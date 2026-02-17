@@ -5,7 +5,6 @@
 use regex::Regex;
 use std::sync::{Arc, LazyLock};
 
-use crate::config::{DEFAULT_MIN_LINE_LEN, DEFAULT_WRAP_WIDTH};
 use crate::wrapping::sentence::split_sentences_regex;
 use crate::wrapping::tag_handling::{add_tag_newline_handling, denormalize_adjacent_tags};
 use crate::wrapping::text_wrapping::{wrap_paragraph, wrap_paragraph_lines};
@@ -168,12 +167,3 @@ pub fn line_wrap_by_sentence(
     }
 }
 
-/// Create the default semantic line wrapper.
-pub fn default_semantic_line_wrapper() -> LineWrapper {
-    line_wrap_by_sentence(DEFAULT_WRAP_WIDTH, DEFAULT_MIN_LINE_LEN, true)
-}
-
-/// Create the default fixed-width line wrapper.
-pub fn default_fixed_line_wrapper() -> LineWrapper {
-    line_wrap_to_width(DEFAULT_WRAP_WIDTH, true)
-}

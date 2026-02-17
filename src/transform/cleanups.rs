@@ -11,7 +11,7 @@ use comrak::nodes::{AstNode, NodeValue};
 ///
 /// Many documents have headings like `# **Title**` where the bold is redundant
 /// since headings are already visually prominent.
-pub fn unbold_headings<'a>(root: &'a AstNode<'a>) {
+pub(crate) fn unbold_headings<'a>(root: &'a AstNode<'a>) {
     // Collect heading nodes first to avoid modifying tree during iteration
     let headings: Vec<_> = root
         .descendants()
@@ -64,6 +64,6 @@ pub fn unbold_headings<'a>(root: &'a AstNode<'a>) {
 }
 
 /// Apply all document cleanups.
-pub fn doc_cleanups<'a>(root: &'a AstNode<'a>) {
+pub(crate) fn doc_cleanups<'a>(root: &'a AstNode<'a>) {
     unbold_headings(root);
 }

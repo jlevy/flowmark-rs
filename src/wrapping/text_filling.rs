@@ -13,7 +13,7 @@ const DEFAULT_INDENT: &str = "    ";
 static PARA_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\n{2,}").unwrap());
 
 /// Split text into paragraphs separated by blank lines.
-pub fn split_paragraphs(text: &str) -> Vec<String> {
+pub(crate) fn split_paragraphs(text: &str) -> Vec<String> {
     PARA_SPLIT_RE
         .split(text)
         .map(|p| p.trim().to_string())

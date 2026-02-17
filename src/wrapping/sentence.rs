@@ -5,8 +5,6 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-/// Minimum length for a sentence in characters.
-pub const SENTENCE_MIN_LENGTH: usize = 15;
 
 /// Regex for detecting end of sentence.
 ///
@@ -23,7 +21,7 @@ static SENTENCE_END_RE: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Check if a word looks like the end of a sentence.
-pub fn heuristic_end_of_sentence(word: &str) -> bool {
+pub(crate) fn heuristic_end_of_sentence(word: &str) -> bool {
     SENTENCE_END_RE.is_match(word)
 }
 
@@ -91,7 +89,7 @@ mod tests {
     #[test]
     fn test_split_sentences() {
         let text = "Hello world. This is a test. And another sentence.";
-        let sentences = split_sentences_regex(text, SENTENCE_MIN_LENGTH);
+        let sentences = split_sentences_regex(text, 15);
         assert_eq!(sentences.len(), 2);
         assert_eq!(sentences[0], "Hello world. This is a test.");
         assert_eq!(sentences[1], "And another sentence.");
@@ -107,7 +105,7 @@ mod tests {
     #[test]
     fn test_first_sentence() {
         let text = "Hello world. This is a test.";
-        let s = first_sentence(text, SENTENCE_MIN_LENGTH);
+        let s = first_sentence(text, 15);
         assert_eq!(s, "Hello world. This is a test.");
     }
 }

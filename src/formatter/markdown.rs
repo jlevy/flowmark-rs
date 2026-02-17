@@ -3,11 +3,10 @@
 //! This module handles the core Markdown normalization by parsing with comrak
 //! and rendering back to normalized `CommonMark` format.
 
-use comrak::nodes::AstNode;
-use comrak::{Arena, Options};
+use comrak::Options;
 
 /// Create comrak options configured for GFM parsing with Flowmark conventions.
-pub fn flowmark_comrak_options<'c>() -> Options<'c> {
+pub(crate) fn flowmark_comrak_options<'c>() -> Options<'c> {
     let mut options = Options::default();
 
     // Extension options - enable GFM features
@@ -56,23 +55,3 @@ pub fn flowmark_comrak_options<'c>() -> Options<'c> {
     options
 }
 
-/// Parse markdown text and render it with comrak, returning the normalized output.
-pub fn parse_and_render(text: &str) -> String {
-    let arena = Arena::new();
-    let options = flowmark_comrak_options();
-    let root = comrak::parse_document(&arena, text, &options);
-    let mut output = vec![];
-    comrak::format_commonmark(root, &options, &mut output).unwrap();
-    String::from_utf8(output).unwrap()
-}
-
-/// Parse markdown text and provide access to the AST via a closure.
-pub fn with_markdown_ast<F, R>(text: &str, f: F) -> R
-where
-    F: for<'a, 'c> FnOnce(&'a AstNode<'a>, &Options<'c>) -> R,
-{
-    let arena = Arena::new();
-    let options = flowmark_comrak_options();
-    let root = comrak::parse_document(&arena, text, &options);
-    f(root, &options)
-}

@@ -12,4 +12,4 @@ pub mod text_wrapping;
 ///
 /// Takes text, an initial indent for the first line, and a subsequent indent
 /// for continuation lines. Returns the wrapped text.
-pub type LineWrapper = Box<dyn Fn(&str, &str, &str) -> String + Send + Sync>;
+pub(crate) type LineWrapper = Box<dyn Fn(&str, &str, &str) -> String + Send + Sync>;

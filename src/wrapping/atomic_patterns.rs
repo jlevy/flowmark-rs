@@ -11,18 +11,18 @@ use std::sync::LazyLock;
 
 /// Defines a regex pattern for an atomic construct that should not be broken.
 #[derive(Debug)]
-pub struct AtomicPattern {
-    pub name: &'static str,
-    pub pattern: &'static str,
-    pub open_delim: &'static str,
-    pub close_delim: &'static str,
-    pub open_re: &'static str,
-    pub close_re: &'static str,
+pub(crate) struct AtomicPattern {
+    pub(crate) _name: &'static str,
+    pub(crate) pattern: &'static str,
+    pub(crate) open_delim: &'static str,
+    pub(crate) close_delim: &'static str,
+    pub(crate) open_re: &'static str,
+    pub(crate) close_re: &'static str,
 }
 
 /// Jinja/Markdoc template tags: {% tag %}, {% /tag %}
-pub static SINGLE_JINJA_TAG: AtomicPattern = AtomicPattern {
-    name: "single_jinja_tag",
+pub(crate) static SINGLE_JINJA_TAG: AtomicPattern = AtomicPattern {
+    _name: "single_jinja_tag",
     pattern: r"\{%.*?%\}",
     open_delim: "{%",
     close_delim: "%}",
@@ -31,8 +31,8 @@ pub static SINGLE_JINJA_TAG: AtomicPattern = AtomicPattern {
 };
 
 /// Jinja comments: {# comment #}
-pub static SINGLE_JINJA_COMMENT: AtomicPattern = AtomicPattern {
-    name: "single_jinja_comment",
+pub(crate) static SINGLE_JINJA_COMMENT: AtomicPattern = AtomicPattern {
+    _name: "single_jinja_comment",
     pattern: r"\{#.*?#\}",
     open_delim: "{#",
     close_delim: "#}",
@@ -41,8 +41,8 @@ pub static SINGLE_JINJA_COMMENT: AtomicPattern = AtomicPattern {
 };
 
 /// Jinja variables: {{ variable }}
-pub static SINGLE_JINJA_VAR: AtomicPattern = AtomicPattern {
-    name: "single_jinja_var",
+pub(crate) static SINGLE_JINJA_VAR: AtomicPattern = AtomicPattern {
+    _name: "single_jinja_var",
     pattern: r"\{\{.*?\}\}",
     open_delim: "{{",
     close_delim: "}}",
@@ -51,8 +51,8 @@ pub static SINGLE_JINJA_VAR: AtomicPattern = AtomicPattern {
 };
 
 /// HTML comments: <!-- comment -->
-pub static SINGLE_HTML_COMMENT: AtomicPattern = AtomicPattern {
-    name: "single_html_comment",
+pub(crate) static SINGLE_HTML_COMMENT: AtomicPattern = AtomicPattern {
+    _name: "single_html_comment",
     pattern: r"<!--.*?-->",
     open_delim: "<!--",
     close_delim: "-->",
@@ -61,8 +61,8 @@ pub static SINGLE_HTML_COMMENT: AtomicPattern = AtomicPattern {
 };
 
 /// HTML/XML open tags: <tag>
-pub static HTML_OPEN_TAG: AtomicPattern = AtomicPattern {
-    name: "html_open_tag",
+pub(crate) static HTML_OPEN_TAG: AtomicPattern = AtomicPattern {
+    _name: "html_open_tag",
     pattern: r"<[a-zA-Z][^>]*>",
     open_delim: "",
     close_delim: "",
@@ -71,8 +71,8 @@ pub static HTML_OPEN_TAG: AtomicPattern = AtomicPattern {
 };
 
 /// HTML/XML close tags: </tag>
-pub static HTML_CLOSE_TAG: AtomicPattern = AtomicPattern {
-    name: "html_close_tag",
+pub(crate) static HTML_CLOSE_TAG: AtomicPattern = AtomicPattern {
+    _name: "html_close_tag",
     pattern: r"</[a-zA-Z][^>]*>",
     open_delim: "",
     close_delim: "",
@@ -90,7 +90,7 @@ pub static HTML_CLOSE_TAG: AtomicPattern = AtomicPattern {
 /// code span cases: double-backtick, then single-backtick.
 ///
 /// Similarly, paired tag patterns use simplified matching without lookahead.
-pub static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+pub(crate) static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     let patterns = [
         // Double-backtick code spans: ``code``
         r"``[^`]+``",

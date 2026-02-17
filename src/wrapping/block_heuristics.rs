@@ -3,7 +3,7 @@
 //! Ported from Python: `flowmark/linewrapping/block_heuristics.py`
 
 /// Check if a line looks like a GFM table row.
-pub fn line_is_table_row(line: &str) -> bool {
+pub(crate) fn line_is_table_row(line: &str) -> bool {
     line.trim_start().starts_with('|')
 }
 
@@ -12,7 +12,7 @@ pub fn line_is_table_row(line: &str) -> bool {
 /// Per `CommonMark` spec:
 /// - Bullet list markers: `-`, `+`, or `*` followed by at least one space/tab
 /// - Ordered list markers: 1-9 digits followed by `.` or `)` then space/tab
-pub fn line_is_list_item(line: &str) -> bool {
+pub(crate) fn line_is_list_item(line: &str) -> bool {
     let stripped = line.trim_start();
     if stripped.is_empty() {
         return false;
@@ -41,7 +41,7 @@ pub fn line_is_list_item(line: &str) -> bool {
 }
 
 /// Check if a line is block content (table row or list item).
-pub fn line_is_block_content(line: &str) -> bool {
+pub(crate) fn line_is_block_content(line: &str) -> bool {
     line_is_table_row(line) || line_is_list_item(line)
 }
 

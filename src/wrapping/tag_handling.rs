@@ -12,7 +12,7 @@ use crate::wrapping::block_heuristics::line_is_block_content;
 use crate::wrapping::LineWrapper;
 
 /// Pattern to match complete template tags (for protecting content inside tags).
-pub static TEMPLATE_TAG_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+pub(crate) static TEMPLATE_TAG_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     let patterns = [
         SINGLE_JINJA_TAG.pattern,
         SINGLE_JINJA_COMMENT.pattern,
@@ -162,7 +162,7 @@ pub fn preprocess_tag_block_spacing(text: &str) -> String {
 }
 
 /// Check if a line ends with a Jinja/Markdoc tag or HTML comment.
-pub fn line_ends_with_tag(line: &str) -> bool {
+pub(crate) fn line_ends_with_tag(line: &str) -> bool {
     let stripped = line.trim_end();
     if stripped.is_empty() {
         return false;
@@ -174,7 +174,7 @@ pub fn line_ends_with_tag(line: &str) -> bool {
 }
 
 /// Check if a line starts with a Jinja/Markdoc tag or HTML comment.
-pub fn line_starts_with_tag(line: &str) -> bool {
+pub(crate) fn line_starts_with_tag(line: &str) -> bool {
     let stripped = line.trim_start();
     if stripped.is_empty() {
         return false;
@@ -283,7 +283,7 @@ pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
 /// Augments a `LineWrapper` to preserve newlines around Jinja/Markdoc tags
 /// and HTML comments.
 #[allow(clippy::type_complexity)]
-pub fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str) -> String + Send + Sync>) -> LineWrapper {
+pub(crate) fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str) -> String + Send + Sync>) -> LineWrapper {
     Box::new(move |text: &str, initial_indent: &str, subsequent_indent: &str| -> String {
         // If no newlines in input, just wrap and apply post-processing fixes.
         if !text.contains('\n') {
