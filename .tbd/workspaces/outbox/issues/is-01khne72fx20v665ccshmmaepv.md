@@ -10,6 +10,6 @@ priority: 0
 status: closed
 title: Set up Rust project structure with Cargo.toml and CI
 type: is
-updated_at: 2026-02-17T10:11:41.892Z
-version: 3
+updated_at: 2026-02-17T10:12:40.875Z
+version: 4
 ---

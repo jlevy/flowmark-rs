@@ -10,6 +10,6 @@ priority: 0
 status: closed
 title: Port Flowmark from Python to Rust
 type: is
-updated_at: 2026-02-17T10:12:08.951Z
-version: 2
+updated_at: 2026-02-17T10:12:40.864Z
+version: 3
 ---

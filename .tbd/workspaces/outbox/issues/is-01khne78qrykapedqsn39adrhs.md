@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: Port CLI layer
 type: is
-updated_at: 2026-02-17T10:11:59.717Z
-version: 2
+updated_at: 2026-02-17T10:12:40.988Z
+version: 3
 ---

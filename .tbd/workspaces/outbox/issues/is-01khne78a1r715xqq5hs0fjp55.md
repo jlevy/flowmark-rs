@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: Port config module (TOML config loading)
 type: is
-updated_at: 2026-02-17T10:11:59.321Z
-version: 2
+updated_at: 2026-02-17T10:12:40.980Z
+version: 3
 ---

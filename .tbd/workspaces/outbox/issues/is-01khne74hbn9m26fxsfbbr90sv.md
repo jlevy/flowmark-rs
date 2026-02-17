@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Port text_wrapping module (word splitter, wrap_paragraph)
 type: is
-updated_at: 2026-02-17T10:11:43.890Z
-version: 2
+updated_at: 2026-02-17T10:12:40.912Z
+version: 3
 ---

@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Port typography modules (smartquotes, ellipses)
 type: is
-updated_at: 2026-02-17T10:11:45.583Z
-version: 2
+updated_at: 2026-02-17T10:12:40.941Z
+version: 3
 ---

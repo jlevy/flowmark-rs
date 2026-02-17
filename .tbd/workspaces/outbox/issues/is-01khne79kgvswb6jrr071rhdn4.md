@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Cross-validate against Python reference output
 type: is
-updated_at: 2026-02-17T10:12:00.495Z
-version: 2
+updated_at: 2026-02-17T10:12:41.006Z
+version: 3
 ---

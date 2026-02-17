@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Port frontmatter module
 type: is
-updated_at: 2026-02-17T10:11:43.093Z
-version: 2
+updated_at: 2026-02-17T10:12:40.898Z
+version: 3
 ---

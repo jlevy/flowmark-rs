@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Port sentence_split_regex module
 type: is
-updated_at: 2026-02-17T10:11:43.495Z
-version: 2
+updated_at: 2026-02-17T10:12:40.905Z
+version: 3
 ---

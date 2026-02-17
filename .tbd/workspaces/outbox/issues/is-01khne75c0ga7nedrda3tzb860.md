@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Port tag_handling module
 type: is
-updated_at: 2026-02-17T10:11:44.752Z
-version: 2
+updated_at: 2026-02-17T10:12:40.927Z
+version: 3
 ---

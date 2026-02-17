@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Port line_wrappers module
 type: is
-updated_at: 2026-02-17T10:11:45.183Z
-version: 2
+updated_at: 2026-02-17T10:12:40.934Z
+version: 3
 ---

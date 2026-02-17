@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Port block_heuristics module
 type: is
-updated_at: 2026-02-17T10:11:42.694Z
-version: 2
+updated_at: 2026-02-17T10:12:40.891Z
+version: 3
 ---

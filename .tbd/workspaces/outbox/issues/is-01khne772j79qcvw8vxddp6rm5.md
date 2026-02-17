@@ -10,6 +10,6 @@ priority: 0
 status: closed
 title: Port flowmark_markdown module (MarkdownNormalizer)
 type: is
-updated_at: 2026-02-17T10:11:58.518Z
-version: 2
+updated_at: 2026-02-17T10:12:40.956Z
+version: 3
 ---
