@@ -1,6 +1,6 @@
 //! Document cleanup transforms.
 //!
-//! Ported from Python: flowmark/transforms/doc_cleanups.py and doc_transforms.py
+//! Ported from Python: `flowmark/transforms/doc_cleanups.py` and `doc_transforms.py`
 //!
 //! In Python, these operate on the Marko AST. In Rust, we operate on comrak's AST.
 //! The approach is different but the effect is the same.

@@ -1,6 +1,6 @@
 //! Tag handling for Jinja/Markdoc tags and HTML comments.
 //!
-//! Ported from Python: flowmark/linewrapping/tag_handling.py
+//! Ported from Python: `flowmark/linewrapping/tag_handling.py`
 
 use regex::Regex;
 use std::sync::LazyLock;
@@ -282,6 +282,7 @@ pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
 
 /// Augments a `LineWrapper` to preserve newlines around Jinja/Markdoc tags
 /// and HTML comments.
+#[allow(clippy::type_complexity)]
 pub fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str) -> String + Send + Sync>) -> LineWrapper {
     Box::new(move |text: &str, initial_indent: &str, subsequent_indent: &str| -> String {
         // If no newlines in input, just wrap and apply post-processing fixes.
@@ -315,11 +316,9 @@ pub fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str) -> St
             let prev_is_block =
                 has_tags && !is_first_line && line_is_block_content(lines[i - 1]);
 
-            if prev_ends_with_tag || curr_starts_with_tag || curr_is_block || prev_is_block {
-                if !current_segment_lines.is_empty() {
-                    segments.push(current_segment_lines.join("\n"));
-                    current_segment_lines.clear();
-                }
+            if (prev_ends_with_tag || curr_starts_with_tag || curr_is_block || prev_is_block) && !current_segment_lines.is_empty() {
+                segments.push(current_segment_lines.join("\n"));
+                current_segment_lines.clear();
             }
 
             current_segment_lines.push(line);
@@ -360,10 +359,10 @@ pub fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str) -> St
 
             let prev_is_block = prev_segment
                 .split('\n')
-                .any(|line| line_is_block_content(line));
+                .any(line_is_block_content);
             let curr_is_block = curr_segment
                 .split('\n')
-                .any(|line| line_is_block_content(line));
+                .any(line_is_block_content);
 
             let prev_last_line = prev_segment.split('\n').next_back().unwrap_or("");
             let curr_first_line = curr_segment.split('\n').next().unwrap_or("");

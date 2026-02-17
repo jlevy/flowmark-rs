@@ -1,15 +1,15 @@
 //! Block content detection using simple line-based heuristics.
 //!
-//! Ported from Python: flowmark/linewrapping/block_heuristics.py
+//! Ported from Python: `flowmark/linewrapping/block_heuristics.py`
 
 /// Check if a line looks like a GFM table row.
 pub fn line_is_table_row(line: &str) -> bool {
     line.trim_start().starts_with('|')
 }
 
-/// Check if a line looks like a CommonMark list item.
+/// Check if a line looks like a `CommonMark` list item.
 ///
-/// Per CommonMark spec:
+/// Per `CommonMark` spec:
 /// - Bullet list markers: `-`, `+`, or `*` followed by at least one space/tab
 /// - Ordered list markers: 1-9 digits followed by `.` or `)` then space/tab
 pub fn line_is_list_item(line: &str) -> bool {
@@ -32,10 +32,8 @@ pub fn line_is_list_item(line: &str) -> bool {
             i += 1;
         }
         // Must have . or ) followed by space/tab
-        if i < bytes.len() && matches!(bytes[i], b'.' | b')') {
-            if i + 1 < bytes.len() && matches!(bytes[i + 1], b' ' | b'\t') {
-                return true;
-            }
+        if i < bytes.len() && matches!(bytes[i], b'.' | b')') && i + 1 < bytes.len() && matches!(bytes[i + 1], b' ' | b'\t') {
+            return true;
         }
     }
 

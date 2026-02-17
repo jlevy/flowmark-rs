@@ -1,7 +1,7 @@
 //! Comrak-based Markdown parsing and rendering.
 //!
 //! This module handles the core Markdown normalization by parsing with comrak
-//! and rendering back to normalized CommonMark format.
+//! and rendering back to normalized `CommonMark` format.
 
 use comrak::nodes::AstNode;
 use comrak::{Arena, Options};

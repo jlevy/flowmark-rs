@@ -1,6 +1,6 @@
-//! LineWrapper factory functions.
+//! `LineWrapper` factory functions.
 //!
-//! Ported from Python: flowmark/linewrapping/line_wrappers.py
+//! Ported from Python: `flowmark/linewrapping/line_wrappers.py`
 
 use regex::Regex;
 use std::sync::{Arc, LazyLock};
@@ -19,7 +19,8 @@ fn split_markdown_hard_breaks(text: &str) -> Vec<String> {
     LINE_BREAK_RE.split(text).map(String::from).collect()
 }
 
-/// Augments a LineWrapper to first split the text by Markdown hard breaks.
+/// Augments a `LineWrapper` to first split the text by Markdown hard breaks.
+#[allow(clippy::type_complexity)]
 fn add_markdown_hard_break_handling(base_wrapper: LineWrapper) -> LineWrapper {
     let base: Arc<dyn Fn(&str, &str, &str) -> String + Send + Sync> = Arc::from(base_wrapper);
 

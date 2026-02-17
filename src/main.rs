@@ -10,6 +10,7 @@ mod cli {
 
     #[derive(Parser, Debug)]
     #[command(name = "flowmark", version, about = "Markdown auto-formatter for clean diffs")]
+    #[allow(clippy::struct_excessive_bools)]
     pub struct Args {
         /// Input files or directories; use `-` for stdin
         #[arg(default_value = "-")]
@@ -96,10 +97,10 @@ mod cli {
                 print!("{output}");
             } else {
                 let path = PathBuf::from(file);
-                let output_path = if args.output != "-" {
-                    Some(PathBuf::from(&args.output))
-                } else {
+                let output_path = if args.output == "-" {
                     None
+                } else {
+                    Some(PathBuf::from(&args.output))
                 };
 
                 flowmark::reformat_file(

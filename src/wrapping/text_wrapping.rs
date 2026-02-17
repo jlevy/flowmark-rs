@@ -1,6 +1,6 @@
 //! Word splitting and paragraph wrapping.
 //!
-//! Ported from Python: flowmark/linewrapping/text_wrapping.py
+//! Ported from Python: `flowmark/linewrapping/text_wrapping.py`
 
 use regex::Regex;
 use std::sync::LazyLock;
@@ -97,7 +97,7 @@ pub fn markdown_escape_word(word: &str) -> String {
 ///
 /// Set `is_markdown` to `true` when wrapping markdown text to enable Markdown mode.
 /// This automatically escapes special markdown characters at the start of wrapped lines.
-#[allow(clippy::fn_params_excessive_bools)]
+#[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools, clippy::type_complexity)]
 pub fn wrap_paragraph_lines(
     text: &str,
     width: usize,
@@ -142,7 +142,7 @@ pub fn wrap_paragraph_lines(
 
     for word in &words {
         let word_width = word.chars().count();
-        let space_width: usize = if current_line.is_empty() { 0 } else { 1 };
+        let space_width: usize = usize::from(!current_line.is_empty());
 
         if current_width + word_width + space_width <= width {
             current_line.push(word.clone());
@@ -184,6 +184,7 @@ pub fn wrap_paragraph_lines(
 }
 
 /// Wrap lines of a single paragraph of plain text, returning a new string.
+#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn wrap_paragraph(
     text: &str,
     width: usize,

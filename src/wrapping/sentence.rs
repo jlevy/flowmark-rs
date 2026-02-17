@@ -1,6 +1,6 @@
 //! Sentence splitting using regex heuristics.
 //!
-//! Ported from Python: flowmark/linewrapping/sentence_split_regex.py
+//! Ported from Python: `flowmark/linewrapping/sentence_split_regex.py`
 
 use regex::Regex;
 use std::sync::LazyLock;

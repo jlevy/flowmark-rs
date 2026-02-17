@@ -1,6 +1,6 @@
 //! Atomic pattern definitions for constructs that should not be broken during wrapping.
 //!
-//! Ported from Python: flowmark/linewrapping/atomic_patterns.py
+//! Ported from Python: `flowmark/linewrapping/atomic_patterns.py`
 //!
 //! Note: Rust's `regex` crate does not support backreferences or lookahead.
 //! Patterns are simplified to work without these features while maintaining
@@ -85,7 +85,7 @@ pub static HTML_CLOSE_TAG: AtomicPattern = AtomicPattern {
 /// Patterns are in priority order: code spans (multi-backtick before single),
 /// links, paired tags, single tags, HTML tags.
 ///
-/// Note: The Python version uses backreferences for code spans (`(`+)...\1`).
+/// Note: The Python version uses backreferences for code spans (`` (`+)...\1 ``).
 /// Since Rust's regex crate doesn't support backreferences, we handle common
 /// code span cases: double-backtick, then single-backtick.
 ///

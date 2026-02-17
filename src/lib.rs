@@ -21,6 +21,7 @@ pub use wrapping::text_filling::{fill_text, Wrap};
 pub use wrapping::text_wrapping::{html_md_word_split, simple_word_split, wrap_paragraph, wrap_paragraph_lines};
 
 /// Reformat a Markdown or plain text string.
+#[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
 pub fn reformat_text(
     text: &str,
     width: usize,
@@ -57,6 +58,7 @@ pub fn reformat_text(
 }
 
 /// Reformat a Markdown or plain text file.
+#[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
 pub fn reformat_file(
     path: &Path,
     output: Option<&Path>,

@@ -1,6 +1,6 @@
 //! Configuration types and loading.
 //!
-//! Ported from Python: flowmark/config.py and flowmark/formats/flowmark_markdown.py
+//! Ported from Python: `flowmark/config.py` and `flowmark/formats/flowmark_markdown.py`
 
 use std::fmt;
 use std::str::FromStr;

@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 /// Pattern to match three consecutive dots with context.
 static ELLIPSIS_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r#"(?m)(^|[\w\x22\x27\u{2018}\u{2019}])(\s*)(\.\.\.)([\.,;:\?!\)\-\u{2014}\x22\x27\u{2018}\u{2019}]?)(\s*)"#,
+        r"(?m)(^|[\w\x22\x27\u{2018}\u{2019}])(\s*)(\.\.\.)([\.,;:\?!\)\-\u{2014}\x22\x27\u{2018}\u{2019}]?)(\s*)",
     )
     .unwrap()
 });

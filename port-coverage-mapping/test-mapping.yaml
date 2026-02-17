@@ -319,11 +319,10 @@
   notes: No Rust equivalent; comprehensive test of escape handling policy showing period vs other char handling
 - python_file: tests/test_escape_handling.py
   python_function: test_other_escaped_chars
-  status: partial
+  status: mapped
   rust_file: tests/test_escape_handling.rs
   rust_function: test_other_escaped_chars
-  notes: Rust test covers asterisk, hash, and hyphen escapes but omits dollar, underscore, bracket, and backtick escape cases
-    from Python
+  notes: Covers asterisk, hash, hyphen, dollar, underscore, bracket, and backtick escapes
 - python_file: tests/test_fenced_code_blocks.py
   python_function: test_code_block_with_inline_backticks
   status: mapped

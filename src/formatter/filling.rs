@@ -4,10 +4,11 @@
 //! It handles the complex interaction between comrak's AST rendering and the
 //! text-level normalization needed to match Python/Marko behavior.
 //!
-//! Ported from Python: flowmark/linewrapping/markdown_filling.py and
-//! parts of flowmark/formats/flowmark_markdown.py
+//! Ported from Python: `flowmark/linewrapping/markdown_filling.py` and
+//! parts of `flowmark/formats/flowmark_markdown.py`
 
 use regex::Regex;
+use std::fmt::Write as _;
 use std::sync::LazyLock;
 
 use comrak::nodes::{AstNode, ListType, NodeValue, TableAlignment};
@@ -74,12 +75,11 @@ fn normalize_comrak_output(text: &str) -> String {
     let text = normalize_blank_lines(text);
     let text = normalize_code_fences(&text);
     let text = normalize_numbered_lists(&text);
-    let text = collapse_blank_lines_outside_code(&text);
-    text
+    collapse_blank_lines_outside_code(&text)
 }
 
 /// Collapse multiple blank lines to single blank lines, but preserve
-/// content inside code blocks (fenced with ``` or ~~~).
+/// content inside code blocks (fenced with backticks or tildes).
 fn collapse_blank_lines_outside_code(text: &str) -> String {
     // Split into segments: outside code and inside code
     // Find code fences and protect their content
@@ -110,7 +110,7 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
             if is_backtick_fence || is_tilde_fence {
                 let fence_char = if is_backtick_fence { '`' } else { '~' };
                 let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
-                fence_str = std::iter::repeat(fence_char).take(fence_len).collect();
+                fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
                 in_code = true;
                 consecutive_empty = 0;
                 result.push(*line);
@@ -163,7 +163,7 @@ fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -
             if is_backtick_fence || is_tilde_fence {
                 let fence_char = if is_backtick_fence { '`' } else { '~' };
                 let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
-                fence_str = std::iter::repeat(fence_char).take(fence_len).collect();
+                fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
                 in_code = true;
                 result.push(line.to_string());
             } else {
@@ -218,7 +218,7 @@ fn postprocess_period_escapes(text: &str) -> String {
         if is_backtick_fence || is_tilde_fence {
             let fence_char = if is_backtick_fence { '`' } else { '~' };
             let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
-            fence_str = std::iter::repeat(fence_char).take(fence_len).collect();
+            fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
             in_fenced_code = true;
             result.push(line.to_string());
             continue;
@@ -239,14 +239,13 @@ fn postprocess_period_escapes(text: &str) -> String {
                 .strip_prefix("- ")
                 .or_else(|| after_quotes.strip_prefix("* "))
                 .or_else(|| after_quotes.strip_prefix("+ "))
-                .map(|rest| {
+                .map_or(after_quotes, |rest| {
                     // Also strip task list markers: [ ] , [x] , [X]
                     rest.strip_prefix("[ ] ")
                         .or_else(|| rest.strip_prefix("[x] "))
                         .or_else(|| rest.strip_prefix("[X] "))
                         .unwrap_or(rest)
-                })
-                .unwrap_or(after_quotes);
+                });
 
             // Check if content starts with DIGITS\.
             let digit_end = after_list_marker
@@ -300,13 +299,12 @@ fn remove_period_escapes_preserving_code(line: &str) -> String {
                         i += close_count;
                         found_close = true;
                         break;
-                    } else {
-                        // Non-matching backticks: copy as code content
-                        for _ in 0..close_count {
-                            result.push('`');
-                        }
-                        i += close_count;
                     }
+                    // Non-matching backticks: copy as code content
+                    for _ in 0..close_count {
+                        result.push('`');
+                    }
+                    i += close_count;
                 } else {
                     // Inside code span: copy literally (no escape processing)
                     result.push(chars[i]);
@@ -414,6 +412,7 @@ fn render_block_children<'a>(
 
 /// Render block children within a quoted context (blockquote or alert).
 /// Uses `blank_prefix` (e.g., ">") for blank separator lines between blocks.
+#[allow(clippy::too_many_arguments)]
 fn render_block_children_quoted<'a>(
     node: &'a AstNode<'a>,
     line_wrapper: &LineWrapper,
@@ -509,7 +508,7 @@ fn render_block<'a>(
             let ends_with_hard_break = inline_ends_with_hard_break(node)
                 || inline_text.ends_with('\\');
 
-            output.push_str(&format!("{prefix}{hashes} {inline_text}\n"));
+            let _ = writeln!(output, "{prefix}{hashes} {inline_text}");
             if !ends_with_hard_break {
                 output.push('\n');
             }
@@ -583,7 +582,7 @@ fn render_block<'a>(
             );
 
             // Trim trailing newlines and re-add single newline
-            output.push_str(&inner.trim_end_matches('\n'));
+            output.push_str(inner.trim_end_matches('\n'));
             output.push('\n');
         }
 
@@ -600,30 +599,30 @@ fn render_block<'a>(
 
             // Calculate minimum fence length needed
             let fence_len = min_fence_length(code_content, fence_char)
-                .max(if code_block.fenced { code_block.fence_length as usize } else { 3 });
-            let fence: String = std::iter::repeat(fence_char).take(fence_len).collect();
+                .max(if code_block.fenced { code_block.fence_length } else { 3 });
+            let fence: String = std::iter::repeat_n(fence_char, fence_len).collect();
 
             let lang_text = if info.is_empty() {
                 String::new()
             } else {
-                info.to_string()
+                info.clone()
             };
 
-            output.push_str(&format!("{prefix}{fence}{lang_text}\n"));
+            let _ = writeln!(output, "{prefix}{fence}{lang_text}");
             let empty_prefix = subsequent_prefix.trim_end();
             for line in code_content.split('\n') {
                 if line.is_empty() {
                     output.push_str(empty_prefix);
                     output.push('\n');
                 } else {
-                    output.push_str(&format!("{subsequent_prefix}{line}\n"));
+                    let _ = writeln!(output, "{subsequent_prefix}{line}");
                 }
             }
-            output.push_str(&format!("{subsequent_prefix}{fence}\n"));
+            let _ = writeln!(output, "{subsequent_prefix}{fence}");
         }
 
         NodeValue::ThematicBreak => {
-            output.push_str(&format!("{prefix}* * *\n"));
+            let _ = writeln!(output, "{prefix}* * *");
         }
 
         NodeValue::HtmlBlock(html) => {
@@ -631,7 +630,7 @@ fn render_block<'a>(
             // Check if this HTML block has wrappable text content
             // (e.g., HTML comments/tags mixed with regular text)
             let trimmed = literal.trim();
-            let has_text_content = trimmed.len() > 0
+            let has_text_content = !trimmed.is_empty()
                 && trimmed.contains(|c: char| c.is_alphabetic())
                 && trimmed.chars().filter(|&c| c == '<').count() > 0;
 
@@ -640,7 +639,7 @@ fn render_block<'a>(
                 // Join all lines into a single line first
                 let single_line: String = literal
                     .lines()
-                    .map(|l| l.trim())
+                    .map(str::trim)
                     .collect::<Vec<_>>()
                     .join(" ")
                     .trim()
@@ -679,7 +678,7 @@ fn render_block<'a>(
                     TableAlignment::Right => "---:".to_string(),
                 })
                 .collect();
-            output.push_str(&format!("| {} |\n", delimiters.join(" | ")));
+            let _ = writeln!(output, "| {} |", delimiters.join(" | "));
 
             // Render body rows
             for child in children.iter().skip(1) {
@@ -729,7 +728,7 @@ fn render_block<'a>(
 
         NodeValue::Alert(alert) => {
             let alert_type = format!("{:?}", alert.alert_type).to_uppercase();
-            output.push_str(&format!("> [!{alert_type}]\n"));
+            let _ = writeln!(output, "> [!{alert_type}]");
 
             let q_prefix = format!("{prefix}> ");
             let q_subsequent = format!("{subsequent_prefix}> ");
@@ -745,7 +744,7 @@ fn render_block<'a>(
                 options,
             );
 
-            output.push_str(&inner.trim_end_matches('\n'));
+            output.push_str(inner.trim_end_matches('\n'));
             output.push('\n');
         }
 
@@ -790,6 +789,7 @@ fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, parent_is_tight: bool) ->
 }
 
 /// Render a list item's children.
+#[allow(clippy::too_many_arguments)]
 fn render_list_item<'a>(
     node: &'a AstNode<'a>,
     output: &mut String,
@@ -805,7 +805,7 @@ fn render_list_item<'a>(
 
     // Check if parent list is tight by looking at the list spacing context
     // We determine this by checking if the parent list node is tight
-    let parent_is_tight = node.parent().map_or(false, |parent| {
+    let parent_is_tight = node.parent().is_some_and(|parent| {
         if let NodeValue::List(list) = &parent.data.borrow().value {
             match list_spacing {
                 ListSpacing::Preserve => list.tight,
@@ -991,7 +991,7 @@ fn get_tasklist_marker<'a>(para_node: &'a AstNode<'a>) -> Option<String> {
         if let NodeValue::TaskItem(checked) = &parent.data.borrow().value {
             let marker = if checked.is_some() { "[x] " } else { "[ ] " };
             // Only add marker to first paragraph in the item
-            if parent.children().next().map(|c| std::ptr::eq(c, para_node)).unwrap_or(false) {
+            if parent.children().next().is_some_and(|c| std::ptr::eq(c, para_node)) {
                 return Some(marker.to_string());
             }
         }
@@ -1038,6 +1038,7 @@ fn min_fence_length(code_content: &str, fence_char: char) -> usize {
 /// Normalize and wrap Markdown text filling paragraphs to the full width.
 ///
 /// This is the main entry point for Markdown formatting.
+#[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
 pub fn fill_markdown(
     markdown_text: &str,
     dedent_input: bool,
@@ -1049,6 +1050,16 @@ pub fn fill_markdown(
     line_wrapper: Option<LineWrapper>,
     list_spacing: ListSpacing,
 ) -> String {
+    // Escaped characters to protect from comrak stripping.
+    // comrak strips backslash escapes (e.g., \~ → ~, \* → *) in the AST for most chars.
+    // Period (\.) is handled by comrak's Escaped node, so we exclude it here.
+    // We use Unicode Private Use Area placeholders to preserve escapes through the pipeline.
+    // IMPORTANT: \\ must be first so \\X doesn't get partially matched as \X.
+    // Period (.) IS included: comrak converts `1\.` to list items, losing the escape.
+    const ESCAPE_CHARS: &[char] = &[
+        '\\', '~', '*', '#', '-', '+', '>', '.', '!', '[', ']', '(', ')', '{', '}', '$', '_', '|', '`',
+    ];
+
     let line_wrapper = line_wrapper.unwrap_or_else(|| {
         if semantic {
             line_wrap_by_sentence(width, DEFAULT_MIN_LINE_LEN, true)
@@ -1060,10 +1071,10 @@ pub fn fill_markdown(
     // Extract frontmatter before any processing
     let (frontmatter, content) = split_frontmatter(markdown_text);
 
-    let mut text = if !frontmatter.is_empty() {
-        content
-    } else {
+    let mut text = if frontmatter.is_empty() {
         markdown_text.to_string()
+    } else {
+        content
     };
 
     if dedent_input {
@@ -1075,16 +1086,6 @@ pub fn fill_markdown(
 
     // Preprocess: ensure proper blank lines around block content within tags
     text = preprocess_tag_block_spacing(&text);
-
-    // Protect escaped characters from being stripped by comrak.
-    // comrak strips backslash escapes (e.g., \~ → ~, \* → *) in the AST for most chars.
-    // Period (\.) is handled by comrak's Escaped node, so we exclude it here.
-    // We use Unicode Private Use Area placeholders to preserve escapes through the pipeline.
-    // IMPORTANT: \\ must be first so \\X doesn't get partially matched as \X.
-    // Period (.) IS included: comrak converts `1\.` to list items, losing the escape.
-    const ESCAPE_CHARS: &[char] = &[
-        '\\', '~', '*', '#', '-', '+', '>', '.', '!', '[', ']', '(', ')', '{', '}', '$', '_', '|', '`',
-    ];
     let mut escape_placeholders: Vec<(String, String)> = Vec::new();
     for &ch in ESCAPE_CHARS {
         let escaped = format!("\\{ch}");
@@ -1140,10 +1141,10 @@ pub fn fill_markdown(
     let result = normalize_comrak_output(&result);
 
     // Reattach frontmatter if present
-    if !frontmatter.is_empty() {
-        format!("{frontmatter}{result}")
-    } else {
+    if frontmatter.is_empty() {
         result
+    } else {
+        format!("{frontmatter}{result}")
     }
 }
 
@@ -1163,6 +1164,7 @@ fn apply_smart_quotes_to_ast<'a>(root: &'a AstNode<'a>) {
 
 /// Collect text nodes from inline tree, apply smart quotes to concatenated text,
 /// then redistribute back.
+#[allow(clippy::items_after_statements)]
 fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
     // Collect all text nodes with their content
     let mut text_nodes: Vec<&'a AstNode<'a>> = Vec::new();
@@ -1188,7 +1190,7 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
                 NodeValue::Code(_) | NodeValue::HtmlInline(_) => {
                     // Skip code spans and raw HTML - don't apply smart quotes
                     // But add placeholder chars to maintain context
-                    concatenated.push_str("X"); // placeholder for quote context
+                    concatenated.push('X'); // placeholder for quote context
                 }
                 NodeValue::SoftBreak => {
                     concatenated.push(' ');

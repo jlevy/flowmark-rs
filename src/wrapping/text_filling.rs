@@ -1,6 +1,6 @@
 //! Multi-paragraph text filling.
 //!
-//! Ported from Python: flowmark/linewrapping/text_filling.py
+//! Ported from Python: `flowmark/linewrapping/text_filling.py`
 
 use regex::Regex;
 use std::sync::LazyLock;
@@ -65,6 +65,7 @@ impl Wrap {
 }
 
 /// Fill any number of paragraphs of plain text.
+#[allow(clippy::type_complexity)]
 pub fn fill_text(
     text: &str,
     text_wrap: Wrap,
@@ -105,7 +106,7 @@ pub fn fill_text(
 
     for (i, paragraph) in paragraphs.iter().enumerate() {
         if text_wrap.initial_indent_first_para_only() && i > 0 {
-            initial_indent = subsequent_indent.clone();
+            initial_indent.clone_from(&subsequent_indent);
         }
 
         wrapped_paragraphs.push(wrap_paragraph(
