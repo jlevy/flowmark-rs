@@ -252,7 +252,7 @@ fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
             || stripped.starts_with(SINGLE_HTML_COMMENT.open_delim);
 
         if !is_tag_start {
-            if let Some(m) = MULTILINE_CLOSING_PATTERN.find(line) {
+            if let Some(_m) = MULTILINE_CLOSING_PATTERN.find(line) {
                 // Find which named group matched
                 let caps = MULTILINE_CLOSING_PATTERN.captures(line).unwrap();
                 let mut found = false;

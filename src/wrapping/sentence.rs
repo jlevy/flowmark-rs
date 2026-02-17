@@ -16,7 +16,9 @@ pub const SENTENCE_MIN_LENGTH: usize = 15;
 /// Note: Python uses `\p{L}` and `\p{Ll}` for Unicode letter classes.
 /// Rust's `regex` crate supports these.
 static SENTENCE_END_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(\b\p{L}+[\p{Ll}])([.?!]['\x22\u{2019}\u{201d}]?|['\x22\u{2019}\u{201d}][.?!]) *$")
+    // Allow optional closing brackets/parens/angle brackets between word and punctuation
+    // to handle cases like [link](url). and <tag>word</tag>.
+    Regex::new(r"(\b\p{L}+[\p{Ll}])[)\]>]*([.?!]['\x22\u{2019}\u{201d}]?|['\x22\u{2019}\u{201d}][.?!]) *$")
         .unwrap()
 });
 

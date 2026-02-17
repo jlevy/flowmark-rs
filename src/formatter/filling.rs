@@ -13,18 +13,15 @@ use std::sync::LazyLock;
 use comrak::nodes::{AstNode, ListType, NodeValue, TableAlignment};
 use comrak::{Arena, Options};
 
-use crate::config::{ListSpacing, DEFAULT_WRAP_WIDTH};
+use crate::config::{ListSpacing, DEFAULT_MIN_LINE_LEN};
 use crate::formatter::markdown::flowmark_comrak_options;
 use crate::parser::frontmatter::split_frontmatter;
 use crate::transform::cleanups::doc_cleanups;
 use crate::typography::ellipses::ellipses as apply_ellipses;
 use crate::typography::quotes::smart_quotes;
 use crate::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
-use crate::wrapping::sentence::split_sentences_regex;
 use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
-use crate::wrapping::text_wrapping::wrap_paragraph_lines;
 use crate::wrapping::LineWrapper;
-use crate::config::DEFAULT_MIN_LINE_LEN;
 
 // ===== Regex patterns for normalization =====
 
@@ -32,34 +29,17 @@ use crate::config::DEFAULT_MIN_LINE_LEN;
 static BLANK_LINE_WS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^[ \t]+$").unwrap());
 
-/// Pattern for multiple consecutive blank lines (3+ newlines).
-static MULTI_BLANK_LINES: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\n{3,}").unwrap());
-
-/// Pattern for code fence with space before language.
+/// Pattern for code fence with space before language (horizontal whitespace only).
 static CODE_FENCE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^([ \t]*```)\s+(\w)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?m)^([ \t]*```)[^\S\n]+(\w)").unwrap());
 
 /// Pattern for numbered list items with two spaces after period.
 static NUMBERED_ITEM_TWO_SPACES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\d+)\.  ").unwrap());
 
-/// Pattern for blockquote markers with trailing space only.
-static QUOTE_TRAILING_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^> $").unwrap());
-
-/// Pattern for HTML comments that should be on their own line.
-static HTML_COMMENT_INLINE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"[ \t]*(<!--.*?-->)[ \t]*").unwrap());
-
 /// Normalize blank lines by removing trailing whitespace.
 fn normalize_blank_lines(text: &str) -> String {
     BLANK_LINE_WS.replace_all(text, "").into_owned()
-}
-
-/// Collapse multiple blank lines to single blank lines.
-fn collapse_blank_lines(text: &str) -> String {
-    MULTI_BLANK_LINES.replace_all(text, "\n\n").into_owned()
 }
 
 /// Remove space between code fence and language identifier.
@@ -89,81 +69,404 @@ fn normalize_numbered_lists(text: &str) -> String {
     result
 }
 
-/// Fix quote markers with trailing space only.
-fn normalize_quote_markers(text: &str) -> String {
-    QUOTE_TRAILING_SPACE.replace_all(text, ">").into_owned()
-}
-
-/// Normalize HTML comments by ensuring they are on their own lines.
-fn normalize_html_comments(text: &str) -> String {
-    let result = HTML_COMMENT_INLINE
-        .replace_all(text, "\n$1\n\n")
-        .into_owned();
-    let result = result.trim_start().to_string();
-    collapse_blank_lines(&result)
-}
-
 /// Apply all text-level normalizations to comrak output.
 fn normalize_comrak_output(text: &str) -> String {
     let text = normalize_blank_lines(text);
     let text = normalize_code_fences(&text);
     let text = normalize_numbered_lists(&text);
-    let text = normalize_quote_markers(&text);
-    let text = collapse_blank_lines(&text);
+    let text = collapse_blank_lines_outside_code(&text);
     text
 }
 
-/// Format a single paragraph by wrapping it with the line wrapper.
-fn format_paragraph(
-    text: &str,
-    line_wrapper: &LineWrapper,
-    prefix: &str,
-    subsequent_prefix: &str,
-) -> String {
-    let wrapped = line_wrapper(text, prefix, subsequent_prefix);
-    format!("{wrapped}\n")
+/// Collapse multiple blank lines to single blank lines, but preserve
+/// content inside code blocks (fenced with ``` or ~~~).
+fn collapse_blank_lines_outside_code(text: &str) -> String {
+    // Split into segments: outside code and inside code
+    // Find code fences and protect their content
+    let lines: Vec<&str> = text.lines().collect();
+    let had_trailing_newline = text.ends_with('\n');
+    let mut result = Vec::new();
+    let mut in_code = false;
+    let mut fence_str = String::new();
+    let mut consecutive_empty = 0;
+
+    for line in &lines {
+        if in_code {
+            result.push(*line);
+            // Check for closing fence
+            let trimmed = line.trim();
+            if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
+                let rest = &trimmed[fence_str.len()..];
+                if rest.chars().all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace()) {
+                    in_code = false;
+                    consecutive_empty = 0;
+                }
+            }
+        } else {
+            let trimmed = line.trim();
+            // Check for opening fence (```, ~~~, or longer)
+            let is_backtick_fence = trimmed.starts_with("```");
+            let is_tilde_fence = trimmed.starts_with("~~~");
+            if is_backtick_fence || is_tilde_fence {
+                let fence_char = if is_backtick_fence { '`' } else { '~' };
+                let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
+                fence_str = std::iter::repeat(fence_char).take(fence_len).collect();
+                in_code = true;
+                consecutive_empty = 0;
+                result.push(*line);
+            } else if trimmed.is_empty() {
+                consecutive_empty += 1;
+                if consecutive_empty <= 1 {
+                    result.push(*line);
+                }
+            } else {
+                consecutive_empty = 0;
+                result.push(*line);
+            }
+        }
+    }
+
+    let mut output = result.join("\n");
+    if had_trailing_newline {
+        output.push('\n');
+    }
+    output
 }
 
-/// Recursively render a comrak AST node to normalized Markdown.
-///
-/// This is the core rendering function that walks the AST and produces
-/// normalized Markdown output.
-fn render_node<'a>(
+/// Replace escaped characters with placeholders, but only outside fenced code blocks.
+/// This prevents comrak from stripping backslash escapes during parsing.
+fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let had_trailing_newline = text.ends_with('\n');
+    let mut result = Vec::new();
+    let mut in_code = false;
+    let mut fence_str = String::new();
+
+    for line in &lines {
+        if in_code {
+            result.push(line.to_string());
+            // Check for closing fence
+            let trimmed = line.trim();
+            if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
+                let rest = &trimmed[fence_str.len()..];
+                if rest.chars().all(|c| {
+                    c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace()
+                }) {
+                    in_code = false;
+                }
+            }
+        } else {
+            let trimmed = line.trim();
+            // Check for opening fence (```, ~~~, or longer)
+            let is_backtick_fence = trimmed.starts_with("```");
+            let is_tilde_fence = trimmed.starts_with("~~~");
+            if is_backtick_fence || is_tilde_fence {
+                let fence_char = if is_backtick_fence { '`' } else { '~' };
+                let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
+                fence_str = std::iter::repeat(fence_char).take(fence_len).collect();
+                in_code = true;
+                result.push(line.to_string());
+            } else {
+                // Apply placeholder replacements outside code blocks
+                let mut processed = line.to_string();
+                for (escaped, placeholder) in placeholders {
+                    processed = processed.replace(escaped.as_str(), placeholder.as_str());
+                }
+                result.push(processed);
+            }
+        }
+    }
+
+    let mut output = result.join("\n");
+    if had_trailing_newline {
+        output.push('\n');
+    }
+    output
+}
+
+/// Remove unnecessary period escapes from the formatted output.
+/// Period escapes (\.) are only needed at the start of a line where
+/// `DIGITS\.` would be interpreted as an ordered list marker.
+/// In headings and mid-paragraph, period escapes are unnecessary.
+/// Preserves content inside code spans (backtick-delimited) and fenced code blocks.
+fn postprocess_period_escapes(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let had_trailing_newline = text.ends_with('\n');
+    let mut result = Vec::new();
+    let mut in_fenced_code = false;
+    let mut fence_str = String::new();
+
+    for line in &lines {
+        if in_fenced_code {
+            result.push(line.to_string());
+            let trimmed = line.trim();
+            if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
+                let rest = &trimmed[fence_str.len()..];
+                if rest.chars().all(|c| {
+                    c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace()
+                }) {
+                    in_fenced_code = false;
+                }
+            }
+            continue;
+        }
+
+        let trimmed = line.trim();
+        // Check for fenced code block opening
+        let is_backtick_fence = trimmed.starts_with("```");
+        let is_tilde_fence = trimmed.starts_with("~~~");
+        if is_backtick_fence || is_tilde_fence {
+            let fence_char = if is_backtick_fence { '`' } else { '~' };
+            let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
+            fence_str = std::iter::repeat(fence_char).take(fence_len).collect();
+            in_fenced_code = true;
+            result.push(line.to_string());
+            continue;
+        }
+
+        let trimmed_start = line.trim_start();
+
+        if trimmed_start.starts_with('#') {
+            // Heading line: remove period escapes but preserve code spans
+            result.push(remove_period_escapes_preserving_code(line));
+        } else {
+            // Strip blockquote markers for content analysis
+            let after_quotes = trimmed_start
+                .trim_start_matches(|c: char| c == '>' || c.is_whitespace());
+
+            // Check if content starts with DIGITS\.
+            let digit_end = after_quotes
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(after_quotes.len());
+
+            if digit_end > 0 && after_quotes[digit_end..].starts_with("\\.") {
+                // DIGITS\. at effective line start: keep the escape to prevent list interpretation
+                result.push(line.to_string());
+            } else {
+                // No list-like pattern at start: remove period escapes, preserving code spans
+                result.push(remove_period_escapes_preserving_code(line));
+            }
+        }
+    }
+
+    let mut output = result.join("\n");
+    if had_trailing_newline {
+        output.push('\n');
+    }
+    output
+}
+
+/// Remove `\.` → `.` on a single line, but preserve content inside backtick code spans.
+fn remove_period_escapes_preserving_code(line: &str) -> String {
+    let mut result = String::new();
+    let chars: Vec<char> = line.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+
+    while i < len {
+        if chars[i] == '`' {
+            // Found backtick(s) - measure opening sequence length
+            let bt_count = chars[i..].iter().take_while(|&&c| c == '`').count();
+            // Copy opening backticks
+            for _ in 0..bt_count {
+                result.push('`');
+            }
+            i += bt_count;
+
+            // Find matching closing backtick sequence (same length)
+            let mut found_close = false;
+            while i < len {
+                if chars[i] == '`' {
+                    let close_count = chars[i..].iter().take_while(|&&c| c == '`').count();
+                    if close_count == bt_count {
+                        // Matching close: copy and exit code span
+                        for _ in 0..close_count {
+                            result.push('`');
+                        }
+                        i += close_count;
+                        found_close = true;
+                        break;
+                    } else {
+                        // Non-matching backticks: copy as code content
+                        for _ in 0..close_count {
+                            result.push('`');
+                        }
+                        i += close_count;
+                    }
+                } else {
+                    // Inside code span: copy literally (no escape processing)
+                    result.push(chars[i]);
+                    i += 1;
+                }
+            }
+            if !found_close {
+                // Unmatched backticks: already copied, continue
+            }
+        } else if chars[i] == '\\' && i + 1 < len && chars[i + 1] == '.' {
+            // \. outside code span → just .
+            result.push('.');
+            i += 2;
+        } else {
+            result.push(chars[i]);
+            i += 1;
+        }
+    }
+
+    result
+}
+
+/// Check if a node is a block-level element that needs blank line separation.
+fn is_block_element(node: &AstNode) -> bool {
+    matches!(
+        node.data.borrow().value,
+        NodeValue::Paragraph
+            | NodeValue::Heading(_)
+            | NodeValue::List(_)
+            | NodeValue::BlockQuote
+            | NodeValue::CodeBlock(_)
+            | NodeValue::ThematicBreak
+            | NodeValue::HtmlBlock(_)
+            | NodeValue::Table(_)
+            | NodeValue::FootnoteDefinition(_)
+            | NodeValue::Alert(_)
+    )
+}
+
+/// Check if inline content ends with a hard break (backslash before newline).
+fn inline_ends_with_hard_break<'a>(node: &'a AstNode<'a>) -> bool {
+    let children: Vec<_> = node.children().collect();
+    if let Some(last_child) = children.last() {
+        // Check for explicit LineBreak node
+        if matches!(last_child.data.borrow().value, NodeValue::LineBreak) {
+            return true;
+        }
+        // Check if last text node ends with backslash (hard break in headings)
+        if let NodeValue::Text(ref text) = last_child.data.borrow().value {
+            if text.ends_with('\\') {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Render block children with proper blank line separation between them.
+fn render_block_children<'a>(
     node: &'a AstNode<'a>,
     line_wrapper: &LineWrapper,
     list_spacing: ListSpacing,
     prefix: &str,
     subsequent_prefix: &str,
-    suppress_item_break: &mut bool,
-    skip_next_blank: &mut bool,
     in_heading: &mut bool,
-    current_list_tight: &mut bool,
+    options: &Options,
+) -> String {
+    let mut output = String::new();
+    let mut prev_was_block = false;
+    let mut prev_ended_with_double_newline = false;
+    let mut prev_was_hard_break_heading = false;
+
+    for child in node.children() {
+        let child_is_block = is_block_element(child);
+
+        // Check if current child is a hard-break heading
+        let child_is_hard_break_heading = matches!(child.data.borrow().value, NodeValue::Heading(_))
+            && inline_ends_with_hard_break(child);
+
+        // Add blank line between consecutive block elements,
+        // unless adjacent to a heading ending with a hard break
+        if child_is_block && prev_was_block && !prev_ended_with_double_newline
+            && !prev_was_hard_break_heading && !child_is_hard_break_heading {
+            output.push('\n');
+        }
+
+        let block_output = render_block(
+            child,
+            line_wrapper,
+            list_spacing,
+            prefix,
+            subsequent_prefix,
+            in_heading,
+            options,
+        );
+        prev_ended_with_double_newline = block_output.ends_with("\n\n");
+        prev_was_hard_break_heading = matches!(child.data.borrow().value, NodeValue::Heading(_))
+            && inline_ends_with_hard_break(child);
+        output.push_str(&block_output);
+        prev_was_block = child_is_block;
+    }
+
+    output
+}
+
+/// Render block children within a quoted context (blockquote or alert).
+/// Uses `blank_prefix` (e.g., ">") for blank separator lines between blocks.
+fn render_block_children_quoted<'a>(
+    node: &'a AstNode<'a>,
+    line_wrapper: &LineWrapper,
+    list_spacing: ListSpacing,
+    prefix: &str,
+    subsequent_prefix: &str,
+    blank_prefix: &str,
+    in_heading: &mut bool,
+    options: &Options,
+) -> String {
+    let mut output = String::new();
+    let mut prev_was_block = false;
+    let mut prev_ended_with_double_newline = false;
+
+    for child in node.children() {
+        let child_is_block = is_block_element(child);
+
+        // Add blank line between consecutive block elements
+        // Use the blank_prefix (e.g., "> ") to maintain the quote context
+        if child_is_block && prev_was_block && !prev_ended_with_double_newline {
+            output.push_str(blank_prefix);
+            output.push_str(" \n");
+        }
+
+        let block_output = render_block(
+            child,
+            line_wrapper,
+            list_spacing,
+            prefix,
+            subsequent_prefix,
+            in_heading,
+            options,
+        );
+        prev_ended_with_double_newline = block_output.ends_with("\n\n");
+        output.push_str(&block_output);
+        prev_was_block = child_is_block;
+    }
+
+    output
+}
+
+/// Render a single block-level node.
+fn render_block<'a>(
+    node: &'a AstNode<'a>,
+    line_wrapper: &LineWrapper,
+    list_spacing: ListSpacing,
+    prefix: &str,
+    subsequent_prefix: &str,
+    in_heading: &mut bool,
     options: &Options,
 ) -> String {
     let mut output = String::new();
 
     match &node.data.borrow().value {
         NodeValue::Document => {
-            for child in node.children() {
-                output.push_str(&render_node(
-                    child,
-                    line_wrapper,
-                    list_spacing,
-                    prefix,
-                    subsequent_prefix,
-                    suppress_item_break,
-                    skip_next_blank,
-                    in_heading,
-                    current_list_tight,
-                    options,
-                ));
-            }
+            output = render_block_children(
+                node,
+                line_wrapper,
+                list_spacing,
+                prefix,
+                subsequent_prefix,
+                in_heading,
+                options,
+            );
         }
 
         NodeValue::Paragraph => {
-            *skip_next_blank = false;
-            *suppress_item_break = false;
-
             // Collect all inline content
             let inline_text = render_inline_children(node, options, *in_heading);
 
@@ -188,23 +491,23 @@ fn render_node<'a>(
             let inline_text = render_inline_children(node, options, true);
             *in_heading = false;
 
-            output.push_str(&format!("{prefix}{hashes} {inline_text}\n\n"));
-            *skip_next_blank = true;
-            *suppress_item_break = true;
+            // Check if heading ends with a hard break (either LineBreak node or trailing backslash)
+            let ends_with_hard_break = inline_ends_with_hard_break(node)
+                || inline_text.ends_with('\\');
+
+            output.push_str(&format!("{prefix}{hashes} {inline_text}\n"));
+            if !ends_with_hard_break {
+                output.push('\n');
+            }
         }
 
         NodeValue::List(list) => {
-            *skip_next_blank = false;
-
             // Determine effective tightness
             let is_tight = match list_spacing {
                 ListSpacing::Preserve => list.tight,
                 ListSpacing::Tight => can_be_tight(node),
                 ListSpacing::Loose => false,
             };
-
-            let old_tight = *current_list_tight;
-            *current_list_tight = is_tight;
 
             let is_ordered = matches!(list.list_type, ListType::Ordered);
             let start = list.start;
@@ -224,92 +527,53 @@ fn render_node<'a>(
                     )
                 };
 
-                let item_output = render_node(
+                // For loose lists, add blank line between items (except before first)
+                // Use the outer prefix (without list indentation) for the blank line
+                // to maintain blockquote context
+                if !is_tight && i > 0 {
+                    let blank_prefix = subsequent_prefix.trim_end();
+                    if blank_prefix.is_empty() {
+                        output.push('\n');
+                    } else {
+                        output.push_str(blank_prefix);
+                        output.push('\n');
+                    }
+                }
+
+                render_list_item(
                     child,
+                    &mut output,
                     line_wrapper,
                     list_spacing,
                     &item_prefix,
                     &item_subsequent,
-                    suppress_item_break,
-                    skip_next_blank,
                     in_heading,
-                    current_list_tight,
                     options,
                 );
-                output.push_str(&item_output);
             }
-
-            *current_list_tight = old_tight;
-        }
-
-        NodeValue::Item(_) => {
-            let mut item_output = String::new();
-
-            // For loose lists, add blank line between items
-            if !*current_list_tight {
-                if *suppress_item_break {
-                    *suppress_item_break = false;
-                } else {
-                    let sep = subsequent_prefix.trim_end();
-                    item_output.push_str(sep);
-                    item_output.push('\n');
-                }
-            }
-
-            // Render the item's children using the prefix passed to us
-            let mut first_child = true;
-            for child in node.children() {
-                let (p, sp) = if first_child {
-                    (prefix.to_string(), subsequent_prefix.to_string())
-                } else {
-                    (subsequent_prefix.to_string(), subsequent_prefix.to_string())
-                };
-                item_output.push_str(&render_node(
-                    child,
-                    line_wrapper,
-                    list_spacing,
-                    &p,
-                    &sp,
-                    suppress_item_break,
-                    skip_next_blank,
-                    in_heading,
-                    current_list_tight,
-                    options,
-                ));
-                first_child = false;
-            }
-
-            output.push_str(&item_output);
         }
 
         NodeValue::BlockQuote => {
-            *skip_next_blank = false;
             let q_prefix = format!("{prefix}> ");
             let q_subsequent = format!("{subsequent_prefix}> ");
 
-            let mut inner = String::new();
-            for child in node.children() {
-                inner.push_str(&render_node(
-                    child,
-                    line_wrapper,
-                    list_spacing,
-                    &q_prefix,
-                    &q_subsequent,
-                    suppress_item_break,
-                    skip_next_blank,
-                    in_heading,
-                    current_list_tight,
-                    options,
-                ));
-            }
+            let inner = render_block_children_quoted(
+                node,
+                line_wrapper,
+                list_spacing,
+                &q_prefix,
+                &q_subsequent,
+                &format!("{subsequent_prefix}>"),
+                in_heading,
+                options,
+            );
 
+            // Trim trailing newlines and re-add single newline
             output.push_str(&inner.trim_end_matches('\n'));
             output.push('\n');
-            *suppress_item_break = false;
         }
 
         NodeValue::CodeBlock(code_block) => {
-            *skip_next_blank = false;
             let info = &code_block.info;
             let literal = &code_block.literal;
             let code_content = literal.trim_end_matches('\n');
@@ -333,7 +597,7 @@ fn render_node<'a>(
 
             output.push_str(&format!("{prefix}{fence}{lang_text}\n"));
             let empty_prefix = subsequent_prefix.trim_end();
-            for line in code_content.lines() {
+            for line in code_content.split('\n') {
                 if line.is_empty() {
                     output.push_str(empty_prefix);
                     output.push('\n');
@@ -341,12 +605,7 @@ fn render_node<'a>(
                     output.push_str(&format!("{subsequent_prefix}{line}\n"));
                 }
             }
-            // Handle case where code content is empty
-            if code_content.is_empty() {
-                // No lines to output
-            }
             output.push_str(&format!("{subsequent_prefix}{fence}\n"));
-            *suppress_item_break = false;
         }
 
         NodeValue::ThematicBreak => {
@@ -354,7 +613,35 @@ fn render_node<'a>(
         }
 
         NodeValue::HtmlBlock(html) => {
-            output.push_str(&format!("{prefix}{}", html.literal));
+            let literal = &html.literal;
+            // Check if this HTML block has wrappable text content
+            // (e.g., HTML comments/tags mixed with regular text)
+            let trimmed = literal.trim();
+            let has_text_content = trimmed.len() > 0
+                && trimmed.contains(|c: char| c.is_alphabetic())
+                && trimmed.chars().filter(|&c| c == '<').count() > 0;
+
+            if has_text_content && trimmed.len() > 40 {
+                // Collapse internal whitespace and wrap as text
+                // Join all lines into a single line first
+                let single_line: String = literal
+                    .lines()
+                    .map(|l| l.trim())
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .trim()
+                    .to_string();
+                let wrapped = line_wrapper(&single_line, prefix, subsequent_prefix);
+                output.push_str(&wrapped);
+                output.push('\n');
+            } else {
+                // Short or non-wrappable HTML: pass through as-is
+                output.push_str(prefix);
+                output.push_str(literal);
+                if !literal.ends_with('\n') {
+                    output.push('\n');
+                }
+            }
         }
 
         NodeValue::Table(_) => {
@@ -396,7 +683,6 @@ fn render_node<'a>(
             let fn_prefix = format!("{prefix}{label_prefix}");
             let fn_subsequent = format!("{subsequent_prefix}    ");
 
-            let mut inner = String::new();
             let mut first_child = true;
             for child in node.children() {
                 let (p, sp) = if first_child {
@@ -404,83 +690,61 @@ fn render_node<'a>(
                 } else {
                     (fn_subsequent.clone(), fn_subsequent.clone())
                 };
-                inner.push_str(&render_node(
+                let child_output = render_block(
                     child,
                     line_wrapper,
                     list_spacing,
                     &p,
                     &sp,
-                    suppress_item_break,
-                    skip_next_blank,
                     in_heading,
-                    current_list_tight,
                     options,
-                ));
+                );
+                output.push_str(&child_output);
                 first_child = false;
             }
 
-            output.push_str(&inner.trim_end_matches('\n'));
-            output.push_str("\n\n");
-            *suppress_item_break = true;
+            // Ensure proper ending
+            if !output.ends_with("\n\n") {
+                if output.ends_with('\n') {
+                    output.push('\n');
+                } else {
+                    output.push_str("\n\n");
+                }
+            }
         }
-
-        NodeValue::SoftBreak => {
-            output.push('\n');
-        }
-
-        NodeValue::LineBreak => {
-            output.push_str("\\\n");
-        }
-
-        // Note: comrak v0.36 has no BlankLine variant; blank lines are handled
-        // during post-processing normalization.
 
         NodeValue::Alert(alert) => {
-            *skip_next_blank = false;
             let alert_type = format!("{:?}", alert.alert_type).to_uppercase();
             output.push_str(&format!("> [!{alert_type}]\n"));
 
             let q_prefix = format!("{prefix}> ");
             let q_subsequent = format!("{subsequent_prefix}> ");
 
-            let mut inner = String::new();
-            for child in node.children() {
-                inner.push_str(&render_node(
-                    child,
-                    line_wrapper,
-                    list_spacing,
-                    &q_prefix,
-                    &q_subsequent,
-                    suppress_item_break,
-                    skip_next_blank,
-                    in_heading,
-                    current_list_tight,
-                    options,
-                ));
-            }
+            let inner = render_block_children_quoted(
+                node,
+                line_wrapper,
+                list_spacing,
+                &q_prefix,
+                &q_subsequent,
+                &format!("{subsequent_prefix}>"),
+                in_heading,
+                options,
+            );
 
             output.push_str(&inner.trim_end_matches('\n'));
             output.push('\n');
-            *suppress_item_break = false;
         }
 
-        // Note: comrak v0.36 has no LinkReference variant; link references
-        // are resolved during parsing.
-
-        // Inline elements - handled by render_inline_children
+        // Inline elements and other node types
         _ => {
-            // For any other node types, render children
             for child in node.children() {
-                output.push_str(&render_node(
+                output.push_str(&render_block(
                     child,
                     line_wrapper,
                     list_spacing,
                     prefix,
                     subsequent_prefix,
-                    suppress_item_break,
-                    skip_next_blank,
                     in_heading,
-                    current_list_tight,
                     options,
                 ));
             }
@@ -488,6 +752,91 @@ fn render_node<'a>(
     }
 
     output
+}
+
+/// Check if a list item needs blank lines between its children.
+/// This is true when:
+/// - The item's parent list is loose (not tight)
+/// - OR the item has multiple block children that aren't just para+nested-list
+fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, parent_is_tight: bool) -> bool {
+    if !parent_is_tight {
+        // For loose lists, always add blank lines between children
+        return true;
+    }
+    let children: Vec<_> = node.children().collect();
+    if children.len() <= 1 {
+        return false;
+    }
+    // For tight lists, only add spacing if there are multiple paragraphs
+    // (not counting para + nested list as needing spacing)
+    let para_count = children.iter().filter(|c| {
+        matches!(c.data.borrow().value, NodeValue::Paragraph)
+    }).count();
+    para_count > 1
+}
+
+/// Render a list item's children.
+fn render_list_item<'a>(
+    node: &'a AstNode<'a>,
+    output: &mut String,
+    line_wrapper: &LineWrapper,
+    list_spacing: ListSpacing,
+    item_prefix: &str,
+    item_subsequent: &str,
+    in_heading: &mut bool,
+    options: &Options,
+) {
+    let mut first_child = true;
+    let children: Vec<_> = node.children().collect();
+
+    // Check if parent list is tight by looking at the list spacing context
+    // We determine this by checking if the parent list node is tight
+    let parent_is_tight = node.parent().map_or(false, |parent| {
+        if let NodeValue::List(list) = &parent.data.borrow().value {
+            match list_spacing {
+                ListSpacing::Preserve => list.tight,
+                ListSpacing::Tight => can_be_tight(parent),
+                ListSpacing::Loose => false,
+            }
+        } else {
+            false
+        }
+    });
+
+    let needs_spacing = item_needs_child_spacing(node, parent_is_tight);
+
+    for (i, child) in children.iter().enumerate() {
+        let (p, sp) = if first_child {
+            (item_prefix.to_string(), item_subsequent.to_string())
+        } else {
+            (item_subsequent.to_string(), item_subsequent.to_string())
+        };
+
+        // Add blank line between children in a list item
+        if !first_child && needs_spacing {
+            // Check if previous child was heading that ends with double newline
+            let prev_ended_double = if i > 0 {
+                matches!(children[i-1].data.borrow().value, NodeValue::Heading(_))
+            } else {
+                false
+            };
+            if !prev_ended_double {
+                output.push('\n');
+            }
+        }
+
+        let child_output = render_block(
+            child,
+            line_wrapper,
+            list_spacing,
+            &p,
+            &sp,
+            in_heading,
+            options,
+        );
+        output.push_str(&child_output);
+        first_child = false;
+    }
 }
 
 /// Render inline children of a node to a flat string.
@@ -555,18 +904,11 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
         NodeValue::LineBreak => "\\\n".to_string(),
 
         NodeValue::Escaped => {
-            // Escaped character - the children will contain the character
+            // Escaped character - the children will contain the character.
+            // Most escapes are handled via placeholders (pre-processing), but
+            // comrak may still create Escaped nodes for some characters.
             let inner = render_inline_children(node, options, in_heading);
-            if inner == "." && in_heading {
-                // In headings, periods don't need escaping
-                ".".to_string()
-            } else if inner == "." {
-                // Only escape if it would form a list marker
-                // For now, preserve the escape
-                format!("\\{inner}")
-            } else {
-                format!("\\{inner}")
-            }
+            format!("\\{inner}")
         }
 
         NodeValue::FootnoteReference(fr) => {
@@ -697,6 +1039,26 @@ pub fn fill_markdown(
     // Preprocess: ensure proper blank lines around block content within tags
     text = preprocess_tag_block_spacing(&text);
 
+    // Protect escaped characters from being stripped by comrak.
+    // comrak strips backslash escapes (e.g., \~ → ~, \* → *) in the AST for most chars.
+    // Period (\.) is handled by comrak's Escaped node, so we exclude it here.
+    // We use Unicode Private Use Area placeholders to preserve escapes through the pipeline.
+    // IMPORTANT: \\ must be first so \\X doesn't get partially matched as \X.
+    // Period (.) IS included: comrak converts `1\.` to list items, losing the escape.
+    const ESCAPE_CHARS: &[char] = &[
+        '\\', '~', '*', '#', '-', '+', '>', '.', '!', '[', ']', '(', ')', '{', '}', '$', '_', '|', '`',
+    ];
+    let mut escape_placeholders: Vec<(String, String)> = Vec::new();
+    for &ch in ESCAPE_CHARS {
+        let escaped = format!("\\{ch}");
+        // Use a single PUA character per escape char for consistent width measurement.
+        // Map to U+E000 + ASCII code point of the escaped character.
+        let placeholder = char::from_u32(0xE000 + ch as u32).unwrap().to_string();
+        escape_placeholders.push((escaped, placeholder));
+    }
+    // Apply replacements, but skip inside fenced code blocks
+    text = protect_escapes_outside_code(&text, &escape_placeholders);
+
     // Parse with comrak
     let arena = Arena::new();
     let options = flowmark_comrak_options();
@@ -716,23 +1078,26 @@ pub fn fill_markdown(
     }
 
     // Render the AST to normalized markdown
-    let mut suppress_item_break = true;
-    let mut skip_next_blank = false;
     let mut in_heading = false;
-    let mut current_list_tight = false;
 
-    let result = render_node(
+    let result = render_block(
         root,
         &line_wrapper,
         list_spacing,
         "",
         "",
-        &mut suppress_item_break,
-        &mut skip_next_blank,
         &mut in_heading,
-        &mut current_list_tight,
         &options,
     );
+
+    // Restore all escaped characters from placeholders
+    let mut result = result;
+    for (escaped, placeholder) in &escape_placeholders {
+        result = result.replace(placeholder.as_str(), escaped.as_str());
+    }
+
+    // Remove unnecessary period escapes (keep only at line starts where they prevent list interpretation)
+    let result = postprocess_period_escapes(&result);
 
     // Apply text-level normalizations
     let result = normalize_comrak_output(&result);
@@ -746,11 +1111,79 @@ pub fn fill_markdown(
 }
 
 /// Apply smart quotes to all text nodes in the AST.
+/// Works at the paragraph level so quotes spanning inline elements are handled.
 fn apply_smart_quotes_to_ast<'a>(root: &'a AstNode<'a>) {
     for node in root.descendants() {
-        let mut data = node.data.borrow_mut();
-        if let NodeValue::Text(ref mut text) = data.value {
-            *text = smart_quotes(text);
+        let is_para = matches!(
+            node.data.borrow().value,
+            NodeValue::Paragraph | NodeValue::Heading(_) | NodeValue::TableCell
+        );
+        if is_para {
+            apply_smart_quotes_to_inline_tree(node);
+        }
+    }
+}
+
+/// Collect text nodes from inline tree, apply smart quotes to concatenated text,
+/// then redistribute back.
+fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
+    // Collect all text nodes with their content
+    let mut text_nodes: Vec<&'a AstNode<'a>> = Vec::new();
+    let mut concatenated = String::new();
+    let mut char_boundaries: Vec<(usize, usize)> = Vec::new(); // (start, len) in chars
+
+    fn collect_text_nodes<'a>(
+        node: &'a AstNode<'a>,
+        text_nodes: &mut Vec<&'a AstNode<'a>>,
+        concatenated: &mut String,
+        char_boundaries: &mut Vec<(usize, usize)>,
+    ) {
+        for child in node.children() {
+            let data = child.data.borrow();
+            match &data.value {
+                NodeValue::Text(text) => {
+                    let start = concatenated.chars().count();
+                    let len = text.chars().count();
+                    concatenated.push_str(text);
+                    char_boundaries.push((start, len));
+                    text_nodes.push(child);
+                }
+                NodeValue::Code(_) | NodeValue::HtmlInline(_) => {
+                    // Skip code spans and raw HTML - don't apply smart quotes
+                    // But add placeholder chars to maintain context
+                    concatenated.push_str("X"); // placeholder for quote context
+                }
+                NodeValue::SoftBreak => {
+                    concatenated.push(' ');
+                }
+                _ => {
+                    // Recurse into emphasis, strong, link, etc.
+                    drop(data);
+                    collect_text_nodes(child, text_nodes, concatenated, char_boundaries);
+                }
+            }
+        }
+    }
+
+    collect_text_nodes(node, &mut text_nodes, &mut concatenated, &mut char_boundaries);
+
+    if text_nodes.is_empty() {
+        return;
+    }
+
+    // Apply smart quotes to the full concatenated text
+    let converted = smart_quotes(&concatenated);
+
+    // Redistribute characters back to text nodes
+    let converted_chars: Vec<char> = converted.chars().collect();
+    for (i, text_node) in text_nodes.iter().enumerate() {
+        let (start, len) = char_boundaries[i];
+        if start + len <= converted_chars.len() {
+            let new_text: String = converted_chars[start..start + len].iter().collect();
+            let mut data = text_node.data.borrow_mut();
+            if let NodeValue::Text(ref mut text) = data.value {
+                *text = new_text;
+            }
         }
     }
 }

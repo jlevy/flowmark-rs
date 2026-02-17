@@ -5,7 +5,6 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-use crate::config::DEFAULT_WRAP_WIDTH;
 use crate::wrapping::text_wrapping::{html_md_word_split, wrap_paragraph};
 
 /// Default indent string.

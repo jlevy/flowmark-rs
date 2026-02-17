@@ -59,7 +59,6 @@ fn apply_smart_quotes_to_text(text: &str) -> String {
         .into_owned();
 
     // Handle apostrophes/contractions - process word by word
-    let parts: Vec<&str> = result.split_inclusive(char::is_whitespace).collect();
     let mut output = String::new();
 
     // Split by whitespace while preserving the separators
