@@ -8,6 +8,6 @@ priority: 3
 status: open
 title: "Review reference: python-to-rust-test-coverage-playbook.md (run coverage, check 90%+ target)"
 type: is
-updated_at: 2026-02-17T18:53:44.034Z
-version: 1
+updated_at: 2026-02-17T18:55:47.185Z
+version: 2
 ---

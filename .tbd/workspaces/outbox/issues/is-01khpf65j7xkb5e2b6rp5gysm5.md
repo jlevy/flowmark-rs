@@ -8,6 +8,6 @@ priority: 2
 status: open
 title: Review previous implementation (attic/flowmark-rs-1) for architectural choices
 type: is
-updated_at: 2026-02-17T18:53:16.230Z
-version: 1
+updated_at: 2026-02-17T18:55:47.117Z
+version: 2
 ---

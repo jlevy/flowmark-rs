@@ -8,6 +8,6 @@ priority: 1
 status: open
 title: "Bug: Extra blank line before HTML comment tag on list continuation line"
 type: is
-updated_at: 2026-02-17T18:55:09.251Z
-version: 3
+updated_at: 2026-02-17T18:55:47.095Z
+version: 4
 ---

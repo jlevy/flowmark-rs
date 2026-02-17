@@ -24,6 +24,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: Add Python smoke test for YAML round-trip serialization
 type: is
-updated_at: 2026-02-17T18:55:09.237Z
-version: 12
+updated_at: 2026-02-17T18:55:47.084Z
+version: 13
 ---

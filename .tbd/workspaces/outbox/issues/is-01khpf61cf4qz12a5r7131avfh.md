@@ -8,6 +8,6 @@ priority: 1
 status: open
 title: "Complete partial test: test_other_escaped_chars (add dollar, underscore, bracket, backtick assertions)"
 type: is
-updated_at: 2026-02-17T18:53:11.950Z
-version: 1
+updated_at: 2026-02-17T18:55:47.112Z
+version: 2
 ---

@@ -12,6 +12,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: "CI integration: run check-mapping in CI pipeline"
 type: is
-updated_at: 2026-02-17T18:55:09.176Z
-version: 6
+updated_at: 2026-02-17T18:55:47.021Z
+version: 7
 ---

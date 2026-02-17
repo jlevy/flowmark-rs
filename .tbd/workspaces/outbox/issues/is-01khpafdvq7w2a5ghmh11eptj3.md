@@ -33,6 +33,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: open
 title: "Spec: Exact Cross-Language Parity"
 type: is
-updated_at: 2026-02-17T18:55:09.182Z
-version: 18
+updated_at: 2026-02-17T18:55:47.027Z
+version: 19
 ---

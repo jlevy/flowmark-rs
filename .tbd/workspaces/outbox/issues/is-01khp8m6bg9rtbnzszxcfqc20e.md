@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: Re-generate YAML artifacts with full 178-test Rust manifest
 type: is
-updated_at: 2026-02-17T18:55:09.158Z
-version: 8
+updated_at: 2026-02-17T18:55:47.003Z
+version: 9
 ---

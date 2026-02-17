@@ -8,6 +8,6 @@ priority: 3
 status: open
 title: "Review guideline: test-coverage-for-porting.md (coverage tools, targets)"
 type: is
-updated_at: 2026-02-17T18:53:38.295Z
-version: 1
+updated_at: 2026-02-17T18:55:47.164Z
+version: 2
 ---
