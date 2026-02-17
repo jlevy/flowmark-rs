@@ -1,4 +1,6 @@
 ---
+close_reason: Smartquotes parity reviewed — 5 new integration tests pass
+closed_at: 2026-02-17T18:04:09.666Z
 created_at: 2026-02-17T17:31:15.892Z
 dependencies:
   - target: is-01khpag10s391w5f4j22nprfgm
@@ -9,9 +11,9 @@ labels: []
 parent_id: is-01khpafdvq7w2a5ghmh11eptj3
 priority: 2
 spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
-status: open
+status: closed
 title: Review smartquotes for behavioral parity
 type: is
-updated_at: 2026-02-17T17:39:36.339Z
-version: 3
+updated_at: 2026-02-17T18:06:05.130Z
+version: 4
 ---

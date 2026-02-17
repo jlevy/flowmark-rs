@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: Add idempotent merge to discover-python and discover-rust
 type: is
-updated_at: 2026-02-17T17:39:36.256Z
-version: 6
+updated_at: 2026-02-17T18:06:05.049Z
+version: 7
 ---

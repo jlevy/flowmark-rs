@@ -10,6 +10,6 @@ priority: 0
 status: closed
 title: Set up Rust project structure (Cargo.toml, module hierarchy)
 type: is
-updated_at: 2026-02-17T17:39:36.150Z
-version: 5
+updated_at: 2026-02-17T18:06:04.945Z
+version: 6
 ---

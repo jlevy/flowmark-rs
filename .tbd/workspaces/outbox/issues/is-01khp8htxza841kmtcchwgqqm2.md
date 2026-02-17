@@ -18,6 +18,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: open
 title: "Spec: Cross-Language Test Mapping (Port Coverage)"
 type: is
-updated_at: 2026-02-17T17:39:36.237Z
-version: 11
+updated_at: 2026-02-17T18:06:05.030Z
+version: 12
 ---
