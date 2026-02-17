@@ -64,28 +64,53 @@ as infrastructure-only), there is a passing Rust test that verifies the same beh
 
 ### Test File Coverage Summary
 
-| Python Test File | # Tests | Rust Tests Exist? | Notes |
+### Mapping Summary (from `check-mapping` output)
+
+| Status | Count | Description |
+|---|---|---|
+| **Mapped** | 137 | Direct Rust equivalent exists and verified |
+| **Excluded** | 79 | Infrastructure-only, not applicable to Rust |
+| **Missing** | 64 | Need to be ported |
+| **Partial** | 1 | Rust test covers subset |
+
+**27 extra Rust tests** (unit tests in `src/` not mapped to Python) — these are
+Rust-native tests, not gaps.
+
+### Missing Tests by File
+
+| Python Test File | Missing | Total | Notes |
 |---|---|---|---|
-| `test_alerts.py` | 15 | Yes (13) | 2 missing |
-| `test_cleanups.py` | 1 | Yes (1) | Complete |
-| `test_ellipses.py` | 1 | Yes (10) | 1:N split, complete |
-| `test_escape_handling.py` | 12 | Yes (7) | 5 missing |
-| `test_fenced_code_blocks.py` | 12 | Yes (11) | 1 missing |
-| `test_filling.py` | 2 | Yes (2) | Complete |
-| `test_frontmatter.py` | 3 | Yes (7) | 1:N split, complete |
-| `test_heading_spacing.py` | 9 | Yes (8) | 1 missing |
-| `test_list_spacing.py` | 20 | Yes (18) | 2 missing |
-| `test_ref_docs.py` | 1 | Yes (1) | Complete |
-| `test_sentences.py` | 2 | Yes (2+) | Complete |
-| `test_smartquotes.py` | 28 | Yes (27+) | Review needed |
-| `test_strikethrough.py` | 11 | Yes (9) | 2 missing |
-| `test_tag_formatting.py` | 30 | Yes (17) | ~13 missing |
-| `test_width_options.py` | 7 | Yes (6) | 1 missing |
-| `test_wrapping.py` | 48 | Yes (16) | ~32 missing |
-| `test_cli_file_discovery.py` | 18 | No | Excluded (infrastructure) |
-| `test_config.py` | 18 | No | Excluded (infrastructure) |
-| `test_file_resolver.py` | 28 | No | Excluded (infrastructure) |
-| `test_skill.py` | 9 | No | Excluded (infrastructure) |
+| `test_wrapping.py` | 32 | 48 | Largest gap — block heuristics, tag spacing, self-closing tags |
+| `test_tag_formatting.py` | 15 | 30 | Multiline tags, selection fields, smart quotes in tags |
+| `test_escape_handling.py` | 5 | 12 | List/quote/table escapes, mixed escapes |
+| `test_smartquotes.py` | 5 | 28 | Blockquote/table integration tests |
+| `test_alerts.py` | 2 | 15 | Empty alert type, quote with link-like content |
+| `test_strikethrough.py` | 2 | 11 | Tilde space opener/closer |
+| `test_fenced_code_blocks.py` | 1 | 12 | Minimum backticks computed from content |
+| `test_heading_spacing.py` | 1 | 9 | Hard break in list heading |
+| `test_width_options.py` | 1 | 7 | Negative width disables wrapping |
+
+### Fully Mapped Files (no gaps)
+
+| Python Test File | # Tests | Notes |
+|---|---|---|
+| `test_cleanups.py` | 1 | Complete |
+| `test_ellipses.py` | 1 | 1:N split into 10 Rust functions |
+| `test_filling.py` | 2 | Complete |
+| `test_frontmatter.py` | 3 | 1:N split into 5+ Rust functions |
+| `test_list_spacing.py` | 20 | Complete |
+| `test_ref_docs.py` | 1 | Golden test, complete |
+| `test_sentences.py` | 2 | Complete |
+
+### Excluded Files (infrastructure)
+
+| File | # Tests | Reason |
+|---|---|---|
+| `test_cli_file_discovery.py` | 18 | Python CLI arg handling, `--auto` mode, stdin |
+| `test_config.py` | 18 | Python TOML config, pyproject.toml, config merging |
+| `test_file_resolver.py` | 28 | Python file glob, gitignore, exclude patterns |
+| `test_skill.py` | 9 | Python skill/plugin system for Claude Code |
+| *(6 from other files)* | 6 | Individual tests within ported files that are infra-only |
 
 ## Design
 
@@ -185,14 +210,14 @@ during the parity process:
 - [ ] Review 1:N split cases (ellipses, frontmatter) for correctness
 - [ ] Document all exclusions with rationale
 
-### Phase 2: Port Missing Tests and Fix Gaps
+### Phase 2: Port Missing Tests and Fix Gaps (64 tests)
 
-- [ ] Port ~13 missing tag formatting tests to `tests/test_tag_formatting.rs`
-- [ ] Port ~32 missing wrapping tests to `tests/test_wrapping.rs`
+- [ ] Port 32 missing wrapping tests to `tests/test_wrapping.rs`
+- [ ] Port 15 missing tag formatting tests to `tests/test_tag_formatting.rs`
 - [ ] Port 5 missing escape handling tests to `tests/test_escape_handling.rs`
-- [ ] Port scattered missing tests (alerts, strikethrough, heading spacing, list
-  spacing, fenced code blocks, width options)
-- [ ] Review smartquotes for any behavioral differences
+- [ ] Port 5 missing smartquotes integration tests to `tests/test_smartquotes.rs`
+- [ ] Port 7 scattered missing tests (2 alerts, 2 strikethrough, 1 heading spacing,
+  1 fenced code blocks, 1 width options)
 - [ ] Fix any Rust implementation bugs discovered during test porting
 - [ ] Update `test-mapping.yaml` as tests are added (change `missing` → `mapped`)
 
