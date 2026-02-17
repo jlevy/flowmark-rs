@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: closed
 title: Port 5 missing escape handling tests (test_escape_handling.rs)
 type: is
-updated_at: 2026-02-17T18:06:05.117Z
-version: 4
+updated_at: 2026-02-17T18:55:09.213Z
+version: 5
 ---

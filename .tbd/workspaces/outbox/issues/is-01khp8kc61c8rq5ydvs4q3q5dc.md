@@ -16,6 +16,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: Switch discover-rust to cargo-based discovery with regex fallback
 type: is
-updated_at: 2026-02-17T18:06:05.043Z
-version: 8
+updated_at: 2026-02-17T18:55:09.146Z
+version: 9
 ---

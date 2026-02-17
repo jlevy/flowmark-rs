@@ -11,6 +11,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: Populate test_mapping.json with verified mappings for all Python tests
 type: is
-updated_at: 2026-02-17T18:06:05.024Z
-version: 5
+updated_at: 2026-02-17T18:55:09.126Z
+version: 6
 ---

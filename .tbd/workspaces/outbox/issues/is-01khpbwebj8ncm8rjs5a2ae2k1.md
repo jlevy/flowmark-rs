@@ -4,10 +4,10 @@ dependencies: []
 id: is-01khpbwebj8ncm8rjs5a2ae2k1
 kind: bug
 labels: []
-priority: 2
+priority: 1
 status: open
 title: "Bug: Escape at start of list item content not preserved (1\\. removed instead of kept)"
 type: is
-updated_at: 2026-02-17T17:55:31.825Z
-version: 1
+updated_at: 2026-02-17T18:55:09.261Z
+version: 3
 ---

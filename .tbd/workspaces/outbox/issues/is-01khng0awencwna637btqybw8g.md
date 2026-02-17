@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Implement reformat API and CLI
 type: is
-updated_at: 2026-02-17T18:06:05.004Z
-version: 5
+updated_at: 2026-02-17T18:55:09.108Z
+version: 6
 ---

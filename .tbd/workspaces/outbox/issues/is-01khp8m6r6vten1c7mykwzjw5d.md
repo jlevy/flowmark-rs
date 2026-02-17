@@ -12,6 +12,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: Run ruff and basedpyright, fix lint/type issues
 type: is
-updated_at: 2026-02-17T18:06:05.064Z
-version: 6
+updated_at: 2026-02-17T18:55:09.164Z
+version: 7
 ---

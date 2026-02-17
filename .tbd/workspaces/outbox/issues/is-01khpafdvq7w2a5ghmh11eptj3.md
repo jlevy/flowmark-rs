@@ -10,7 +10,21 @@ child_order_hints:
   - is-01khpag10s391w5f4j22nprfgm
   - is-01khparv02wpxxktcme0tqpyk2
 created_at: 2026-02-17T17:30:56.758Z
-dependencies: []
+dependencies:
+  - target: is-01khpf61cf4qz12a5r7131avfh
+    type: blocks
+  - target: is-01khpf65j7xkb5e2b6rp5gysm5
+    type: blocks
+  - target: is-01khpf69jj9q5vxyt8ppqngw9a
+    type: blocks
+  - target: is-01khpf6dqs2wnvgn8nkkmxkst3
+    type: blocks
+  - target: is-01khpbwebj8ncm8rjs5a2ae2k1
+    type: blocks
+  - target: is-01khpc3hry62c4wdj3d561gc9p
+    type: blocks
+  - target: is-01khpbs8bybcnyx72ndxzrwpwa
+    type: blocks
 id: is-01khpafdvq7w2a5ghmh11eptj3
 kind: epic
 labels: []
@@ -19,6 +33,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: open
 title: "Spec: Exact Cross-Language Parity"
 type: is
-updated_at: 2026-02-17T18:06:05.083Z
-version: 12
+updated_at: 2026-02-17T18:55:09.182Z
+version: 18
 ---

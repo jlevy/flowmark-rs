@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Implement text wrapping and sentence splitting
 type: is
-updated_at: 2026-02-17T18:06:04.970Z
-version: 5
+updated_at: 2026-02-17T18:55:09.075Z
+version: 6
 ---
