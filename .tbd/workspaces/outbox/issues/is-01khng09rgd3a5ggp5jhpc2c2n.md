@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Implement typography transforms (smart quotes, ellipses)
 type: is
-updated_at: 2026-02-17T20:36:55.845Z
-version: 9
+updated_at: 2026-02-17T23:55:17.754Z
+version: 10
 ---

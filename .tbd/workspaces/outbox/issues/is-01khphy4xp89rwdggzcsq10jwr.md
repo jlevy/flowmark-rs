@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Fix 70 clippy warnings across lib and bin (doc_markdown, format_push_string, manual_repeat_n, etc.)
 type: is
-updated_at: 2026-02-17T19:54:39.557Z
-version: 3
+updated_at: 2026-02-17T23:55:18.110Z
+version: 4
 ---

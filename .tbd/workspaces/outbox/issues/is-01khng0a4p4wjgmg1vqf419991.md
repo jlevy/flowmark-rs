@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Implement document transforms and cleanups
 type: is
-updated_at: 2026-02-17T20:36:55.853Z
-version: 9
+updated_at: 2026-02-17T23:55:17.760Z
+version: 10
 ---

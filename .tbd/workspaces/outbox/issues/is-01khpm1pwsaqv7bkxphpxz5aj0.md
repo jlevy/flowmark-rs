@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: "P1: Refactor main() error handling - anyhow, ExitCode, SIGPIPE"
 type: is
-updated_at: 2026-02-17T20:21:24.408Z
-version: 3
+updated_at: 2026-02-17T23:55:18.130Z
+version: 4
 ---

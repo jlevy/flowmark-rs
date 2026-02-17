@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review reference: rust-cli-best-practices.md (CI/CD, release, cross-compilation)"
 type: is
-updated_at: 2026-02-17T20:36:56.123Z
-version: 4
+updated_at: 2026-02-17T23:55:18.067Z
+version: 5
 ---

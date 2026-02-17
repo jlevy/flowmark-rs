@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: "P1: Fix CI workflow and add deny.toml"
 type: is
-updated_at: 2026-02-17T20:23:44.918Z
-version: 3
+updated_at: 2026-02-17T23:55:18.143Z
+version: 4
 ---

@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: "P2: Project metadata, tooling config (rustfmt.toml, justfile, deny.toml, Cargo metadata)"
 type: is
-updated_at: 2026-02-17T20:23:45.333Z
-version: 2
+updated_at: 2026-02-17T23:55:18.165Z
+version: 3
 ---

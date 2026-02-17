@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: "P2: Restrict visibility with pub(crate)"
 type: is
-updated_at: 2026-02-17T20:32:44.041Z
-version: 2
+updated_at: 2026-02-17T23:55:18.173Z
+version: 3
 ---

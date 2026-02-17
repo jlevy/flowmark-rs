@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review guideline: python-to-rust-porting-rules.md (core porting rules)"
 type: is
-updated_at: 2026-02-17T20:36:56.081Z
-version: 4
+updated_at: 2026-02-17T23:55:18.017Z
+version: 5
 ---

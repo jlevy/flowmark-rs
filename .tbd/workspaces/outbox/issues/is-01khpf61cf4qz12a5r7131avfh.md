@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: "Complete partial test: test_other_escaped_chars (add dollar, underscore, bracket, backtick assertions)"
 type: is
-updated_at: 2026-02-17T20:36:56.047Z
-version: 4
+updated_at: 2026-02-17T23:55:17.982Z
+version: 5
 ---

@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review guideline: test-coverage-for-porting.md (coverage tools, targets)"
 type: is
-updated_at: 2026-02-17T20:36:56.104Z
-version: 4
+updated_at: 2026-02-17T23:55:18.046Z
+version: 5
 ---

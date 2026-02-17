@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: Re-run discover-rust to update rust-tests.yaml (178→243 tests)
 type: is
-updated_at: 2026-02-17T19:59:56.913Z
-version: 2
+updated_at: 2026-02-17T23:55:18.123Z
+version: 3
 ---

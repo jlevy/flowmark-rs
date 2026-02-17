@@ -13,6 +13,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: Build test mapping discovery scripts and meta-test infrastructure
 type: is
-updated_at: 2026-02-17T20:36:55.879Z
-version: 10
+updated_at: 2026-02-17T23:55:17.791Z
+version: 11
 ---

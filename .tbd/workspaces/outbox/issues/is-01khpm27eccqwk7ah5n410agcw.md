@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: "P2: Add edge case tests from old impl review (5 tests)"
 type: is
-updated_at: 2026-02-17T20:25:09.517Z
-version: 3
+updated_at: 2026-02-17T23:55:18.157Z
+version: 4
 ---

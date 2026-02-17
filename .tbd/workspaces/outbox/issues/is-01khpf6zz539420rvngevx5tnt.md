@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review reference: rust-code-review-checklist.md (apply to codebase)"
 type: is
-updated_at: 2026-02-17T20:36:56.117Z
-version: 4
+updated_at: 2026-02-17T23:55:18.060Z
+version: 5
 ---

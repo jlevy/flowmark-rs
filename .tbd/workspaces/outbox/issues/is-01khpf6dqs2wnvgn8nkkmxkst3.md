@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: "Meta-playbook review: fold learnings back into porting playbook"
 type: is
-updated_at: 2026-02-17T20:36:56.068Z
-version: 4
+updated_at: 2026-02-17T23:55:18.003Z
+version: 5
 ---

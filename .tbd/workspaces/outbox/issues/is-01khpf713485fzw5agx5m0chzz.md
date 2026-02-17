@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review reference: port-checklist-initial-template.md (verify completion gates)"
 type: is
-updated_at: 2026-02-17T20:36:56.135Z
-version: 4
+updated_at: 2026-02-17T23:55:18.082Z
+version: 5
 ---

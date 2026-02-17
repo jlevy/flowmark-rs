@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review guideline: rust-cli-app-patterns.md (error handling, logging)"
 type: is
-updated_at: 2026-02-17T20:36:56.087Z
-version: 4
+updated_at: 2026-02-17T23:55:18.025Z
+version: 5
 ---

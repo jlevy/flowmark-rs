@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review case study: flowmark-port-decision-log.md (verify 10 decisions)"
 type: is
-updated_at: 2026-02-17T20:36:56.141Z
-version: 4
+updated_at: 2026-02-17T23:55:18.089Z
+version: 5
 ---

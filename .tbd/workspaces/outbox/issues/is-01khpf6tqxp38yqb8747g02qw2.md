@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review guideline: rust-project-setup.md (Cargo.toml, CI, clippy)"
 type: is
-updated_at: 2026-02-17T20:36:56.099Z
-version: 4
+updated_at: 2026-02-17T23:55:18.039Z
+version: 5
 ---

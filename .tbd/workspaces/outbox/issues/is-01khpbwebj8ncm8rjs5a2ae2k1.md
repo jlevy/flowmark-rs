@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: "Bug: Escape at start of list item content not preserved (1\\. removed instead of kept)"
 type: is
-updated_at: 2026-02-17T20:36:56.027Z
-version: 6
+updated_at: 2026-02-17T23:55:17.968Z
+version: 7
 ---

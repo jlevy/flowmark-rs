@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: "P1: Wire up tracing or remove unused deps"
 type: is
-updated_at: 2026-02-17T20:21:25.225Z
-version: 2
+updated_at: 2026-02-17T23:55:18.150Z
+version: 3
 ---

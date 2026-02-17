@@ -10,6 +10,6 @@ priority: 2
 status: closed
 title: "Update exact parity spec: mark phases 3-4 DONE, update remaining work"
 type: is
-updated_at: 2026-02-17T19:59:56.502Z
-version: 2
+updated_at: 2026-02-17T23:55:18.117Z
+version: 3
 ---

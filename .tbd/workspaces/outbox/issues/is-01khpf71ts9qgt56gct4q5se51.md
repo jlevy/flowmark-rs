@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "Review case study: flowmark-port-comrak-bug.md (fence bug, workaround status)"
 type: is
-updated_at: 2026-02-17T20:36:56.146Z
-version: 4
+updated_at: 2026-02-17T23:55:18.097Z
+version: 5
 ---
