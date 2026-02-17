@@ -9,6 +9,8 @@ child_order_hints:
   - is-01khpag0hnf95kds97f0s1jy80
   - is-01khpag10s391w5f4j22nprfgm
   - is-01khparv02wpxxktcme0tqpyk2
+close_reason: All 8 phases complete. 250 tests pass, 0 ignored, 0 partial, zero warnings, check-mapping PASS, golden test PASS.
+closed_at: 2026-02-17T20:36:46.374Z
 created_at: 2026-02-17T17:30:56.758Z
 dependencies:
   - target: is-01khpf61cf4qz12a5r7131avfh
@@ -30,9 +32,9 @@ kind: epic
 labels: []
 priority: 0
 spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
-status: open
+status: closed
 title: "Spec: Exact Cross-Language Parity"
 type: is
-updated_at: 2026-02-17T19:33:55.662Z
-version: 20
+updated_at: 2026-02-17T20:36:55.950Z
+version: 21
 ---
