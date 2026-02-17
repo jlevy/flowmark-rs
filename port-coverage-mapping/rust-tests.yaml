@@ -42,16 +42,16 @@
   line_number: 179
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_block_content
-  line_number: 104
+  line_number: 102
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_list_item_ordered
-  line_number: 86
+  line_number: 84
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_list_item_unordered
-  line_number: 69
+  line_number: 67
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_table_row
-  line_number: 55
+  line_number: 53
 - file: src/wrapping/sentence.rs
   function: test_first_sentence
   line_number: 108
@@ -66,22 +66,22 @@
   line_number: 101
 - file: src/wrapping/text_filling.rs
   function: test_split_paragraphs
-  line_number: 133
+  line_number: 134
 - file: src/wrapping/text_wrapping.rs
   function: test_html_md_word_split
-  line_number: 278
+  line_number: 279
 - file: src/wrapping/text_wrapping.rs
   function: test_html_md_word_split_links
-  line_number: 284
+  line_number: 285
 - file: src/wrapping/text_wrapping.rs
   function: test_markdown_escape_word
-  line_number: 230
+  line_number: 231
 - file: src/wrapping/text_wrapping.rs
   function: test_no_wrap
-  line_number: 262
+  line_number: 263
 - file: src/wrapping/text_wrapping.rs
   function: test_simple_wrapping
-  line_number: 244
+  line_number: 245
 - file: tests/test_alerts.rs
   function: test_alert_after_heading
   line_number: 128
@@ -171,31 +171,31 @@
   line_number: 13
 - file: tests/test_escape_handling.rs
   function: test_escape_in_list_item
-  line_number: 86
+  line_number: 99
 - file: tests/test_escape_handling.rs
   function: test_escape_in_list_item_start_preserved
-  line_number: 94
+  line_number: 106
 - file: tests/test_escape_handling.rs
   function: test_escape_in_paragraph_middle
   line_number: 33
 - file: tests/test_escape_handling.rs
   function: test_escape_in_quote
-  line_number: 101
+  line_number: 113
 - file: tests/test_escape_handling.rs
   function: test_escape_in_table
-  line_number: 112
+  line_number: 124
 - file: tests/test_escape_handling.rs
   function: test_escaped_chars_at_line_start
-  line_number: 74
+  line_number: 87
 - file: tests/test_escape_handling.rs
   function: test_escaped_chars_in_headings
-  line_number: 64
+  line_number: 77
 - file: tests/test_escape_handling.rs
   function: test_mixed_escapes
-  line_number: 122
+  line_number: 133
 - file: tests/test_escape_handling.rs
   function: test_mixed_escapes_comprehensive
-  line_number: 129
+  line_number: 140
 - file: tests/test_escape_handling.rs
   function: test_other_escaped_chars
   line_number: 51
@@ -288,7 +288,7 @@
   line_number: 45
 - file: tests/test_heading_spacing.rs
   function: test_heading_with_hard_break_in_list
-  line_number: 76
+  line_number: 75
 - file: tests/test_list_spacing.rs
   function: test_complex_content_with_loose_mode
   line_number: 209
@@ -495,16 +495,16 @@
   line_number: 173
 - file: tests/test_tag_formatting.rs
   function: test_list_item_with_tag_on_continuation_line
-  line_number: 186
+  line_number: 185
 - file: tests/test_tag_formatting.rs
   function: test_multiline_opening_tag_closing_on_own_line
-  line_number: 196
+  line_number: 195
 - file: tests/test_tag_formatting.rs
   function: test_multiline_tag_through_pipeline
-  line_number: 205
+  line_number: 204
 - file: tests/test_tag_formatting.rs
   function: test_multiline_tag_with_surrounding_text
-  line_number: 223
+  line_number: 222
 - file: tests/test_tag_formatting.rs
   function: test_pipeline_preserves_tag_quotes
   line_number: 103
@@ -513,7 +513,7 @@
   line_number: 146
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_inline_tags
-  line_number: 235
+  line_number: 234
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_lists
   line_number: 130
@@ -522,16 +522,16 @@
   line_number: 139
 - file: tests/test_tag_formatting.rs
   function: test_selection_field_with_task_list
-  line_number: 245
+  line_number: 244
 - file: tests/test_tag_formatting.rs
   function: test_single_line_paired_tags_not_split
-  line_number: 255
+  line_number: 254
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_converts_prose_but_not_tags
   line_number: 60
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_multiline_tag_with_prose
-  line_number: 264
+  line_number: 263
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_apostrophe_in_jinja_variable
   line_number: 53
@@ -555,19 +555,19 @@
   line_number: 121
 - file: tests/test_tag_formatting.rs
   function: test_tag_newlines_preserved_in_pipeline
-  line_number: 275
+  line_number: 274
 - file: tests/test_tag_formatting.rs
   function: test_tag_with_array_spanning_lines
-  line_number: 284
+  line_number: 283
 - file: tests/test_tag_formatting.rs
   function: test_tag_with_embedded_percent_brace
-  line_number: 291
+  line_number: 290
 - file: tests/test_tag_formatting.rs
   function: test_tag_with_object_spanning_lines
-  line_number: 301
+  line_number: 300
 - file: tests/test_tag_formatting.rs
   function: test_word_splitter_handles_multiline_tags
-  line_number: 308
+  line_number: 307
 - file: tests/test_width_options.rs
   function: test_existing_behavior_unchanged
   line_number: 59

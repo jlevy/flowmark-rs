@@ -40,26 +40,26 @@ match in Rust).**
 ### Current State
 
 **Python flowmark v0.6.4**: 281 test functions across 20 files.
-**Rust flowmark-rs**: 243 test functions (216 integration + 27 unit). 232 passing,
-4 `#[ignore]`d (3 bugs), 1 `partial` mapping.
+**Rust flowmark-rs**: 243 test functions (216 integration + 27 unit). 243 passing,
+0 `#[ignore]`d, 0 failures, 0 `partial` mappings. 202 mapped + 79 excluded in test
+mapping.
 
 ### Bugs Blocking Parity
 
-**There are currently 3 Rust implementation bugs causing 4 ignored tests. Each must be
-fixed (or if the upstream Python behavior is itself wrong, fix upstream first and then
-match).**
+**All 3 Rust implementation bugs have been fixed. All 4 previously ignored tests now
+pass.**
 
-| Bug ID | Tests Affected | Summary | Root Cause |
+| Bug ID | Tests Affected | Summary | Status |
 |---|---|---|---|
-| **fmr-2tll** | `test_escape_in_list_item_start_preserved`, `test_mixed_escapes` | `- 1\. text` loses backslash | `postprocess_period_escapes` doesn't strip list markers before checking for digit-period patterns |
-| **fmr-4l1x** | `test_heading_with_hard_break_in_list` | Extra blank line before heading in list item | `render_list_item` inserts blank line before heading without checking for hard-break headings (logic exists in `render_block_children` but not in list items) |
-| **fmr-5ojk** | `test_list_item_with_tag_on_continuation_line` | Extra blank line before HTML comment tag on list continuation | Comrak parses indented HTML comment as `HtmlBlock` (separate child), and `render_list_item` unconditionally adds blank line between list item children |
+| **fmr-2tll** | `test_escape_in_list_item_start_preserved`, `test_mixed_escapes` | `- 1\. text` loses backslash | **FIXED** — `postprocess_period_escapes` now strips list markers before checking for digit-period patterns |
+| **fmr-4l1x** | `test_heading_with_hard_break_in_list` | Extra blank line before heading in list item | **FIXED** — added `child_is_hard_break_heading` check to `render_list_item` spacing logic |
+| **fmr-5ojk** | `test_list_item_with_tag_on_continuation_line` | Extra blank line before HTML comment tag on list continuation | **FIXED** — approach B: detect tag-only HTML blocks and suppress blank line before them in list items |
 
 ### Partial Test Coverage Gap
 
 | Mapping | Gap | Status |
 |---|---|---|
-| `test_other_escaped_chars` (partial) | Rust covers `\*`, `\#`, `\-` but omits `\$`, `\_`, `\[`/`\]`, `` \` `` | All 4 missing cases verified to pass at runtime; test assertions need to be added |
+| `test_other_escaped_chars` | Rust covers `\*`, `\#`, `\-` plus `\$`, `\_`, `\[`/`\]`, `` \` `` | **DONE** — all assertions added, mapping updated to `mapped` |
 
 ### Python Module → Rust Module Mapping
 
@@ -88,10 +88,10 @@ match).**
 
 | Status | Count | Description |
 |---|---|---|
-| **Mapped** | 201 | Direct Rust equivalent exists and verified |
+| **Mapped** | 202 | Direct Rust equivalent exists and verified |
 | **Excluded** | 79 | Infrastructure-only, not applicable to Rust |
 | **Missing** | 0 | All ported |
-| **Partial** | 1 | `test_other_escaped_chars` — must be completed |
+| **Partial** | 0 | All completed |
 
 **27 extra Rust tests** (unit tests in `src/` not mapped to Python) — these are
 Rust-native tests, not gaps.
@@ -113,10 +113,9 @@ Rust-native tests, not gaps.
 The work is organized into phases:
 
 1. **Test mapping** — DONE. All 281 Python tests have entries in `test-mapping.yaml`.
-2. **Port missing tests** — DONE. 64 tests ported. But 4 are `#[ignore]`d and
-   1 is `partial`.
-3. **Fix all bugs** — Fix the 3 Rust bugs blocking the 4 ignored tests.
-4. **Complete partial test** — Add missing assertions to `test_other_escaped_chars`.
+2. **Port missing tests** — DONE. 64 tests ported.
+3. **Fix all bugs** — DONE. Fixed all 3 Rust bugs, un-ignored all 4 tests.
+4. **Code quality & cleanup** — DONE. Completed partial test, fixed all 70 clippy warnings.
 5. **Review previous implementation** — Review `attic/flowmark-rs-1` for architectural
    choices that may be superior to the current approach.
 6. **Apply porting playbook best practices** — Review each document in
@@ -144,38 +143,28 @@ The work is organized into phases:
 - [x] Port 7 scattered missing tests (alerts, strikethrough, heading, code blocks, width)
 - [x] Updated `test-mapping.yaml` — all 64 entries changed `missing` → `mapped`
 
-### Phase 3: Fix All Bugs — NOT DONE
+### Phase 3: Fix Remaining Test Failures — DONE
 
-Every discrepancy is tracked as a bead. For each: determine whether it's a Rust bug or
-an upstream Python bug, fix it at the source, and un-ignore the test.
+All 3 bugs fixed, all 4 previously ignored tests un-ignored and passing.
 
-- [ ] **fmr-2tll**: Fix escape at start of list item content
-  - Root cause: `postprocess_period_escapes()` in `src/formatter/filling.rs` strips
-    blockquote markers but not list markers (`- `, `* `, `+ `) before checking for
-    digit-period patterns. Fix: also strip list item prefixes before the digit check.
-  - Python behavior confirmed correct (preserves escape).
-  - 2 tests to un-ignore.
-- [ ] **fmr-4l1x**: Fix extra blank line before heading in list item with hard break
-  - Root cause: `render_list_item()` in `src/formatter/filling.rs` adds blank lines
-    between children without checking whether the current child is a hard-break heading.
-    `render_block_children()` has this logic but `render_list_item()` doesn't.
-    Fix: add `child_is_hard_break_heading` check to the list item spacing logic.
-  - Python behavior confirmed correct (no extra blank line).
-  - 1 test to un-ignore.
-- [ ] **fmr-5ojk**: Fix extra blank line before HTML comment tag on list continuation
-  - Root cause: Comrak parses `<!-- #id -->` on an indented line as a block-level
-    `HtmlBlock` (separate child of the list item), while Python's Marko disables block
-    HTML parsing entirely and treats it as inline HTML within the paragraph.
-    The Rust formatter then adds a blank line between the paragraph and HtmlBlock children.
-  - Python behavior confirmed correct (no extra blank line).
-  - Fix approach TBD (see Open Questions).
-  - 1 test to un-ignore.
+- [x] **fmr-2tll**: Fixed escape at start of list item content
+  - Fix: `postprocess_period_escapes()` now strips list markers (`- `, `* `, `+ `)
+    before checking for digit-period patterns, matching blockquote marker stripping.
+  - 2 tests un-ignored and passing.
+- [x] **fmr-4l1x**: Fixed extra blank line before heading in list item with hard break
+  - Fix: added `child_is_hard_break_heading` check to `render_list_item()` spacing
+    logic, matching the existing check in `render_block_children()`.
+  - 1 test un-ignored and passing.
+- [x] **fmr-5ojk**: Fixed extra blank line before HTML comment tag on list continuation
+  - Fix: approach B — detect tag-only HTML blocks (e.g., `<!-- #id -->`) and suppress
+    blank line before them in list items.
+  - 1 test un-ignored and passing.
 
-### Phase 4: Complete Partial Test — NOT DONE
+### Phase 4: Code Quality & Cleanup — DONE
 
-- [ ] **test_other_escaped_chars**: Add `\$`, `\_`, `\[`/`\]`, `` \` `` assertions
-  - All 4 cases verified passing at runtime. Just need test assertions added.
-  - Update `test-mapping.yaml` status from `partial` to `mapped`.
+- [x] **test_other_escaped_chars**: Added `\$`, `\_`, `\[`/`\]`, `` \` `` assertions.
+  Updated `test-mapping.yaml` status from `partial` to `mapped`.
+- [x] **Clippy warnings**: Fixed all 70 clippy warnings. Zero warnings now.
 
 ### Phase 5: Review Previous Implementation (`attic/flowmark-rs-1`) — NOT DONE
 
@@ -292,18 +281,9 @@ Follow the process in `attic/rust-porting-playbook/reference/meta-improving-this
 
 These are decisions where multiple approaches exist and we need to choose:
 
-1. **fmr-5ojk fix approach**: Comrak parses indented HTML comments as block-level
-   `HtmlBlock` nodes. Python avoids this by disabling block HTML parsing entirely.
-   Three possible approaches for Rust:
-   - **(A) AST transformation**: After parsing, walk the AST and convert `HtmlBlock`
-     nodes within list items into `HtmlInline` appended to the preceding paragraph.
-     Most closely matches Python behavior.
-   - **(B) Suppress spacing**: Modify `render_list_item` to not add blank lines before
-     short `HtmlBlock` children (type 2 = HTML comment) in list items. Simpler but
-     may not cover all cases.
-   - **(C) Comrak configuration**: Check if comrak has options to disable block HTML
-     parsing (likely not available).
-   Which approach is most robust?
+1. ~~**fmr-5ojk fix approach**~~: **RESOLVED** — approach B was chosen: detect tag-only
+   HTML blocks and suppress blank line before them in list items. This was simpler than
+   AST transformation (approach A) and sufficient for the cases encountered.
 
 2. **Comrak version**: Should we upgrade from 0.36 to 0.47? The previous implementation
    used 0.47. Benefits: potential bug fixes, newer CommonMark spec. Risks: may change
@@ -312,10 +292,8 @@ These are decisions where multiple approaches exist and we need to choose:
 3. **Property-based testing**: The previous implementation used `proptest`. Should we
    adopt it for fuzzing edge cases? Would help catch regressions but adds complexity.
 
-4. **Upstream Python bugs**: If any of the 3 bugs turn out to reflect Python bugs
-   (e.g., Python preserving escapes where the CommonMark spec says they should be
-   removed), should we match the Python bug for parity and track the upstream fix
-   separately, or fix both simultaneously?
+4. ~~**Upstream Python bugs**~~: **RESOLVED** — all 3 bugs were confirmed as Rust
+   implementation bugs, not upstream Python bugs. All fixed in the Rust codebase.
 
 5. **`doc_transforms.py` coverage**: This module's status is "Review needed" in the
    module mapping. Need to determine if there are untested transform paths.
