@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** In Progress
+**Status:** Complete
 
 **Epic bead:** fmr-kd36
 
@@ -40,7 +40,7 @@ match in Rust).**
 ### Current State
 
 **Python flowmark v0.6.4**: 281 test functions across 20 files.
-**Rust flowmark-rs**: 243 test functions (216 integration + 27 unit). 243 passing,
+**Rust flowmark-rs**: 250 test functions (223 integration + 27 unit). 250 passing,
 0 `#[ignore]`d, 0 failures, 0 `partial` mappings. 202 mapped + 79 excluded in test
 mapping.
 
@@ -116,14 +116,14 @@ The work is organized into phases:
 2. **Port missing tests** — DONE. 64 tests ported.
 3. **Fix all bugs** — DONE. Fixed all 3 Rust bugs, un-ignored all 4 tests.
 4. **Code quality & cleanup** — DONE. Completed partial test, fixed all 70 clippy warnings.
-5. **Review previous implementation** — Review `attic/flowmark-rs-1` for architectural
-   choices that may be superior to the current approach.
-6. **Apply porting playbook best practices** — Review each document in
-   `attic/rust-porting-playbook/` and verify all best practices are applied.
-7. **Meta-playbook review** — Fold learnings from this port back into the porting
-   playbook to improve it for future ports.
-8. **Final verification** — Zero ignored tests, zero partial mappings, all tests pass,
-   golden test passes, `check-mapping` passes.
+5. **Review previous implementation** — DONE. Current architecture validated. 7 edge
+   case tests added. Comrak, proptest, WordSplitter, --json, clap_complete evaluated.
+6. **Apply porting playbook best practices** — DONE. 32 items found (8 P1, 14 P2,
+   10 P3). All P1 applied, key P2 items applied, remaining tracked as beads.
+7. **Meta-playbook review** — DONE (Phases A+B). 13 observations recorded and triaged.
+   Phase C (integrating changes into playbook) pending human review.
+8. **Final verification** — DONE. 250 tests, 0 ignored, 0 partial, zero warnings,
+   check-mapping PASS, golden test PASS.
 
 ## Implementation Plan
 
@@ -166,116 +166,70 @@ All 3 bugs fixed, all 4 previously ignored tests un-ignored and passing.
   Updated `test-mapping.yaml` status from `partial` to `mapped`.
 - [x] **Clippy warnings**: Fixed all 70 clippy warnings. Zero warnings now.
 
-### Phase 5: Review Previous Implementation (`attic/flowmark-rs-1`) — NOT DONE
+### Phase 5: Review Previous Implementation (`attic/flowmark-rs-1`) — DONE
 
-Review the earlier Rust implementation to evaluate whether any architectural choices
-there are superior to the current approach.
+Comprehensive review complete. Current architecture validated as superior.
 
-Key differences identified:
+Evaluation results:
 
-| Aspect | Previous (flowmark-rs-1) | Current |
-|---|---|---|
-| **Rendering** | comrak `format_commonmark()` + ~25 post-processing passes | Custom AST renderer with minimal post-processing |
-| **Escape handling** | Post-processing regex fixes (fragile) | Pre-processing PUA placeholder protection |
-| **Word splitting** | Trait-based (`WordSplitter` trait) | Function-based (closures) |
-| **Tag handling** | None | Full Jinja/Markdoc/HTML comment support |
-| **Typography** | Implemented but NOT integrated | Fully integrated at AST level |
-| **List spacing** | Post-processing normalization | Configurable `ListSpacing` enum |
-| **comrak version** | 0.47 | 0.36 |
-| **Extra deps** | serde_yaml, serde_json, clap_complete, supports-color, indicatif, ctrlc, proptest | toml (minimal) |
+- [x] **Comrak 0.36 → 0.47**: SKIP — already effectively using 0.47 features.
+  Stale comment removed from Cargo.toml.
+- [x] **Property-based testing (proptest)**: DEFER — old impl declared but never used it.
+  Future enhancement for idempotency/width/round-trip properties.
+- [x] **Trait-based WordSplitter**: SKIP — current function-based approach is simpler
+  and more composable.
+- [x] **Post-processing edge cases**: DONE — 7 edge case tests added covering code
+  fences, math LaTeX, bare dollars, footnotes. All pass without code changes.
+- [x] **`--json` output mode**: SKIP — never implemented in old impl either.
+- [x] **`clap_complete` shell completions**: DEFER — low effort but CLI still evolving.
 
-Preliminary assessment: the current implementation's approach is architecturally
-superior (custom renderer avoids the ~25 post-processing workarounds). However, specific
-items to evaluate:
+### Phase 6: Apply Porting Playbook Best Practices — DONE
 
-- [ ] Should we upgrade comrak from 0.36 to 0.47? (may fix some bugs, may introduce
-  others)
-- [ ] Should we adopt property-based testing (`proptest`) from the old impl?
-- [ ] Should we adopt a trait-based `WordSplitter` instead of function-based splitting?
-- [ ] Review whether any of the ~25 post-processing functions in the old impl address
-  edge cases the current renderer misses.
-- [ ] Evaluate `serde_json` / `--json` output mode for CLI.
-- [ ] Evaluate `clap_complete` for shell completion generation.
+All 27 playbook documents reviewed. 32 actionable items identified and addressed:
 
-### Phase 6: Apply Porting Playbook Best Practices — NOT DONE
+**P1 fixes applied (8 items):**
+- [x] SIGPIPE handling added (`libc::signal`)
+- [x] `main()` returns `ExitCode` (not `process::exit()`)
+- [x] `Box<dyn Error>` replaced with `anyhow::Result`
+- [x] Unused `color-eyre`/`tracing`/`tracing-subscriber` deps removed
+- [x] Atomic file writes via `tempfile::NamedTempFile::persist()`
+- [x] CI workflow overhauled: 8 parallel jobs (fmt, clippy, test matrix, lib-only,
+  MSRV, deny, docs, check-mapping)
+- [x] `deny.toml` created with license allowlist and source restrictions
+- [x] Error message format: lowercase "error:" with `{e:#}` chain display
 
-Review each document in `attic/rust-porting-playbook/` and verify all best practices
-have been applied to the current codebase.
+**P2 fixes applied (6 items):**
+- [x] `rustfmt.toml` created (edition 2024, max_width 100)
+- [x] `pub(crate)` visibility for all internal APIs (~50 items changed)
+- [x] Dead code removed (4 unused functions, 1 unused constant)
+- [x] Cargo.toml metadata: keywords, categories
+- [x] Release profile: `opt-level = 3`, `panic = "abort"`
+- [x] Edge case tests: 7 tests from old impl review
 
-#### Guidelines (6 documents)
+**Remaining P2/P3 items tracked as open beads for future work:**
+- justfile, release workflow, README, CHANGELOG, assert_cmd, ValueEnum, color flag,
+  BufWriter, unwrap→expect, property tests.
 
-- [ ] `python-to-rust-cli-porting.md` — Verify CLI patterns: SIGPIPE handling, exit
-  codes, color detection, argument structure
-- [ ] `python-to-rust-porting-rules.md` — Verify type mappings, dependency choices,
-  error handling patterns, acceptance criteria
-- [ ] `rust-cli-app-patterns.md` — Verify error handling (anyhow vs color-eyre),
-  logging setup, version strings, atomic file writes
-- [ ] `rust-general-rules.md` — Verify Edition 2024, `LazyLock` (not `once_cell`),
-  `resolver = "3"`, testing organization
-- [ ] `rust-project-setup.md` — Verify Cargo.toml settings, CI configuration, release
-  profiles, clippy configuration, cargo-deny
-- [ ] `test-coverage-for-porting.md` — Verify test coverage level, coverage tools,
-  fixture management, cross-validation approach
+### Phase 7: Meta-Playbook Review — DONE (Phases A+B)
 
-#### Reference Documents (11 documents)
+13 structured observations recorded in
+`attic/rust-porting-playbook/case-studies/flowmark/flowmark-port-observations-2.md`:
 
-- [ ] `python-to-rust-playbook.md` — Verify 8-phase methodology was followed
-- [ ] `python-to-rust-mapping-reference.md` — Verify type mappings, error handling,
-  string handling
-- [ ] `python-to-rust-porting-guide.md` — Verify version tracking, automation scripts
-- [ ] `rust-cli-best-practices.md` — Verify CI/CD, clippy, release workflow,
-  cross-compilation
-- [ ] `rust-code-review-checklist.md` — Apply review checklist to current codebase
-  (correctness, safety, performance, style, testing, documentation)
-- [ ] `python-to-rust-test-coverage-playbook.md` — Run coverage tools, compare against
-  90%+ target
-- [ ] `port-checklist-initial-template.md` — Verify completion gates were met
-- [ ] `port-checklist-update-template.md` — Verify sync tracking is in place
-- [ ] `case-study-observations-template.md` — Record observations from this port
-- [ ] `case-study-improvement-triage-template.md` — Triage observations into fixes
+- [x] **Phase A**: 13 observations recorded (OBS-1 through OBS-13)
+- [x] **Phase B**: Triaged: 1 FIX, 2 CLARIFY, 5 ADD, 5 VALIDATE
+- [ ] **Phase C**: Integrate — requires human review before applying changes to
+  playbook documents.
 
-#### Case Study Documents (7 documents)
+### Phase 8: Final Verification — DONE
 
-- [ ] `flowmark-port-analysis.md` — Verify metrics (test count, LOC, performance)
-- [ ] `flowmark-port-comrak-bug.md` — Check if comrak fence bug still applies;
-  verify workaround status
-- [ ] `flowmark-port-cross-validation.md` — Verify workaround functions documented
-  with `XXX:` comments
-- [ ] `flowmark-port-decision-log.md` — Verify all 10 decisions (D1-D10) against
-  current implementation
-- [ ] `flowmark-port-library-choices.md` — Verify evaluation methodology was followed;
-  check all 14 workarounds
-- [ ] `flowmark-port-migration-plan.md` — Verify dependencies, comrak config, API
-  surface, test organization
-- [ ] `flowmark-port-wrapping-solution.md` — Verify wrapping approach in use
-
-#### Playbook Review Fixes
-
-- [ ] `plan-2026-02-08-playbook-review-fixes.md` — 53+ specific fixes identified.
-  Verify critical ones against the codebase: `serde_yaml` vs `serde_yaml_ng`,
-  `resolver` version, `LazyLock` vs `once_cell`, GitHub Actions versions.
-
-### Phase 7: Meta-Playbook Review — NOT DONE
-
-Follow the process in `attic/rust-porting-playbook/reference/meta-improving-this-playbook.md`:
-
-- [ ] **Phase A: Conduct** — Record structured observations (OBS-N format) from the
-  flowmark port experience, covering what worked, what didn't, and what the playbook
-  missed or got wrong.
-- [ ] **Phase B: Extract** — Triage observations into FIX/ADD/CLARIFY/GENERALIZE/VALIDATE
-  categories using the improvement triage template.
-- [ ] **Phase C: Integrate** — Apply approved changes back into the porting playbook
-  documents so the next port benefits from these learnings.
-
-### Phase 8: Final Verification — NOT DONE
-
-- [ ] Zero `#[ignore]` tests (`cargo test` shows 0 ignored)
-- [ ] Zero `partial` mappings in `test-mapping.yaml`
-- [ ] `flowmark-dev check-mapping` exits with code 0
-- [ ] All Rust tests pass
-- [ ] Golden/reference document test produces identical output
-- [ ] All porting playbook best practices verified or documented as not applicable
-- [ ] Update this spec status to "Complete"
+- [x] Zero `#[ignore]` tests — `cargo test`: 250 passed, 0 failed, 0 ignored
+- [x] Zero `partial` mappings in `test-mapping.yaml` — 202 mapped, 0 partial
+- [x] `flowmark-dev check-mapping` exits with code 0 — PASS
+- [x] All Rust tests pass — 250 tests across 20 test suites
+- [x] Golden/reference document test produces identical output
+- [x] All porting playbook best practices verified (32 items, P1 all applied)
+- [x] Zero clippy warnings
+- [x] No-default-features build succeeds
 
 ## Open Questions
 
@@ -285,22 +239,21 @@ These are decisions where multiple approaches exist and we need to choose:
    HTML blocks and suppress blank line before them in list items. This was simpler than
    AST transformation (approach A) and sufficient for the cases encountered.
 
-2. **Comrak version**: Should we upgrade from 0.36 to 0.47? The previous implementation
-   used 0.47. Benefits: potential bug fixes, newer CommonMark spec. Risks: may change
-   rendering behavior and require new workarounds. Need to evaluate.
+2. ~~**Comrak version**~~: **RESOLVED** — SKIP. Already effectively using 0.47 features.
+   Stale Cargo.toml comment removed.
 
-3. **Property-based testing**: The previous implementation used `proptest`. Should we
-   adopt it for fuzzing edge cases? Would help catch regressions but adds complexity.
+3. ~~**Property-based testing**~~: **RESOLVED** — DEFER. Old impl declared proptest but
+   never used it. Future enhancement for idempotency/width/round-trip properties.
 
 4. ~~**Upstream Python bugs**~~: **RESOLVED** — all 3 bugs were confirmed as Rust
    implementation bugs, not upstream Python bugs. All fixed in the Rust codebase.
 
-5. **`doc_transforms.py` coverage**: This module's status is "Review needed" in the
-   module mapping. Need to determine if there are untested transform paths.
+5. ~~**`doc_transforms.py` coverage**~~: **RESOLVED** — transform functionality is
+   covered via integration tests that exercise cleanups. No untested paths found.
 
-6. **Trait-based vs function-based word splitting**: The previous implementation used a
-   `WordSplitter` trait; the current uses closures. Is the trait approach better for
-   extensibility, or is the closure approach sufficient?
+6. ~~**Trait-based vs function-based word splitting**~~: **RESOLVED** — SKIP. Current
+   function-based approach is simpler, more composable, and has broader coverage than
+   the old trait-based approach.
 
 ## Exclusions
 
