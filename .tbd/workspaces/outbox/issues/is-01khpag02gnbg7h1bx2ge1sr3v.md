@@ -1,0 +1,17 @@
+---
+created_at: 2026-02-17T17:31:15.407Z
+dependencies:
+  - target: is-01khpag10s391w5f4j22nprfgm
+    type: blocks
+id: is-01khpag02gnbg7h1bx2ge1sr3v
+kind: task
+labels: []
+parent_id: is-01khpafdvq7w2a5ghmh11eptj3
+priority: 1
+spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
+status: open
+title: Port 7 scattered missing tests (alerts, strikethrough, heading, code blocks, width)
+type: is
+updated_at: 2026-02-17T17:36:04.698Z
+version: 3
+---
