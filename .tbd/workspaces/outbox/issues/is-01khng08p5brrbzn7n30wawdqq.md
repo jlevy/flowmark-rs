@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Implement core modules (error, config, frontmatter)
 type: is
-updated_at: 2026-02-17T17:36:56.168Z
-version: 3
+updated_at: 2026-02-17T17:39:36.168Z
+version: 4
 ---

@@ -1,4 +1,6 @@
 ---
+close_reason: "Done: check-mapping reports 137 mapped, 79 excluded, 64 missing, 1 partial. 27 extra Rust tests (unit tests in src/)."
+closed_at: 2026-02-17T17:38:44.794Z
 created_at: 2026-02-17T17:31:13.518Z
 dependencies:
   - target: is-01khpafyn8ccjfqggdg3rckyk6
@@ -19,9 +21,9 @@ labels: []
 parent_id: is-01khpafdvq7w2a5ghmh11eptj3
 priority: 1
 spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
-status: open
+status: closed
 title: Run check-mapping and capture baseline gap report
 type: is
-updated_at: 2026-02-17T17:36:14.057Z
-version: 7
+updated_at: 2026-02-17T17:39:36.305Z
+version: 10
 ---

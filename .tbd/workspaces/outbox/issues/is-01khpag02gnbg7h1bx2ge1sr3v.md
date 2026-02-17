@@ -12,6 +12,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: open
 title: Port 7 scattered missing tests (alerts, strikethrough, heading, code blocks, width)
 type: is
-updated_at: 2026-02-17T17:36:04.698Z
-version: 3
+updated_at: 2026-02-17T17:39:36.333Z
+version: 4
 ---

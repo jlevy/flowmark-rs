@@ -10,6 +10,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: open
 title: "Verify: check-mapping exits 0, all cargo tests pass, golden test matches"
 type: is
-updated_at: 2026-02-17T17:31:16.376Z
-version: 1
+updated_at: 2026-02-17T17:39:36.344Z
+version: 2
 ---

@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: closed
 title: Complete test-mapping.yaml with all 281 entries
 type: is
-updated_at: 2026-02-17T17:36:24.226Z
-version: 3
+updated_at: 2026-02-17T17:39:36.298Z
+version: 4
 ---

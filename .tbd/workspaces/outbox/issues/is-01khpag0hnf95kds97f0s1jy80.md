@@ -12,6 +12,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: open
 title: Review smartquotes for behavioral parity
 type: is
-updated_at: 2026-02-17T17:31:31.833Z
-version: 2
+updated_at: 2026-02-17T17:39:36.339Z
+version: 3
 ---

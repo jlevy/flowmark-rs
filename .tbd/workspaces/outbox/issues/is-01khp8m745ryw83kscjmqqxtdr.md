@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: closed
 title: Populate test-mapping.yaml with verified mappings for all Python tests
 type: is
-updated_at: 2026-02-17T17:36:56.276Z
-version: 6
+updated_at: 2026-02-17T17:39:36.279Z
+version: 7
 ---
