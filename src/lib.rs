@@ -10,7 +10,6 @@ pub mod transform;
 pub mod typography;
 pub mod wrapping;
 
-use std::io::Write;
 use std::path::Path;
 
 pub use config::{ListSpacing, DEFAULT_WRAP_WIDTH};
@@ -112,6 +111,7 @@ fn atomic_write(path: &Path, content: &str) -> Result<()> {
 
     #[cfg(feature = "cli")]
     {
+        use std::io::Write;
         let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
         tmp.write_all(content.as_bytes())?;
         tmp.persist(path).map_err(|e| Error::Io(e.error))?;
