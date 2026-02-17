@@ -8,6 +8,6 @@ priority: 3
 status: open
 title: "Review reference: port-checklist-initial-template.md (verify completion gates)"
 type: is
-updated_at: 2026-02-17T18:55:47.191Z
-version: 2
+updated_at: 2026-02-17T19:33:55.839Z
+version: 3
 ---

@@ -8,6 +8,6 @@ priority: 3
 status: open
 title: "Review reference: python-to-rust-playbook.md (8-phase methodology)"
 type: is
-updated_at: 2026-02-17T18:55:47.170Z
-version: 2
+updated_at: 2026-02-17T19:33:55.815Z
+version: 3
 ---

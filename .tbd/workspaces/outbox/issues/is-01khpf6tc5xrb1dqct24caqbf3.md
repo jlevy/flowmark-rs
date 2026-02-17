@@ -8,6 +8,6 @@ priority: 3
 status: open
 title: "Review guideline: rust-general-rules.md (Edition 2024, LazyLock, resolver)"
 type: is
-updated_at: 2026-02-17T18:55:47.154Z
-version: 2
+updated_at: 2026-02-17T19:33:55.795Z
+version: 3
 ---

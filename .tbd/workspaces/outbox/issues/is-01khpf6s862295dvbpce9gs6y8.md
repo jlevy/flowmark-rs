@@ -8,6 +8,6 @@ priority: 3
 status: open
 title: "Review guideline: python-to-rust-cli-porting.md (CLI patterns)"
 type: is
-updated_at: 2026-02-17T18:55:47.136Z
-version: 2
+updated_at: 2026-02-17T19:33:55.777Z
+version: 3
 ---
