@@ -206,7 +206,7 @@ fn is_closing_tag(line: &str) -> bool {
 }
 
 /// Fix closing tag spacing for block content.
-fn fix_closing_tag_spacing(text: &str) -> String {
+pub fn fix_closing_tag_spacing(text: &str) -> String {
     let lines: Vec<&str> = text.split('\n').collect();
     let mut fixed_lines: Vec<String> = Vec::new();
 
@@ -231,7 +231,7 @@ fn fix_closing_tag_spacing(text: &str) -> String {
 }
 
 /// Ensure closing tags are on their own line when the opening tag spans multiple lines.
-fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
+pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
     if !text.contains('\n') {
         return text.to_string();
     }

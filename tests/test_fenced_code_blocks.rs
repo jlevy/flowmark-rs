@@ -114,3 +114,17 @@ fn test_multiple_empty_lines_in_code_block() {
     let expected = "```python\nline1\n\n\nline2\n```\n";
     assert_eq!(fmt(input), expected);
 }
+
+// ===== Tests ported from Python test_fenced_code_blocks.py =====
+
+#[test]
+fn test_minimum_backticks_computed_from_content() {
+    // When content contains triple backticks, the fence must use 4+ backticks
+    // This is tested indirectly via the nested code block tests above,
+    // but we verify explicitly that nested backticks produce correct output
+    let input = "````markdown\nShow this:\n\n```python\nprint('hello')\n```\n````";
+    let result = fmt(input);
+    // The outer fence should use 4 backticks to contain the inner triple backticks
+    assert!(result.starts_with("````"), "Outer fence should use 4+ backticks");
+    assert!(result.contains("```python"), "Inner fence should be preserved");
+}

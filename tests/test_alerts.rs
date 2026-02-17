@@ -140,3 +140,21 @@ fn test_regular_quote_still_works() {
     assert!(result.starts_with('>'));
     assert!(result.contains("regular quote"));
 }
+
+// ===== Tests ported from Python test_alerts.py =====
+
+#[test]
+fn test_empty_alert_type_preserves_quote() {
+    let input = "> [!]\n> Some content";
+    let result = fmt(input);
+    assert!(result.starts_with('>'), "Quote formatting lost for empty alert type");
+    assert!(result.contains("Some content"));
+}
+
+#[test]
+fn test_quote_with_link_like_content() {
+    let input = "> Check out [!this link](https://example.com) for more info.";
+    let result = fmt(input);
+    assert!(result.starts_with('>'));
+    assert!(result.contains("this link") || result.contains("[!this link]"));
+}

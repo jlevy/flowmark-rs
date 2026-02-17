@@ -68,3 +68,18 @@ fn test_existing_behavior_unchanged() {
     let lines: Vec<&str> = result.trim().split('\n').collect();
     assert!(lines.len() > 1, "Long text should be wrapped at default width");
 }
+
+// ===== Tests ported from Python test_width_options.py =====
+
+#[test]
+fn test_negative_width_disables_wrapping() {
+    // Python uses negative width (-1) to disable wrapping.
+    // In Rust, width is usize (unsigned), so width=0 serves the same purpose.
+    // This test verifies the Rust equivalent behavior.
+    let text = "This is a very long line that would normally be wrapped at any reasonable width setting but should remain as a single line when wrapping is disabled.";
+
+    let result = reformat_text(text, 0, true, false, false, false, false, ListSpacing::Preserve);
+    let lines: Vec<&str> = result.trim().split('\n').collect();
+    assert_eq!(lines.len(), 1, "Width 0 should disable wrapping and keep text on one line");
+    assert_eq!(result.trim(), text, "Text should be unchanged except for whitespace normalization");
+}

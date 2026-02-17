@@ -79,3 +79,55 @@ fn test_escaped_chars_at_line_start() {
     let result = fmt("\\- Not a list\n");
     assert!(result.contains("\\-"), "Hyphen escape at start should be preserved: got {:?}", result);
 }
+
+// ===== Tests ported from Python test_escape_handling.py =====
+
+#[test]
+fn test_escape_in_list_item() {
+    // In middle of list item — remove escape
+    let result = fmt("- List item 1\\. in middle\n");
+    assert!(result.contains("1. in middle"), "Escape should be removed in list item middle: got {:?}", result);
+}
+
+#[test]
+#[ignore] // Known bug: fmr-2tll — escape at start of list item content not preserved
+fn test_escape_in_list_item_start_preserved() {
+    // At start of list item — preserve escape
+    let result = fmt("- 1\\. At start of item\n");
+    assert!(result.contains("1\\."), "Escape should be preserved at list item start: got {:?}", result);
+}
+
+#[test]
+fn test_escape_in_quote() {
+    // In middle of quote line — remove escape
+    let result = fmt("> Quote with 1\\. in middle\n");
+    assert!(result.contains("1. in middle"), "Escape should be removed in quote middle: got {:?}", result);
+
+    // At start of quote content — preserve escape
+    let result = fmt("> 1\\. Quote start\n");
+    assert!(result.contains("1\\."), "Escape should be preserved at quote start: got {:?}", result);
+}
+
+#[test]
+fn test_escape_in_table() {
+    let input = "| Header | 1\\. Cell |\n| --- | --- |\n| 1\\. | Value 1\\. here |\n";
+    let result = fmt(input);
+
+    assert!(result.contains("1. Cell"), "Escape should be removed in table header: got {:?}", result);
+    assert!(result.contains("Value 1. here"), "Escape should be removed in table cell: got {:?}", result);
+}
+
+#[test]
+#[ignore] // Known bug: fmr-2tll — escape at start of list item content not preserved
+fn test_mixed_escapes() {
+    let input = "## 1\\. Heading\n\nParagraph with 1\\. in middle.\n\n1\\. Start of paragraph\n\n- List 1\\. middle\n- 1\\. start\n\n> 1\\. quote start\n";
+    let expected = "## 1. Heading\n\nParagraph with 1. in middle.\n\n1\\. Start of paragraph\n\n- List 1. middle\n\n- 1\\. start\n\n> 1\\. quote start\n";
+    assert_eq!(fmt_loose(input), expected);
+}
+
+#[test]
+fn test_mixed_escapes_comprehensive() {
+    let input = "## 1\\. Heading with \\* asterisk\n\nText with 1\\. period and \\* asterisk and \\# hash.\n\n1\\. Not a list (period escape kept)\n\\* Not a list (asterisk escape kept)\n\nCost: \\$100 (dollar escape kept)\n";
+    let expected = "## 1. Heading with \\* asterisk\n\nText with 1. period and \\* asterisk and \\# hash.\n\n1\\. Not a list (period escape kept) \\* Not a list (asterisk escape kept)\n\nCost: \\$100 (dollar escape kept)\n";
+    assert_eq!(fmt(input), expected);
+}

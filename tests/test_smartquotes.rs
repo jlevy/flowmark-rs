@@ -349,3 +349,61 @@ fn test_smart_quotes_apostrophe_spanning_code_span() {
     assert!(result.contains("I\u{2019}ll"));
     assert!(result.contains("it\u{2019}ll"));
 }
+
+// ===== Tests ported from Python test_smartquotes.py =====
+
+fn fmt_sq(input: &str) -> String {
+    fill_markdown(input, true, 88, false, false, true, false, None, ListSpacing::Preserve)
+}
+
+fn fmt_sq_semantic(input: &str) -> String {
+    fill_markdown(input, true, 88, true, false, true, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_smart_quotes_blockquote_multiline_with_code_span() {
+    let text = "> **Tell the user:** \"First, I'll make sure Markform is installed.\n> Markform is a CLI tool for creating structured forms that agents can fill via tool\n> calls. I'll install it globally so we can use the `markform` command.\"\n";
+    let result = fmt_sq_semantic(text);
+    assert!(result.contains("\u{201c}First,"), "Outer quotes should be converted");
+    assert!(result.contains("command.\u{201d}"), "Closing quote should be converted");
+    assert!(result.contains("I\u{2019}ll"), "Apostrophes should be converted");
+    assert!(result.contains("`markform`"), "Code span must be preserved");
+}
+
+#[test]
+fn test_smart_quotes_complex_table() {
+    let text = "| User Says | You (the Agent) Run |\n| --- | --- |\n| **Issues/Beads** |  |\n| \"There's a bug where ...\" | `tbd create \"...\" --type=bug` |\n| \"Create a task/feature for ...\" | `tbd create \"...\" --type=task` or `--type=feature` |\n";
+    let result = fmt_sq(text);
+    // Prose quotes should be converted
+    assert!(
+        result.contains("\u{201c}There\u{2019}s a bug where \u{2026}\u{201d}")
+            || result.contains("\u{201c}There\u{2019}s a bug where ...\u{201d}"),
+        "Prose quotes should be converted in table: {}", result
+    );
+    // Code spans should be unchanged
+    assert!(result.contains("`tbd create \"...\" --type=bug`"), "Code spans should be unchanged");
+    assert!(result.contains("`tbd create \"...\" --type=task`"), "Code spans should be unchanged");
+}
+
+#[test]
+fn test_smart_quotes_in_table_preserve_code_spans() {
+    let text = "| Description | Command |\n| --- | --- |\n| \"Fix a bug\" | `tbd create \"...\" --type=bug` |\n";
+    let result = fmt_sq(text);
+    assert!(result.contains("\u{201c}Fix a bug\u{201d}"), "Prose quotes should be converted");
+    assert!(result.contains("`tbd create \"...\" --type=bug`"), "Code span should be unchanged");
+}
+
+#[test]
+fn test_smart_quotes_in_table_with_bold() {
+    let text = "| Column |\n| --- |\n| **Issues/Beads** |\n| \"There's a bug\" |\n";
+    let result = fmt_sq(text);
+    assert!(result.contains("\u{201c}There\u{2019}s a bug\u{201d}"), "Smart quotes should be applied in table with bold");
+}
+
+#[test]
+fn test_smart_quotes_spanning_code_span_in_blockquote() {
+    let text = "> **Tell the user:** \"First, install the `markform` command.\"\n";
+    let result = fmt_sq(text);
+    assert!(result.contains("\u{201c}First,"), "Opening quote should be converted");
+    assert!(result.contains("command.\u{201d}"), "Closing quote should be converted");
+}
