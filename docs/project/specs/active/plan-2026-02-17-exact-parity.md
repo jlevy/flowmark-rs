@@ -62,8 +62,6 @@ as infrastructure-only), there is a passing Rust test that verifies the same beh
 | `file_resolver/` | Not ported | Excluded (infrastructure) |
 | `skill.py` / `skills/` | Not ported | Excluded (Python-specific) |
 
-### Test File Coverage Summary
-
 ### Mapping Summary (from `check-mapping` output)
 
 | Status | Count | Description |
@@ -202,13 +200,14 @@ during the parity process:
 
 ## Implementation Plan
 
-### Phase 1: Complete Test Mapping
+### Phase 1: Complete Test Mapping — DONE
 
-- [ ] Populate `test-mapping.yaml` with all 281 entries (mapped, excluded, partial,
-  missing)
-- [ ] Run `flowmark-dev check-mapping` and capture the baseline gap report
-- [ ] Review 1:N split cases (ellipses, frontmatter) for correctness
-- [ ] Document all exclusions with rationale
+- [x] Populate `test-mapping.yaml` with all 281 entries (137 mapped, 79 excluded,
+  64 missing, 1 partial)
+- [x] Run `flowmark-dev check-mapping` and capture the baseline gap report
+- [x] Review 1:N split cases: `test_ellipses` → 10 Rust fns,
+  `test_split_frontmatter` → 5 Rust fns — verified correct
+- [x] Document all exclusions with rationale (79 infrastructure tests across 4 files)
 
 ### Phase 2: Port Missing Tests and Fix Gaps (64 tests)
 

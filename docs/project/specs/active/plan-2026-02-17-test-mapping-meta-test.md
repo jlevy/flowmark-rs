@@ -405,16 +405,22 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
 - [x] Run ruff and basedpyright, fix any lint/type issues
 - [ ] Add a basic smoke test in `python/tests/`
 
-### Phase 3: Populate the Mapping (Agent Labor)
+### Phase 3: Populate the Mapping (Agent Labor) — DONE
 
-- [ ] For each of the 20 Python test files, review every test function against its Rust
+- [x] For each of the 20 Python test files, review every test function against its Rust
   counterpart
-- [ ] Update `test-mapping.yaml` with `mapped`, `excluded`, or `partial` status
-- [ ] Handle 1:N cases (e.g., `test_ellipses` → 10 Rust functions)
-- [ ] Mark infrastructure tests (`test_skill`, `test_cli_file_discovery`,
+- [x] Update `test-mapping.yaml` with `mapped`, `excluded`, or `partial` status
+- [x] Handle 1:N cases (e.g., `test_ellipses` → 10 Rust functions,
+  `test_split_frontmatter` → 5 Rust functions)
+- [x] Mark infrastructure tests (`test_skill`, `test_cli_file_discovery`,
   `test_file_resolver`, `test_config`) as `excluded` with notes
-- [ ] Verify `flowmark-dev check-mapping` passes with exit code 0
-- [ ] Document any `partial` entries with notes on what's missing
+- [ ] Verify `flowmark-dev check-mapping` passes with exit code 0 (currently fails:
+  64 `missing` entries remain — tracked in parity spec)
+- [x] Document `partial` entry: `test_other_escaped_chars` covers subset of escape types
+
+**Mapping results:** 137 mapped, 79 excluded, 64 missing, 1 partial.
+Remaining work to reach check-mapping pass is tracked in the parity spec
+(`plan-2026-02-17-exact-parity.md`).
 
 ### Phase 4: CI Integration (Future)
 
