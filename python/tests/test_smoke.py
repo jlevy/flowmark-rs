@@ -11,8 +11,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from flowmark_dev_tools.check_mapping import run_check
 from flowmark_dev_tools.models import MappingStatus
 from flowmark_dev_tools.yaml_io import (
@@ -42,7 +40,7 @@ class TestYamlRoundTrip:
         write_python_tests_yaml(records, out)
         reloaded = load_python_tests_yaml(out)
         assert len(reloaded) == len(records)
-        for orig, new in zip(records, reloaded):
+        for orig, new in zip(records, reloaded, strict=True):
             assert orig.file == new.file
             assert orig.function == new.function
             assert orig.class_name == new.class_name
@@ -54,7 +52,7 @@ class TestYamlRoundTrip:
         write_rust_tests_yaml(records, out)
         reloaded = load_rust_tests_yaml(out)
         assert len(reloaded) == len(records)
-        for orig, new in zip(records, reloaded):
+        for orig, new in zip(records, reloaded, strict=True):
             assert orig.file == new.file
             assert orig.function == new.function
 
@@ -65,10 +63,58 @@ class TestYamlRoundTrip:
         write_mapping_yaml(records, out)
         reloaded = load_mapping_yaml(out)
         assert len(reloaded) == len(records)
-        for orig, new in zip(records, reloaded):
+        for orig, new in zip(records, reloaded, strict=True):
             assert orig.python_file == new.python_file
             assert orig.python_function == new.python_function
             assert orig.status == new.status
+
+
+class TestYamlDeterminism:
+    """Verify YAML output is byte-for-byte stable across writes."""
+
+    def test_python_tests_stable_output(self, tmp_path: Path) -> None:
+        records = load_python_tests_yaml(PYTHON_YAML)
+        out1 = tmp_path / "a.yaml"
+        out2 = tmp_path / "b.yaml"
+        write_python_tests_yaml(records, out1)
+        write_python_tests_yaml(records, out2)
+        assert out1.read_text() == out2.read_text(), "Python YAML output is not stable"
+
+    def test_rust_tests_stable_output(self, tmp_path: Path) -> None:
+        records = load_rust_tests_yaml(RUST_YAML)
+        out1 = tmp_path / "a.yaml"
+        out2 = tmp_path / "b.yaml"
+        write_rust_tests_yaml(records, out1)
+        write_rust_tests_yaml(records, out2)
+        assert out1.read_text() == out2.read_text(), "Rust YAML output is not stable"
+
+    def test_mapping_stable_output(self, tmp_path: Path) -> None:
+        records = load_mapping_yaml(MAPPING_YAML)
+        out1 = tmp_path / "a.yaml"
+        out2 = tmp_path / "b.yaml"
+        write_mapping_yaml(records, out1)
+        write_mapping_yaml(records, out2)
+        assert out1.read_text() == out2.read_text(), "Mapping YAML output is not stable"
+
+    def test_checked_in_files_match_canonical_output(self, tmp_path: Path) -> None:
+        """Re-serializing checked-in YAML must reproduce the same bytes.
+
+        If this fails, run the discover/init commands to regenerate.
+        """
+        for load_fn, write_fn, src in [
+            (load_python_tests_yaml, write_python_tests_yaml, PYTHON_YAML),
+            (load_rust_tests_yaml, write_rust_tests_yaml, RUST_YAML),
+            (load_mapping_yaml, write_mapping_yaml, MAPPING_YAML),
+        ]:
+            records = load_fn(src)
+            out = tmp_path / src.name
+            write_fn(records, out)
+            expected = src.read_text()
+            actual = out.read_text()
+            assert actual == expected, (
+                f"{src.name} is not in canonical form. "
+                f"Re-run the appropriate flowmark-dev command to regenerate."
+            )
 
 
 class TestDiscoveryCounts:

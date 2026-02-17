@@ -57,20 +57,25 @@ def _ordered_dict(d: dict[str, object], key_order: list[str]) -> dict[str, objec
 
 
 def write_python_tests_yaml(records: list[PythonTestRecord], output_path: Path) -> None:
-    """Write Python test records to a YAML file."""
-    data = [_ordered_dict(asdict(r), _PYTHON_KEY_ORDER) for r in records]
+    """Write Python test records to a YAML file with deterministic ordering."""
+    sorted_records = sorted(records, key=lambda r: (r.file, r.class_name or "", r.function))
+    data = [_ordered_dict(asdict(r), _PYTHON_KEY_ORDER) for r in sorted_records]
     _write_yaml(data, output_path, comment="Python flowmark test manifest")
 
 
 def write_rust_tests_yaml(records: list[RustTestRecord], output_path: Path) -> None:
-    """Write Rust test records to a YAML file."""
-    data = [_ordered_dict(asdict(r), _RUST_KEY_ORDER) for r in records]
+    """Write Rust test records to a YAML file with deterministic ordering."""
+    sorted_records = sorted(records, key=lambda r: (r.file, r.function))
+    data = [_ordered_dict(asdict(r), _RUST_KEY_ORDER) for r in sorted_records]
     _write_yaml(data, output_path, comment="Rust flowmark-rs test manifest")
 
 
 def write_mapping_yaml(records: list[MappingRecord], output_path: Path) -> None:
-    """Write mapping records to a YAML file."""
-    data = [_ordered_dict(asdict(r), _MAPPING_KEY_ORDER) for r in records]
+    """Write mapping records to a YAML file with deterministic ordering."""
+    sorted_records = sorted(
+        records, key=lambda r: (r.python_file, r.python_class or "", r.python_function)
+    )
+    data = [_ordered_dict(asdict(r), _MAPPING_KEY_ORDER) for r in sorted_records]
     _write_yaml(data, output_path, comment="Python-to-Rust test mapping")
 
 

@@ -1,10 +1,6 @@
 # Python-to-Rust test mapping
 # Auto-generated. Manual edits are preserved on re-generation.
 
-# ============================================================================
-# tests/test_alerts.py (15 tests) -> tests/test_alerts.rs
-# ============================================================================
-
 - python_file: tests/test_alerts.py
   python_function: test_alert_after_heading
   status: mapped
@@ -43,7 +39,7 @@
 - python_file: tests/test_alerts.py
   python_function: test_empty_alert_type_preserves_quote
   status: missing
-  notes: "No Rust equivalent for the empty alert type [!] test case"
+  notes: No Rust equivalent for the empty alert type [!] test case
 - python_file: tests/test_alerts.py
   python_function: test_lowercase_alert_normalized_to_uppercase
   status: mapped
@@ -67,7 +63,7 @@
 - python_file: tests/test_alerts.py
   python_function: test_quote_with_link_like_content
   status: missing
-  notes: "No Rust equivalent for quote with link-like content test case"
+  notes: No Rust equivalent for quote with link-like content test case
 - python_file: tests/test_alerts.py
   python_function: test_regular_quote_still_works
   status: mapped
@@ -78,211 +74,183 @@
   status: mapped
   rust_file: tests/test_alerts.rs
   rust_function: test_unknown_alert_types_preserve_quote
-
-# ============================================================================
-# tests/test_cleanups.py (1 test) -> tests/test_cleanups.rs
-# ============================================================================
-
 - python_file: tests/test_cleanups.py
   python_function: test_unbold_headings
   status: mapped
   rust_file: tests/test_cleanups.rs
   rust_function: test_unbold_headings
-
-# ============================================================================
-# tests/test_cli_file_discovery.py (20 tests) -> excluded
-# Python CLI infrastructure, not applicable to Rust port
-# ============================================================================
-
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_list_files_no_args_errors
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_no_args_errors
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_with_dot_formats_cwd
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_with_explicit_file
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_explicit_file_still_works
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_explicit_flag_detection_with_default_value
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_flowmarkignore
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_directory
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_extend_exclude
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_extend_include
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_force_exclude
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_max_size
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_no_args_errors
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_no_respect_gitignore
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_skips_excluded_dirs
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_stdin_does_not_crash
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_no_args_errors
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_stdin_explicit_dash
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_stdin_still_works
   status: excluded
-  notes: "Python CLI infrastructure, not applicable to Rust port"
-
-# ============================================================================
-# tests/test_config.py (20 tests) -> excluded
-# Python config system, Rust uses different config approach
-# ============================================================================
-
+  notes: Python CLI infrastructure, not applicable to Rust port
 - python_file: tests/test_config.py
   python_function: test_find_config_dot_flowmark_toml_takes_precedence
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_find_config_flowmark_toml
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_find_config_none_when_missing
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_find_config_pyproject_toml
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_find_config_pyproject_without_section_skipped
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_find_config_walks_up
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_load_config_file_discovery_section
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_load_config_flowmark_toml
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_load_config_kebab_case
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_load_config_malformed_toml
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_load_config_partial
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_load_config_pyproject_toml
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_merge_auto_mode_overrides_formatting
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_merge_auto_mode_width_from_config
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_merge_config_overrides_defaults
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_merge_explicit_cli_overrides_config
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_merge_extend_include_from_config
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_merge_file_discovery_from_config
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_merge_no_config
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_config.py
   python_function: test_parse_config_warns_unknown_keys
   status: excluded
-  notes: "Python config system, Rust uses different config approach"
-
-# ============================================================================
-# tests/test_ellipses.py (1 test) -> tests/test_ellipses.rs (10 tests)
-# Python single function with ~98 assertions split into 10 Rust functions
-# ============================================================================
-
+  notes: Python config system, Rust uses different config approach
 - python_file: tests/test_ellipses.py
   python_function: test_ellipses
   status: mapped
   rust_file: tests/test_ellipses.rs
   rust_functions:
-    - test_ellipses_basic_conversions
-    - test_ellipses_at_boundaries
-    - test_ellipses_multiple
-    - test_ellipses_punctuation
-    - test_ellipses_does_not_apply
-    - test_ellipses_multiline
-    - test_ellipses_edge_cases
-    - test_ellipses_code_like
-    - test_ellipses_four_dots
-    - test_ellipses_quotes
-  notes: "Python single function with ~98 assertions was split into 10 Rust functions covering all assertion groups"
-
-# ============================================================================
-# tests/test_escape_handling.py (12 tests) -> tests/test_escape_handling.rs
-# ============================================================================
-
+  - test_ellipses_basic_conversions
+  - test_ellipses_at_boundaries
+  - test_ellipses_multiple
+  - test_ellipses_punctuation
+  - test_ellipses_does_not_apply
+  - test_ellipses_multiline
+  - test_ellipses_edge_cases
+  - test_ellipses_code_like
+  - test_ellipses_four_dots
+  - test_ellipses_quotes
+  notes: Python single function with ~98 assertions was split into 10 Rust functions covering all assertion groups
 - python_file: tests/test_escape_handling.py
   python_function: test_actual_list_no_escape
   status: mapped
@@ -301,7 +269,7 @@
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_list_item
   status: missing
-  notes: "No Rust equivalent; tests escape handling in list items (remove in middle, preserve at start)"
+  notes: No Rust equivalent; tests escape handling in list items (remove in middle, preserve at start)
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_paragraph_middle
   status: mapped
@@ -310,11 +278,11 @@
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_quote
   status: missing
-  notes: "No Rust equivalent; tests escape handling in block quotes (remove in middle, preserve at start)"
+  notes: No Rust equivalent; tests escape handling in block quotes (remove in middle, preserve at start)
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_table
   status: missing
-  notes: "No Rust equivalent; tests that escapes in table cells are removed"
+  notes: No Rust equivalent; tests that escapes in table cells are removed
 - python_file: tests/test_escape_handling.py
   python_function: test_escaped_chars_at_line_start
   status: mapped
@@ -328,22 +296,18 @@
 - python_file: tests/test_escape_handling.py
   python_function: test_mixed_escapes
   status: missing
-  notes: "No Rust equivalent; comprehensive mixed escape document test with heading, paragraph, list, and quote contexts"
+  notes: No Rust equivalent; comprehensive mixed escape document test with heading, paragraph, list, and quote contexts
 - python_file: tests/test_escape_handling.py
   python_function: test_mixed_escapes_comprehensive
   status: missing
-  notes: "No Rust equivalent; comprehensive test of escape handling policy showing period vs other char handling"
+  notes: No Rust equivalent; comprehensive test of escape handling policy showing period vs other char handling
 - python_file: tests/test_escape_handling.py
   python_function: test_other_escaped_chars
   status: partial
   rust_file: tests/test_escape_handling.rs
   rust_function: test_other_escaped_chars
-  notes: "Rust test covers asterisk, hash, and hyphen escapes but omits dollar, underscore, bracket, and backtick escape cases from Python"
-
-# ============================================================================
-# tests/test_fenced_code_blocks.py (12 tests) -> tests/test_fenced_code_blocks.rs
-# ============================================================================
-
+  notes: Rust test covers asterisk, hash, and hyphen escapes but omits dollar, underscore, bracket, and backtick escape cases
+    from Python
 - python_file: tests/test_fenced_code_blocks.py
   python_function: test_code_block_with_inline_backticks
   status: mapped
@@ -377,7 +341,7 @@
 - python_file: tests/test_fenced_code_blocks.py
   python_function: test_minimum_backticks_computed_from_content
   status: missing
-  notes: "No Rust equivalent; tests that output uses enough backticks even if input only uses 3"
+  notes: No Rust equivalent; tests that output uses enough backticks even if input only uses 3
 - python_file: tests/test_fenced_code_blocks.py
   python_function: test_multiple_empty_lines_in_code_block
   status: mapped
@@ -403,141 +367,130 @@
   status: mapped
   rust_file: tests/test_fenced_code_blocks.rs
   rust_function: test_tilde_fence_with_backticks_in_content
-
-# ============================================================================
-# tests/test_file_resolver.py (30 tests) -> excluded
-# Python file resolution infrastructure, not applicable to Rust port
-# ============================================================================
-
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_exclude_extended
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_exclude_replaced
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_include
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_include_custom_base
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_read_ignore_file_missing
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_read_ignore_file_non_utf8
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_read_ignore_file_unreadable
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_deduplication
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_directory_recursion
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_exclude_replaces_defaults
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_excludes_default_dirs
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_explicit_files_bypass_exclusions_by_default
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_extend_exclude
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_extend_include
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_file_not_found
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_files_max_size
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_files_max_size_zero_disables
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_flowmarkignore
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_flowmarkignore_positive_assertion
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_force_exclude_filters_explicit_files
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_gitignore_file_patterns
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_gitignore_wildcard_file_pattern
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_glob_pattern
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_mixed_inputs
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_nested_gitignore
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_nested_gitignore_combines_parent_rules
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_no_respect_gitignore
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_respects_gitignore
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_single_file
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_sorted_output
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_tool_ignore_per_walk_root
   status: excluded
-  notes: "Python file resolution infrastructure, not applicable to Rust port"
-
-# ============================================================================
-# tests/test_filling.py (2 tests) -> tests/test_filling.rs
-# ============================================================================
-
+  notes: Python file resolution infrastructure, not applicable to Rust port
 - python_file: tests/test_filling.py
   python_function: test_multi_paragraph_list_items
   status: mapped
@@ -548,11 +501,6 @@
   status: mapped
   rust_file: tests/test_filling.rs
   rust_function: test_normalize_markdown
-
-# ============================================================================
-# tests/test_frontmatter.py (3 tests) -> tests/test_frontmatter.rs
-# ============================================================================
-
 - python_file: tests/test_frontmatter.py
   python_function: test_has_frontmatter
   status: mapped
@@ -568,17 +516,12 @@
   status: mapped
   rust_file: tests/test_frontmatter.rs
   rust_functions:
-    - test_split_frontmatter_empty
-    - test_split_frontmatter_no_frontmatter
-    - test_split_frontmatter_proper
-    - test_split_frontmatter_empty_lines_before
-    - test_split_frontmatter_unclosed
-  notes: "Python single function with 5 cases was split into 5 individual Rust functions covering each case"
-
-# ============================================================================
-# tests/test_heading_spacing.py (9 tests) -> tests/test_heading_spacing.rs
-# ============================================================================
-
+  - test_split_frontmatter_empty
+  - test_split_frontmatter_no_frontmatter
+  - test_split_frontmatter_proper
+  - test_split_frontmatter_empty_lines_before
+  - test_split_frontmatter_unclosed
+  notes: Python single function with 5 cases was split into 5 individual Rust functions covering each case
 - python_file: tests/test_heading_spacing.py
   python_function: test_hard_breaks_after_comments
   status: mapped
@@ -622,12 +565,7 @@
 - python_file: tests/test_heading_spacing.py
   python_function: test_heading_with_hard_break_in_list
   status: missing
-  notes: "No Rust equivalent; tests hard breaks in headings within list items"
-
-# ============================================================================
-# tests/test_list_spacing.py (20 tests) -> tests/test_list_spacing.rs
-# ============================================================================
-
+  notes: No Rust equivalent; tests hard breaks in headings within list items
 - python_file: tests/test_list_spacing.py
   python_function: test_complex_content_with_loose_mode
   status: mapped
@@ -723,89 +661,68 @@
   status: mapped
   rust_file: tests/test_list_spacing.rs
   rust_function: test_tight_list_to_loose
-
-# ============================================================================
-# tests/test_ref_docs.py (1 test) -> tests/test_ref_docs.rs
-# ============================================================================
-
 - python_file: tests/test_ref_docs.py
   python_function: test_reference_doc_formats
   status: mapped
   rust_file: tests/test_ref_docs.rs
   rust_function: test_reference_doc_formats
-
-# ============================================================================
-# tests/test_sentences.py (2 tests) -> tests/test_sentences.rs + src/wrapping/sentence.rs
-# ============================================================================
-
 - python_file: tests/test_sentences.py
   python_function: test_first_sentence
   status: mapped
   rust_file: tests/test_sentences.rs
   rust_function: test_first_sentence
-  notes: "Also tested in src/wrapping/sentence.rs::test_first_sentence"
+  notes: Also tested in src/wrapping/sentence.rs::test_first_sentence
 - python_file: tests/test_sentences.py
   python_function: test_split_sentences
   status: mapped
   rust_file: tests/test_sentences.rs
   rust_function: test_split_sentences
-  notes: "Also tested in src/wrapping/sentence.rs::test_split_sentences"
-
-# ============================================================================
-# tests/test_skill.py (9 tests) -> excluded
-# Python skill/plugin infrastructure, not applicable to Rust port
-# ============================================================================
-
+  notes: Also tested in src/wrapping/sentence.rs::test_split_sentences
 - python_file: tests/test_skill.py
   python_function: test_docs_content_is_readme
   python_class: TestGetDocsContent
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_docs_content_loads
   python_class: TestGetDocsContent
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_skill_content_has_metadata
   python_class: TestGetSkillContent
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_skill_content_has_usage
   python_class: TestGetSkillContent
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_skill_content_loads
   python_class: TestGetSkillContent
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_install_skill_creates_directories
   python_class: TestInstallSkill
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_install_skill_custom_base
   python_class: TestInstallSkill
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_install_skill_default
   python_class: TestInstallSkill
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_skill.py
   python_function: test_install_skill_overwrites_existing
   python_class: TestInstallSkill
   status: excluded
-  notes: "Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port"
-
-# ============================================================================
-# tests/test_smartquotes.py (28 tests) -> tests/test_smartquotes.rs
-# ============================================================================
-
+  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
 - python_file: tests/test_smartquotes.py
   python_function: test_apostrophes_and_contractions
   status: mapped
@@ -884,11 +801,12 @@
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_blockquote_multiline_with_code_span
   status: missing
-  notes: "No Rust equivalent; tests smart quotes in a multiline blockquote with code spans (specific bug report regression)"
+  notes: No Rust equivalent; tests smart quotes in a multiline blockquote with code spans (specific bug report regression)
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_complex_table
   status: missing
-  notes: "No Rust equivalent; tests smart quotes in a complex table with code spans and multiple rows (specific bug report regression)"
+  notes: No Rust equivalent; tests smart quotes in a complex table with code spans and multiple rows (specific bug report
+    regression)
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_in_strikethrough
   status: mapped
@@ -902,11 +820,11 @@
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_in_table_preserve_code_spans
   status: missing
-  notes: "No Rust equivalent; tests that code spans inside table cells are not modified by smart quotes"
+  notes: No Rust equivalent; tests that code spans inside table cells are not modified by smart quotes
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_in_table_with_bold
   status: missing
-  notes: "No Rust equivalent; tests smart quotes in table cells containing bold text"
+  notes: No Rust equivalent; tests smart quotes in table cells containing bold text
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_not_modifying_code_content
   status: mapped
@@ -920,7 +838,7 @@
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_spanning_code_span_in_blockquote
   status: missing
-  notes: "No Rust equivalent; tests quotes spanning a code span inside a blockquote"
+  notes: No Rust equivalent; tests quotes spanning a code span inside a blockquote
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_spanning_emphasis
   status: mapped
@@ -941,11 +859,6 @@
   status: mapped
   rust_file: tests/test_smartquotes.rs
   rust_function: test_technical_content_unchanged
-
-# ============================================================================
-# tests/test_strikethrough.py (11 tests) -> tests/test_strikethrough.rs
-# ============================================================================
-
 - python_file: tests/test_strikethrough.py
   python_function: test_double_tilde_strikethrough
   status: mapped
@@ -989,27 +902,22 @@
 - python_file: tests/test_strikethrough.py
   python_function: test_tilde_space_after_opener
   status: missing
-  notes: "No Rust equivalent; tests that a tilde followed by space is not left-flanking (no strikethrough)"
+  notes: No Rust equivalent; tests that a tilde followed by space is not left-flanking (no strikethrough)
 - python_file: tests/test_strikethrough.py
   python_function: test_tilde_space_before_closer
   status: missing
-  notes: "No Rust equivalent; tests that a tilde preceded by space is not right-flanking (no strikethrough)"
+  notes: No Rust equivalent; tests that a tilde preceded by space is not right-flanking (no strikethrough)
 - python_file: tests/test_strikethrough.py
   python_function: test_tildes_with_space_before_closer
   status: mapped
   rust_file: tests/test_strikethrough.rs
   rust_function: test_tildes_with_space_before_closer
-
-# ============================================================================
-# tests/test_tag_formatting.py (34 tests) -> tests/test_tag_formatting.rs
-# ============================================================================
-
 - python_file: tests/test_tag_formatting.py
   python_function: test_adjacent_closing_tags
   status: mapped
   rust_file: tests/test_tag_formatting.rs
   rust_function: test_adjacent_closing_tags_roundtrip
-  notes: "Rust uses roundtrip naming but tests the same normalize/denormalize behavior"
+  notes: Rust uses roundtrip naming but tests the same normalize/denormalize behavior
 - python_file: tests/test_tag_formatting.py
   python_function: test_fill_markdown_with_list_in_tags
   status: mapped
@@ -1018,7 +926,7 @@
 - python_file: tests/test_tag_formatting.py
   python_function: test_html_comment_multiline_closing
   status: missing
-  notes: "No Rust equivalent; tests _fix_multiline_opening_tag_with_closing for HTML comment pattern"
+  notes: No Rust equivalent; tests _fix_multiline_opening_tag_with_closing for HTML comment pattern
 - python_file: tests/test_tag_formatting.py
   python_function: test_html_comment_tags_with_quotes
   status: mapped
@@ -1037,23 +945,23 @@
 - python_file: tests/test_tag_formatting.py
   python_function: test_line_wrapper_preserves_multiline_tags
   status: missing
-  notes: "No Rust equivalent; tests that line wrappers preserve structure of multiline tags"
+  notes: No Rust equivalent; tests that line wrappers preserve structure of multiline tags
 - python_file: tests/test_tag_formatting.py
   python_function: test_list_item_with_tag_on_continuation_line
   status: missing
-  notes: "No Rust equivalent; regression test for HTML comment tags on continuation lines of list items"
+  notes: No Rust equivalent; regression test for HTML comment tags on continuation lines of list items
 - python_file: tests/test_tag_formatting.py
   python_function: test_multiline_opening_tag_closing_on_own_line
   status: missing
-  notes: "No Rust equivalent; tests _fix_multiline_opening_tag_with_closing for multiline opening tags (GitHub issue #17)"
+  notes: 'No Rust equivalent; tests _fix_multiline_opening_tag_with_closing for multiline opening tags (GitHub issue #17)'
 - python_file: tests/test_tag_formatting.py
   python_function: test_multiline_tag_through_pipeline
   status: missing
-  notes: "No Rust equivalent; tests that long tags stay together through the full pipeline"
+  notes: No Rust equivalent; tests that long tags stay together through the full pipeline
 - python_file: tests/test_tag_formatting.py
   python_function: test_multiline_tag_with_surrounding_text
   status: missing
-  notes: "No Rust equivalent; tests multiline tags with regular text that should get smart quotes"
+  notes: No Rust equivalent; tests multiline tags with regular text that should get smart quotes
 - python_file: tests/test_tag_formatting.py
   python_function: test_pipeline_preserves_tag_quotes
   status: mapped
@@ -1067,7 +975,7 @@
 - python_file: tests/test_tag_formatting.py
   python_function: test_preprocess_tag_block_spacing_inline_tags
   status: missing
-  notes: "No Rust equivalent; tests that inline tags in list items do not trigger extra spacing"
+  notes: No Rust equivalent; tests that inline tags in list items do not trigger extra spacing
 - python_file: tests/test_tag_formatting.py
   python_function: test_preprocess_tag_block_spacing_lists
   status: mapped
@@ -1081,11 +989,11 @@
 - python_file: tests/test_tag_formatting.py
   python_function: test_selection_field_with_task_list
   status: missing
-  notes: "No Rust equivalent; tests selection fields with task list items (TAG_8 pattern)"
+  notes: No Rust equivalent; tests selection fields with task list items (TAG_8 pattern)
 - python_file: tests/test_tag_formatting.py
   python_function: test_single_line_paired_tags_not_split
   status: missing
-  notes: "No Rust equivalent; regression test ensuring single-line paired tags are not split (fix for issue #17)"
+  notes: 'No Rust equivalent; regression test ensuring single-line paired tags are not split (fix for issue #17)'
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_converts_prose_but_not_tags
   status: mapped
@@ -1094,13 +1002,13 @@
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_multiline_tag_with_prose
   status: missing
-  notes: "No Rust equivalent; tests smart quotes with multiline tag surrounded by prose"
+  notes: No Rust equivalent; tests smart quotes with multiline tag surrounded by prose
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_not_applied_in_tag_attributes
   status: mapped
   rust_file: tests/test_tag_formatting.rs
   rust_function: test_smart_quotes_preserves_quotes_in_tags
-  notes: "Rust equivalent uses different name but tests the same behavior: tag attribute quotes not converted"
+  notes: 'Rust equivalent uses different name but tests the same behavior: tag attribute quotes not converted'
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_preserves_apostrophe_in_jinja_variable
   status: mapped
@@ -1111,7 +1019,7 @@
   status: mapped
   rust_file: tests/test_tag_formatting.rs
   rust_function: test_smart_quotes_preserves_quotes_in_include
-  notes: "Rust name slightly different but tests same behavior: include tag quotes preserved"
+  notes: 'Rust name slightly different but tests same behavior: include tag quotes preserved'
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_preserves_quotes_in_html_comments
   status: mapped
@@ -1135,28 +1043,23 @@
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_newlines_preserved_in_pipeline
   status: missing
-  notes: "No Rust equivalent; tests that newlines within multiline tags are preserved through the pipeline"
+  notes: No Rust equivalent; tests that newlines within multiline tags are preserved through the pipeline
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_with_array_spanning_lines
   status: missing
-  notes: "No Rust equivalent; tests that arrays spanning multiple lines inside tags are preserved"
+  notes: No Rust equivalent; tests that arrays spanning multiple lines inside tags are preserved
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_with_embedded_percent_brace
   status: missing
-  notes: "No Rust equivalent; tests that percent-brace inside a string attribute does not end the tag early"
+  notes: No Rust equivalent; tests that percent-brace inside a string attribute does not end the tag early
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_with_object_spanning_lines
   status: missing
-  notes: "No Rust equivalent; tests that objects spanning multiple lines inside tags are preserved"
+  notes: No Rust equivalent; tests that objects spanning multiple lines inside tags are preserved
 - python_file: tests/test_tag_formatting.py
   python_function: test_word_splitter_handles_multiline_tags
   status: missing
-  notes: "No Rust equivalent; tests that the word splitter correctly handles multiline tags"
-
-# ============================================================================
-# tests/test_width_options.py (7 tests) -> tests/test_width_options.rs
-# ============================================================================
-
+  notes: No Rust equivalent; tests that the word splitter correctly handles multiline tags
 - python_file: tests/test_width_options.py
   python_function: test_existing_behavior_unchanged
   status: mapped
@@ -1165,7 +1068,7 @@
 - python_file: tests/test_width_options.py
   python_function: test_negative_width_disables_wrapping
   status: missing
-  notes: "No Rust equivalent; tests that negative width values disable wrapping entirely"
+  notes: No Rust equivalent; tests that negative width values disable wrapping entirely
 - python_file: tests/test_width_options.py
   python_function: test_normal_width_wrapping
   status: mapped
@@ -1191,11 +1094,6 @@
   status: mapped
   rust_file: tests/test_width_options.rs
   rust_function: test_zero_width_disables_wrapping
-
-# ============================================================================
-# tests/test_wrapping.py (47 tests) -> tests/test_wrapping.rs + src/ modules
-# ============================================================================
-
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_html_comment_tags_no_space
   status: mapped
@@ -1204,7 +1102,7 @@
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_jinja_comment_tags_no_space
   status: missing
-  notes: "No Rust equivalent; tests that adjacent Jinja comment tags stay adjacent"
+  notes: No Rust equivalent; tests that adjacent Jinja comment tags stay adjacent
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_jinja_tags_no_space
   status: mapped
@@ -1213,7 +1111,7 @@
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_jinja_variable_tags_no_space
   status: missing
-  notes: "No Rust equivalent; tests that adjacent Jinja variable tags stay adjacent"
+  notes: No Rust equivalent; tests that adjacent Jinja variable tags stay adjacent
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_tags_full_pipeline
   status: mapped
@@ -1222,39 +1120,39 @@
 - python_file: tests/test_wrapping.py
   python_function: test_backslash_in_tag_attributes
   status: missing
-  notes: "No Rust equivalent; tests that backslashes in tag attribute values are preserved"
+  notes: No Rust equivalent; tests that backslashes in tag attribute values are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_blank_line_normalization
   status: missing
-  notes: "No Rust equivalent; tests that block content between tags gets exactly one blank line at boundaries"
+  notes: No Rust equivalent; tests that block content between tags gets exactly one blank line at boundaries
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_list_items
   status: missing
-  notes: "No Rust equivalent; tests that list items inside tags have their newlines preserved"
+  notes: No Rust equivalent; tests that list items inside tags have their newlines preserved
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_mixed_content
   status: missing
-  notes: "No Rust equivalent; tests block heuristics with mixed content (text + block elements)"
+  notes: No Rust equivalent; tests block heuristics with mixed content (text + block elements)
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_only_with_tags
   status: missing
-  notes: "No Rust equivalent; tests that block heuristics only apply when tags are present"
+  notes: No Rust equivalent; tests that block heuristics only apply when tags are present
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_preserves_existing_blank_lines
   status: missing
-  notes: "No Rust equivalent; tests that existing blank lines are not doubled by block heuristics"
+  notes: No Rust equivalent; tests that existing blank lines are not doubled by block heuristics
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_table_blank_lines
   status: missing
-  notes: "No Rust equivalent; tests blank line normalization specifically for tables"
+  notes: No Rust equivalent; tests blank line normalization specifically for tables
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_table_rows
   status: missing
-  notes: "No Rust equivalent; tests that table rows inside tags have their newlines preserved"
+  notes: No Rust equivalent; tests that table rows inside tags have their newlines preserved
 - python_file: tests/test_wrapping.py
   python_function: test_closing_tag_spacing_function
   status: missing
-  notes: "No Rust equivalent; tests the _fix_closing_tag_spacing function directly"
+  notes: No Rust equivalent; tests the _fix_closing_tag_spacing function directly
 - python_file: tests/test_wrapping.py
   python_function: test_html_comments_kept_together
   status: mapped
@@ -1263,7 +1161,7 @@
 - python_file: tests/test_wrapping.py
   python_function: test_inline_code_in_table_cells
   status: missing
-  notes: "No Rust equivalent; tests that inline code in table cell content is tokenized correctly"
+  notes: No Rust equivalent; tests that inline code in table cell content is tokenized correctly
 - python_file: tests/test_wrapping.py
   python_function: test_inline_code_with_spaces
   status: mapped
@@ -1272,7 +1170,7 @@
 - python_file: tests/test_wrapping.py
   python_function: test_inline_code_with_surrounding_punctuation
   status: missing
-  notes: "No Rust equivalent; tests that inline code with surrounding punctuation stays together"
+  notes: No Rust equivalent; tests that inline code with surrounding punctuation stays together
 - python_file: tests/test_wrapping.py
   python_function: test_line_wrap_to_width_with_markdown_breaks
   status: mapped
@@ -1281,19 +1179,19 @@
 - python_file: tests/test_wrapping.py
   python_function: test_list_content_gets_blank_lines
   status: missing
-  notes: "No Rust equivalent; tests that list content between tags DOES get blank lines"
+  notes: No Rust equivalent; tests that list content between tags DOES get blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_long_html_tags
   status: missing
-  notes: "No Rust equivalent; tests that HTML tags with many attributes are kept together"
+  notes: No Rust equivalent; tests that HTML tags with many attributes are kept together
 - python_file: tests/test_wrapping.py
   python_function: test_long_jinja_comments
   status: missing
-  notes: "No Rust equivalent; tests that long Jinja comments are kept together"
+  notes: No Rust equivalent; tests that long Jinja comments are kept together
 - python_file: tests/test_wrapping.py
   python_function: test_long_template_tags
   status: missing
-  notes: "No Rust equivalent; tests that tags with many attributes (10+ words) are kept together"
+  notes: No Rust equivalent; tests that tags with many attributes (10+ words) are kept together
 - python_file: tests/test_wrapping.py
   python_function: test_markdown_escape_word_function
   status: mapped
@@ -1302,7 +1200,7 @@
 - python_file: tests/test_wrapping.py
   python_function: test_mixed_content_blank_lines_correct
   status: missing
-  notes: "No Rust equivalent; tests that mixed content (text followed by list) gets correct blank lines"
+  notes: No Rust equivalent; tests that mixed content (text followed by list) gets correct blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_mixed_html_and_template_tags
   status: mapped
@@ -1311,47 +1209,47 @@
 - python_file: tests/test_wrapping.py
   python_function: test_multiple_single_word_inline_codes
   status: missing
-  notes: "No Rust equivalent; tests text with multiple single-word inline code spans"
+  notes: No Rust equivalent; tests text with multiple single-word inline code spans
 - python_file: tests/test_wrapping.py
   python_function: test_nested_tags_newlines_preserved
   status: missing
-  notes: "No Rust equivalent; tests that newlines between nested tags are preserved"
+  notes: No Rust equivalent; tests that newlines between nested tags are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_newline_after_opening_tag
   status: missing
-  notes: "No Rust equivalent; tests that newlines after opening Jinja/Markdoc tags are preserved"
+  notes: No Rust equivalent; tests that newlines after opening Jinja/Markdoc tags are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_newline_before_closing_tag
   status: missing
-  notes: "No Rust equivalent; tests that newlines before closing Jinja/Markdoc tags are preserved"
+  notes: No Rust equivalent; tests that newlines before closing Jinja/Markdoc tags are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_paired_tags_not_broken
   status: missing
-  notes: "No Rust equivalent; tests that paired tags on the same line stay together during wrapping"
+  notes: No Rust equivalent; tests that paired tags on the same line stay together during wrapping
 - python_file: tests/test_wrapping.py
   python_function: test_paragraph_only_content_various_tags
   status: missing
-  notes: "No Rust equivalent; tests paragraph-only content with various tag types"
+  notes: No Rust equivalent; tests paragraph-only content with various tag types
 - python_file: tests/test_wrapping.py
   python_function: test_paragraph_text_no_extra_blank_lines
   status: missing
-  notes: "No Rust equivalent; tests that paragraph text between tags does NOT get extra blank lines"
+  notes: No Rust equivalent; tests that paragraph text between tags does NOT get extra blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_html_comment_tags
   status: missing
-  notes: "No Rust equivalent; tests self-closing HTML comment tags (comments without a closing counterpart)"
+  notes: No Rust equivalent; tests self-closing HTML comment tags (comments without a closing counterpart)
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_jinja_comment_tags
   status: missing
-  notes: "No Rust equivalent; tests Jinja comment tags {# #} which are always self-closing"
+  notes: 'No Rust equivalent; tests Jinja comment tags {# #} which are always self-closing'
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_jinja_tags
   status: missing
-  notes: "No Rust equivalent; tests self-closing Jinja tags (tags without a separate closing tag)"
+  notes: No Rust equivalent; tests self-closing Jinja tags (tags without a separate closing tag)
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_jinja_variable_tags
   status: missing
-  notes: "No Rust equivalent; tests Jinja variable tags {{ }} which are always self-closing"
+  notes: No Rust equivalent; tests Jinja variable tags {{ }} which are always self-closing
 - python_file: tests/test_wrapping.py
   python_function: test_single_word_inline_code_not_coalesced
   status: mapped
@@ -1365,11 +1263,11 @@
 - python_file: tests/test_wrapping.py
   python_function: test_table_content_gets_blank_lines
   status: missing
-  notes: "No Rust equivalent; tests that table content between tags DOES get blank lines"
+  notes: No Rust equivalent; tests that table content between tags DOES get blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_tag_with_list_items
   status: missing
-  notes: "No Rust equivalent; tests that tags containing lists do not merge with list items"
+  notes: No Rust equivalent; tests that tags containing lists do not merge with list items
 - python_file: tests/test_wrapping.py
   python_function: test_template_tag_splitter
   status: mapped
@@ -1383,7 +1281,7 @@
 - python_file: tests/test_wrapping.py
   python_function: test_various_tag_types_with_tables
   status: missing
-  notes: "No Rust equivalent; tests tables with various tag types (Jinja, HTML comments, variables)"
+  notes: No Rust equivalent; tests tables with various tag types (Jinja, HTML comments, variables)
 - python_file: tests/test_wrapping.py
   python_function: test_wrap_paragraph_lines_markdown_escaping
   status: mapped
