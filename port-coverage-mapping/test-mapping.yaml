@@ -38,7 +38,9 @@
   rust_function: test_basic_note_alert
 - python_file: tests/test_alerts.py
   python_function: test_empty_alert_type_preserves_quote
-  status: missing
+  status: mapped
+  rust_file: tests/test_alerts.rs
+  rust_function: test_empty_alert_type_preserves_quote
   notes: No Rust equivalent for the empty alert type [!] test case
 - python_file: tests/test_alerts.py
   python_function: test_lowercase_alert_normalized_to_uppercase
@@ -62,7 +64,9 @@
   rust_function: test_multiple_alerts_in_document
 - python_file: tests/test_alerts.py
   python_function: test_quote_with_link_like_content
-  status: missing
+  status: mapped
+  rust_file: tests/test_alerts.rs
+  rust_function: test_quote_with_link_like_content
   notes: No Rust equivalent for quote with link-like content test case
 - python_file: tests/test_alerts.py
   python_function: test_regular_quote_still_works
@@ -268,8 +272,12 @@
   rust_function: test_escape_in_heading
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_list_item
-  status: missing
-  notes: No Rust equivalent; tests escape handling in list items (remove in middle, preserve at start)
+  status: mapped
+  rust_file: tests/test_escape_handling.rs
+  rust_function: test_escape_in_list_item
+  rust_functions:
+  - test_escape_in_list_item_start_preserved
+  notes: 'Split into passing/ignored parts. Bug: fmr-2tll'
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_paragraph_middle
   status: mapped
@@ -277,11 +285,15 @@
   rust_function: test_escape_in_paragraph_middle
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_quote
-  status: missing
+  status: mapped
+  rust_file: tests/test_escape_handling.rs
+  rust_function: test_escape_in_quote
   notes: No Rust equivalent; tests escape handling in block quotes (remove in middle, preserve at start)
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_table
-  status: missing
+  status: mapped
+  rust_file: tests/test_escape_handling.rs
+  rust_function: test_escape_in_table
   notes: No Rust equivalent; tests that escapes in table cells are removed
 - python_file: tests/test_escape_handling.py
   python_function: test_escaped_chars_at_line_start
@@ -295,11 +307,15 @@
   rust_function: test_escaped_chars_in_headings
 - python_file: tests/test_escape_handling.py
   python_function: test_mixed_escapes
-  status: missing
-  notes: No Rust equivalent; comprehensive mixed escape document test with heading, paragraph, list, and quote contexts
+  status: mapped
+  rust_file: tests/test_escape_handling.rs
+  rust_function: test_mixed_escapes
+  notes: 'Ignored: known bug fmr-2tll (escape at list item start)'
 - python_file: tests/test_escape_handling.py
   python_function: test_mixed_escapes_comprehensive
-  status: missing
+  status: mapped
+  rust_file: tests/test_escape_handling.rs
+  rust_function: test_mixed_escapes_comprehensive
   notes: No Rust equivalent; comprehensive test of escape handling policy showing period vs other char handling
 - python_file: tests/test_escape_handling.py
   python_function: test_other_escaped_chars
@@ -340,7 +356,9 @@
   rust_function: test_four_backtick_fence_preserved
 - python_file: tests/test_fenced_code_blocks.py
   python_function: test_minimum_backticks_computed_from_content
-  status: missing
+  status: mapped
+  rust_file: tests/test_fenced_code_blocks.rs
+  rust_function: test_minimum_backticks_computed_from_content
   notes: No Rust equivalent; tests that output uses enough backticks even if input only uses 3
 - python_file: tests/test_fenced_code_blocks.py
   python_function: test_multiple_empty_lines_in_code_block
@@ -564,8 +582,10 @@
   rust_function: test_heading_with_hard_break
 - python_file: tests/test_heading_spacing.py
   python_function: test_heading_with_hard_break_in_list
-  status: missing
-  notes: No Rust equivalent; tests hard breaks in headings within list items
+  status: mapped
+  rust_file: tests/test_heading_spacing.rs
+  rust_function: test_heading_with_hard_break_in_list
+  notes: 'Ignored: known bug fmr-4l1x'
 - python_file: tests/test_list_spacing.py
   python_function: test_complex_content_with_loose_mode
   status: mapped
@@ -800,11 +820,15 @@
   rust_function: test_smart_quotes_apostrophes_in_table_cells
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_blockquote_multiline_with_code_span
-  status: missing
+  status: mapped
+  rust_file: tests/test_smartquotes.rs
+  rust_function: test_smart_quotes_blockquote_multiline_with_code_span
   notes: No Rust equivalent; tests smart quotes in a multiline blockquote with code spans (specific bug report regression)
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_complex_table
-  status: missing
+  status: mapped
+  rust_file: tests/test_smartquotes.rs
+  rust_function: test_smart_quotes_complex_table
   notes: No Rust equivalent; tests smart quotes in a complex table with code spans and multiple rows (specific bug report
     regression)
 - python_file: tests/test_smartquotes.py
@@ -819,11 +843,15 @@
   rust_function: test_smart_quotes_in_table_cells
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_in_table_preserve_code_spans
-  status: missing
+  status: mapped
+  rust_file: tests/test_smartquotes.rs
+  rust_function: test_smart_quotes_in_table_preserve_code_spans
   notes: No Rust equivalent; tests that code spans inside table cells are not modified by smart quotes
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_in_table_with_bold
-  status: missing
+  status: mapped
+  rust_file: tests/test_smartquotes.rs
+  rust_function: test_smart_quotes_in_table_with_bold
   notes: No Rust equivalent; tests smart quotes in table cells containing bold text
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_not_modifying_code_content
@@ -837,7 +865,9 @@
   rust_function: test_smart_quotes_spanning_code_span
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_spanning_code_span_in_blockquote
-  status: missing
+  status: mapped
+  rust_file: tests/test_smartquotes.rs
+  rust_function: test_smart_quotes_spanning_code_span_in_blockquote
   notes: No Rust equivalent; tests quotes spanning a code span inside a blockquote
 - python_file: tests/test_smartquotes.py
   python_function: test_smart_quotes_spanning_emphasis
@@ -901,11 +931,15 @@
   rust_function: test_strikethrough_in_paragraph
 - python_file: tests/test_strikethrough.py
   python_function: test_tilde_space_after_opener
-  status: missing
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_space_after_opener
   notes: No Rust equivalent; tests that a tilde followed by space is not left-flanking (no strikethrough)
 - python_file: tests/test_strikethrough.py
   python_function: test_tilde_space_before_closer
-  status: missing
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_space_before_closer
   notes: No Rust equivalent; tests that a tilde preceded by space is not right-flanking (no strikethrough)
 - python_file: tests/test_strikethrough.py
   python_function: test_tildes_with_space_before_closer
@@ -925,7 +959,9 @@
   rust_function: test_fill_markdown_with_list_in_tags
 - python_file: tests/test_tag_formatting.py
   python_function: test_html_comment_multiline_closing
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_html_comment_multiline_closing
   notes: No Rust equivalent; tests _fix_multiline_opening_tag_with_closing for HTML comment pattern
 - python_file: tests/test_tag_formatting.py
   python_function: test_html_comment_tags_with_quotes
@@ -944,23 +980,33 @@
   rust_function: test_jinja_variable_tags_in_prose
 - python_file: tests/test_tag_formatting.py
   python_function: test_line_wrapper_preserves_multiline_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_line_wrapper_preserves_multiline_tags
   notes: No Rust equivalent; tests that line wrappers preserve structure of multiline tags
 - python_file: tests/test_tag_formatting.py
   python_function: test_list_item_with_tag_on_continuation_line
-  status: missing
-  notes: No Rust equivalent; regression test for HTML comment tags on continuation lines of list items
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_list_item_with_tag_on_continuation_line
+  notes: 'Ignored: known bug fmr-5ojk'
 - python_file: tests/test_tag_formatting.py
   python_function: test_multiline_opening_tag_closing_on_own_line
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_multiline_opening_tag_closing_on_own_line
   notes: 'No Rust equivalent; tests _fix_multiline_opening_tag_with_closing for multiline opening tags (GitHub issue #17)'
 - python_file: tests/test_tag_formatting.py
   python_function: test_multiline_tag_through_pipeline
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_multiline_tag_through_pipeline
   notes: No Rust equivalent; tests that long tags stay together through the full pipeline
 - python_file: tests/test_tag_formatting.py
   python_function: test_multiline_tag_with_surrounding_text
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_multiline_tag_with_surrounding_text
   notes: No Rust equivalent; tests multiline tags with regular text that should get smart quotes
 - python_file: tests/test_tag_formatting.py
   python_function: test_pipeline_preserves_tag_quotes
@@ -974,7 +1020,9 @@
   rust_function: test_preprocess_tag_block_spacing_already_spaced
 - python_file: tests/test_tag_formatting.py
   python_function: test_preprocess_tag_block_spacing_inline_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_preprocess_tag_block_spacing_inline_tags
   notes: No Rust equivalent; tests that inline tags in list items do not trigger extra spacing
 - python_file: tests/test_tag_formatting.py
   python_function: test_preprocess_tag_block_spacing_lists
@@ -988,11 +1036,15 @@
   rust_function: test_preprocess_tag_block_spacing_tables
 - python_file: tests/test_tag_formatting.py
   python_function: test_selection_field_with_task_list
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_selection_field_with_task_list
   notes: No Rust equivalent; tests selection fields with task list items (TAG_8 pattern)
 - python_file: tests/test_tag_formatting.py
   python_function: test_single_line_paired_tags_not_split
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_single_line_paired_tags_not_split
   notes: 'No Rust equivalent; regression test ensuring single-line paired tags are not split (fix for issue #17)'
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_converts_prose_but_not_tags
@@ -1001,7 +1053,9 @@
   rust_function: test_smart_quotes_converts_prose_but_not_tags
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_multiline_tag_with_prose
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_smart_quotes_multiline_tag_with_prose
   notes: No Rust equivalent; tests smart quotes with multiline tag surrounded by prose
 - python_file: tests/test_tag_formatting.py
   python_function: test_smart_quotes_not_applied_in_tag_attributes
@@ -1042,23 +1096,33 @@
   rust_function: test_smart_quotes_with_nunjucks_raw_block
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_newlines_preserved_in_pipeline
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_tag_newlines_preserved_in_pipeline
   notes: No Rust equivalent; tests that newlines within multiline tags are preserved through the pipeline
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_with_array_spanning_lines
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_tag_with_array_spanning_lines
   notes: No Rust equivalent; tests that arrays spanning multiple lines inside tags are preserved
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_with_embedded_percent_brace
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_tag_with_embedded_percent_brace
   notes: No Rust equivalent; tests that percent-brace inside a string attribute does not end the tag early
 - python_file: tests/test_tag_formatting.py
   python_function: test_tag_with_object_spanning_lines
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_tag_with_object_spanning_lines
   notes: No Rust equivalent; tests that objects spanning multiple lines inside tags are preserved
 - python_file: tests/test_tag_formatting.py
   python_function: test_word_splitter_handles_multiline_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_word_splitter_handles_multiline_tags
   notes: No Rust equivalent; tests that the word splitter correctly handles multiline tags
 - python_file: tests/test_width_options.py
   python_function: test_existing_behavior_unchanged
@@ -1067,8 +1131,10 @@
   rust_function: test_existing_behavior_unchanged
 - python_file: tests/test_width_options.py
   python_function: test_negative_width_disables_wrapping
-  status: missing
-  notes: No Rust equivalent; tests that negative width values disable wrapping entirely
+  status: mapped
+  rust_file: tests/test_width_options.rs
+  rust_function: test_negative_width_disables_wrapping
+  notes: Rust uses width=0 (usize) instead of -1
 - python_file: tests/test_width_options.py
   python_function: test_normal_width_wrapping
   status: mapped
@@ -1101,7 +1167,9 @@
   rust_function: test_adjacent_html_comment_tags_no_space
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_jinja_comment_tags_no_space
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_adjacent_jinja_comment_tags_no_space
   notes: No Rust equivalent; tests that adjacent Jinja comment tags stay adjacent
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_jinja_tags_no_space
@@ -1110,7 +1178,9 @@
   rust_function: test_adjacent_jinja_tags_no_space
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_jinja_variable_tags_no_space
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_adjacent_jinja_variable_tags_no_space
   notes: No Rust equivalent; tests that adjacent Jinja variable tags stay adjacent
 - python_file: tests/test_wrapping.py
   python_function: test_adjacent_tags_full_pipeline
@@ -1119,39 +1189,57 @@
   rust_function: test_adjacent_tags_full_pipeline
 - python_file: tests/test_wrapping.py
   python_function: test_backslash_in_tag_attributes
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_backslash_in_tag_attributes
   notes: No Rust equivalent; tests that backslashes in tag attribute values are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_blank_line_normalization
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_block_heuristics_blank_line_normalization
   notes: No Rust equivalent; tests that block content between tags gets exactly one blank line at boundaries
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_list_items
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_block_heuristics_list_items
   notes: No Rust equivalent; tests that list items inside tags have their newlines preserved
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_mixed_content
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_block_heuristics_mixed_content
   notes: No Rust equivalent; tests block heuristics with mixed content (text + block elements)
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_only_with_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_block_heuristics_only_with_tags
   notes: No Rust equivalent; tests that block heuristics only apply when tags are present
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_preserves_existing_blank_lines
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_block_heuristics_preserves_existing_blank_lines
   notes: No Rust equivalent; tests that existing blank lines are not doubled by block heuristics
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_table_blank_lines
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_block_heuristics_table_blank_lines
   notes: No Rust equivalent; tests blank line normalization specifically for tables
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_table_rows
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_block_heuristics_table_rows
   notes: No Rust equivalent; tests that table rows inside tags have their newlines preserved
 - python_file: tests/test_wrapping.py
   python_function: test_closing_tag_spacing_function
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_closing_tag_spacing_function
   notes: No Rust equivalent; tests the _fix_closing_tag_spacing function directly
 - python_file: tests/test_wrapping.py
   python_function: test_html_comments_kept_together
@@ -1160,7 +1248,9 @@
   rust_function: test_html_comments_kept_together
 - python_file: tests/test_wrapping.py
   python_function: test_inline_code_in_table_cells
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_inline_code_in_table_cells
   notes: No Rust equivalent; tests that inline code in table cell content is tokenized correctly
 - python_file: tests/test_wrapping.py
   python_function: test_inline_code_with_spaces
@@ -1169,7 +1259,9 @@
   rust_function: test_inline_code_with_spaces
 - python_file: tests/test_wrapping.py
   python_function: test_inline_code_with_surrounding_punctuation
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_inline_code_with_surrounding_punctuation
   notes: No Rust equivalent; tests that inline code with surrounding punctuation stays together
 - python_file: tests/test_wrapping.py
   python_function: test_line_wrap_to_width_with_markdown_breaks
@@ -1178,19 +1270,27 @@
   rust_function: test_line_wrap_to_width_with_markdown_breaks
 - python_file: tests/test_wrapping.py
   python_function: test_list_content_gets_blank_lines
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_list_content_gets_blank_lines
   notes: No Rust equivalent; tests that list content between tags DOES get blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_long_html_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_long_html_tags
   notes: No Rust equivalent; tests that HTML tags with many attributes are kept together
 - python_file: tests/test_wrapping.py
   python_function: test_long_jinja_comments
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_long_jinja_comments
   notes: No Rust equivalent; tests that long Jinja comments are kept together
 - python_file: tests/test_wrapping.py
   python_function: test_long_template_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_long_template_tags
   notes: No Rust equivalent; tests that tags with many attributes (10+ words) are kept together
 - python_file: tests/test_wrapping.py
   python_function: test_markdown_escape_word_function
@@ -1199,7 +1299,9 @@
   rust_function: test_markdown_escape_word_function
 - python_file: tests/test_wrapping.py
   python_function: test_mixed_content_blank_lines_correct
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_mixed_content_blank_lines_correct
   notes: No Rust equivalent; tests that mixed content (text followed by list) gets correct blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_mixed_html_and_template_tags
@@ -1208,47 +1310,69 @@
   rust_function: test_mixed_html_and_template_tags
 - python_file: tests/test_wrapping.py
   python_function: test_multiple_single_word_inline_codes
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_multiple_single_word_inline_codes
   notes: No Rust equivalent; tests text with multiple single-word inline code spans
 - python_file: tests/test_wrapping.py
   python_function: test_nested_tags_newlines_preserved
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_nested_tags_newlines_preserved
   notes: No Rust equivalent; tests that newlines between nested tags are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_newline_after_opening_tag
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_newline_after_opening_tag
   notes: No Rust equivalent; tests that newlines after opening Jinja/Markdoc tags are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_newline_before_closing_tag
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_newline_before_closing_tag
   notes: No Rust equivalent; tests that newlines before closing Jinja/Markdoc tags are preserved
 - python_file: tests/test_wrapping.py
   python_function: test_paired_tags_not_broken
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_paired_tags_not_broken
   notes: No Rust equivalent; tests that paired tags on the same line stay together during wrapping
 - python_file: tests/test_wrapping.py
   python_function: test_paragraph_only_content_various_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_paragraph_only_content_various_tags
   notes: No Rust equivalent; tests paragraph-only content with various tag types
 - python_file: tests/test_wrapping.py
   python_function: test_paragraph_text_no_extra_blank_lines
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_paragraph_text_no_extra_blank_lines
   notes: No Rust equivalent; tests that paragraph text between tags does NOT get extra blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_html_comment_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_self_closing_html_comment_tags
   notes: No Rust equivalent; tests self-closing HTML comment tags (comments without a closing counterpart)
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_jinja_comment_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_self_closing_jinja_comment_tags
   notes: 'No Rust equivalent; tests Jinja comment tags {# #} which are always self-closing'
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_jinja_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_self_closing_jinja_tags
   notes: No Rust equivalent; tests self-closing Jinja tags (tags without a separate closing tag)
 - python_file: tests/test_wrapping.py
   python_function: test_self_closing_jinja_variable_tags
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_self_closing_jinja_variable_tags
   notes: No Rust equivalent; tests Jinja variable tags {{ }} which are always self-closing
 - python_file: tests/test_wrapping.py
   python_function: test_single_word_inline_code_not_coalesced
@@ -1262,11 +1386,15 @@
   rust_function: test_smart_splitter
 - python_file: tests/test_wrapping.py
   python_function: test_table_content_gets_blank_lines
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_table_content_gets_blank_lines
   notes: No Rust equivalent; tests that table content between tags DOES get blank lines
 - python_file: tests/test_wrapping.py
   python_function: test_tag_with_list_items
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_tag_with_list_items
   notes: No Rust equivalent; tests that tags containing lists do not merge with list items
 - python_file: tests/test_wrapping.py
   python_function: test_template_tag_splitter
@@ -1280,7 +1408,9 @@
   rust_function: test_template_tag_wrapping
 - python_file: tests/test_wrapping.py
   python_function: test_various_tag_types_with_tables
-  status: missing
+  status: mapped
+  rust_file: tests/test_wrapping.rs
+  rust_function: test_various_tag_types_with_tables
   notes: No Rust equivalent; tests tables with various tag types (Jinja, HTML comments, variables)
 - python_file: tests/test_wrapping.py
   python_function: test_wrap_paragraph_lines_markdown_escaping

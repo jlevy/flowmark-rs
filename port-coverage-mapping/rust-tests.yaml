@@ -104,6 +104,9 @@
   function: test_basic_note_alert
   line_number: 9
 - file: tests/test_alerts.rs
+  function: test_empty_alert_type_preserves_quote
+  line_number: 147
+- file: tests/test_alerts.rs
   function: test_lowercase_alert_normalized_to_uppercase
   line_number: 28
 - file: tests/test_alerts.rs
@@ -115,6 +118,9 @@
 - file: tests/test_alerts.rs
   function: test_multiple_alerts_in_document
   line_number: 117
+- file: tests/test_alerts.rs
+  function: test_quote_with_link_like_content
+  line_number: 155
 - file: tests/test_alerts.rs
   function: test_regular_quote_still_works
   line_number: 137
@@ -164,14 +170,32 @@
   function: test_escape_in_heading
   line_number: 13
 - file: tests/test_escape_handling.rs
+  function: test_escape_in_list_item
+  line_number: 86
+- file: tests/test_escape_handling.rs
+  function: test_escape_in_list_item_start_preserved
+  line_number: 94
+- file: tests/test_escape_handling.rs
   function: test_escape_in_paragraph_middle
   line_number: 33
+- file: tests/test_escape_handling.rs
+  function: test_escape_in_quote
+  line_number: 101
+- file: tests/test_escape_handling.rs
+  function: test_escape_in_table
+  line_number: 112
 - file: tests/test_escape_handling.rs
   function: test_escaped_chars_at_line_start
   line_number: 74
 - file: tests/test_escape_handling.rs
   function: test_escaped_chars_in_headings
   line_number: 64
+- file: tests/test_escape_handling.rs
+  function: test_mixed_escapes
+  line_number: 122
+- file: tests/test_escape_handling.rs
+  function: test_mixed_escapes_comprehensive
+  line_number: 129
 - file: tests/test_escape_handling.rs
   function: test_other_escaped_chars
   line_number: 51
@@ -193,6 +217,9 @@
 - file: tests/test_fenced_code_blocks.rs
   function: test_four_backtick_fence_preserved
   line_number: 16
+- file: tests/test_fenced_code_blocks.rs
+  function: test_minimum_backticks_computed_from_content
+  line_number: 121
 - file: tests/test_fenced_code_blocks.rs
   function: test_multiple_empty_lines_in_code_block
   line_number: 112
@@ -259,6 +286,9 @@
 - file: tests/test_heading_spacing.rs
   function: test_heading_with_hard_break
   line_number: 45
+- file: tests/test_heading_spacing.rs
+  function: test_heading_with_hard_break_in_list
+  line_number: 76
 - file: tests/test_list_spacing.rs
   function: test_complex_content_with_loose_mode
   line_number: 209
@@ -371,17 +401,32 @@
   function: test_smart_quotes_apostrophes_in_table_cells
   line_number: 292
 - file: tests/test_smartquotes.rs
+  function: test_smart_quotes_blockquote_multiline_with_code_span
+  line_number: 364
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_complex_table
+  line_number: 374
+- file: tests/test_smartquotes.rs
   function: test_smart_quotes_in_strikethrough
   line_number: 299
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_in_table_cells
   line_number: 284
 - file: tests/test_smartquotes.rs
+  function: test_smart_quotes_in_table_preserve_code_spans
+  line_number: 389
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_in_table_with_bold
+  line_number: 397
+- file: tests/test_smartquotes.rs
   function: test_smart_quotes_not_modifying_code_content
   line_number: 339
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_spanning_code_span
   line_number: 307
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_spanning_code_span_in_blockquote
+  line_number: 404
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_spanning_emphasis
   line_number: 315
@@ -419,6 +464,12 @@
   function: test_strikethrough_in_paragraph
   line_number: 59
 - file: tests/test_strikethrough.rs
+  function: test_tilde_space_after_opener
+  line_number: 69
+- file: tests/test_strikethrough.rs
+  function: test_tilde_space_before_closer
+  line_number: 76
+- file: tests/test_strikethrough.rs
   function: test_tildes_with_space_before_closer
   line_number: 47
 - file: tests/test_tag_formatting.rs
@@ -427,6 +478,9 @@
 - file: tests/test_tag_formatting.rs
   function: test_fill_markdown_with_list_in_tags
   line_number: 153
+- file: tests/test_tag_formatting.rs
+  function: test_html_comment_multiline_closing
+  line_number: 164
 - file: tests/test_tag_formatting.rs
   function: test_html_comment_tags_with_quotes
   line_number: 83
@@ -437,11 +491,29 @@
   function: test_jinja_variable_tags_in_prose
   line_number: 68
 - file: tests/test_tag_formatting.rs
+  function: test_line_wrapper_preserves_multiline_tags
+  line_number: 173
+- file: tests/test_tag_formatting.rs
+  function: test_list_item_with_tag_on_continuation_line
+  line_number: 186
+- file: tests/test_tag_formatting.rs
+  function: test_multiline_opening_tag_closing_on_own_line
+  line_number: 196
+- file: tests/test_tag_formatting.rs
+  function: test_multiline_tag_through_pipeline
+  line_number: 205
+- file: tests/test_tag_formatting.rs
+  function: test_multiline_tag_with_surrounding_text
+  line_number: 223
+- file: tests/test_tag_formatting.rs
   function: test_pipeline_preserves_tag_quotes
   line_number: 103
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_already_spaced
   line_number: 146
+- file: tests/test_tag_formatting.rs
+  function: test_preprocess_tag_block_spacing_inline_tags
+  line_number: 235
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_lists
   line_number: 130
@@ -449,8 +521,17 @@
   function: test_preprocess_tag_block_spacing_tables
   line_number: 139
 - file: tests/test_tag_formatting.rs
+  function: test_selection_field_with_task_list
+  line_number: 245
+- file: tests/test_tag_formatting.rs
+  function: test_single_line_paired_tags_not_split
+  line_number: 255
+- file: tests/test_tag_formatting.rs
   function: test_smart_quotes_converts_prose_but_not_tags
   line_number: 60
+- file: tests/test_tag_formatting.rs
+  function: test_smart_quotes_multiline_tag_with_prose
+  line_number: 264
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_apostrophe_in_jinja_variable
   line_number: 53
@@ -472,9 +553,27 @@
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_with_nunjucks_raw_block
   line_number: 121
+- file: tests/test_tag_formatting.rs
+  function: test_tag_newlines_preserved_in_pipeline
+  line_number: 275
+- file: tests/test_tag_formatting.rs
+  function: test_tag_with_array_spanning_lines
+  line_number: 284
+- file: tests/test_tag_formatting.rs
+  function: test_tag_with_embedded_percent_brace
+  line_number: 291
+- file: tests/test_tag_formatting.rs
+  function: test_tag_with_object_spanning_lines
+  line_number: 301
+- file: tests/test_tag_formatting.rs
+  function: test_word_splitter_handles_multiline_tags
+  line_number: 308
 - file: tests/test_width_options.rs
   function: test_existing_behavior_unchanged
   line_number: 59
+- file: tests/test_width_options.rs
+  function: test_negative_width_disables_wrapping
+  line_number: 75
 - file: tests/test_width_options.rs
   function: test_normal_width_wrapping
   line_number: 5
@@ -494,26 +593,113 @@
   function: test_adjacent_html_comment_tags_no_space
   line_number: 360
 - file: tests/test_wrapping.rs
+  function: test_adjacent_jinja_comment_tags_no_space
+  line_number: 404
+- file: tests/test_wrapping.rs
   function: test_adjacent_jinja_tags_no_space
   line_number: 339
+- file: tests/test_wrapping.rs
+  function: test_adjacent_jinja_variable_tags_no_space
+  line_number: 421
 - file: tests/test_wrapping.rs
   function: test_adjacent_tags_full_pipeline
   line_number: 381
 - file: tests/test_wrapping.rs
+  function: test_backslash_in_tag_attributes
+  line_number: 438
+- file: tests/test_wrapping.rs
+  function: test_block_heuristics_blank_line_normalization
+  line_number: 450
+- file: tests/test_wrapping.rs
+  function: test_block_heuristics_list_items
+  line_number: 463
+- file: tests/test_wrapping.rs
+  function: test_block_heuristics_mixed_content
+  line_number: 479
+- file: tests/test_wrapping.rs
+  function: test_block_heuristics_only_with_tags
+  line_number: 494
+- file: tests/test_wrapping.rs
+  function: test_block_heuristics_preserves_existing_blank_lines
+  line_number: 505
+- file: tests/test_wrapping.rs
+  function: test_block_heuristics_table_blank_lines
+  line_number: 529
+- file: tests/test_wrapping.rs
+  function: test_block_heuristics_table_rows
+  line_number: 542
+- file: tests/test_wrapping.rs
+  function: test_closing_tag_spacing_function
+  line_number: 558
+- file: tests/test_wrapping.rs
   function: test_html_comments_kept_together
   line_number: 285
+- file: tests/test_wrapping.rs
+  function: test_inline_code_in_table_cells
+  line_number: 592
 - file: tests/test_wrapping.rs
   function: test_inline_code_with_spaces
   line_number: 277
 - file: tests/test_wrapping.rs
+  function: test_inline_code_with_surrounding_punctuation
+  line_number: 613
+- file: tests/test_wrapping.rs
   function: test_line_wrap_to_width_with_markdown_breaks
   line_number: 311
+- file: tests/test_wrapping.rs
+  function: test_list_content_gets_blank_lines
+  line_number: 626
+- file: tests/test_wrapping.rs
+  function: test_long_html_tags
+  line_number: 639
+- file: tests/test_wrapping.rs
+  function: test_long_jinja_comments
+  line_number: 647
+- file: tests/test_wrapping.rs
+  function: test_long_template_tags
+  line_number: 655
 - file: tests/test_wrapping.rs
   function: test_markdown_escape_word_function
   line_number: 7
 - file: tests/test_wrapping.rs
+  function: test_mixed_content_blank_lines_correct
+  line_number: 670
+- file: tests/test_wrapping.rs
   function: test_mixed_html_and_template_tags
   line_number: 267
+- file: tests/test_wrapping.rs
+  function: test_multiple_single_word_inline_codes
+  line_number: 682
+- file: tests/test_wrapping.rs
+  function: test_nested_tags_newlines_preserved
+  line_number: 692
+- file: tests/test_wrapping.rs
+  function: test_newline_after_opening_tag
+  line_number: 707
+- file: tests/test_wrapping.rs
+  function: test_newline_before_closing_tag
+  line_number: 727
+- file: tests/test_wrapping.rs
+  function: test_paired_tags_not_broken
+  line_number: 742
+- file: tests/test_wrapping.rs
+  function: test_paragraph_only_content_various_tags
+  line_number: 767
+- file: tests/test_wrapping.rs
+  function: test_paragraph_text_no_extra_blank_lines
+  line_number: 789
+- file: tests/test_wrapping.rs
+  function: test_self_closing_html_comment_tags
+  line_number: 809
+- file: tests/test_wrapping.rs
+  function: test_self_closing_jinja_comment_tags
+  line_number: 834
+- file: tests/test_wrapping.rs
+  function: test_self_closing_jinja_tags
+  line_number: 850
+- file: tests/test_wrapping.rs
+  function: test_self_closing_jinja_variable_tags
+  line_number: 879
 - file: tests/test_wrapping.rs
   function: test_single_word_inline_code_not_coalesced
   line_number: 298
@@ -521,11 +707,20 @@
   function: test_smart_splitter
   line_number: 94
 - file: tests/test_wrapping.rs
+  function: test_table_content_gets_blank_lines
+  line_number: 899
+- file: tests/test_wrapping.rs
+  function: test_tag_with_list_items
+  line_number: 912
+- file: tests/test_wrapping.rs
   function: test_template_tag_splitter
   line_number: 217
 - file: tests/test_wrapping.rs
   function: test_template_tag_wrapping
   line_number: 246
+- file: tests/test_wrapping.rs
+  function: test_various_tag_types_with_tables
+  line_number: 923
 - file: tests/test_wrapping.rs
   function: test_wrap_paragraph_lines_markdown_escaping
   line_number: 37
