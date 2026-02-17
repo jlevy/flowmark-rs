@@ -28,15 +28,15 @@ use crate::wrapping::LineWrapper;
 
 /// Pattern for blank lines with trailing whitespace.
 static BLANK_LINE_WS: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^[ \t]+$").unwrap());
+    LazyLock::new(|| Regex::new(r"(?m)^[ \t]+$").expect("valid BLANK_LINE_WS regex"));
 
 /// Pattern for code fence with space before language (horizontal whitespace only).
 static CODE_FENCE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^([ \t]*```)[^\S\n]+(\w)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?m)^([ \t]*```)[^\S\n]+(\w)").expect("valid CODE_FENCE_SPACE regex"));
 
 /// Pattern for numbered list items with two spaces after period.
 static NUMBERED_ITEM_TWO_SPACES: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(\d+)\.  ").unwrap());
+    LazyLock::new(|| Regex::new(r"^(\d+)\.  ").expect("valid NUMBERED_ITEM_TWO_SPACES regex"));
 
 /// Normalize blank lines by removing trailing whitespace.
 fn normalize_blank_lines(text: &str) -> String {
@@ -1026,10 +1026,10 @@ fn min_fence_length(code_content: &str, fence_char: char) -> usize {
         r"(?m)^[ ]{{0,3}}({escaped}{{3,}})",
         escaped = regex::escape(&fence_char.to_string())
     );
-    let re = Regex::new(&pattern).unwrap();
+    let re = Regex::new(&pattern).expect("valid fence length regex");
     let max_len = re
         .captures_iter(code_content)
-        .map(|caps| caps.get(1).unwrap().as_str().len())
+        .map(|caps| caps.get(1).expect("capture group 1 always exists").as_str().len())
         .max()
         .unwrap_or(0);
     std::cmp::max(3, max_len + 1)
@@ -1091,7 +1091,7 @@ pub fn fill_markdown(
         let escaped = format!("\\{ch}");
         // Use a single PUA character per escape char for consistent width measurement.
         // Map to U+E000 + ASCII code point of the escaped character.
-        let placeholder = char::from_u32(0xE000 + ch as u32).unwrap().to_string();
+        let placeholder = char::from_u32(0xE000 + ch as u32).expect("valid PUA code point").to_string();
         escape_placeholders.push((escaped, placeholder));
     }
     // Apply replacements, but skip inside fenced code blocks

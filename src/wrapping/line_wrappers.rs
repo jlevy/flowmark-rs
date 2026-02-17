@@ -11,7 +11,8 @@ use crate::wrapping::text_wrapping::{wrap_paragraph, wrap_paragraph_lines};
 use crate::wrapping::LineWrapper;
 
 /// Pattern to match Markdown hard line breaks.
-static LINE_BREAK_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\\\n|  \n").unwrap());
+static LINE_BREAK_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\\\n|  \n").expect("valid LINE_BREAK_RE regex"));
 
 /// Split text by explicit Markdown line breaks.
 fn split_markdown_hard_breaks(text: &str) -> Vec<String> {
@@ -111,9 +112,9 @@ pub fn line_wrap_by_sentence(
                 };
 
                 let current_column = if !lines.is_empty()
-                    && lines.last().unwrap().chars().count() < min_line_len
+                    && lines.last().expect("non-empty lines").chars().count() < min_line_len
                 {
-                    current_column + lines.last().unwrap().chars().count()
+                    current_column + lines.last().expect("non-empty lines").chars().count()
                 } else {
                     current_column
                 };
@@ -132,11 +133,11 @@ pub fn line_wrap_by_sentence(
                 // If last line is shorter than min_line_len, combine with next line.
                 if !lines.is_empty()
                     && !wrapped.is_empty()
-                    && lines.last().unwrap().chars().count() < min_line_len
-                    && lines.last().unwrap().chars().count() + 1 + wrapped[0].chars().count()
+                    && lines.last().expect("non-empty lines").chars().count() < min_line_len
+                    && lines.last().expect("non-empty lines").chars().count() + 1 + wrapped[0].chars().count()
                         <= width
                 {
-                    let last = lines.last_mut().unwrap();
+                    let last = lines.last_mut().expect("non-empty lines");
                     *last = format!("{last} {}", wrapped[0]);
                     wrapped.remove(0);
                 }

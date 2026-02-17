@@ -4,7 +4,7 @@
 mod cli {
     use anyhow::{Context, Result};
     use clap::Parser;
-    use std::io::Read;
+    use std::io::{BufWriter, Read, Write};
     use std::path::PathBuf;
 
     use flowmark::{ListSpacing, DEFAULT_WRAP_WIDTH};
@@ -46,8 +46,8 @@ mod cli {
         pub ellipses: bool,
 
         /// Control list item spacing
-        #[arg(long, default_value = "preserve")]
-        pub list_spacing: String,
+        #[arg(long, value_enum, default_value_t = ListSpacing::Preserve)]
+        pub list_spacing: ListSpacing,
 
         /// Edit files in place
         #[arg(short, long)]
@@ -60,6 +60,10 @@ mod cli {
         /// Shortcut for --inplace --nobackup --semantic --cleanups --smartquotes --ellipses
         #[arg(long)]
         pub auto: bool,
+
+        /// Show verbose output (e.g., which files are being formatted)
+        #[arg(short, long)]
+        pub verbose: bool,
     }
 
     pub fn run() -> Result<()> {
@@ -74,11 +78,6 @@ mod cli {
             args.smartquotes = true;
             args.ellipses = true;
         }
-
-        let list_spacing: ListSpacing = args
-            .list_spacing
-            .parse()
-            .map_err(|e: String| anyhow::anyhow!(e))?;
 
         for file in &args.files {
             if file == "-" {
@@ -95,9 +94,11 @@ mod cli {
                     args.cleanups,
                     args.smartquotes,
                     args.ellipses,
-                    list_spacing,
+                    args.list_spacing,
                 );
-                print!("{output}");
+                let stdout = std::io::stdout().lock();
+                let mut writer = BufWriter::new(stdout);
+                writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
             } else {
                 let path = PathBuf::from(file);
                 let output_path = if args.output == "-" {
@@ -105,6 +106,10 @@ mod cli {
                 } else {
                     Some(PathBuf::from(&args.output))
                 };
+
+                if args.verbose {
+                    eprintln!("formatting {}", path.display());
+                }
 
                 flowmark::reformat_file(
                     &path,
@@ -117,7 +122,7 @@ mod cli {
                     args.cleanups,
                     args.smartquotes,
                     args.ellipses,
-                    list_spacing,
+                    args.list_spacing,
                 )
                 .with_context(|| format!("failed to format {}", path.display()))?;
             }

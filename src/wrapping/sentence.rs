@@ -17,7 +17,7 @@ static SENTENCE_END_RE: LazyLock<Regex> = LazyLock::new(|| {
     // Allow optional closing brackets/parens/angle brackets between word and punctuation
     // to handle cases like [link](url). and <tag>word</tag>.
     Regex::new(r"(\b\p{L}+[\p{Ll}])[)\]>]*([.?!]['\x22\u{2019}\u{201d}]?|['\x22\u{2019}\u{201d}][.?!]) *$")
-        .unwrap()
+        .expect("valid SENTENCE_END_RE regex")
 });
 
 /// Check if a word looks like the end of a sentence.

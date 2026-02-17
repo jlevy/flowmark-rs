@@ -116,5 +116,5 @@ pub(crate) static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         HTML_CLOSE_TAG.pattern,
     ];
     // Use (?s) for DOTALL mode
-    Regex::new(&format!("(?s){}", patterns.join("|"))).unwrap()
+    Regex::new(&format!("(?s){}", patterns.join("|"))).expect("valid ATOMIC_CONSTRUCT_PATTERN regex")
 });

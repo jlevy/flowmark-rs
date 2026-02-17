@@ -14,20 +14,21 @@ const PLACEHOLDER_SUFFIX: &str = "\x00";
 
 /// Pattern to identify words that need escaping if they start a wrapped markdown line.
 static MD_SPECIALS_PAT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^([-*+>]|#+)$").unwrap());
+    LazyLock::new(|| Regex::new(r"^([-*+>]|#+)$").expect("valid MD_SPECIALS_PAT regex"));
 
 /// Pattern for numbered list markers.
 static MD_NUMERAL_PAT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[0-9]+[.)]$").unwrap());
+    LazyLock::new(|| Regex::new(r"^[0-9]+[.)]$").expect("valid MD_NUMERAL_PAT regex"));
 
 /// Pattern for replacing whitespace.
-static WHITESPACE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s+").unwrap());
+static WHITESPACE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s+").expect("valid WHITESPACE_RE regex"));
 
 /// Extract all atomic constructs from text, replacing them with placeholders.
 fn extract_atomic_constructs(text: &str) -> (Vec<String>, String) {
     let mut construct_map: Vec<String> = Vec::new();
     let result = ATOMIC_CONSTRUCT_PATTERN.replace_all(text, |caps: &regex::Captures<'_>| {
-        let construct = caps.get(0).unwrap().as_str().to_string();
+        let construct = caps.get(0).expect("group 0 always exists").as_str().to_string();
         let idx = construct_map.len();
         construct_map.push(construct);
         format!("{PLACEHOLDER_PREFIX}{idx}{PLACEHOLDER_SUFFIX}")

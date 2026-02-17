@@ -19,7 +19,7 @@ pub(crate) static TEMPLATE_TAG_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         SINGLE_JINJA_VAR.pattern,
         SINGLE_HTML_COMMENT.pattern,
     ];
-    Regex::new(&format!("(?s){}", patterns.join("|"))).unwrap()
+    Regex::new(&format!("(?s){}", patterns.join("|"))).expect("valid TEMPLATE_TAG_PATTERN regex")
 });
 
 /// Pattern to detect adjacent tags (closing tag immediately followed by opening tag).
@@ -35,7 +35,7 @@ static ADJACENT_TAGS_RE: LazyLock<Regex> = LazyLock::new(|| {
         close_hc = SINGLE_HTML_COMMENT.close_re,
         open_hc = SINGLE_HTML_COMMENT.open_re,
     );
-    Regex::new(&pattern).unwrap()
+    Regex::new(&pattern).expect("valid ADJACENT_TAGS_RE regex")
 });
 
 /// Pattern to remove spaces between adjacent tags.
@@ -51,7 +51,7 @@ static DENORMALIZE_TAGS_RE: LazyLock<Regex> = LazyLock::new(|| {
         close_hc = SINGLE_HTML_COMMENT.close_re,
         open_hc = SINGLE_HTML_COMMENT.open_re,
     );
-    Regex::new(&pattern).unwrap()
+    Regex::new(&pattern).expect("valid DENORMALIZE_TAGS_RE regex")
 });
 
 /// Pattern for detecting multiline closing tags.
@@ -67,7 +67,7 @@ static MULTILINE_CLOSING_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         close_hc = SINGLE_HTML_COMMENT.close_re,
         open_hc = SINGLE_HTML_COMMENT.open_re,
     );
-    Regex::new(&pattern).unwrap()
+    Regex::new(&pattern).expect("valid MULTILINE_CLOSING_PATTERN regex")
 });
 
 /// Add a space between adjacent tags so they become separate tokens.
@@ -81,7 +81,7 @@ pub fn normalize_adjacent_tags(text: &str) -> String {
                     return format!("{} {}", a.as_str(), b.as_str());
                 }
             }
-            caps.get(0).unwrap().as_str().to_string()
+            caps.get(0).expect("group 0 always exists").as_str().to_string()
         })
         .into_owned()
 }
@@ -97,7 +97,7 @@ pub fn denormalize_adjacent_tags(text: &str) -> String {
                     return format!("{}{}", a.as_str(), b.as_str());
                 }
             }
-            caps.get(0).unwrap().as_str().to_string()
+            caps.get(0).expect("group 0 always exists").as_str().to_string()
         })
         .into_owned()
 }
@@ -254,12 +254,12 @@ pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
         if !is_tag_start {
             if let Some(_m) = MULTILINE_CLOSING_PATTERN.find(line) {
                 // Find which named group matched
-                let caps = MULTILINE_CLOSING_PATTERN.captures(line).unwrap();
+                let caps = MULTILINE_CLOSING_PATTERN.captures(line).expect("captures must succeed after find");
                 let mut found = false;
                 for group_name in &["closing_tag", "closing_comment", "closing_var", "closing_html"]
                 {
                     if caps.name(group_name).is_some() {
-                        let split_pos = caps.name(group_name).unwrap().start();
+                        let split_pos = caps.name(group_name).expect("named group must exist after is_some check").start();
                         let before = line[..split_pos].trim_end();
                         let closing = line[split_pos..].trim_start();
                         result_lines.push(before.to_string());

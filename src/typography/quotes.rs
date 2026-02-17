@@ -9,7 +9,7 @@ use crate::wrapping::tag_handling::TEMPLATE_TAG_PATTERN;
 
 /// Pattern to detect paragraph breaks.
 static PARAGRAPH_BREAK_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\n\s*\n").unwrap());
+    LazyLock::new(|| Regex::new(r"\n\s*\n").expect("valid PARAGRAPH_BREAK_PATTERN regex"));
 
 /// Pattern for matching quoted text.
 /// Handles double quotes and single quotes, excluding content with same-type quotes.
@@ -18,16 +18,16 @@ static QUOTE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r#"(?m)(^|\s|\u{2014})(?:"([^"\u{201c}\u{201d}]*)"|'([^'\u{2018}\u{2019}]*)')(\s|$|\.|,|;|:|\?|!|\u{2014}|\))"#,
     )
-    .unwrap()
+    .expect("valid QUOTE_PATTERN regex")
 });
 
 /// Pattern for apostrophes/contractions.
 static APOSTROPHE_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(\w)'(\w)").unwrap());
+    LazyLock::new(|| Regex::new(r"(\w)'(\w)").expect("valid APOSTROPHE_PATTERN regex"));
 
 /// Pattern for possessive after s/S.
 static POSSESSIVE_PATTERN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\w*[sS]'$").unwrap());
+    LazyLock::new(|| Regex::new(r"^\w*[sS]'$").expect("valid POSSESSIVE_PATTERN regex"));
 
 /// Check if text contains paragraph breaks.
 fn is_multi_paragraph(text: &str) -> bool {
@@ -47,7 +47,7 @@ fn apply_smart_quotes_to_text(text: &str) -> String {
             let content = double_content.or(single_content).map_or("", |m| m.as_str());
 
             if is_multi_paragraph(content) {
-                return caps.get(0).unwrap().as_str().to_string();
+                return caps.get(0).expect("group 0 always exists").as_str().to_string();
             }
 
             if double_content.is_some() {

@@ -10,10 +10,11 @@ static ELLIPSIS_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"(?m)(^|[\w\x22\x27\u{2018}\u{2019}])(\s*)(\.\.\.)([\.,;:\?!\)\-\u{2014}\x22\x27\u{2018}\u{2019}]?)(\s*)",
     )
-    .unwrap()
+    .expect("valid ELLIPSIS_PATTERN regex")
 });
 
-static WORD_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\w").unwrap());
+static WORD_CHAR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\w").expect("valid WORD_CHAR_RE regex"));
 
 /// Replace three consecutive dots with a proper ellipsis character (\u{2026}).
 pub fn ellipses(text: &str) -> String {
@@ -23,7 +24,7 @@ pub fn ellipses(text: &str) -> String {
     let mut last_end = 0;
 
     for m in ELLIPSIS_PATTERN.find_iter(text) {
-        let caps = ELLIPSIS_PATTERN.captures(&text[m.start()..]).unwrap();
+        let caps = ELLIPSIS_PATTERN.captures(&text[m.start()..]).expect("captures must succeed after find");
         let full_match_start = m.start();
         let full_match_end = m.end();
 

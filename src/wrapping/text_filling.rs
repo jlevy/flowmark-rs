@@ -10,7 +10,8 @@ use crate::wrapping::text_wrapping::{html_md_word_split, wrap_paragraph};
 /// Default indent string.
 const DEFAULT_INDENT: &str = "    ";
 
-static PARA_SPLIT_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\n{2,}").unwrap());
+static PARA_SPLIT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\n{2,}").expect("valid PARA_SPLIT_RE regex"));
 
 /// Split text into paragraphs separated by blank lines.
 pub(crate) fn split_paragraphs(text: &str) -> Vec<String> {

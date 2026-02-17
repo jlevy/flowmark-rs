@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 /// Controls how list item spacing is handled during Markdown normalization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 pub enum ListSpacing {
     /// Keep lists tight or loose as authored (default).
     #[default]
