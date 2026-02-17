@@ -396,13 +396,13 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
 
 ### Phase 2: Cargo-Based Discovery, Idempotent Merge, and Polish
 
-- [ ] Switch `discover-rust` to use `cargo test -- --list` as the primary strategy
-- [ ] Keep regex parser as `--fallback-regex` option
-- [ ] Add idempotent merge to `discover-python`: load existing YAML, preserve hand-added
+- [x] Switch `discover-rust` to use `cargo test -- --list` as the primary strategy
+- [x] Keep regex parser as `--fallback-regex` option
+- [x] Add idempotent merge to `discover-python`: load existing YAML, preserve hand-added
   entries, update auto-discovered entries by identity key
-- [ ] Add idempotent merge to `discover-rust`: same behavior
-- [ ] Re-generate `rust-tests.yaml` with full 178-test list (151 integration + 27 unit)
-- [ ] Run ruff and basedpyright, fix any lint/type issues
+- [x] Add idempotent merge to `discover-rust`: same behavior
+- [x] Re-generate `rust-tests.yaml` with full 178-test list (151 integration + 27 unit)
+- [x] Run ruff and basedpyright, fix any lint/type issues
 - [ ] Add a basic smoke test in `python/tests/`
 
 ### Phase 3: Populate the Mapping (Agent Labor)
