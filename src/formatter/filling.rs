@@ -234,12 +234,26 @@ fn postprocess_period_escapes(text: &str) -> String {
             let after_quotes = trimmed_start
                 .trim_start_matches(|c: char| c == '>' || c.is_whitespace());
 
-            // Check if content starts with DIGITS\.
-            let digit_end = after_quotes
-                .find(|c: char| !c.is_ascii_digit())
-                .unwrap_or(after_quotes.len());
+            // Strip unordered list markers (- , * , + ) and optional task list markers
+            let after_list_marker = after_quotes
+                .strip_prefix("- ")
+                .or_else(|| after_quotes.strip_prefix("* "))
+                .or_else(|| after_quotes.strip_prefix("+ "))
+                .map(|rest| {
+                    // Also strip task list markers: [ ] , [x] , [X]
+                    rest.strip_prefix("[ ] ")
+                        .or_else(|| rest.strip_prefix("[x] "))
+                        .or_else(|| rest.strip_prefix("[X] "))
+                        .unwrap_or(rest)
+                })
+                .unwrap_or(after_quotes);
 
-            if digit_end > 0 && after_quotes[digit_end..].starts_with("\\.") {
+            // Check if content starts with DIGITS\.
+            let digit_end = after_list_marker
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(after_list_marker.len());
+
+            if digit_end > 0 && after_list_marker[digit_end..].starts_with("\\.") {
                 // DIGITS\. at effective line start: keep the escape to prevent list interpretation
                 result.push(line.to_string());
             } else {
@@ -820,7 +834,30 @@ fn render_list_item<'a>(
             } else {
                 false
             };
-            if !prev_ended_double {
+
+            // Don't add blank line before a heading that ends with hard break
+            // (it connects tightly to the following content)
+            let current_is_hard_break_heading =
+                matches!(&child.data.borrow().value, NodeValue::Heading(_))
+                    && inline_ends_with_hard_break(child);
+
+            // Don't add blank line before a short tag-only HTML block
+            // (e.g., <!-- comment --> on a continuation line in a list item)
+            let current_is_tag_block = if let NodeValue::HtmlBlock(html) =
+                &child.data.borrow().value
+            {
+                let trimmed = html.literal.trim();
+                !trimmed.contains('\n')
+                    && ((trimmed.starts_with("<!--") && trimmed.ends_with("-->"))
+                        || (trimmed.starts_with("{%") && trimmed.ends_with("%}"))
+                        || (trimmed.starts_with("{#") && trimmed.ends_with("#}"))
+                        || (trimmed.starts_with("{{") && trimmed.ends_with("}}")))
+            } else {
+                false
+            };
+
+            if !prev_ended_double && !current_is_hard_break_heading && !current_is_tag_block
+            {
                 output.push('\n');
             }
         }

@@ -72,7 +72,6 @@ fn test_hard_breaks_in_list_items() {
 // ===== Tests ported from Python test_heading_spacing.py =====
 
 #[test]
-#[ignore] // Known bug: fmr-4l1x — extra blank line before heading in list item
 fn test_heading_with_hard_break_in_list() {
     let input = "- Item with heading and hard break:\n  ## Heading\\\n  continuation text";
     let expected = "- Item with heading and hard break:\n  ## Heading\\\n  continuation text\n";

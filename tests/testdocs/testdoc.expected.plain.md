@@ -540,17 +540,13 @@ Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
        try:\
        temp\_file = tempfile.NamedTemporaryFile(mode='w', dir=dest\_dir, delete=False,
        prefix='tmp', suffix='.tmp')\
-
        # Write data to temp\_file.file (or temp\_file directly in older Pythons)\
        temp\_file.write(...)\
-
        # Ensure data is on disk before renaming\
        temp\_file.flush()\
        os.fsync(temp\_file.fileno())\
-
        # Close the file handle before renaming\
        temp\_file.close()\
-
        # Atomic rename/replace\
        os.replace(temp\_file.name, dest\_path)\
        temp\_file = None # Prevent cleanup in finally block if successful\
@@ -559,7 +555,6 @@ Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
        try:\
        os.unlink(temp\_file.name)\
        except OSError:\
-
        # Log error, but continue\
        pass\
 
@@ -1555,7 +1550,6 @@ The indented tag is part of the list item content, not a separate tag block.
   <!-- #kg-11h2 -->
 
 - [ ] 0.3: Configure TypeScript with strict settings (tsconfig.base.json)
-
   <!-- #kg-32zz -->
 
 - [ ] 0.4: Configure Biome for formatting and linting <!-- #kg-ibof -->

@@ -58,6 +58,19 @@ fn test_other_escaped_chars() {
 
     let result = fmt("Text with \\- hyphen\n");
     assert!(result.contains("\\-"), "Hyphen escape should be preserved: got {:?}", result);
+
+    let result = fmt("Cost is \\$100\n");
+    assert!(result.contains("\\$"), "Dollar escape should be preserved: got {:?}", result);
+
+    let result = fmt("Use \\_name\\_ for underscores\n");
+    assert!(result.contains("\\_"), "Underscore escape should be preserved: got {:?}", result);
+
+    let result = fmt("Not a link: \\[text\\]\n");
+    assert!(result.contains("\\["), "Open bracket escape should be preserved: got {:?}", result);
+    assert!(result.contains("\\]"), "Close bracket escape should be preserved: got {:?}", result);
+
+    let result = fmt("Literal \\`backtick\\`\n");
+    assert!(result.contains("\\`"), "Backtick escape should be preserved: got {:?}", result);
 }
 
 #[test]
@@ -90,7 +103,6 @@ fn test_escape_in_list_item() {
 }
 
 #[test]
-#[ignore] // Known bug: fmr-2tll — escape at start of list item content not preserved
 fn test_escape_in_list_item_start_preserved() {
     // At start of list item — preserve escape
     let result = fmt("- 1\\. At start of item\n");
@@ -118,7 +130,6 @@ fn test_escape_in_table() {
 }
 
 #[test]
-#[ignore] // Known bug: fmr-2tll — escape at start of list item content not preserved
 fn test_mixed_escapes() {
     let input = "## 1\\. Heading\n\nParagraph with 1\\. in middle.\n\n1\\. Start of paragraph\n\n- List 1\\. middle\n- 1\\. start\n\n> 1\\. quote start\n";
     let expected = "## 1. Heading\n\nParagraph with 1. in middle.\n\n1\\. Start of paragraph\n\n- List 1. middle\n\n- 1\\. start\n\n> 1\\. quote start\n";

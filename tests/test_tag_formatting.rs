@@ -182,7 +182,6 @@ fn test_line_wrapper_preserves_multiline_tags() {
 }
 
 #[test]
-#[ignore] // Known bug: fmr-5ojk — extra blank line before HTML comment tag on list continuation line
 fn test_list_item_with_tag_on_continuation_line() {
     let text = "**Phase 0 - Repository Setup:**\n\n- [ ] 0.1-0.2: Verify reference repos and initialize Bun monorepo with workspaces <!-- #kg-11h2 -->\n\n- [ ] 0.3: Configure TypeScript with strict settings (tsconfig.base.json)\n  <!-- #kg-32zz -->\n\n- [ ] 0.4: Configure Biome for formatting and linting <!-- #kg-ibof -->";
     let result = fmt(&text);
