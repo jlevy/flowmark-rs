@@ -7,11 +7,11 @@ so that diffs are meaningful and files are easy to review and hand-edit.
 
 from __future__ import annotations
 
-import yaml
 from dataclasses import asdict
 from enum import StrEnum
 from pathlib import Path
 
+import yaml
 from strif import atomic_output_file
 
 from flowmark_dev_tools.models import (
@@ -21,7 +21,6 @@ from flowmark_dev_tools.models import (
     RustTestRecord,
     TestType,
 )
-
 
 # Ordered keys for deterministic, readable YAML output.
 
@@ -39,9 +38,9 @@ _MAPPING_KEY_ORDER = [
 ]
 
 
-def _ordered_dict(d: dict, key_order: list[str]) -> dict:
+def _ordered_dict(d: dict[str, object], key_order: list[str]) -> dict[str, object]:
     """Reorder dict keys and omit None/empty values for cleaner YAML."""
-    result = {}
+    result: dict[str, object] = {}
     for key in key_order:
         if key in d:
             val = d[key]
@@ -75,10 +74,10 @@ def write_mapping_yaml(records: list[MappingRecord], output_path: Path) -> None:
     _write_yaml(data, output_path, comment="Python-to-Rust test mapping")
 
 
-def _write_yaml(data: list[dict], output_path: Path, comment: str) -> None:
+def _write_yaml(data: list[dict[str, object]], output_path: Path, comment: str) -> None:
     """Write data to YAML with a header comment, using atomic file writes."""
     content = f"# {comment}\n"
-    content += f"# Auto-generated. Manual edits are preserved on re-generation.\n\n"
+    content += "# Auto-generated. Manual edits are preserved on re-generation.\n\n"
     content += yaml.dump(
         data,
         default_flow_style=False,

@@ -13,24 +13,30 @@ from pathlib import Path
 from flowmark_dev_tools.models import PythonTestRecord, TestType
 
 # Files that test CLI, config, file resolution, and skill infrastructure.
-INFRASTRUCTURE_FILES = frozenset({
-    "test_cli_file_discovery.py",
-    "test_config.py",
-    "test_file_resolver.py",
-    "test_skill.py",
-})
+INFRASTRUCTURE_FILES = frozenset(
+    {
+        "test_cli_file_discovery.py",
+        "test_config.py",
+        "test_file_resolver.py",
+        "test_skill.py",
+    }
+)
 
 # Files that test golden/reference document output.
-GOLDEN_FILES = frozenset({
-    "test_ref_docs.py",
-})
+GOLDEN_FILES = frozenset(
+    {
+        "test_ref_docs.py",
+    }
+)
 
 # Functions that indicate an integration test when called.
-INTEGRATION_INDICATORS = frozenset({
-    "fill_markdown",
-    "fill_lines",
-    "fill_string",
-})
+INTEGRATION_INDICATORS = frozenset(
+    {
+        "fill_markdown",
+        "fill_lines",
+        "fill_string",
+    }
+)
 
 
 def _classify_test_type(file_name: str, func_node: ast.FunctionDef) -> TestType:
@@ -87,27 +93,31 @@ def discover_python_tests(repo_path: Path) -> list[PythonTestRecord]:
         for node in ast.iter_child_nodes(tree):
             # Top-level test functions.
             if isinstance(node, ast.FunctionDef) and node.name.startswith("test_"):
-                records.append(PythonTestRecord(
-                    file=relative_path,
-                    function=node.name,
-                    class_name=None,
-                    test_type=_classify_test_type(file_name, node),
-                    line_number=node.lineno,
-                    doc_string=_extract_docstring(node),
-                ))
+                records.append(
+                    PythonTestRecord(
+                        file=relative_path,
+                        function=node.name,
+                        class_name=None,
+                        test_type=_classify_test_type(file_name, node),
+                        line_number=node.lineno,
+                        doc_string=_extract_docstring(node),
+                    )
+                )
 
             # Test methods inside classes.
             if isinstance(node, ast.ClassDef):
                 for method in ast.iter_child_nodes(node):
                     if isinstance(method, ast.FunctionDef) and method.name.startswith("test_"):
-                        records.append(PythonTestRecord(
-                            file=relative_path,
-                            function=method.name,
-                            class_name=node.name,
-                            test_type=_classify_test_type(file_name, method),
-                            line_number=method.lineno,
-                            doc_string=_extract_docstring(method),
-                        ))
+                        records.append(
+                            PythonTestRecord(
+                                file=relative_path,
+                                function=method.name,
+                                class_name=node.name,
+                                test_type=_classify_test_type(file_name, method),
+                                line_number=method.lineno,
+                                doc_string=_extract_docstring(method),
+                            )
+                        )
 
     # Sort by file, class, function for deterministic output.
     records.sort(key=lambda r: (r.file, r.class_name or "", r.function))

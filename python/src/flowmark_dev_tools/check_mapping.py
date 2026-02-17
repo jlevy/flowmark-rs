@@ -10,7 +10,6 @@ Loads the three YAML files (python tests, rust tests, mapping) and validates:
 
 from __future__ import annotations
 
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -38,11 +37,7 @@ class CheckResult:
 
     @property
     def ok(self) -> bool:
-        return (
-            self.missing == 0
-            and not self.stale_entries
-            and not self.broken_rust_refs
-        )
+        return self.missing == 0 and not self.stale_entries and not self.broken_rust_refs
 
 
 def check_mapping(
@@ -62,9 +57,7 @@ def check_mapping(
     python_keys: set[tuple[str, str | None, str]] = {
         (t.file, t.class_name, t.function) for t in python_tests
     }
-    rust_keys: set[tuple[str, str]] = {
-        (t.file, t.function) for t in rust_tests
-    }
+    rust_keys: set[tuple[str, str]] = {(t.file, t.function) for t in rust_tests}
     mapping_python_keys: set[tuple[str, str | None, str]] = {
         (m.python_file, m.python_class, m.python_function) for m in mapping
     }
@@ -101,9 +94,7 @@ def check_mapping(
     # 4. Check for stale mapping entries (Python test no longer exists).
     stale = mapping_python_keys - python_keys
     if stale:
-        result.stale_entries = sorted(
-            f"{f}::{c + '::' if c else ''}{fn}" for f, c, fn in stale
-        )
+        result.stale_entries = sorted(f"{f}::{c + '::' if c else ''}{fn}" for f, c, fn in stale)
 
     # 5. Find extra Rust tests not referenced by any mapping.
     mapped_rust_keys: set[tuple[str, str]] = set()
@@ -158,8 +149,7 @@ def format_report(result: CheckResult) -> str:
 
     if result.broken_rust_refs:
         lines.append(
-            f"FAIL: {len(result.broken_rust_refs)} mapping(s) reference "
-            f"non-existent Rust test(s):"
+            f"FAIL: {len(result.broken_rust_refs)} mapping(s) reference non-existent Rust test(s):"
         )
         for entry in result.broken_rust_refs:
             lines.append(f"  - {entry}")

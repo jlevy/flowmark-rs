@@ -18,11 +18,12 @@ from pathlib import Path
 
 from flowmark_dev_tools.check_mapping import run_check
 from flowmark_dev_tools.discover_python import discover_python_tests
-from flowmark_dev_tools.discover_rust import discover_rust_tests
-from flowmark_dev_tools.models import MappingRecord, MappingStatus
+from flowmark_dev_tools.discover_rust import discover_rust_tests_cargo, discover_rust_tests_regex
+from flowmark_dev_tools.models import MappingRecord, MappingStatus, PythonTestRecord, RustTestRecord
 from flowmark_dev_tools.yaml_io import (
     load_mapping_yaml,
     load_python_tests_yaml,
+    load_rust_tests_yaml,
     write_mapping_yaml,
     write_python_tests_yaml,
     write_rust_tests_yaml,
@@ -46,6 +47,45 @@ def _resolve_root() -> Path:
     return cwd
 
 
+def _merge_python_tests(
+    discovered: list[PythonTestRecord],
+    existing_path: Path,
+) -> tuple[list[PythonTestRecord], int]:
+    """
+    Merge auto-discovered Python tests with existing YAML, preserving hand-added entries.
+    Returns (merged records, count of hand-preserved entries).
+    """
+    if not existing_path.exists():
+        return discovered, 0
+
+    existing = load_python_tests_yaml(existing_path)
+    discovered_keys: set[tuple[str, str | None, str]] = {
+        (r.file, r.class_name, r.function) for r in discovered
+    }
+
+    # Preserve hand-added entries not found by auto-discovery.
+    preserved = [r for r in existing if (r.file, r.class_name, r.function) not in discovered_keys]
+    return discovered + preserved, len(preserved)
+
+
+def _merge_rust_tests(
+    discovered: list[RustTestRecord],
+    existing_path: Path,
+) -> tuple[list[RustTestRecord], int]:
+    """
+    Merge auto-discovered Rust tests with existing YAML, preserving hand-added entries.
+    Returns (merged records, count of hand-preserved entries).
+    """
+    if not existing_path.exists():
+        return discovered, 0
+
+    existing = load_rust_tests_yaml(existing_path)
+    discovered_keys: set[tuple[str, str]] = {(r.file, r.function) for r in discovered}
+
+    preserved = [r for r in existing if (r.file, r.function) not in discovered_keys]
+    return discovered + preserved, len(preserved)
+
+
 def cmd_discover_python(args: argparse.Namespace) -> int:
     """Discover Python tests and write YAML manifest."""
     root = _resolve_root()
@@ -54,7 +94,7 @@ def cmd_discover_python(args: argparse.Namespace) -> int:
     if args.local_path:
         repo_path = Path(args.local_path)
         print(f"Using local path: {repo_path}")
-        records = discover_python_tests(repo_path)
+        discovered = discover_python_tests(repo_path)
     else:
         repo_url = args.repo_url
         ref = args.ref
@@ -66,22 +106,37 @@ def cmd_discover_python(args: argparse.Namespace) -> int:
                 capture_output=True,
                 text=True,
             )
-            records = discover_python_tests(Path(tmpdir))
+            discovered = discover_python_tests(Path(tmpdir))
 
+    records, preserved = _merge_python_tests(discovered, output)
+    records.sort(key=lambda r: (r.file, r.class_name or "", r.function))
     write_python_tests_yaml(records, output)
-    print(f"Discovered {len(records)} Python tests -> {output}")
+    print(f"Discovered {len(discovered)} Python tests -> {output}")
+    if preserved:
+        print(f"  Preserved {preserved} hand-added entries from existing file")
     return 0
 
 
 def cmd_discover_rust(args: argparse.Namespace) -> int:
     """Discover Rust tests and write YAML manifest."""
     root = _resolve_root()
-    tests_dir = Path(args.tests_dir) if args.tests_dir else root / "tests"
+    project_dir = Path(args.project_dir) if args.project_dir else root
     output = Path(args.output) if args.output else root / DEFAULT_RUST_YAML
 
-    records = discover_rust_tests(tests_dir)
+    if args.fallback_regex:
+        tests_dir = project_dir / "tests"
+        print(f"Using regex fallback (integration tests in {tests_dir} only)...")
+        discovered = discover_rust_tests_regex(tests_dir)
+    else:
+        print(f"Using cargo test --list (project: {project_dir})...")
+        discovered = discover_rust_tests_cargo(project_dir)
+
+    records, preserved = _merge_rust_tests(discovered, output)
+    records.sort(key=lambda r: (r.file, r.function))
     write_rust_tests_yaml(records, output)
-    print(f"Discovered {len(records)} Rust tests -> {output}")
+    print(f"Discovered {len(discovered)} Rust tests -> {output}")
+    if preserved:
+        print(f"  Preserved {preserved} hand-added entries from existing file")
     return 0
 
 
@@ -111,12 +166,14 @@ def cmd_init_mapping(args: argparse.Namespace) -> int:
         if key in existing:
             records.append(existing[key])
         else:
-            records.append(MappingRecord(
-                python_file=pt.file,
-                python_function=pt.function,
-                python_class=pt.class_name,
-                status=MappingStatus.missing,
-            ))
+            records.append(
+                MappingRecord(
+                    python_file=pt.file,
+                    python_function=pt.function,
+                    python_class=pt.class_name,
+                    status=MappingStatus.missing,
+                )
+            )
             new_count += 1
 
     records.sort(key=lambda r: (r.python_file, r.python_class or "", r.python_function))
@@ -160,7 +217,12 @@ def main(argv: list[str] | None = None) -> None:
         "discover-rust",
         help="Discover all tests in the Rust flowmark-rs repo.",
     )
-    dr.add_argument("--tests-dir", help="Path to Rust tests/ directory.")
+    dr.add_argument("--project-dir", help="Path to Rust project root.")
+    dr.add_argument(
+        "--fallback-regex",
+        action="store_true",
+        help="Use regex parsing instead of cargo (integration tests only).",
+    )
     dr.add_argument("--output", "-o", help="Output YAML path.")
 
     # init-mapping
@@ -182,11 +244,13 @@ def main(argv: list[str] | None = None) -> None:
 
     args = parser.parse_args(argv)
 
-    handlers: dict[str, object] = {
+    from collections.abc import Callable
+
+    handlers: dict[str, Callable[[argparse.Namespace], int]] = {
         "discover-python": cmd_discover_python,
         "discover-rust": cmd_discover_rust,
         "init-mapping": cmd_init_mapping,
         "check-mapping": cmd_check_mapping,
     }
     handler = handlers[args.command]
-    sys.exit(handler(args))  # pyright: ignore[reportCallIssue]
+    sys.exit(handler(args))
