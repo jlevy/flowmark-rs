@@ -10,6 +10,7 @@ use comrak::{Arena, Options, parse_document};
 use regex::Regex;
 
 use crate::linewrapping::protocols::LineWrapper;
+use crate::linewrapping::text_wrapping::markdown_escape_word;
 
 /// Controls how list item spacing is handled during Markdown normalization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,6 +95,19 @@ fn render_node<'a>(node: &'a AstNode<'a>, state: &mut RenderState<'_>) -> String
             state.current_inline_text.clear();
 
             let mut children_text = render_children(node, state);
+
+            // Escape first word of paragraph text to prevent block-level misinterpretation.
+            // comrak strips backslash escapes during parsing (e.g., `1\.` → `1.` in Text node),
+            // so we must re-add escapes for patterns like `1.`, `*`, `-` at paragraph start.
+            if let Some(space_pos) = children_text.find(' ') {
+                let first_word = children_text[..space_pos].to_string();
+                let escaped = markdown_escape_word(&first_word);
+                if escaped != first_word {
+                    children_text = format!("{escaped}{}", &children_text[space_pos..]);
+                }
+            } else if !children_text.is_empty() {
+                children_text = markdown_escape_word(&children_text);
+            }
 
             // GFM task list checkbox support
             if let Some(parent) = node.parent() {
@@ -375,7 +389,7 @@ fn render_node<'a>(node: &'a AstNode<'a>, state: &mut RenderState<'_>) -> String
         NodeValue::Escaped => {
             drop(ast);
             let children = render_children(node, state);
-            children
+            format!("\\{children}")
         }
 
         NodeValue::Item(_) | NodeValue::TaskItem(_) => {
