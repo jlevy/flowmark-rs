@@ -1,42 +1,62 @@
-# Feature: Cross-Language Test Mapping Meta-Test
+# Feature: Cross-Language Test Mapping (Port Coverage)
 
 **Date:** 2026-02-17 (last updated 2026-02-17)
 
 **Author:** Joshua Levy
 
-**Status:** Draft
+**Status:** Draft — prototype implemented, spec under review
 
 ## Overview
 
 A systematic test provenance tracking system that ensures every Python flowmark test has
 a verified Rust counterpart.
-The system consists of three components:
+All artifacts are YAML for human readability, clean diffs, and agent editability.
 
-1. A **Python discovery script** that walks the Python test suite and emits a JSON
-   manifest of every test.
-2. A **Rust-side test discovery** mechanism that walks the Rust test files and emits a
-   similar JSON manifest.
-3. A **hand-maintained mapping file** (JSON) that maps each Python test to its Rust
-   equivalent(s), with status and notes.
-4. A **Rust meta-test** that loads all three artifacts and asserts completeness: every
-   Python test must appear in the mapping, every mapping target must exist in the Rust
-   manifest, and any unmapped tests cause a test failure.
+The system has four components:
 
-When a Python test is added, renamed, or removed upstream, the meta-test breaks.
-When a Rust test is added or removed, the meta-test breaks.
-The mapping file must be manually updated to resolve failures, ensuring a human (or LLM
-agent) has verified the correspondence.
+1. **Python test discovery CLI** (`flowmark-dev discover-python`) — walks the Python
+   flowmark repo at a pinned release tag, extracts every test function via AST parsing,
+   writes `python-tests.yaml`.
+2. **Rust test discovery** — two options, both producing `rust-tests.yaml`:
+   - a. A Python script (`flowmark-dev discover-rust`) using regex parsing of `*.rs`
+     files.
+   - b. (Proposed) A Rust build target or test that uses compile-time introspection to
+     emit its own test list as YAML, which would be more authoritative and not require
+     a Python dependency.
+3. **Hand-maintained mapping file** (`test-mapping.yaml`) — maps each Python test to its
+   Rust equivalent(s) with status and notes.
+   Agent-editable YAML.
+4. **Mapping checker** (`flowmark-dev check-mapping`) — loads all three YAML files and
+   asserts completeness.
+   Pure Python, runnable standalone or from CI.
+
+### Key Design Principles
+
+- **All YAML**: Every artifact is YAML for readability, diffability, and agent
+  editability.
+- **Idempotent and additive**: Both discovery scripts merge into existing files.
+  Auto-discovered tests update in place; hand-added entries are preserved.
+  Nothing is deleted on re-generation.
+- **Pinned source version**: The Python discovery is pinned to a specific release tag
+  (currently `v0.6.4`).
+  The checked-in YAML only changes when we intentionally bump the pin.
+- **Reusable**: The tool structure is designed to work for any Python-to-Rust port, not
+  just flowmark.
+  Project-specific knowledge (file classification, integration function names) is
+  configurable.
 
 ## Goals
 
 - 100% coverage tracking: every Python test has a documented Rust mapping or an explicit
   exclusion reason.
-- Machine-verifiable: `cargo test test_mapping_completeness` fails if the mapping is
-  stale.
-- Low friction: the Python discovery script and Rust discovery are fast, deterministic,
-  and require no special environment beyond Python 3.10+ and `cargo test`.
+- Machine-verifiable: `flowmark-dev check-mapping` fails with exit code 1 if the mapping
+  is stale or incomplete.
+- Low friction: discovery is fast and deterministic, requiring only Python 3.11+ and the
+  uv-managed project.
 - Incremental: an agent can fill in the mapping one test at a time, and each addition is
   immediately verifiable.
+- Extra Rust tests are tracked and logged (not failures) — useful for potential
+  upstreaming.
 
 ## Non-Goals
 
@@ -51,295 +71,353 @@ agent) has verified the correspondence.
 
 The flowmark-rs project is a Rust port of the Python
 [flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter.
-The Python test suite has ~234 test functions across 20 files.
-The Rust port currently has ~148 test functions across 16 files.
-The gap is approximately 37% by count, concentrated in tag formatting (36 vs 16) and
-wrapping (38 vs 15).
+As of v0.6.4, the Python test suite has **281 test functions** across 20 files.
+The Rust port currently has **151 test functions** across 16 files.
 
 There is no current mechanism to track which Python tests have been ported, which are
 intentionally excluded, and which have drifted.
 This spec addresses that gap.
 
-### Python Source Location
+### Python Source Pin
 
-The original Python source is available at `https://github.com/jlevy/flowmark`.
-A local copy exists at `attic/flowmark/` (gitignored).
-The discovery script will work against a fresh checkout of a specified branch/tag to
-ensure reproducibility.
+The original Python source is at `https://github.com/jlevy/flowmark`.
+Discovery is pinned to **tag `v0.6.4`** (the latest release).
+A local copy at `attic/flowmark/` (gitignored) can be used for faster iteration.
 
 ### Test Categories in Python
 
 | Category | Files | Description |
 |---|---|---|
 | Unit tests | `test_ellipses.py`, `test_sentences.py`, `test_smartquotes.py`, `test_escape_handling.py`, `test_strikethrough.py`, `test_wrapping.py` | Test individual functions/modules |
-| Integration tests | `test_filling.py`, `test_alerts.py`, `test_cleanups.py`, `test_fenced_code_blocks.py`, `test_frontmatter.py`, `test_heading_spacing.py`, `test_list_spacing.py`, `test_tag_formatting.py`, `test_width_options.py` | Test `fill_markdown` pipeline with various options |
-| Golden/fixture tests | `test_ref_docs.py` | Compare full document output against expected fixture files in `tests/testdocs/` |
-| Infrastructure tests | `test_cli_file_discovery.py`, `test_config.py`, `test_file_resolver.py`, `test_skill.py` | Test CLI, config, file resolution, skill system |
+| Integration tests | `test_filling.py`, `test_alerts.py`, `test_cleanups.py`, `test_fenced_code_blocks.py`, `test_frontmatter.py`, `test_heading_spacing.py`, `test_list_spacing.py`, `test_tag_formatting.py`, `test_width_options.py` | Test `fill_markdown` pipeline |
+| Golden/fixture tests | `test_ref_docs.py` | Compare full document output against expected fixtures |
+| Infrastructure tests | `test_cli_file_discovery.py`, `test_config.py`, `test_file_resolver.py`, `test_skill.py` | CLI, config, file resolution, skill system |
+
+### Test Patterns (Python)
+
+- No `pytest.mark.parametrize` is used anywhere.
+- Classes are rare (only `test_skill.py` for logical grouping).
+- Dense multi-assert functions are common (e.g., `test_ellipses()` has ~98 assertions).
+- Fixtures used only for CLI integration tests (`tmp_path`, `capsys`, `monkeypatch`).
+- Golden tests in `test_ref_docs.py` use an inline dataclass + loop pattern.
 
 ## Design
-
-### Data Model
-
-Each test is represented as a record with the following fields:
-
-```
-TestRecord:
-  file: str            # Relative path to test file (e.g., "tests/test_alerts.py")
-  function: str        # Test function name (e.g., "test_basic_note_alert")
-  class_name: str?     # Enclosing class name, if any (Python only)
-  test_type: enum      # "unit" | "integration" | "golden" | "infrastructure"
-  line_number: int     # Line number where the test function is defined
-  doc_string: str?     # First line of docstring, if present
-```
-
-The mapping file uses a record per Python test:
-
-```
-MappingRecord:
-  python_file: str         # e.g., "tests/test_alerts.py"
-  python_function: str     # e.g., "test_basic_note_alert"
-  python_class: str?       # e.g., null or "TestSkillInstallation"
-  status: enum             # "mapped" | "excluded" | "partial" | "missing"
-  rust_file: str?          # e.g., "tests/test_alerts.rs" (null if excluded)
-  rust_function: str?      # e.g., "test_basic_note_alert" (null if excluded)
-  rust_functions: [str]?   # If one Python test maps to multiple Rust tests
-  notes: str?              # Why excluded, what's partial, etc.
-```
-
-Status values:
-- **mapped**: Python test has a direct Rust equivalent.
-  `rust_function` (or `rust_functions` for 1:N) is set.
-- **excluded**: Python test is intentionally not ported.
-  `notes` explains why (e.g., "Python CLI infrastructure, not applicable to Rust").
-- **partial**: Rust test exists but covers only a subset of the Python test's
-  assertions.
-  `rust_function` is set, `notes` describes what's missing.
-- **missing**: Python test has no Rust equivalent yet and should be ported.
-
-### Component 1: Python Test Discovery Script
-
-**Location:** `dev/test_mapping/discover_python_tests.py`
-
-**Inputs:**
-- `--repo-url` (default: `https://github.com/jlevy/flowmark`)
-- `--ref` (default: `main`) — branch, tag, or commit
-- `--output` (default: `dev/test_mapping/python_tests.json`)
-- `--local-path` (optional) — use a local checkout instead of cloning
-
-**Behavior:**
-1. If `--local-path` is not provided, clone the repo to a temp directory at the
-   specified ref.
-2. Use Python's `ast` module to walk all `test_*.py` files under `tests/`.
-3. For each file, extract every function whose name starts with `test_`.
-4. Record: file path (relative to repo root), function name, enclosing class (if any),
-   line number, first line of docstring.
-5. Classify test type using a heuristic:
-   - If file is `test_ref_docs.py` → `golden`
-   - If file is in `{test_cli_file_discovery, test_config, test_file_resolver,
-     test_skill}` → `infrastructure`
-   - If the test calls `fill_markdown` or uses pipeline-level functions → `integration`
-   - Otherwise → `unit`
-6. Write sorted JSON array to output file.
-
-**Dependencies:** Python 3.10+ standard library only (`ast`, `json`, `pathlib`,
-`subprocess`, `tempfile`).
-No pytest or third-party libraries needed since we're parsing AST, not running tests.
-
-**Output format** (`python_tests.json`):
-```json
-[
-  {
-    "file": "tests/test_alerts.py",
-    "function": "test_basic_note_alert",
-    "class_name": null,
-    "test_type": "integration",
-    "line_number": 14,
-    "doc_string": "Test basic [!NOTE] alert formatting."
-  },
-  ...
-]
-```
-
-### Component 2: Rust Test Discovery
-
-**Location:** `dev/test_mapping/discover_rust_tests.py`
-
-This is also a Python script (for consistency and ease of text parsing).
-It walks the Rust `tests/` directory.
-
-**Inputs:**
-- `--tests-dir` (default: `tests/`)
-- `--output` (default: `dev/test_mapping/rust_tests.json`)
-
-**Behavior:**
-1. Walk all `test_*.rs` files under the tests directory.
-2. Use a regex-based parser to find all `#[test]` annotated functions:
-   - Pattern: `#[test]` followed by `fn <name>(` (possibly with intervening attributes
-     or comments).
-3. Record: file path, function name, line number.
-4. Write sorted JSON array to output file.
-
-**Output format** (`rust_tests.json`):
-```json
-[
-  {
-    "file": "tests/test_alerts.rs",
-    "function": "test_basic_note_alert",
-    "line_number": 8
-  },
-  ...
-]
-```
-
-### Component 3: Hand-Maintained Mapping File
-
-**Location:** `dev/test_mapping/test_mapping.json`
-
-This file is checked into the repository.
-It is the source of truth for test provenance.
-An agent or human fills it in by:
-
-1. Running both discovery scripts to generate current manifests.
-2. For each Python test, examining the Python test code and the candidate Rust test code.
-3. Adding a mapping record with the appropriate status.
-
-The mapping file is sorted by `(python_file, python_class, python_function)` for
-deterministic diffs.
-
-### Component 4: Rust Meta-Test
-
-**Location:** `tests/test_mapping_completeness.rs`
-
-A Rust integration test that:
-
-1. Shells out to run both discovery scripts (or reads pre-generated JSON files — see
-   open questions).
-2. Loads `python_tests.json`, `rust_tests.json`, and `test_mapping.json`.
-3. Asserts:
-   - **Every Python test has a mapping entry.** If a new Python test appears that isn't
-     in the mapping, the test fails with a clear message listing the unmapped tests.
-   - **Every mapped Rust test exists.** If a mapping says `rust_function:
-     "test_foo"` in `test_bar.rs`, that function must appear in `rust_tests.json`.
-   - **No stale mapping entries.** If a Python test was removed upstream but still has a
-     mapping entry, the test warns (or fails, configurable).
-   - **Summary statistics.** Print a coverage report: N mapped, N excluded, N partial, N
-     missing out of N total Python tests.
-4. The test passes only when every Python test is either `mapped`, `excluded`, or
-   `partial` — never `missing`.
 
 ### Directory Layout
 
 ```
-dev/
-  test_mapping/
-    discover_python_tests.py    # Python test discovery script
-    discover_rust_tests.py      # Rust test discovery script
-    test_mapping.json           # Hand-maintained mapping (checked in)
-    python_tests.json           # Generated (gitignored)
-    rust_tests.json             # Generated (gitignored)
-    README.md                   # Usage instructions
-tests/
-  test_mapping_completeness.rs  # Rust meta-test
+python/                              # uv-managed Python project
+  pyproject.toml                     # Modern uv setup, flowmark-dev CLI entry point
+  README.md
+  src/flowmark_dev_tools/
+    __init__.py
+    cli.py                           # CLI: discover-python, discover-rust, init-mapping,
+                                     #       check-mapping
+    models.py                        # Frozen dataclasses: PythonTestRecord,
+                                     #   RustTestRecord, MappingRecord
+    discover_python.py               # AST-based Python test walker
+    discover_rust.py                 # Regex-based Rust test walker
+    yaml_io.py                       # YAML read/write with ordered keys, atomic writes
+    check_mapping.py                 # Mapping validation logic
+
+port-coverage-mapping/               # All checked-in YAML artifacts
+  python-tests.yaml                  # Python test manifest (checked in, pinned)
+  rust-tests.yaml                    # Rust test manifest (checked in)
+  test-mapping.yaml                  # Hand-maintained mapping (checked in)
 ```
+
+### Data Model
+
+**Python test record** (in `python-tests.yaml`):
+```yaml
+- file: tests/test_alerts.py
+  function: test_basic_note_alert
+  test_type: integration
+  line_number: 14
+  doc_string: Test basic [!NOTE] alert formatting.
+```
+
+Fields: `file`, `function`, `class_name` (optional), `test_type`
+(`unit`|`integration`|`golden`|`infrastructure`), `line_number`, `doc_string`
+(optional).
+
+**Rust test record** (in `rust-tests.yaml`):
+```yaml
+- file: tests/test_alerts.rs
+  function: test_basic_note_alert
+  line_number: 8
+```
+
+Fields: `file`, `function`, `line_number`.
+
+**Mapping record** (in `test-mapping.yaml`):
+```yaml
+- python_file: tests/test_alerts.py
+  python_function: test_basic_note_alert
+  status: mapped
+  rust_file: tests/test_alerts.rs
+  rust_function: test_basic_note_alert
+
+- python_file: tests/test_ellipses.py
+  python_function: test_ellipses
+  status: mapped
+  rust_file: tests/test_ellipses.rs
+  rust_functions:
+    - test_ellipses_basic_conversions
+    - test_ellipses_punctuation
+    - test_ellipses_does_not_apply
+    - test_ellipses_multiline
+    # ... etc.
+
+- python_file: tests/test_skill.py
+  python_function: test_get_skill_content
+  python_class: TestGetSkillContent
+  status: excluded
+  notes: Python skill system infrastructure, not applicable to Rust port.
+```
+
+Status values:
+- **mapped**: Python test has a direct Rust equivalent.
+- **excluded**: Intentionally not ported.
+  `notes` explains why.
+- **partial**: Rust test exists but covers only a subset.
+- **missing**: No Rust equivalent yet; should be ported.
+
+### Idempotent, Additive Merge Behavior
+
+Both discovery commands and `init-mapping` are **idempotent and additive**:
+
+- **Discovery scripts** (`discover-python`, `discover-rust`): Write out the full
+  discovered set.
+  Since these are auto-generated (not hand-edited), they are fully overwritten each time.
+  The header comment marks them as auto-generated.
+
+- **`init-mapping`**: If `test-mapping.yaml` already exists, it loads existing entries,
+  preserves all manual edits (status, rust refs, notes), and only adds new `missing`
+  entries for newly discovered Python tests.
+  It never deletes entries — stale entries are detected by `check-mapping` instead.
+
+- **Hand-added entries**: If a user or agent manually adds a test record to any YAML file
+  (e.g., a custom test type the auto-discovery missed), it is preserved across
+  re-generation.
+  The identity key for merging is `(python_file, python_class, python_function)` for
+  mapping and `(file, function)` for test manifests.
+
+### Component 1: Python Test Discovery CLI
+
+**Command:** `flowmark-dev discover-python`
+
+**Flags:**
+- `--repo-url` (default: `https://github.com/jlevy/flowmark`)
+- `--ref` (default: `v0.6.4`) — pinned release tag
+- `--local-path` — use a local checkout instead of cloning
+- `--output` / `-o` — output YAML path (default: `port-coverage-mapping/python-tests.yaml`)
+
+**Behavior:**
+1. Clone repo at pinned ref to a temp directory (or use `--local-path`).
+2. Use Python `ast` module to walk all `test_*.py` files under `tests/`.
+3. Extract every `test_*` function, including those inside classes.
+4. Classify test type by filename heuristic + call-site analysis (looks for
+   `fill_markdown` etc.).
+5. Write sorted YAML using atomic file output.
+
+**Dependencies:** Python 3.11+ stdlib (`ast`, `subprocess`, `tempfile`) + `pyyaml` +
+`strif` (for atomic writes).
+
+### Component 2: Rust Test Discovery
+
+#### Option A: Python-based (implemented)
+
+**Command:** `flowmark-dev discover-rust`
+
+**Flags:**
+- `--tests-dir` (default: `tests/`)
+- `--output` / `-o` — output YAML path (default: `port-coverage-mapping/rust-tests.yaml`)
+
+**Behavior:**
+1. Walk `test_*.rs` files.
+2. Regex-based parser: find `#[test]` attribute followed by `fn name(`.
+3. Record file, function, line number.
+4. Write sorted YAML.
+
+#### Option B: Rust build target (proposed, not yet implemented)
+
+A Rust binary target (e.g., `cargo run --bin discover-tests`) or a test helper that uses
+compile-time or runtime introspection to enumerate all `#[test]` functions and emit YAML.
+
+**Advantages:**
+- More authoritative — the Rust compiler knows exactly what's a test.
+- No Python dependency needed for Rust-side discovery.
+- Could use `cargo test --list` output parsing as a simple approach.
+
+**Disadvantages:**
+- `cargo test --list` output format is not stable/guaranteed.
+- Adds a binary target to the Cargo workspace.
+
+**Recommendation:** Start with Option A (Python regex parser) since it's already working
+and sufficient.
+Evaluate Option B if the regex parser misses edge cases or if we want to eliminate the
+Python dependency for Rust-side discovery.
+A practical middle ground: parse `cargo test -- --list` output in a Python wrapper.
+
+### Component 3: Mapping Checker
+
+**Command:** `flowmark-dev check-mapping`
+
+**Flags:**
+- `--python-yaml`, `--rust-yaml`, `--mapping-yaml` — override default paths.
+
+**Checks:**
+1. **Every Python test has a mapping entry.** Unmapped tests cause FAIL.
+2. **Every mapped Rust function actually exists** in `rust-tests.yaml`.
+   Broken refs cause FAIL.
+3. **No `missing` status entries.** Any `missing` causes FAIL.
+4. **Stale mapping entries** (Python test removed upstream): WARN.
+5. **Extra Rust tests** (not referenced in any mapping): INFO with a log.
+   These are candidates for upstreaming to the Python repo.
+6. **Summary statistics**: total, mapped, excluded, partial, missing counts.
+
+Exit code 0 on pass, 1 on fail.
+
+### Component 4: Init/Update Mapping
+
+**Command:** `flowmark-dev init-mapping`
+
+**Flags:**
+- `--python-yaml` — source Python manifest.
+- `--output` / `-o` — mapping file path.
+
+**Behavior:**
+1. Load `python-tests.yaml`.
+2. If `test-mapping.yaml` exists, load it and index by identity key.
+3. For each Python test: if already in mapping, preserve the existing record.
+   If new, add with status `missing`.
+4. Sort by `(python_file, python_class, python_function)`.
+5. Write atomically.
 
 ### Workflow
 
-**Initial population (one-time, by LLM agent):**
-1. Run `python dev/test_mapping/discover_python_tests.py` → generates
-   `python_tests.json`.
-2. Run `python dev/test_mapping/discover_rust_tests.py` → generates `rust_tests.json`.
-3. Generate a skeleton `test_mapping.json` with every Python test listed as `missing`.
-4. For each Python test, the agent reads the Python source and the candidate Rust source,
-   determines the mapping, and updates the record.
-   This is the labor-intensive step.
-5. Commit `test_mapping.json`.
-   The meta-test now passes.
+**Setup (one-time):**
+```bash
+cd flowmark-rs
+uv run --project python flowmark-dev discover-python --local-path attic/flowmark
+uv run --project python flowmark-dev discover-rust
+uv run --project python flowmark-dev init-mapping
+uv run --project python flowmark-dev check-mapping  # Fails: all missing
+```
 
-**Ongoing maintenance:**
-- When a Python test is added upstream: the meta-test fails → agent adds a mapping entry
-  (either ports the test or marks it excluded).
-- When a Rust test is added: the meta-test may fail if no mapping references it (this is
-  fine — extra Rust tests are allowed but the mapping should be updated for traceability).
-- When a Python test is removed upstream: the meta-test fails → agent removes or updates
-  the mapping entry.
-- Periodically: re-run discovery scripts and verify the mapping is current.
+**Agent mapping population (one-time, labor-intensive):**
+1. For each entry in `test-mapping.yaml` with status `missing`:
+   - Read the Python test source.
+   - Find the Rust counterpart (by name similarity, file correspondence, behavior).
+   - Update the YAML record: set `status`, `rust_file`, `rust_function`/`rust_functions`,
+     `notes`.
+2. Run `flowmark-dev check-mapping` after each batch to verify progress.
+
+**Ongoing maintenance (when Python upstream changes):**
+1. Bump `--ref` to new release tag.
+2. Re-run `discover-python` → updates `python-tests.yaml`.
+3. Re-run `init-mapping` → adds new entries as `missing`, preserves existing.
+4. `check-mapping` fails → agent addresses new/changed tests.
+
+**Ongoing maintenance (when Rust tests change):**
+1. Re-run `discover-rust` → updates `rust-tests.yaml`.
+2. `check-mapping` reports broken refs or extra tests.
+3. Agent updates mapping as needed.
 
 ## Implementation Plan
 
-### Phase 1: Scaffolding and Discovery Scripts
+### Phase 1: Python Project and Discovery CLI (DONE — prototype)
 
-- [ ] Create `dev/test_mapping/` directory structure
-- [ ] Write `discover_python_tests.py` using `ast` module
-- [ ] Write `discover_rust_tests.py` using regex parsing
-- [ ] Add `.gitignore` entries for generated JSON files (`python_tests.json`,
-  `rust_tests.json`)
-- [ ] Test both scripts produce correct output against current codebase
-- [ ] Add a `--skeleton` flag to `discover_python_tests.py` that generates a starter
-  `test_mapping.json` with all entries as `missing`
+- [x] Create `python/` directory with modern uv project setup
+- [x] Write `models.py` with frozen dataclasses and StrEnum types
+- [x] Write `discover_python.py` using `ast` module with test type classification
+- [x] Write `discover_rust.py` using regex parsing
+- [x] Write `yaml_io.py` with ordered keys, None-omission, atomic writes
+- [x] Write `cli.py` with `discover-python`, `discover-rust`, `init-mapping`,
+  `check-mapping` subcommands
+- [x] Write `check_mapping.py` with completeness validation and human-readable report
+- [x] Create `port-coverage-mapping/` directory
+- [x] Verify end-to-end: 281 Python tests discovered, 151 Rust tests discovered,
+  skeleton mapping generated, check correctly reports all missing
 
-### Phase 2: Meta-Test and Mapping Infrastructure
+### Phase 2: Idempotent Merge and Polish
 
-- [ ] Write `tests/test_mapping_completeness.rs` that loads the three JSON files and
-  asserts completeness
-- [ ] Generate initial skeleton `test_mapping.json` using the `--skeleton` flag
-- [ ] Verify the meta-test correctly fails (all entries are `missing`)
-- [ ] Add `README.md` with usage instructions
+- [ ] Add idempotent merge to `discover-python`: if existing `python-tests.yaml` exists,
+  preserve hand-added entries not found by auto-discovery
+- [ ] Add idempotent merge to `discover-rust`: same behavior
+- [ ] Add `--format json` option for machine consumption alongside YAML
+- [ ] Run ruff and basedpyright, fix any lint/type issues
+- [ ] Add a basic smoke test in `python/tests/`
 
-### Phase 3: Populate the Mapping (Agent Labor)
+### Phase 3: Rust-Side Discovery (Optional Enhancement)
 
-- [ ] For each Python test file, review every test function against its Rust counterpart
-- [ ] Update `test_mapping.json` with `mapped`, `excluded`, or `partial` status for each
-  entry
-- [ ] Verify `cargo test test_mapping_completeness` passes
+- [ ] Evaluate `cargo test -- --list` parsing as an alternative to regex
+- [ ] If pursued: add a `discover-rust-native` command that wraps `cargo test --list`
+- [ ] Or: add a Rust binary target `discover-tests` that emits YAML directly
+- [ ] Compare output of Python regex parser vs Rust-native discovery for correctness
+
+### Phase 4: Populate the Mapping (Agent Labor)
+
+- [ ] For each of the 20 Python test files, review every test function against its Rust
+  counterpart
+- [ ] Update `test-mapping.yaml` with `mapped`, `excluded`, or `partial` status
+- [ ] Handle 1:N cases (e.g., `test_ellipses` → 10 Rust functions)
+- [ ] Mark infrastructure tests (`test_skill`, `test_cli_file_discovery`,
+  `test_file_resolver`, `test_config`) as `excluded` with notes
+- [ ] Verify `flowmark-dev check-mapping` passes with exit code 0
 - [ ] Document any `partial` entries with notes on what's missing
+
+### Phase 5: CI Integration (Future)
+
+- [ ] Add a CI step that runs `flowmark-dev check-mapping` and fails the build if
+  incomplete
+- [ ] Optionally: CI re-runs discovery scripts and checks for drift between committed
+  YAML and actual test trees
 
 ## Testing Strategy
 
-- The meta-test itself is the primary test.
-  It runs as part of `cargo test`.
-- The discovery scripts should be tested with a small smoke test: run them and verify the
-  output JSON is valid and contains expected entries.
-- The meta-test should print a human-readable summary showing coverage statistics.
+- `flowmark-dev check-mapping` is the primary verification mechanism.
+- The discovery scripts are tested by running them against the current codebase and
+  verifying the output YAML contains expected entries and is valid.
+- A basic smoke test in `python/tests/` validates round-trip YAML serialization.
+
+## Resolved Questions
+
+- **YAML over JSON**: YAML chosen for readability, diffability, and agent editability.
+  All three artifact files use YAML.
+
+- **Python-based mapping checker over Rust meta-test**: Chosen for simplicity. The
+  checker is a Python CLI command, avoiding the need for Python in the Rust test
+  environment.
+  Can be wrapped by CI directly.
+
+- **1:N mappings**: Supported via `rust_functions: [...]` list field alongside
+  `rust_function` for the 1:1 case.
+
+- **Extra Rust tests**: Logged at INFO level, not failures.
+  Useful for identifying candidates to upstream to the Python repo.
+
+- **Idempotent merge**: Both discovery scripts and `init-mapping` preserve hand-edits.
+  Identity keys: `(file, function)` for test manifests,
+  `(python_file, python_class, python_function)` for mapping.
 
 ## Open Questions
 
-- **Should the meta-test shell out to Python at test time, or read pre-committed JSON?**
-  Recommendation: read pre-committed JSON files.
-  The discovery scripts are run manually (or by CI) and their output is committed.
-  This avoids requiring Python in the Rust test environment.
-  The trade-off is that the JSON manifests could drift — but the mapping update workflow
-  catches this since the agent re-runs discovery before updating the mapping.
-  Alternatively: a CI job runs the discovery scripts and commits updated JSON, and the
-  meta-test just reads those files.
+- **Rust-native discovery**: Should we add a Rust build target that emits its own test
+  list?
+  The Python regex parser works but `cargo test -- --list` would be more authoritative.
+  Not blocking — can be added later.
 
-- **Should the Rust meta-test also be implemented in Python for simplicity?**
-  Since both discovery scripts are Python, a pure Python meta-test
-  (`dev/test_mapping/check_mapping.py`) could complement or replace the Rust integration
-  test.
-  Recommendation: implement it as a Python script in `dev/test_mapping/` that is also
-  callable from a Rust test via `Command::new("python")`.
-  This keeps the tooling self-contained and makes debugging easier.
-
-- **How to handle 1:N mappings (one Python test → multiple Rust tests)?**
-  The Python ellipsis test is one monolithic function with 98 assertions, split into 10
-  Rust tests.
-  The mapping record should support `rust_functions: [...]` as an alternative to
-  `rust_function`.
-
-- **How to handle parameterized tests?**
-  Some Python tests use inline parameterization (multiple assert blocks in one function).
-  The Rust side may split these into separate `#[test]` functions.
-  The mapping should treat the Python function as the atomic unit and list all
-  corresponding Rust functions.
-
-- **Should extra Rust-only tests cause a warning or be silently allowed?**
-  Recommendation: silently allowed.
-  Extra Rust tests (e.g., comrak-specific regression tests) are fine.
-  The meta-test only ensures Python → Rust coverage, not the reverse.
+- **Reusability for other ports**: The current tool has some flowmark-specific
+  assumptions (test type classification heuristics, `fill_markdown` as integration
+  indicator).
+  If we want to reuse this for other Python→Rust ports, we'd need to make the
+  classification configurable (e.g., via a config file or CLI flags).
 
 ## References
 
-- Original Python repo: https://github.com/jlevy/flowmark
+- Original Python repo: https://github.com/jlevy/flowmark (pinned: `v0.6.4`)
 - Porting plan: `docs/porting-plan.md`
-- Previous cross-validation assessment:
-  `attic/flowmark-rs-1/docs/project/cross-validation-assessment.md`
+- Python project: `python/pyproject.toml`
+- YAML artifacts: `port-coverage-mapping/`

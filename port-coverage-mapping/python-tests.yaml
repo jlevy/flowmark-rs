@@ -1,0 +1,1352 @@
+# Python flowmark test manifest
+# Auto-generated. Manual edits are preserved on re-generation.
+
+- file: tests/test_alerts.py
+  function: test_alert_after_heading
+  test_type: integration
+  line_number: 245
+  doc_string: Test alert immediately after a heading.
+- file: tests/test_alerts.py
+  function: test_alert_with_code_block
+  test_type: integration
+  line_number: 183
+  doc_string: Test alerts containing fenced code blocks.
+- file: tests/test_alerts.py
+  function: test_alert_with_list
+  test_type: integration
+  line_number: 203
+  doc_string: Test alerts containing bullet lists.
+- file: tests/test_alerts.py
+  function: test_alert_with_multiline_content
+  test_type: integration
+  line_number: 146
+  doc_string: Test alerts with multiple lines of content.
+- file: tests/test_alerts.py
+  function: test_alert_with_multiple_paragraphs
+  test_type: integration
+  line_number: 165
+  doc_string: Test alerts with multiple paragraphs separated by blank quote lines.
+- file: tests/test_alerts.py
+  function: test_all_valid_alert_types
+  test_type: integration
+  line_number: 40
+  doc_string: Test all five valid GitHub alert types are preserved.
+- file: tests/test_alerts.py
+  function: test_basic_note_alert
+  test_type: integration
+  line_number: 17
+  doc_string: Test that NOTE alerts are preserved correctly.
+- file: tests/test_alerts.py
+  function: test_empty_alert_type_preserves_quote
+  test_type: integration
+  line_number: 122
+  doc_string: Empty alert brackets should not cause quote formatting to be stripped.
+- file: tests/test_alerts.py
+  function: test_lowercase_alert_normalized_to_uppercase
+  test_type: integration
+  line_number: 56
+  doc_string: Test that lowercase alert types are normalized to uppercase.
+- file: tests/test_alerts.py
+  function: test_malformed_alert_preserves_quote
+  test_type: integration
+  line_number: 131
+  doc_string: Malformed alert syntax should not cause quote formatting to be stripped.
+- file: tests/test_alerts.py
+  function: test_misspelled_alert_preserves_quote
+  test_type: integration
+  line_number: 74
+  doc_string: 'CRITICAL: Misspelled alert types must NOT cause quote formatting to be stripped.'
+- file: tests/test_alerts.py
+  function: test_multiple_alerts_in_document
+  test_type: integration
+  line_number: 222
+  doc_string: Test multiple alerts in the same document.
+- file: tests/test_alerts.py
+  function: test_quote_with_link_like_content
+  test_type: integration
+  line_number: 278
+  doc_string: Test quote with content that looks like but isn't an alert.
+- file: tests/test_alerts.py
+  function: test_regular_quote_still_works
+  test_type: integration
+  line_number: 263
+  doc_string: Ensure regular quotes without alert syntax still work correctly.
+- file: tests/test_alerts.py
+  function: test_unknown_alert_types_preserve_quote
+  test_type: integration
+  line_number: 97
+  doc_string: 'CRITICAL: Unknown/custom alert types must NOT cause quote formatting to be stripped.'
+- file: tests/test_cleanups.py
+  function: test_unbold_headings
+  test_type: unit
+  line_number: 55
+- file: tests/test_cli_file_discovery.py
+  function: test_auto_list_files_no_args_errors
+  test_type: infrastructure
+  line_number: 209
+  doc_string: --auto --list-files with no file args should error (--auto message takes priority).
+- file: tests/test_cli_file_discovery.py
+  function: test_auto_no_args_errors
+  test_type: infrastructure
+  line_number: 114
+  doc_string: --auto with no file args should error, not silently default to cwd.
+- file: tests/test_cli_file_discovery.py
+  function: test_auto_with_dot_formats_cwd
+  test_type: infrastructure
+  line_number: 128
+  doc_string: --auto . should format files in current directory.
+- file: tests/test_cli_file_discovery.py
+  function: test_auto_with_explicit_file
+  test_type: infrastructure
+  line_number: 154
+- file: tests/test_cli_file_discovery.py
+  function: test_explicit_file_still_works
+  test_type: infrastructure
+  line_number: 137
+- file: tests/test_cli_file_discovery.py
+  function: test_explicit_flag_detection_with_default_value
+  test_type: infrastructure
+  line_number: 216
+  doc_string: Passing --width 88 (the default) should still be detected as explicit (fm-4z3r).
+- file: tests/test_cli_file_discovery.py
+  function: test_flowmarkignore
+  test_type: infrastructure
+  line_number: 162
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_directory
+  test_type: infrastructure
+  line_number: 29
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_extend_exclude
+  test_type: infrastructure
+  line_number: 62
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_extend_include
+  test_type: infrastructure
+  line_number: 51
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_force_exclude
+  test_type: infrastructure
+  line_number: 90
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_max_size
+  test_type: infrastructure
+  line_number: 102
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_no_args_errors
+  test_type: infrastructure
+  line_number: 121
+  doc_string: --list-files with no file args should error, not silently default to cwd.
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_no_respect_gitignore
+  test_type: infrastructure
+  line_number: 76
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_skips_excluded_dirs
+  test_type: infrastructure
+  line_number: 40
+- file: tests/test_cli_file_discovery.py
+  function: test_list_files_stdin_does_not_crash
+  test_type: infrastructure
+  line_number: 177
+  doc_string: --list-files with stdin arg should not raise FileNotFoundError (fm-1xaz).
+- file: tests/test_cli_file_discovery.py
+  function: test_no_args_errors
+  test_type: infrastructure
+  line_number: 189
+  doc_string: Bare `flowmark` with no arguments should error with a helpful message.
+- file: tests/test_cli_file_discovery.py
+  function: test_stdin_explicit_dash
+  test_type: infrastructure
+  line_number: 199
+  doc_string: Explicit `-` argument should still read from stdin after default change.
+- file: tests/test_cli_file_discovery.py
+  function: test_stdin_still_works
+  test_type: infrastructure
+  line_number: 145
+- file: tests/test_config.py
+  function: test_find_config_dot_flowmark_toml_takes_precedence
+  test_type: infrastructure
+  line_number: 21
+- file: tests/test_config.py
+  function: test_find_config_flowmark_toml
+  test_type: infrastructure
+  line_number: 14
+- file: tests/test_config.py
+  function: test_find_config_none_when_missing
+  test_type: infrastructure
+  line_number: 51
+- file: tests/test_config.py
+  function: test_find_config_pyproject_toml
+  test_type: infrastructure
+  line_number: 29
+- file: tests/test_config.py
+  function: test_find_config_pyproject_without_section_skipped
+  test_type: infrastructure
+  line_number: 36
+- file: tests/test_config.py
+  function: test_find_config_walks_up
+  test_type: infrastructure
+  line_number: 42
+- file: tests/test_config.py
+  function: test_load_config_file_discovery_section
+  test_type: infrastructure
+  line_number: 95
+- file: tests/test_config.py
+  function: test_load_config_flowmark_toml
+  test_type: infrastructure
+  line_number: 56
+- file: tests/test_config.py
+  function: test_load_config_kebab_case
+  test_type: infrastructure
+  line_number: 75
+- file: tests/test_config.py
+  function: test_load_config_malformed_toml
+  test_type: infrastructure
+  line_number: 240
+  doc_string: Malformed TOML should return empty config, not crash (fm-lbku).
+- file: tests/test_config.py
+  function: test_load_config_partial
+  test_type: infrastructure
+  line_number: 105
+- file: tests/test_config.py
+  function: test_load_config_pyproject_toml
+  test_type: infrastructure
+  line_number: 67
+- file: tests/test_config.py
+  function: test_merge_auto_mode_overrides_formatting
+  test_type: infrastructure
+  line_number: 190
+- file: tests/test_config.py
+  function: test_merge_auto_mode_width_from_config
+  test_type: infrastructure
+  line_number: 208
+- file: tests/test_config.py
+  function: test_merge_config_overrides_defaults
+  test_type: infrastructure
+  line_number: 175
+- file: tests/test_config.py
+  function: test_merge_explicit_cli_overrides_config
+  test_type: infrastructure
+  line_number: 183
+- file: tests/test_config.py
+  function: test_merge_extend_include_from_config
+  test_type: infrastructure
+  line_number: 232
+  doc_string: Config extend_include should be applied when not explicitly set (fm-p6x5).
+- file: tests/test_config.py
+  function: test_merge_file_discovery_from_config
+  test_type: infrastructure
+  line_number: 224
+- file: tests/test_config.py
+  function: test_merge_no_config
+  test_type: infrastructure
+  line_number: 168
+- file: tests/test_config.py
+  function: test_parse_config_warns_unknown_keys
+  test_type: infrastructure
+  line_number: 250
+  doc_string: Unknown keys in config should produce a warning (fm-y9cx).
+- file: tests/test_ellipses.py
+  function: test_ellipses
+  test_type: unit
+  line_number: 4
+- file: tests/test_escape_handling.py
+  function: test_actual_list_no_escape
+  test_type: unit
+  line_number: 88
+  doc_string: Real lists without escapes should remain unchanged.
+- file: tests/test_escape_handling.py
+  function: test_escape_at_paragraph_start
+  test_type: unit
+  line_number: 19
+  doc_string: Escape at paragraph start should be preserved to prevent list interpretation.
+- file: tests/test_escape_handling.py
+  function: test_escape_in_heading
+  test_type: unit
+  line_number: 6
+  doc_string: Escapes in headings should be removed - they're never needed.
+- file: tests/test_escape_handling.py
+  function: test_escape_in_list_item
+  test_type: unit
+  line_number: 45
+  doc_string: Test escape handling in list items.
+- file: tests/test_escape_handling.py
+  function: test_escape_in_paragraph_middle
+  test_type: unit
+  line_number: 32
+  doc_string: Escapes in middle of paragraph should be removed.
+- file: tests/test_escape_handling.py
+  function: test_escape_in_quote
+  test_type: unit
+  line_number: 58
+  doc_string: Test escape handling in block quotes.
+- file: tests/test_escape_handling.py
+  function: test_escape_in_table
+  test_type: unit
+  line_number: 72
+  doc_string: Escapes in table cells should be removed.
+- file: tests/test_escape_handling.py
+  function: test_escaped_chars_at_line_start
+  test_type: unit
+  line_number: 190
+  doc_string: Test that escaped characters at line start are preserved.
+- file: tests/test_escape_handling.py
+  function: test_escaped_chars_in_headings
+  test_type: unit
+  line_number: 167
+  doc_string: Test that non-period escaped characters in headings are preserved.
+- file: tests/test_escape_handling.py
+  function: test_mixed_escapes
+  test_type: unit
+  line_number: 96
+  doc_string: Test document with mixed escape scenarios.
+- file: tests/test_escape_handling.py
+  function: test_mixed_escapes_comprehensive
+  test_type: unit
+  line_number: 214
+  doc_string: 'Comprehensive test showing our escape handling policy:'
+- file: tests/test_escape_handling.py
+  function: test_other_escaped_chars
+  test_type: unit
+  line_number: 129
+  doc_string: Test that other escaped characters are preserved (only periods are handled specially).
+- file: tests/test_fenced_code_blocks.py
+  function: test_code_block_with_inline_backticks
+  test_type: integration
+  line_number: 139
+  doc_string: Test that inline backticks in code content are handled correctly.
+- file: tests/test_fenced_code_blocks.py
+  function: test_deeply_nested_code_blocks
+  test_type: integration
+  line_number: 103
+  doc_string: Test code block containing 4-backtick fences in content.
+- file: tests/test_fenced_code_blocks.py
+  function: test_empty_lines_in_code_block_no_trailing_whitespace
+  test_type: integration
+  line_number: 236
+  doc_string: Test that empty lines in code blocks remain truly empty (no trailing whitespace).
+- file: tests/test_fenced_code_blocks.py
+  function: test_empty_lines_in_nested_code_block_no_trailing_whitespace
+  test_type: integration
+  line_number: 267
+  doc_string: Test that empty lines in code blocks inside list items have no trailing whitespace.
+- file: tests/test_fenced_code_blocks.py
+  function: test_empty_lines_in_quoted_code_block_no_trailing_whitespace
+  test_type: integration
+  line_number: 316
+  doc_string: Test that empty lines in code blocks inside blockquotes preserve > but strip trailing space.
+- file: tests/test_fenced_code_blocks.py
+  function: test_four_backtick_fence_preserved
+  test_type: integration
+  line_number: 39
+  doc_string: Test that 4-backtick fences are preserved as 4 backticks.
+- file: tests/test_fenced_code_blocks.py
+  function: test_minimum_backticks_computed_from_content
+  test_type: unit
+  line_number: 224
+  doc_string: Test that even if input uses 3 backticks, output uses enough.
+- file: tests/test_fenced_code_blocks.py
+  function: test_multiple_empty_lines_in_code_block
+  test_type: integration
+  line_number: 335
+  doc_string: Test code blocks with multiple consecutive empty lines stay clean.
+- file: tests/test_fenced_code_blocks.py
+  function: test_nested_code_blocks
+  test_type: integration
+  line_number: 67
+  doc_string: Test code block containing triple backticks in content.
+- file: tests/test_fenced_code_blocks.py
+  function: test_simple_fenced_code_block
+  test_type: integration
+  line_number: 14
+  doc_string: Test basic fenced code block with no backticks in content.
+- file: tests/test_fenced_code_blocks.py
+  function: test_tilde_fence_stays_tilde
+  test_type: integration
+  line_number: 166
+  doc_string: Test that tilde-fenced code blocks stay as tildes.
+- file: tests/test_fenced_code_blocks.py
+  function: test_tilde_fence_with_backticks_in_content
+  test_type: integration
+  line_number: 191
+  doc_string: Test tilde-fenced code blocks with backticks in content.
+- file: tests/test_file_resolver.py
+  function: test_config_effective_exclude_extended
+  test_type: infrastructure
+  line_number: 34
+- file: tests/test_file_resolver.py
+  function: test_config_effective_exclude_replaced
+  test_type: infrastructure
+  line_number: 29
+- file: tests/test_file_resolver.py
+  function: test_config_effective_include
+  test_type: infrastructure
+  line_number: 19
+- file: tests/test_file_resolver.py
+  function: test_config_effective_include_custom_base
+  test_type: infrastructure
+  line_number: 24
+- file: tests/test_file_resolver.py
+  function: test_read_ignore_file_missing
+  test_type: infrastructure
+  line_number: 319
+  doc_string: _read_ignore_file returns None for missing files (fm-39fo / fm-pek5).
+- file: tests/test_file_resolver.py
+  function: test_read_ignore_file_non_utf8
+  test_type: infrastructure
+  line_number: 343
+  doc_string: _read_ignore_file returns None for non-UTF-8 files (fm-8to0).
+- file: tests/test_file_resolver.py
+  function: test_read_ignore_file_unreadable
+  test_type: infrastructure
+  line_number: 325
+  doc_string: _read_ignore_file returns None for unreadable files (fm-39fo / fm-pek5).
+- file: tests/test_file_resolver.py
+  function: test_resolver_deduplication
+  test_type: infrastructure
+  line_number: 219
+- file: tests/test_file_resolver.py
+  function: test_resolver_directory_recursion
+  test_type: infrastructure
+  line_number: 51
+- file: tests/test_file_resolver.py
+  function: test_resolver_exclude_replaces_defaults
+  test_type: infrastructure
+  line_number: 139
+- file: tests/test_file_resolver.py
+  function: test_resolver_excludes_default_dirs
+  test_type: infrastructure
+  line_number: 65
+- file: tests/test_file_resolver.py
+  function: test_resolver_explicit_files_bypass_exclusions_by_default
+  test_type: infrastructure
+  line_number: 117
+- file: tests/test_file_resolver.py
+  function: test_resolver_extend_exclude
+  test_type: infrastructure
+  line_number: 161
+- file: tests/test_file_resolver.py
+  function: test_resolver_extend_include
+  test_type: infrastructure
+  line_number: 128
+- file: tests/test_file_resolver.py
+  function: test_resolver_file_not_found
+  test_type: infrastructure
+  line_number: 237
+- file: tests/test_file_resolver.py
+  function: test_resolver_files_max_size
+  test_type: infrastructure
+  line_number: 173
+- file: tests/test_file_resolver.py
+  function: test_resolver_files_max_size_zero_disables
+  test_type: infrastructure
+  line_number: 185
+- file: tests/test_file_resolver.py
+  function: test_resolver_flowmarkignore
+  test_type: infrastructure
+  line_number: 246
+- file: tests/test_file_resolver.py
+  function: test_resolver_flowmarkignore_positive_assertion
+  test_type: infrastructure
+  line_number: 376
+  doc_string: Flowmarkignore test with positive assertion on kept files (fm-pvxa).
+- file: tests/test_file_resolver.py
+  function: test_resolver_force_exclude_filters_explicit_files
+  test_type: infrastructure
+  line_number: 106
+- file: tests/test_file_resolver.py
+  function: test_resolver_gitignore_file_patterns
+  test_type: infrastructure
+  line_number: 295
+  doc_string: Gitignore should exclude files matching patterns, not just directories (fm-911m).
+- file: tests/test_file_resolver.py
+  function: test_resolver_gitignore_wildcard_file_pattern
+  test_type: infrastructure
+  line_number: 307
+  doc_string: Gitignore wildcard patterns should match files (fm-qeeg).
+- file: tests/test_file_resolver.py
+  function: test_resolver_glob_pattern
+  test_type: infrastructure
+  line_number: 194
+- file: tests/test_file_resolver.py
+  function: test_resolver_mixed_inputs
+  test_type: infrastructure
+  line_number: 207
+- file: tests/test_file_resolver.py
+  function: test_resolver_nested_gitignore
+  test_type: infrastructure
+  line_number: 259
+  doc_string: Gitignore in subdirectory should apply to that subtree.
+- file: tests/test_file_resolver.py
+  function: test_resolver_nested_gitignore_combines_parent_rules
+  test_type: infrastructure
+  line_number: 276
+  doc_string: Parent .gitignore rules should still apply in subdirectories (fm-8lf6).
+- file: tests/test_file_resolver.py
+  function: test_resolver_no_respect_gitignore
+  test_type: infrastructure
+  line_number: 93
+- file: tests/test_file_resolver.py
+  function: test_resolver_respects_gitignore
+  test_type: infrastructure
+  line_number: 80
+- file: tests/test_file_resolver.py
+  function: test_resolver_single_file
+  test_type: infrastructure
+  line_number: 42
+- file: tests/test_file_resolver.py
+  function: test_resolver_sorted_output
+  test_type: infrastructure
+  line_number: 228
+- file: tests/test_file_resolver.py
+  function: test_resolver_tool_ignore_per_walk_root
+  test_type: infrastructure
+  line_number: 351
+  doc_string: Tool ignore should be loaded per walk root, not cached from first (fm-jl1d).
+- file: tests/test_filling.py
+  function: test_multi_paragraph_list_items
+  test_type: integration
+  line_number: 241
+- file: tests/test_filling.py
+  function: test_normalize_markdown
+  test_type: integration
+  line_number: 226
+- file: tests/test_frontmatter.py
+  function: test_has_frontmatter
+  test_type: unit
+  line_number: 36
+- file: tests/test_frontmatter.py
+  function: test_markdown_with_frontmatter
+  test_type: integration
+  line_number: 43
+- file: tests/test_frontmatter.py
+  function: test_split_frontmatter
+  test_type: unit
+  line_number: 5
+- file: tests/test_heading_spacing.py
+  function: test_hard_breaks_after_comments
+  test_type: integration
+  line_number: 187
+  doc_string: Test hard breaks after comment lines are preserved correctly.
+- file: tests/test_heading_spacing.py
+  function: test_hard_breaks_in_list_items
+  test_type: integration
+  line_number: 213
+  doc_string: Test hard breaks within list items.
+- file: tests/test_heading_spacing.py
+  function: test_hard_breaks_in_paragraphs
+  test_type: integration
+  line_number: 172
+  doc_string: Test that hard breaks in regular paragraphs are preserved without extra spacing.
+- file: tests/test_heading_spacing.py
+  function: test_heading_spacing_basic
+  test_type: integration
+  line_number: 14
+  doc_string: Test that headings have exactly one blank line after them.
+- file: tests/test_heading_spacing.py
+  function: test_heading_spacing_before_code
+  test_type: integration
+  line_number: 96
+  doc_string: Test that headings have exactly one blank line before code blocks.
+- file: tests/test_heading_spacing.py
+  function: test_heading_spacing_before_list
+  test_type: integration
+  line_number: 45
+  doc_string: Test that headings have exactly one blank line before list items.
+- file: tests/test_heading_spacing.py
+  function: test_heading_spacing_before_quote
+  test_type: integration
+  line_number: 72
+  doc_string: Test that headings have exactly one blank line before quote blocks.
+- file: tests/test_heading_spacing.py
+  function: test_heading_with_hard_break
+  test_type: integration
+  line_number: 124
+  doc_string: Test that headings ending with hard breaks don't add extra blank lines.
+- file: tests/test_heading_spacing.py
+  function: test_heading_with_hard_break_in_list
+  test_type: integration
+  line_number: 147
+  doc_string: Test hard breaks in headings within list items.
+- file: tests/test_list_spacing.py
+  function: test_complex_content_with_loose_mode
+  test_type: integration
+  line_number: 339
+  doc_string: Test that complex content gets proper spacing in loose mode.
+- file: tests/test_list_spacing.py
+  function: test_input_spacing_normalization_loose
+  test_type: integration
+  line_number: 301
+  doc_string: Test that various input spacings normalize to loose output in loose mode.
+- file: tests/test_list_spacing.py
+  function: test_input_spacing_normalization_tight
+  test_type: integration
+  line_number: 320
+  doc_string: Test that various input spacings normalize to tight output in tight mode.
+- file: tests/test_list_spacing.py
+  function: test_list_items_with_code_blocks_loose
+  test_type: integration
+  line_number: 227
+  doc_string: List items with code blocks get proper spacing in loose mode.
+- file: tests/test_list_spacing.py
+  function: test_list_items_with_code_blocks_preserve
+  test_type: integration
+  line_number: 190
+  doc_string: List items with code blocks preserve tightness in preserve mode.
+- file: tests/test_list_spacing.py
+  function: test_list_items_with_quote_blocks
+  test_type: integration
+  line_number: 263
+  doc_string: Test that list items with quote blocks get proper spacing.
+- file: tests/test_list_spacing.py
+  function: test_loose_list_preserved
+  test_type: integration
+  line_number: 27
+  doc_string: Loose lists stay loose in preserve mode.
+- file: tests/test_list_spacing.py
+  function: test_loose_list_stays_loose
+  test_type: integration
+  line_number: 70
+  doc_string: Loose lists stay loose in loose mode.
+- file: tests/test_list_spacing.py
+  function: test_loose_list_to_tight
+  test_type: integration
+  line_number: 87
+  doc_string: Loose lists become tight in tight mode.
+- file: tests/test_list_spacing.py
+  function: test_multi_para_stays_loose_in_tight_mode
+  test_type: integration
+  line_number: 101
+  doc_string: Multi-paragraph items stay loose even in tight mode (CommonMark requirement).
+- file: tests/test_list_spacing.py
+  function: test_multi_paragraph_spacing_loose_mode
+  test_type: integration
+  line_number: 378
+  doc_string: Test that multi-paragraph items get consistent spacing in loose mode.
+- file: tests/test_list_spacing.py
+  function: test_nested_lists_independent_preserve
+  test_type: integration
+  line_number: 123
+  doc_string: Each nested list independently preserves its tightness.
+- file: tests/test_list_spacing.py
+  function: test_nested_lists_loose_outer_tight_inner
+  test_type: integration
+  line_number: 153
+  doc_string: Loose outer list with tight inner list.
+- file: tests/test_list_spacing.py
+  function: test_numbered_list_preserve
+  test_type: integration
+  line_number: 45
+  doc_string: Numbered lists preserve their tightness.
+- file: tests/test_list_spacing.py
+  function: test_numbered_list_to_loose
+  test_type: integration
+  line_number: 77
+  doc_string: Numbered lists become loose in loose mode.
+- file: tests/test_list_spacing.py
+  function: test_preserve_is_default
+  test_type: integration
+  line_number: 34
+  doc_string: Preserve is the default mode.
+- file: tests/test_list_spacing.py
+  function: test_tight_list_preserved
+  test_type: integration
+  line_number: 20
+  doc_string: Tight lists stay tight in preserve mode.
+- file: tests/test_list_spacing.py
+  function: test_tight_list_stays_tight
+  test_type: integration
+  line_number: 94
+  doc_string: Tight lists stay tight in tight mode.
+- file: tests/test_list_spacing.py
+  function: test_tight_list_to_loose
+  test_type: integration
+  line_number: 63
+  doc_string: Tight lists become loose in loose mode.
+- file: tests/test_ref_docs.py
+  function: test_reference_doc_formats
+  test_type: golden
+  line_number: 9
+  doc_string: Test that the reference document is formatted correctly with both plain and semantic formats.
+- file: tests/test_sentences.py
+  function: test_first_sentence
+  test_type: unit
+  line_number: 24
+- file: tests/test_sentences.py
+  function: test_split_sentences
+  test_type: unit
+  line_number: 14
+- file: tests/test_skill.py
+  function: test_docs_content_is_readme
+  class_name: TestGetDocsContent
+  test_type: infrastructure
+  line_number: 42
+  doc_string: get_docs_content returns README.md content.
+- file: tests/test_skill.py
+  function: test_docs_content_loads
+  class_name: TestGetDocsContent
+  test_type: infrastructure
+  line_number: 36
+  doc_string: README.md content can be loaded.
+- file: tests/test_skill.py
+  function: test_skill_content_has_metadata
+  class_name: TestGetSkillContent
+  test_type: infrastructure
+  line_number: 19
+  doc_string: SKILL.md contains required metadata fields.
+- file: tests/test_skill.py
+  function: test_skill_content_has_usage
+  class_name: TestGetSkillContent
+  test_type: infrastructure
+  line_number: 26
+  doc_string: SKILL.md contains usage instructions.
+- file: tests/test_skill.py
+  function: test_skill_content_loads
+  class_name: TestGetSkillContent
+  test_type: infrastructure
+  line_number: 13
+  doc_string: SKILL.md can be loaded from package data.
+- file: tests/test_skill.py
+  function: test_install_skill_creates_directories
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 79
+  doc_string: Skill installation creates necessary directories.
+- file: tests/test_skill.py
+  function: test_install_skill_custom_base
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 67
+  doc_string: Skill installs to custom agent base directory.
+- file: tests/test_skill.py
+  function: test_install_skill_default
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 54
+  doc_string: Skill installs to ~/.claude by default.
+- file: tests/test_skill.py
+  function: test_install_skill_overwrites_existing
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 88
+  doc_string: Skill installation overwrites existing SKILL.md.
+- file: tests/test_smartquotes.py
+  function: test_apostrophes_and_contractions
+  test_type: unit
+  line_number: 21
+  doc_string: Test apostrophe and contraction conversion.
+- file: tests/test_smartquotes.py
+  function: test_basic_double_quotes
+  test_type: unit
+  line_number: 5
+  doc_string: Test basic double quote conversion.
+- file: tests/test_smartquotes.py
+  function: test_basic_single_quotes
+  test_type: unit
+  line_number: 12
+  doc_string: Test basic single quote conversion.
+- file: tests/test_smartquotes.py
+  function: test_complex_cases_unchanged
+  test_type: unit
+  line_number: 120
+  doc_string: Test that nested or complex quote patterns are left alone.
+- file: tests/test_smartquotes.py
+  function: test_complex_sentences
+  test_type: unit
+  line_number: 105
+  doc_string: Test more complex real-world sentences.
+- file: tests/test_smartquotes.py
+  function: test_edge_cases
+  test_type: unit
+  line_number: 85
+  doc_string: Test edge cases.
+- file: tests/test_smartquotes.py
+  function: test_mixed_quotes_and_apostrophes
+  test_type: unit
+  line_number: 73
+  doc_string: Test text with both quotes and apostrophes.
+- file: tests/test_smartquotes.py
+  function: test_multiple_quotes_in_text
+  test_type: unit
+  line_number: 93
+  doc_string: Test text with multiple separate quoted sections.
+- file: tests/test_smartquotes.py
+  function: test_patterns_left_unchanged
+  test_type: unit
+  line_number: 39
+  doc_string: Test patterns that should remain unchanged.
+- file: tests/test_smartquotes.py
+  function: test_possessives_at_end_of_words
+  test_type: unit
+  line_number: 29
+  doc_string: Test possessives at the end of words ending in s.
+- file: tests/test_smartquotes.py
+  function: test_quotes_at_boundaries
+  test_type: unit
+  line_number: 64
+  doc_string: Test quotes at sentence boundaries.
+- file: tests/test_smartquotes.py
+  function: test_quotes_with_newlines
+  test_type: unit
+  line_number: 137
+  doc_string: Test quotes that contain newlines.
+- file: tests/test_smartquotes.py
+  function: test_quotes_with_punctuation
+  test_type: unit
+  line_number: 50
+  doc_string: Test quotes followed by various punctuation marks.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_apostrophe_spanning_code_span
+  test_type: integration
+  line_number: 285
+  doc_string: Test apostrophes in text around code spans.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_apostrophes_in_table_cells
+  test_type: integration
+  line_number: 212
+  doc_string: Test that apostrophes are converted inside table cells.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_blockquote_multiline_with_code_span
+  test_type: integration
+  line_number: 324
+  doc_string: Test the specific blockquote from the bug report.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_complex_table
+  test_type: integration
+  line_number: 300
+  doc_string: Test the specific table from the bug report.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_in_strikethrough
+  test_type: integration
+  line_number: 229
+  doc_string: Test that smart quotes are applied inside strikethrough text.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_in_table_cells
+  test_type: integration
+  line_number: 204
+  doc_string: Test that smart quotes are applied inside GFM table cells.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_in_table_preserve_code_spans
+  test_type: integration
+  line_number: 219
+  doc_string: Test that code spans inside table cells are not modified.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_in_table_with_bold
+  test_type: integration
+  line_number: 293
+  doc_string: Test smart quotes in table cells containing bold text.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_not_modifying_code_content
+  test_type: integration
+  line_number: 277
+  doc_string: Ensure code spans are never modified even when between smart-quoted text.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_spanning_code_span
+  test_type: integration
+  line_number: 237
+  doc_string: Test quotes that span across a code span within a paragraph.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_spanning_code_span_in_blockquote
+  test_type: integration
+  line_number: 245
+  doc_string: Test quotes spanning a code span inside a blockquote.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_spanning_emphasis
+  test_type: integration
+  line_number: 253
+  doc_string: Test quotes that span across emphasis within a paragraph.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_spanning_link
+  test_type: integration
+  line_number: 269
+  doc_string: Test quotes that span across a link.
+- file: tests/test_smartquotes.py
+  function: test_smart_quotes_spanning_strong_emphasis
+  test_type: integration
+  line_number: 261
+  doc_string: Test quotes that span across strong emphasis.
+- file: tests/test_smartquotes.py
+  function: test_technical_content_unchanged
+  test_type: unit
+  line_number: 112
+  doc_string: Test that technical content is not modified.
+- file: tests/test_strikethrough.py
+  function: test_double_tilde_strikethrough
+  test_type: unit
+  line_number: 27
+  doc_string: Standard ~~strikethrough~~ should be preserved.
+- file: tests/test_strikethrough.py
+  function: test_escaped_tildes_preserved
+  test_type: unit
+  line_number: 84
+  doc_string: Backslash-escaped tildes should remain escaped.
+- file: tests/test_strikethrough.py
+  function: test_literal_tildes_before_numbers
+  test_type: unit
+  line_number: 12
+  doc_string: Tildes before numbers (meaning 'approximately') should be preserved as literal.
+- file: tests/test_strikethrough.py
+  function: test_literal_tildes_not_converted_to_double
+  test_type: integration
+  line_number: 20
+  doc_string: 'The bug: ~60 seconds, ~130 should NOT become ~~60 seconds, ~~130.'
+- file: tests/test_strikethrough.py
+  function: test_multiple_strikethroughs
+  test_type: unit
+  line_number: 43
+  doc_string: Multiple strikethrough spans in a single line.
+- file: tests/test_strikethrough.py
+  function: test_single_tilde_no_closer
+  test_type: unit
+  line_number: 51
+  doc_string: A single tilde with no matching closer should remain literal.
+- file: tests/test_strikethrough.py
+  function: test_single_tilde_strikethrough
+  test_type: unit
+  line_number: 35
+  doc_string: Single-tilde ~strikethrough~ is valid GFM; flowmark normalizes to ~~double~~.
+- file: tests/test_strikethrough.py
+  function: test_strikethrough_in_paragraph
+  test_type: integration
+  line_number: 92
+  doc_string: Strikethrough within a longer paragraph should be preserved during wrapping.
+- file: tests/test_strikethrough.py
+  function: test_tilde_space_after_opener
+  test_type: unit
+  line_number: 68
+  doc_string: A tilde followed by a space is not left-flanking, so no strikethrough.
+- file: tests/test_strikethrough.py
+  function: test_tilde_space_before_closer
+  test_type: unit
+  line_number: 76
+  doc_string: A tilde preceded by a space is not right-flanking, so no strikethrough.
+- file: tests/test_strikethrough.py
+  function: test_tildes_with_space_before_closer
+  test_type: unit
+  line_number: 59
+  doc_string: Tildes where the 'closer' is preceded by whitespace should not be strikethrough.
+- file: tests/test_tag_formatting.py
+  function: test_adjacent_closing_tags
+  test_type: unit
+  line_number: 318
+  doc_string: Test that %}{% stays adjacent (no space inserted).
+- file: tests/test_tag_formatting.py
+  function: test_fill_markdown_with_list_in_tags
+  test_type: integration
+  line_number: 595
+  doc_string: 'Integration test: fill_markdown properly formats lists inside tags.'
+- file: tests/test_tag_formatting.py
+  function: test_html_comment_multiline_closing
+  test_type: unit
+  line_number: 485
+  doc_string: Test HTML comment tags with multi-line opening and closing on same line.
+- file: tests/test_tag_formatting.py
+  function: test_html_comment_tags_with_quotes
+  test_type: unit
+  line_number: 306
+  doc_string: Test that HTML comment tags with quotes are handled.
+- file: tests/test_tag_formatting.py
+  function: test_jinja_comment_tags
+  test_type: unit
+  line_number: 294
+  doc_string: 'Test that Jinja comment tags {# #} are handled correctly.'
+- file: tests/test_tag_formatting.py
+  function: test_jinja_variable_tags_in_prose
+  test_type: unit
+  line_number: 282
+  doc_string: Test that Jinja variable tags {{ }} work correctly.
+- file: tests/test_tag_formatting.py
+  function: test_line_wrapper_preserves_multiline_tags
+  test_type: unit
+  line_number: 257
+  doc_string: Test that line wrappers preserve structure of multiline tags.
+- file: tests/test_tag_formatting.py
+  function: test_list_item_with_tag_on_continuation_line
+  test_type: integration
+  line_number: 646
+  doc_string: Test that HTML comment tags on continuation lines don't get extra newlines.
+- file: tests/test_tag_formatting.py
+  function: test_multiline_opening_tag_closing_on_own_line
+  test_type: unit
+  line_number: 424
+  doc_string: Test that closing tags are placed on their own line after multiline opening tags.
+- file: tests/test_tag_formatting.py
+  function: test_multiline_tag_through_pipeline
+  test_type: integration
+  line_number: 463
+  doc_string: Test that long tags stay together through the full pipeline.
+- file: tests/test_tag_formatting.py
+  function: test_multiline_tag_with_surrounding_text
+  test_type: unit
+  line_number: 191
+  doc_string: Test multiline tags with regular text that SHOULD get smart quotes.
+- file: tests/test_tag_formatting.py
+  function: test_pipeline_preserves_tag_quotes
+  test_type: integration
+  line_number: 214
+  doc_string: Test that the full Markdown pipeline preserves tag attribute quotes.
+- file: tests/test_tag_formatting.py
+  function: test_preprocess_tag_block_spacing_already_spaced
+  test_type: unit
+  line_number: 551
+  doc_string: Test that already-spaced content is not double-spaced.
+- file: tests/test_tag_formatting.py
+  function: test_preprocess_tag_block_spacing_inline_tags
+  test_type: unit
+  line_number: 573
+  doc_string: Test that inline tags in list items don't trigger extra spacing.
+- file: tests/test_tag_formatting.py
+  function: test_preprocess_tag_block_spacing_lists
+  test_type: unit
+  line_number: 499
+  doc_string: Test that blank lines are added around lists inside tags.
+- file: tests/test_tag_formatting.py
+  function: test_preprocess_tag_block_spacing_tables
+  test_type: unit
+  line_number: 527
+  doc_string: Test that blank lines are added around tables inside tags.
+- file: tests/test_tag_formatting.py
+  function: test_selection_field_with_task_list
+  test_type: integration
+  line_number: 332
+  doc_string: Test selection fields with task list items (TAG_8).
+- file: tests/test_tag_formatting.py
+  function: test_single_line_paired_tags_not_split
+  test_type: unit
+  line_number: 444
+  doc_string: Test that single-line paired tags like {% field %}{% /field %} are NOT split.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_converts_prose_but_not_tags
+  test_type: unit
+  line_number: 380
+  doc_string: Test that prose quotes are converted but tag quotes are preserved.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_multiline_tag_with_prose
+  test_type: unit
+  line_number: 400
+  doc_string: Test smart quotes with multiline tag surrounded by prose.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_not_applied_in_tag_attributes
+  test_type: unit
+  line_number: 146
+  doc_string: Verify that smart quotes are NOT applied to quotes inside Markdoc/Jinja tag attributes.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_preserves_apostrophe_in_jinja_variable
+  test_type: unit
+  line_number: 343
+  doc_string: Test that apostrophes inside {{ }} variable tags are NOT converted.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_preserves_double_quotes_in_include
+  test_type: unit
+  line_number: 352
+  doc_string: Test that double quotes in {% include %} are NOT converted.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_preserves_quotes_in_html_comments
+  test_type: unit
+  line_number: 373
+  doc_string: Test that quotes inside <!-- --> comment tags are NOT converted.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_preserves_quotes_in_jinja_comments
+  test_type: unit
+  line_number: 366
+  doc_string: 'Test that quotes inside {# #} comment tags are NOT converted.'
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_preserves_single_quotes_in_attributes
+  test_type: unit
+  line_number: 359
+  doc_string: Test that single quotes in tag attributes are NOT converted.
+- file: tests/test_tag_formatting.py
+  function: test_smart_quotes_with_nunjucks_raw_block
+  test_type: unit
+  line_number: 392
+  doc_string: Test the specific Nunjucks raw block pattern from testdoc.
+- file: tests/test_tag_formatting.py
+  function: test_tag_newlines_preserved_in_pipeline
+  test_type: integration
+  line_number: 232
+  doc_string: Test that newlines within multiline tags are preserved through the pipeline.
+- file: tests/test_tag_formatting.py
+  function: test_tag_with_array_spanning_lines
+  test_type: unit
+  line_number: 173
+  doc_string: Test that arrays spanning multiple lines inside tags are preserved.
+- file: tests/test_tag_formatting.py
+  function: test_tag_with_embedded_percent_brace
+  test_type: integration
+  line_number: 270
+  doc_string: Test that %} inside a string attribute doesn't end the tag early.
+- file: tests/test_tag_formatting.py
+  function: test_tag_with_object_spanning_lines
+  test_type: unit
+  line_number: 183
+  doc_string: Test that objects spanning multiple lines inside tags are preserved.
+- file: tests/test_tag_formatting.py
+  function: test_word_splitter_handles_multiline_tags
+  test_type: unit
+  line_number: 242
+  doc_string: Test that the word splitter correctly handles multiline tags.
+- file: tests/test_width_options.py
+  function: test_existing_behavior_unchanged
+  test_type: unit
+  line_number: 75
+  doc_string: Test that existing default behavior is unchanged.
+- file: tests/test_width_options.py
+  function: test_negative_width_disables_wrapping
+  test_type: unit
+  line_number: 30
+  doc_string: Test that negative width values disable wrapping entirely.
+- file: tests/test_width_options.py
+  function: test_normal_width_wrapping
+  test_type: unit
+  line_number: 4
+  doc_string: Test that normal width values work as expected.
+- file: tests/test_width_options.py
+  function: test_width_zero_with_markdown
+  test_type: unit
+  line_number: 51
+  doc_string: Test that width=0 works correctly with markdown mode.
+- file: tests/test_width_options.py
+  function: test_width_zero_with_markdown_semantic
+  test_type: unit
+  line_number: 63
+  doc_string: Test that width=0 works correctly with markdown semantic mode.
+- file: tests/test_width_options.py
+  function: test_width_zero_with_semantic
+  test_type: unit
+  line_number: 41
+  doc_string: Test that width=0 works correctly with semantic mode.
+- file: tests/test_width_options.py
+  function: test_zero_width_disables_wrapping
+  test_type: unit
+  line_number: 19
+  doc_string: Test that width=0 disables wrapping entirely.
+- file: tests/test_wrapping.py
+  function: test_adjacent_html_comment_tags_no_space
+  test_type: unit
+  line_number: 975
+  doc_string: Test that adjacent HTML comment tags stay adjacent (no space inserted).
+- file: tests/test_wrapping.py
+  function: test_adjacent_jinja_comment_tags_no_space
+  test_type: unit
+  line_number: 1028
+  doc_string: Test that adjacent Jinja comment tags stay adjacent.
+- file: tests/test_wrapping.py
+  function: test_adjacent_jinja_tags_no_space
+  test_type: unit
+  line_number: 942
+  doc_string: Test that adjacent Jinja tags stay adjacent (no space inserted).
+- file: tests/test_wrapping.py
+  function: test_adjacent_jinja_variable_tags_no_space
+  test_type: unit
+  line_number: 1007
+  doc_string: Test that adjacent Jinja variable tags stay adjacent.
+- file: tests/test_wrapping.py
+  function: test_adjacent_tags_full_pipeline
+  test_type: integration
+  line_number: 1049
+  doc_string: Test adjacent tags through the full Markdown processing pipeline.
+- file: tests/test_wrapping.py
+  function: test_backslash_in_tag_attributes
+  test_type: unit
+  line_number: 624
+  doc_string: Test that backslashes in tag attribute values are preserved.
+- file: tests/test_wrapping.py
+  function: test_block_heuristics_blank_line_normalization
+  test_type: unit
+  line_number: 754
+  doc_string: Test that block content between tags gets exactly one blank line at boundaries.
+- file: tests/test_wrapping.py
+  function: test_block_heuristics_list_items
+  test_type: unit
+  line_number: 690
+  doc_string: Test that list items inside tags have their newlines preserved.
+- file: tests/test_wrapping.py
+  function: test_block_heuristics_mixed_content
+  test_type: unit
+  line_number: 731
+  doc_string: Test block heuristics with mixed content (text + block elements).
+- file: tests/test_wrapping.py
+  function: test_block_heuristics_only_with_tags
+  test_type: unit
+  line_number: 712
+  doc_string: Test that block heuristics only apply when tags are present.
+- file: tests/test_wrapping.py
+  function: test_block_heuristics_preserves_existing_blank_lines
+  test_type: unit
+  line_number: 796
+  doc_string: Test that if there are already blank lines, we don't add extras.
+- file: tests/test_wrapping.py
+  function: test_block_heuristics_table_blank_lines
+  test_type: unit
+  line_number: 779
+  doc_string: Test blank line normalization specifically for tables.
+- file: tests/test_wrapping.py
+  function: test_block_heuristics_table_rows
+  test_type: unit
+  line_number: 665
+  doc_string: Test that table rows inside tags have their newlines preserved.
+- file: tests/test_wrapping.py
+  function: test_closing_tag_spacing_function
+  test_type: unit
+  line_number: 1170
+  doc_string: Test the _fix_closing_tag_spacing function directly.
+- file: tests/test_wrapping.py
+  function: test_html_comments_kept_together
+  test_type: unit
+  line_number: 427
+  doc_string: Test that HTML comments are kept as atomic units.
+- file: tests/test_wrapping.py
+  function: test_inline_code_in_table_cells
+  test_type: unit
+  line_number: 487
+  doc_string: Test that inline code in table cell content is tokenized correctly.
+- file: tests/test_wrapping.py
+  function: test_inline_code_with_spaces
+  test_type: unit
+  line_number: 395
+  doc_string: Test that inline code spans with spaces are kept together.
+- file: tests/test_wrapping.py
+  function: test_inline_code_with_surrounding_punctuation
+  test_type: unit
+  line_number: 412
+  doc_string: Test that inline code with surrounding punctuation stays together.
+- file: tests/test_wrapping.py
+  function: test_line_wrap_to_width_with_markdown_breaks
+  test_type: unit
+  line_number: 226
+- file: tests/test_wrapping.py
+  function: test_list_content_gets_blank_lines
+  test_type: unit
+  line_number: 1108
+  doc_string: Test that list content between tags DOES get blank lines.
+- file: tests/test_wrapping.py
+  function: test_long_html_tags
+  test_type: unit
+  line_number: 371
+  doc_string: Test that HTML tags with many attributes are kept together.
+- file: tests/test_wrapping.py
+  function: test_long_jinja_comments
+  test_type: unit
+  line_number: 384
+  doc_string: Test that long Jinja comments are kept together.
+- file: tests/test_wrapping.py
+  function: test_long_template_tags
+  test_type: unit
+  line_number: 352
+  doc_string: Test that tags with many attributes (10+ words) are kept together.
+- file: tests/test_wrapping.py
+  function: test_markdown_escape_word_function
+  test_type: unit
+  line_number: 13
+- file: tests/test_wrapping.py
+  function: test_mixed_content_blank_lines_correct
+  test_type: unit
+  line_number: 1151
+  doc_string: Test that mixed content (text followed by list) gets correct blank lines.
+- file: tests/test_wrapping.py
+  function: test_mixed_html_and_template_tags
+  test_type: unit
+  line_number: 338
+  doc_string: Test that HTML tags and template tags work together.
+- file: tests/test_wrapping.py
+  function: test_multiple_single_word_inline_codes
+  test_type: unit
+  line_number: 469
+  doc_string: Test text with multiple single-word inline code spans.
+- file: tests/test_wrapping.py
+  function: test_nested_tags_newlines_preserved
+  test_type: unit
+  line_number: 605
+  doc_string: Test that newlines between nested tags are preserved.
+- file: tests/test_wrapping.py
+  function: test_newline_after_opening_tag
+  test_type: unit
+  line_number: 519
+  doc_string: Test that newlines after opening Jinja/Markdoc tags are preserved.
+- file: tests/test_wrapping.py
+  function: test_newline_before_closing_tag
+  test_type: unit
+  line_number: 549
+  doc_string: Test that newlines before closing Jinja/Markdoc tags are preserved.
+- file: tests/test_wrapping.py
+  function: test_paired_tags_not_broken
+  test_type: unit
+  line_number: 571
+  doc_string: Test that paired tags on the same line stay together during wrapping.
+- file: tests/test_wrapping.py
+  function: test_paragraph_only_content_various_tags
+  test_type: unit
+  line_number: 1246
+  doc_string: Test paragraph-only content with various tag types.
+- file: tests/test_wrapping.py
+  function: test_paragraph_text_no_extra_blank_lines
+  test_type: unit
+  line_number: 1077
+  doc_string: Test that paragraph text between tags does NOT get extra blank lines.
+- file: tests/test_wrapping.py
+  function: test_self_closing_html_comment_tags
+  test_type: unit
+  line_number: 859
+  doc_string: Test self-closing HTML comment tags (comments without a closing counterpart).
+- file: tests/test_wrapping.py
+  function: test_self_closing_jinja_comment_tags
+  test_type: unit
+  line_number: 920
+  doc_string: 'Test Jinja comment tags {# ... #} which are always self-closing.'
+- file: tests/test_wrapping.py
+  function: test_self_closing_jinja_tags
+  test_type: unit
+  line_number: 824
+  doc_string: Test self-closing Jinja tags (tags without a separate closing tag).
+- file: tests/test_wrapping.py
+  function: test_self_closing_jinja_variable_tags
+  test_type: unit
+  line_number: 893
+  doc_string: Test Jinja variable tags {{ ... }} which are always self-closing.
+- file: tests/test_wrapping.py
+  function: test_single_word_inline_code_not_coalesced
+  test_type: unit
+  line_number: 444
+  doc_string: Test that single-word inline code spans do NOT incorrectly coalesce with following text.
+- file: tests/test_wrapping.py
+  function: test_smart_splitter
+  test_type: unit
+  line_number: 105
+- file: tests/test_wrapping.py
+  function: test_table_content_gets_blank_lines
+  test_type: unit
+  line_number: 1130
+  doc_string: Test that table content between tags DOES get blank lines.
+- file: tests/test_wrapping.py
+  function: test_tag_with_list_items
+  test_type: unit
+  line_number: 646
+  doc_string: Test that tags containing lists don't merge with list items.
+- file: tests/test_wrapping.py
+  function: test_template_tag_splitter
+  test_type: unit
+  line_number: 276
+  doc_string: Test that template tags (Markdoc/Jinja/Nunjucks) are kept as atomic tokens.
+- file: tests/test_wrapping.py
+  function: test_template_tag_wrapping
+  test_type: unit
+  line_number: 314
+  doc_string: Test that template tags don't break across lines during wrapping.
+- file: tests/test_wrapping.py
+  function: test_various_tag_types_with_tables
+  test_type: unit
+  line_number: 1217
+  doc_string: Test tables with various tag types (Jinja, HTML comments, variables).
+- file: tests/test_wrapping.py
+  function: test_wrap_paragraph_lines_markdown_escaping
+  test_type: unit
+  line_number: 42
+- file: tests/test_wrapping.py
+  function: test_wrap_text
+  test_type: unit
+  line_number: 140
+- file: tests/test_wrapping.py
+  function: test_wrap_width
+  test_type: unit
+  line_number: 211
