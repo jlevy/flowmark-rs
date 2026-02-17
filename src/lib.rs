@@ -10,6 +10,7 @@ pub mod transform;
 pub mod typography;
 pub mod wrapping;
 
+use std::io::Write;
 use std::path::Path;
 
 pub use config::{ListSpacing, DEFAULT_WRAP_WIDTH};
@@ -89,14 +90,37 @@ pub fn reformat_file(
             let backup_path = path.with_extension("bak");
             std::fs::copy(path, &backup_path)?;
         }
-        std::fs::write(path, &formatted)?;
+        atomic_write(path, &formatted)?;
     } else if let Some(out) = output {
         if let Some(parent) = out.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        std::fs::write(out, &formatted)?;
+        atomic_write(out, &formatted)?;
     } else {
         print!("{formatted}");
+    }
+
+    Ok(())
+}
+
+/// Write content to a file atomically via a temporary file.
+///
+/// Writes to a temp file in the same directory, then persists (renames) to the
+/// target path. This prevents file corruption if the process is interrupted.
+fn atomic_write(path: &Path, content: &str) -> Result<()> {
+    let dir = path.parent().unwrap_or(Path::new("."));
+
+    #[cfg(feature = "cli")]
+    {
+        let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
+        tmp.write_all(content.as_bytes())?;
+        tmp.persist(path).map_err(|e| Error::Io(e.error))?;
+    }
+
+    #[cfg(not(feature = "cli"))]
+    {
+        let _ = dir;
+        std::fs::write(path, content)?;
     }
 
     Ok(())

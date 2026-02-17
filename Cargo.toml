@@ -18,12 +18,10 @@ required-features = ["cli"]
 
 [features]
 default = ["cli"]
-cli = ["clap", "color-eyre", "tracing", "tracing-subscriber", "tempfile"]
+cli = ["clap", "anyhow", "tempfile"]
 
 [dependencies]
 comrak = "0.36"
-# Note: comrak 0.36 is used for Rust 1.85 compatibility.
-# comrak 0.47+ requires newer Rust versions.
 regex = "1.11"
 unicode-segmentation = "1.11"
 thiserror = "2.0"
@@ -32,10 +30,11 @@ serde = { version = "1.0", features = ["derive"] }
 
 # CLI-only dependencies
 clap = { version = "4.5", features = ["derive", "cargo"], optional = true }
-color-eyre = { version = "0.6", optional = true }
-tracing = { version = "0.1", optional = true }
-tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+anyhow = { version = "1.0", optional = true }
 tempfile = { version = "3.10", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
 
 [lints.clippy]
 pedantic = { level = "warn", priority = -1 }
@@ -46,12 +45,14 @@ must_use_candidate = "allow"
 too_many_lines = "allow"
 
 [lints.rust]
-unsafe_code = "forbid"
+unsafe_code = "deny"
 
 [package.metadata.python_source]
 version = "latest"
 
 [profile.release]
+opt-level = 3
 lto = true
 codegen-units = 1
+panic = "abort"
 strip = true

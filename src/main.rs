@@ -2,6 +2,7 @@
 
 #[cfg(feature = "cli")]
 mod cli {
+    use anyhow::{Context, Result};
     use clap::Parser;
     use std::io::Read;
     use std::path::PathBuf;
@@ -61,7 +62,7 @@ mod cli {
         pub auto: bool,
     }
 
-    pub fn run() -> Result<(), Box<dyn std::error::Error>> {
+    pub fn run() -> Result<()> {
         let mut args = Args::parse();
 
         // Handle --auto shortcut
@@ -77,12 +78,14 @@ mod cli {
         let list_spacing: ListSpacing = args
             .list_spacing
             .parse()
-            .map_err(|e: String| flowmark::Error::Config(e))?;
+            .map_err(|e: String| anyhow::anyhow!(e))?;
 
         for file in &args.files {
             if file == "-" {
                 let mut input = String::new();
-                std::io::stdin().read_to_string(&mut input)?;
+                std::io::stdin()
+                    .read_to_string(&mut input)
+                    .context("failed to read stdin")?;
 
                 let output = flowmark::reformat_text(
                     &input,
@@ -115,7 +118,8 @@ mod cli {
                     args.smartquotes,
                     args.ellipses,
                     list_spacing,
-                )?;
+                )
+                .with_context(|| format!("failed to format {}", path.display()))?;
             }
         }
 
@@ -123,18 +127,27 @@ mod cli {
     }
 }
 
-fn main() {
+fn main() -> std::process::ExitCode {
+    // Reset SIGPIPE to default behavior so piping to `head` etc. works correctly.
+    #[cfg(unix)]
+    #[allow(unsafe_code)]
+    unsafe {
+        libc::signal(libc::SIGPIPE, libc::SIG_DFL);
+    }
+
     #[cfg(feature = "cli")]
     {
         if let Err(e) = cli::run() {
-            eprintln!("Error: {e}");
-            std::process::exit(1);
+            eprintln!("error: {e:#}");
+            return std::process::ExitCode::FAILURE;
         }
     }
 
     #[cfg(not(feature = "cli"))]
     {
-        eprintln!("CLI feature not enabled. Build with --features cli");
-        std::process::exit(1);
+        eprintln!("error: CLI feature not enabled. Build with --features cli");
+        return std::process::ExitCode::FAILURE;
     }
+
+    std::process::ExitCode::SUCCESS
 }
