@@ -72,7 +72,8 @@ The system has four components:
 The flowmark-rs project is a Rust port of the Python
 [flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter.
 As of v0.6.4, the Python test suite has **281 test functions** across 20 files.
-The Rust port currently has **151 test functions** across 16 files.
+The Rust port currently has **178 test functions** (151 integration tests in `tests/` +
+27 unit tests in `src/` modules).
 
 There is no current mechanism to track which Python tests have been ported, which are
 intentionally excluded, and which have drifted.
@@ -116,7 +117,7 @@ python/                              # uv-managed Python project
     models.py                        # Frozen dataclasses: PythonTestRecord,
                                      #   RustTestRecord, MappingRecord
     discover_python.py               # AST-based Python test walker
-    discover_rust.py                 # Regex-based Rust test walker
+    discover_rust.py                 # Cargo-based + regex fallback Rust test walker
     yaml_io.py                       # YAML read/write with ordered keys, atomic writes
     check_mapping.py                 # Mapping validation logic
 
@@ -185,23 +186,55 @@ Status values:
 
 ### Idempotent, Additive Merge Behavior
 
-Both discovery commands and `init-mapping` are **idempotent and additive**:
+All three commands (`discover-python`, `discover-rust`, `init-mapping`) are
+**idempotent and additive**.
+This is critical because some projects have custom test forms (like flowmark's inline
+dataclass golden tests) that may be hand-added to the YAML but not detected by
+auto-discovery.
 
-- **Discovery scripts** (`discover-python`, `discover-rust`): Write out the full
-  discovered set.
-  Since these are auto-generated (not hand-edited), they are fully overwritten each time.
-  The header comment marks them as auto-generated.
+**Identity keys** determine how records merge:
+- Test manifests (`python-tests.yaml`, `rust-tests.yaml`): identity is `(file, function)`
+  for test records without classes, `(file, class_name, function)` for tests inside
+  classes.
+- Mapping (`test-mapping.yaml`): identity is
+  `(python_file, python_class, python_function)`.
 
-- **`init-mapping`**: If `test-mapping.yaml` already exists, it loads existing entries,
-  preserves all manual edits (status, rust refs, notes), and only adds new `missing`
-  entries for newly discovered Python tests.
-  It never deletes entries — stale entries are detected by `check-mapping` instead.
+**Merge rules for all three files:**
 
-- **Hand-added entries**: If a user or agent manually adds a test record to any YAML file
-  (e.g., a custom test type the auto-discovery missed), it is preserved across
-  re-generation.
-  The identity key for merging is `(python_file, python_class, python_function)` for
-  mapping and `(file, function)` for test manifests.
+1. **Load existing file** if it exists, index all records by identity key.
+2. **For each auto-discovered record:**
+   - If identity key already exists: **update** auto-discoverable fields (line number,
+     test type, doc_string) with the latest values.
+     Preserve any hand-added fields that auto-discovery doesn't populate.
+   - If identity key is new: **add** the record.
+3. **For each existing record not found by auto-discovery:** **preserve** it.
+   It may be a hand-added entry for a custom test form, or it may be stale.
+   The `check-mapping` command detects and reports stale entries — the discovery scripts
+   never delete.
+4. **Sort** deterministically and write atomically.
+
+**Example: hand-added custom test in `python-tests.yaml`:**
+
+```yaml
+# Auto-discovered:
+- file: tests/test_ellipses.py
+  function: test_ellipses
+  test_type: unit
+  line_number: 9
+
+# Hand-added (custom test form not caught by AST walker):
+- file: tests/test_ref_docs.py
+  function: test_reference_doc_markdown_only
+  test_type: golden
+  line_number: 42
+  doc_string: Manually added — tests a subset of ref doc configs.
+```
+
+When `discover-python` runs again, the hand-added entry is preserved because its
+identity key `(tests/test_ref_docs.py, None, test_reference_doc_markdown_only)` won't
+be found by auto-discovery.
+The auto-discovered entry for `test_ellipses` gets its `line_number` and other fields
+updated if they changed.
 
 ### Component 1: Python Test Discovery CLI
 
@@ -221,44 +254,64 @@ Both discovery commands and `init-mapping` are **idempotent and additive**:
    `fill_markdown` etc.).
 5. Write sorted YAML using atomic file output.
 
+**Merge behavior:**
+
+Like all discovery commands, `discover-python` is idempotent and additive.
+If `python-tests.yaml` already exists, existing records are loaded and hand-added entries
+are preserved.
+Auto-discovered records update fields (line_number, test_type, doc_string) for matching
+identity keys.
+
 **Dependencies:** Python 3.11+ stdlib (`ast`, `subprocess`, `tempfile`) + `pyyaml` +
 `strif` (for atomic writes).
 
 ### Component 2: Rust Test Discovery
 
-#### Option A: Python-based (implemented)
-
 **Command:** `flowmark-dev discover-rust`
 
 **Flags:**
-- `--tests-dir` (default: `tests/`)
+- `--project-dir` — path to the Rust project root (default: auto-detect from cwd)
 - `--output` / `-o` — output YAML path (default: `port-coverage-mapping/rust-tests.yaml`)
+- `--fallback-regex` — use regex parsing instead of cargo (for environments without
+  Rust toolchain)
 
-**Behavior:**
-1. Walk `test_*.rs` files.
-2. Regex-based parser: find `#[test]` attribute followed by `fn name(`.
-3. Record file, function, line number.
-4. Write sorted YAML.
+**Primary strategy: `cargo test -- --list`**
 
-#### Option B: Rust build target (proposed, not yet implemented)
+The Python CLI shells out to `cargo test -- --list --format terse`, which is
+compiler-authoritative.
+The Rust compiler knows exactly what's a `#[test]` function — no regex guessing.
 
-A Rust binary target (e.g., `cargo run --bin discover-tests`) or a test helper that uses
-compile-time or runtime introspection to enumerate all `#[test]` functions and emit YAML.
+This discovers **all tests**, including:
+- Integration tests in `tests/test_*.rs` (output: `test_function_name: test`)
+- Unit tests in `src/` modules (output: `module::submod::tests::test_name: test`)
 
-**Advantages:**
-- More authoritative — the Rust compiler knows exactly what's a test.
-- No Python dependency needed for Rust-side discovery.
-- Could use `cargo test --list` output parsing as a simple approach.
+For each discovered test, the CLI resolves file paths and line numbers by searching the
+source files.
+This hybrid approach (compiler-authoritative list + file-level line resolution) gives the
+best of both worlds: the compiler's authority on test identity, and human-useful file/line
+references.
 
-**Disadvantages:**
-- `cargo test --list` output format is not stable/guaranteed.
-- Adds a binary target to the Cargo workspace.
+**Fallback strategy: regex parsing**
 
-**Recommendation:** Start with Option A (Python regex parser) since it's already working
-and sufficient.
-Evaluate Option B if the regex parser misses edge cases or if we want to eliminate the
-Python dependency for Rust-side discovery.
-A practical middle ground: parse `cargo test -- --list` output in a Python wrapper.
+If `cargo` is not available (e.g., a CI environment with only Python), the
+`--fallback-regex` flag activates the original regex-based parser.
+This only finds integration tests in `tests/test_*.rs` — it misses unit tests in `src/`.
+
+**Why not a Rust binary target?**
+
+A Rust binary that calls `cargo test -- --list` and writes YAML would require adding
+`serde_yaml` as a dependency and a binary target to the Cargo workspace.
+Since the Python CLI already handles YAML serialization and the cargo subprocess call is
+trivial, this adds complexity without benefit.
+Rust has no runtime test introspection — the only authoritative source is the compiler
+via `cargo test -- --list`, which is equally accessible from Python or Rust.
+
+**Merge behavior:**
+
+Like all discovery commands, `discover-rust` is idempotent and additive.
+If `rust-tests.yaml` already exists, existing records are loaded and hand-added entries
+are preserved.
+Auto-discovered records update fields (file, line_number) for matching identity keys.
 
 ### Component 3: Mapping Checker
 
@@ -341,23 +394,18 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
 - [x] Verify end-to-end: 281 Python tests discovered, 151 Rust tests discovered,
   skeleton mapping generated, check correctly reports all missing
 
-### Phase 2: Idempotent Merge and Polish
+### Phase 2: Cargo-Based Discovery, Idempotent Merge, and Polish
 
-- [ ] Add idempotent merge to `discover-python`: if existing `python-tests.yaml` exists,
-  preserve hand-added entries not found by auto-discovery
+- [ ] Switch `discover-rust` to use `cargo test -- --list` as the primary strategy
+- [ ] Keep regex parser as `--fallback-regex` option
+- [ ] Add idempotent merge to `discover-python`: load existing YAML, preserve hand-added
+  entries, update auto-discovered entries by identity key
 - [ ] Add idempotent merge to `discover-rust`: same behavior
-- [ ] Add `--format json` option for machine consumption alongside YAML
+- [ ] Re-generate `rust-tests.yaml` with full 178-test list (151 integration + 27 unit)
 - [ ] Run ruff and basedpyright, fix any lint/type issues
 - [ ] Add a basic smoke test in `python/tests/`
 
-### Phase 3: Rust-Side Discovery (Optional Enhancement)
-
-- [ ] Evaluate `cargo test -- --list` parsing as an alternative to regex
-- [ ] If pursued: add a `discover-rust-native` command that wraps `cargo test --list`
-- [ ] Or: add a Rust binary target `discover-tests` that emits YAML directly
-- [ ] Compare output of Python regex parser vs Rust-native discovery for correctness
-
-### Phase 4: Populate the Mapping (Agent Labor)
+### Phase 3: Populate the Mapping (Agent Labor)
 
 - [ ] For each of the 20 Python test files, review every test function against its Rust
   counterpart
@@ -368,7 +416,7 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
 - [ ] Verify `flowmark-dev check-mapping` passes with exit code 0
 - [ ] Document any `partial` entries with notes on what's missing
 
-### Phase 5: CI Integration (Future)
+### Phase 4: CI Integration (Future)
 
 - [ ] Add a CI step that runs `flowmark-dev check-mapping` and fails the build if
   incomplete
@@ -398,16 +446,20 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
 - **Extra Rust tests**: Logged at INFO level, not failures.
   Useful for identifying candidates to upstream to the Python repo.
 
-- **Idempotent merge**: Both discovery scripts and `init-mapping` preserve hand-edits.
+- **Idempotent merge**: All three commands (`discover-python`, `discover-rust`,
+  `init-mapping`) preserve hand-edits.
   Identity keys: `(file, function)` for test manifests,
   `(python_file, python_class, python_function)` for mapping.
+  Auto-discovered fields are updated; hand-added entries are never deleted.
+
+- **Rust discovery via cargo vs binary target**: The Python CLI shells out to
+  `cargo test -- --list` rather than building a Rust binary.
+  Rust has no runtime test introspection — the compiler is the authoritative source
+  regardless.
+  The Python CLI already handles YAML serialization and subprocess calls, so a Rust
+  binary would add complexity (serde_yaml dep, binary target) without benefit.
 
 ## Open Questions
-
-- **Rust-native discovery**: Should we add a Rust build target that emits its own test
-  list?
-  The Python regex parser works but `cargo test -- --list` would be more authoritative.
-  Not blocking — can be added later.
 
 - **Reusability for other ports**: The current tool has some flowmark-specific
   assumptions (test type classification heuristics, `fill_markdown` as integration
