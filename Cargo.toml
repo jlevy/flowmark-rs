@@ -1,0 +1,57 @@
+[package]
+name = "flowmark"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "A Markdown auto-formatter for clean diffs and semantic line breaks"
+repository = "https://github.com/jlevy/flowmark-rs"
+
+[lib]
+name = "flowmark"
+path = "src/lib.rs"
+
+[[bin]]
+name = "flowmark"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[features]
+default = ["cli"]
+cli = ["clap", "color-eyre", "tracing", "tracing-subscriber", "tempfile"]
+
+[dependencies]
+comrak = "0.36"
+# Note: comrak 0.36 is used for Rust 1.85 compatibility.
+# comrak 0.47+ requires newer Rust versions.
+regex = "1.11"
+unicode-segmentation = "1.11"
+thiserror = "2.0"
+toml = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+
+# CLI-only dependencies
+clap = { version = "4.5", features = ["derive", "cargo"], optional = true }
+color-eyre = { version = "0.6", optional = true }
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", features = ["env-filter"], optional = true }
+tempfile = { version = "3.10", optional = true }
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+too_many_lines = "allow"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[package.metadata.python_source]
+version = "latest"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

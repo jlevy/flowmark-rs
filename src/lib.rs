@@ -1,0 +1,101 @@
+//! Flowmark: A Markdown auto-formatter for clean diffs and semantic line breaks.
+//!
+//! Ported from Python: [flowmark](https://github.com/jlevy/flowmark)
+
+pub mod config;
+pub mod error;
+pub mod formatter;
+pub mod parser;
+pub mod transform;
+pub mod typography;
+pub mod wrapping;
+
+use std::path::Path;
+
+pub use config::{ListSpacing, DEFAULT_WRAP_WIDTH};
+pub use error::{Error, Result};
+pub use formatter::filling::fill_markdown;
+pub use wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
+pub use wrapping::sentence::{first_sentence, first_sentences, split_sentences_regex};
+pub use wrapping::text_filling::{fill_text, Wrap};
+pub use wrapping::text_wrapping::{html_md_word_split, simple_word_split, wrap_paragraph, wrap_paragraph_lines};
+
+/// Reformat a Markdown or plain text string.
+pub fn reformat_text(
+    text: &str,
+    width: usize,
+    plaintext: bool,
+    semantic: bool,
+    cleanups: bool,
+    smartquotes: bool,
+    ellipses: bool,
+    list_spacing: ListSpacing,
+) -> String {
+    if plaintext {
+        fill_text(
+            text,
+            if width > 0 { Wrap::WrapFull } else { Wrap::None },
+            width,
+            "",
+            "",
+            0,
+            None,
+        )
+    } else {
+        fill_markdown(
+            text,
+            true,
+            width,
+            semantic,
+            cleanups,
+            smartquotes,
+            ellipses,
+            None,
+            list_spacing,
+        )
+    }
+}
+
+/// Reformat a Markdown or plain text file.
+pub fn reformat_file(
+    path: &Path,
+    output: Option<&Path>,
+    width: usize,
+    inplace: bool,
+    nobackup: bool,
+    plaintext: bool,
+    semantic: bool,
+    cleanups: bool,
+    smartquotes: bool,
+    ellipses: bool,
+    list_spacing: ListSpacing,
+) -> Result<()> {
+    let content = std::fs::read_to_string(path)?;
+    let formatted = reformat_text(
+        &content,
+        width,
+        plaintext,
+        semantic,
+        cleanups,
+        smartquotes,
+        ellipses,
+        list_spacing,
+    );
+
+    if inplace {
+        if !nobackup {
+            let backup_path = path.with_extension("bak");
+            std::fs::copy(path, &backup_path)?;
+        }
+        std::fs::write(path, &formatted)?;
+    } else if let Some(out) = output {
+        if let Some(parent) = out.parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+        std::fs::write(out, &formatted)?;
+    } else {
+        print!("{formatted}");
+    }
+
+    Ok(())
+}
