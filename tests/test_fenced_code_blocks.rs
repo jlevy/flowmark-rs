@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use flowmark::config::ListSpacing;
 use flowmark::fill_markdown;
 

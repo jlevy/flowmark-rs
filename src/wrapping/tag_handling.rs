@@ -227,7 +227,7 @@ pub fn fix_closing_tag_spacing(text: &str) -> String {
             }
             fixed_lines.push(stripped);
         } else {
-            fixed_lines.push(line.to_string());
+            fixed_lines.push((*line).to_string());
         }
     }
 
@@ -245,7 +245,7 @@ pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
 
     for (i, line) in lines.iter().enumerate() {
         if i == 0 {
-            result_lines.push(line.to_string());
+            result_lines.push((*line).to_string());
             continue;
         }
 
@@ -283,7 +283,7 @@ pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
             }
         }
 
-        result_lines.push(line.to_string());
+        result_lines.push((*line).to_string());
     }
 
     result_lines.join("\n")

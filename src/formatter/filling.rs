@@ -77,54 +77,97 @@ fn normalize_comrak_output(text: &str) -> String {
     collapse_blank_lines_outside_code(&text)
 }
 
-/// Collapse multiple blank lines to single blank lines, but preserve
-/// content inside code blocks (fenced with backticks or tildes).
-fn collapse_blank_lines_outside_code(text: &str) -> String {
-    // Split into segments: outside code and inside code
-    // Find code fences and protect their content
+/// Check if a trimmed line is a closing fence matching the given fence string.
+fn is_closing_fence(trimmed: &str, fence_str: &str) -> bool {
+    if fence_str.is_empty() || !trimmed.starts_with(fence_str) {
+        return false;
+    }
+    let fence_char = fence_str.chars().next().unwrap_or('`');
+    trimmed[fence_str.len()..].chars().all(|c| c == fence_char || c.is_whitespace())
+}
+
+/// Detect an opening code fence and return the fence string if found.
+fn detect_opening_fence(trimmed: &str) -> Option<String> {
+    let is_backtick_fence = trimmed.starts_with("```");
+    let is_tilde_fence = trimmed.starts_with("~~~");
+    if is_backtick_fence || is_tilde_fence {
+        let fence_char = if is_backtick_fence { '`' } else { '~' };
+        let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
+        Some(std::iter::repeat_n(fence_char, fence_len).collect())
+    } else {
+        None
+    }
+}
+
+/// Process text line-by-line, applying a transformation only outside fenced code blocks.
+///
+/// `process_outside` receives each non-code, non-fence line and returns zero or more
+/// output lines. Code block lines and fence lines are included in the output unchanged.
+fn transform_outside_code_fences<F>(text: &str, mut process_outside: F) -> String
+where
+    F: FnMut(&str) -> Vec<String>,
+{
     let lines: Vec<&str> = text.lines().collect();
     let had_trailing_newline = text.ends_with('\n');
-    let mut result = Vec::new();
+    let mut result: Vec<String> = Vec::new();
     let mut in_code = false;
     let mut fence_str = String::new();
-    let mut consecutive_empty = 0;
 
     for line in &lines {
         if in_code {
-            result.push(*line);
-            // Check for closing fence
-            let trimmed = line.trim();
-            if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
-                let rest = &trimmed[fence_str.len()..];
-                if rest
-                    .chars()
-                    .all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace())
-                {
-                    in_code = false;
-                    consecutive_empty = 0;
-                }
+            result.push((*line).to_string());
+            if is_closing_fence(line.trim(), &fence_str) {
+                in_code = false;
+            }
+        } else if let Some(fs) = detect_opening_fence(line.trim()) {
+            fence_str = fs;
+            in_code = true;
+            result.push((*line).to_string());
+        } else {
+            result.extend(process_outside(line));
+        }
+    }
+
+    let mut output = result.join("\n");
+    if had_trailing_newline {
+        output.push('\n');
+    }
+    output
+}
+
+/// Collapse multiple blank lines to single blank lines, but preserve
+/// content inside code blocks (fenced with backticks or tildes).
+///
+/// Uses the fence helpers directly (rather than `transform_outside_code_fences`)
+/// because it needs to reset the blank-line counter at fence boundaries.
+fn collapse_blank_lines_outside_code(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let had_trailing_newline = text.ends_with('\n');
+    let mut result: Vec<&str> = Vec::new();
+    let mut in_code = false;
+    let mut fence_str = String::new();
+    let mut consecutive_empty: usize = 0;
+
+    for line in &lines {
+        if in_code {
+            result.push(line);
+            if is_closing_fence(line.trim(), &fence_str) {
+                in_code = false;
+                consecutive_empty = 0;
+            }
+        } else if let Some(fs) = detect_opening_fence(line.trim()) {
+            fence_str = fs;
+            in_code = true;
+            consecutive_empty = 0;
+            result.push(line);
+        } else if line.trim().is_empty() {
+            consecutive_empty += 1;
+            if consecutive_empty <= 1 {
+                result.push(line);
             }
         } else {
-            let trimmed = line.trim();
-            // Check for opening fence (```, ~~~, or longer)
-            let is_backtick_fence = trimmed.starts_with("```");
-            let is_tilde_fence = trimmed.starts_with("~~~");
-            if is_backtick_fence || is_tilde_fence {
-                let fence_char = if is_backtick_fence { '`' } else { '~' };
-                let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
-                fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
-                in_code = true;
-                consecutive_empty = 0;
-                result.push(*line);
-            } else if trimmed.is_empty() {
-                consecutive_empty += 1;
-                if consecutive_empty <= 1 {
-                    result.push(*line);
-                }
-            } else {
-                consecutive_empty = 0;
-                result.push(*line);
-            }
+            consecutive_empty = 0;
+            result.push(line);
         }
     }
 
@@ -138,53 +181,13 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
 /// Replace escaped characters with placeholders, but only outside fenced code blocks.
 /// This prevents comrak from stripping backslash escapes during parsing.
 fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
-    let lines: Vec<&str> = text.lines().collect();
-    let had_trailing_newline = text.ends_with('\n');
-    let mut result = Vec::new();
-    let mut in_code = false;
-    let mut fence_str = String::new();
-
-    for line in &lines {
-        if in_code {
-            result.push(line.to_string());
-            // Check for closing fence
-            let trimmed = line.trim();
-            if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
-                let rest = &trimmed[fence_str.len()..];
-                if rest
-                    .chars()
-                    .all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace())
-                {
-                    in_code = false;
-                }
-            }
-        } else {
-            let trimmed = line.trim();
-            // Check for opening fence (```, ~~~, or longer)
-            let is_backtick_fence = trimmed.starts_with("```");
-            let is_tilde_fence = trimmed.starts_with("~~~");
-            if is_backtick_fence || is_tilde_fence {
-                let fence_char = if is_backtick_fence { '`' } else { '~' };
-                let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
-                fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
-                in_code = true;
-                result.push(line.to_string());
-            } else {
-                // Apply placeholder replacements outside code blocks
-                let mut processed = line.to_string();
-                for (escaped, placeholder) in placeholders {
-                    processed = processed.replace(escaped.as_str(), placeholder.as_str());
-                }
-                result.push(processed);
-            }
+    transform_outside_code_fences(text, |line| {
+        let mut processed = line.to_string();
+        for (escaped, placeholder) in placeholders {
+            processed = processed.replace(escaped.as_str(), placeholder.as_str());
         }
-    }
-
-    let mut output = result.join("\n");
-    if had_trailing_newline {
-        output.push('\n');
-    }
-    output
+        vec![processed]
+    })
 }
 
 /// Remove unnecessary period escapes from the formatted output.
@@ -193,138 +196,87 @@ fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -
 /// In headings and mid-paragraph, period escapes are unnecessary.
 /// Preserves content inside code spans (backtick-delimited) and fenced code blocks.
 fn postprocess_period_escapes(text: &str) -> String {
-    let lines: Vec<&str> = text.lines().collect();
-    let had_trailing_newline = text.ends_with('\n');
-    let mut result = Vec::new();
-    let mut in_fenced_code = false;
-    let mut fence_str = String::new();
-
-    for line in &lines {
-        if in_fenced_code {
-            result.push(line.to_string());
-            let trimmed = line.trim();
-            if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
-                let rest = &trimmed[fence_str.len()..];
-                if rest
-                    .chars()
-                    .all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace())
-                {
-                    in_fenced_code = false;
-                }
-            }
-            continue;
-        }
-
-        let trimmed = line.trim();
-        // Check for fenced code block opening
-        let is_backtick_fence = trimmed.starts_with("```");
-        let is_tilde_fence = trimmed.starts_with("~~~");
-        if is_backtick_fence || is_tilde_fence {
-            let fence_char = if is_backtick_fence { '`' } else { '~' };
-            let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
-            fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
-            in_fenced_code = true;
-            result.push(line.to_string());
-            continue;
-        }
-
+    transform_outside_code_fences(text, |line| {
         let trimmed_start = line.trim_start();
 
         if trimmed_start.starts_with('#') {
             // Heading line: remove period escapes but preserve code spans
-            result.push(remove_period_escapes_preserving_code(line));
-        } else {
-            // Strip blockquote markers for content analysis
-            let after_quotes =
-                trimmed_start.trim_start_matches(|c: char| c == '>' || c.is_whitespace());
-
-            // Strip unordered list markers (- , * , + ) and optional task list markers
-            let after_list_marker = after_quotes
-                .strip_prefix("- ")
-                .or_else(|| after_quotes.strip_prefix("* "))
-                .or_else(|| after_quotes.strip_prefix("+ "))
-                .map_or(after_quotes, |rest| {
-                    // Also strip task list markers: [ ] , [x] , [X]
-                    rest.strip_prefix("[ ] ")
-                        .or_else(|| rest.strip_prefix("[x] "))
-                        .or_else(|| rest.strip_prefix("[X] "))
-                        .unwrap_or(rest)
-                });
-
-            // Check if content starts with DIGITS\.
-            let digit_end = after_list_marker
-                .find(|c: char| !c.is_ascii_digit())
-                .unwrap_or(after_list_marker.len());
-
-            if digit_end > 0 && after_list_marker[digit_end..].starts_with("\\.") {
-                // DIGITS\. at effective line start: keep the escape to prevent list interpretation
-                result.push(line.to_string());
-            } else {
-                // No list-like pattern at start: remove period escapes, preserving code spans
-                result.push(remove_period_escapes_preserving_code(line));
-            }
+            return vec![remove_period_escapes_preserving_code(line)];
         }
-    }
 
-    let mut output = result.join("\n");
-    if had_trailing_newline {
-        output.push('\n');
-    }
-    output
+        // Strip blockquote markers for content analysis
+        let after_quotes =
+            trimmed_start.trim_start_matches(|c: char| c == '>' || c.is_whitespace());
+
+        // Strip unordered list markers (- , * , + ) and optional task list markers
+        let after_list_marker = after_quotes
+            .strip_prefix("- ")
+            .or_else(|| after_quotes.strip_prefix("* "))
+            .or_else(|| after_quotes.strip_prefix("+ "))
+            .map_or(after_quotes, |rest| {
+                // Also strip task list markers: [ ] , [x] , [X]
+                rest.strip_prefix("[ ] ")
+                    .or_else(|| rest.strip_prefix("[x] "))
+                    .or_else(|| rest.strip_prefix("[X] "))
+                    .unwrap_or(rest)
+            });
+
+        // Check if content starts with DIGITS\.
+        let digit_end = after_list_marker
+            .find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(after_list_marker.len());
+
+        if digit_end > 0 && after_list_marker[digit_end..].starts_with("\\.") {
+            // DIGITS\. at effective line start: keep the escape to prevent list interpretation
+            vec![line.to_string()]
+        } else {
+            // No list-like pattern at start: remove period escapes, preserving code spans
+            vec![remove_period_escapes_preserving_code(line)]
+        }
+    })
 }
 
 /// Remove `\.` → `.` on a single line, but preserve content inside backtick code spans.
+///
+/// Uses byte indexing (all relevant delimiters are ASCII) to avoid `Vec<char>` allocation.
 fn remove_period_escapes_preserving_code(line: &str) -> String {
-    let mut result = String::new();
-    let chars: Vec<char> = line.chars().collect();
-    let len = chars.len();
+    let bytes = line.as_bytes();
+    let len = bytes.len();
+    let mut result = String::with_capacity(len);
     let mut i = 0;
 
     while i < len {
-        if chars[i] == '`' {
+        if bytes[i] == b'`' {
             // Found backtick(s) - measure opening sequence length
-            let bt_count = chars[i..].iter().take_while(|&&c| c == '`').count();
-            // Copy opening backticks
-            for _ in 0..bt_count {
-                result.push('`');
-            }
+            let bt_count = bytes[i..].iter().take_while(|&&b| b == b'`').count();
+            result.push_str(&line[i..i + bt_count]);
             i += bt_count;
 
             // Find matching closing backtick sequence (same length)
-            let mut found_close = false;
             while i < len {
-                if chars[i] == '`' {
-                    let close_count = chars[i..].iter().take_while(|&&c| c == '`').count();
+                if bytes[i] == b'`' {
+                    let close_count = bytes[i..].iter().take_while(|&&b| b == b'`').count();
+                    result.push_str(&line[i..i + close_count]);
+                    i += close_count;
                     if close_count == bt_count {
-                        // Matching close: copy and exit code span
-                        for _ in 0..close_count {
-                            result.push('`');
-                        }
-                        i += close_count;
-                        found_close = true;
                         break;
                     }
-                    // Non-matching backticks: copy as code content
-                    for _ in 0..close_count {
-                        result.push('`');
-                    }
-                    i += close_count;
                 } else {
-                    // Inside code span: copy literally (no escape processing)
-                    result.push(chars[i]);
-                    i += 1;
+                    // Inside code span: copy literally (no escape processing).
+                    // Advance one UTF-8 character at a time.
+                    let ch = line[i..].chars().next().expect("valid UTF-8");
+                    result.push(ch);
+                    i += ch.len_utf8();
                 }
             }
-            if !found_close {
-                // Unmatched backticks: already copied, continue
-            }
-        } else if chars[i] == '\\' && i + 1 < len && chars[i + 1] == '.' {
+        } else if bytes[i] == b'\\' && i + 1 < len && bytes[i + 1] == b'.' {
             // \. outside code span → just .
             result.push('.');
             i += 2;
         } else {
-            result.push(chars[i]);
-            i += 1;
+            let ch = line[i..].chars().next().expect("valid UTF-8");
+            result.push(ch);
+            i += ch.len_utf8();
         }
     }
 
@@ -611,9 +563,7 @@ fn render_block<'a>(
             });
             let fence: String = std::iter::repeat_n(fence_char, fence_len).collect();
 
-            let lang_text = if info.is_empty() { String::new() } else { info.clone() };
-
-            let _ = writeln!(output, "{prefix}{fence}{lang_text}");
+            let _ = writeln!(output, "{prefix}{fence}{info}");
             let empty_prefix = subsequent_prefix.trim_end();
             for line in code_content.split('\n') {
                 if line.is_empty() {

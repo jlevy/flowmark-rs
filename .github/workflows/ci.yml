@@ -42,6 +42,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --locked --all-features
+        env:
+          RUSTFLAGS: "-D warnings"
 
   test-lib-only:
     name: Test library (no default features)
@@ -51,6 +53,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --locked --no-default-features
+        env:
+          RUSTFLAGS: "-D warnings"
 
   msrv:
     name: MSRV check (1.85)

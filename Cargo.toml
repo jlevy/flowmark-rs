@@ -25,10 +25,7 @@ cli = ["clap", "anyhow", "tempfile"]
 [dependencies]
 comrak = "0.36"
 regex = "1.11"
-unicode-segmentation = "1.11"
 thiserror = "2.0"
-toml = "0.8"
-serde = { version = "1.0", features = ["derive"] }
 
 # CLI-only dependencies
 clap = { version = "4.5", features = ["derive", "cargo"], optional = true }
@@ -39,15 +36,17 @@ tempfile = { version = "3.10", optional = true }
 libc = "0.2"
 
 [lints.clippy]
-pedantic = { level = "warn", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
 must_use_candidate = "allow"
 too_many_lines = "allow"
+unwrap_used = "deny"
 
 [lints.rust]
 unsafe_code = "deny"
+warnings = "deny"
 
 [package.metadata.python_source]
 version = "latest"

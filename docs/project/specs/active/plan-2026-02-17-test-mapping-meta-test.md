@@ -476,6 +476,6 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
 ## References
 
 - Original Python repo: https://github.com/jlevy/flowmark (pinned: `v0.6.4`)
-- Porting plan: `docs/porting-plan.md`
+- Porting plan: `docs/project/specs/done/porting-plan.md`
 - Python project: `python/pyproject.toml`
 - YAML artifacts: `port-coverage-mapping/`

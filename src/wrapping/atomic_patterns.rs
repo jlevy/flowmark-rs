@@ -12,7 +12,6 @@ use std::sync::LazyLock;
 /// Defines a regex pattern for an atomic construct that should not be broken.
 #[derive(Debug)]
 pub(crate) struct AtomicPattern {
-    pub(crate) _name: &'static str,
     pub(crate) pattern: &'static str,
     pub(crate) open_delim: &'static str,
     pub(crate) close_delim: &'static str,
@@ -22,7 +21,6 @@ pub(crate) struct AtomicPattern {
 
 /// Jinja/Markdoc template tags: {% tag %}, {% /tag %}
 pub(crate) static SINGLE_JINJA_TAG: AtomicPattern = AtomicPattern {
-    _name: "single_jinja_tag",
     pattern: r"\{%.*?%\}",
     open_delim: "{%",
     close_delim: "%}",
@@ -32,7 +30,6 @@ pub(crate) static SINGLE_JINJA_TAG: AtomicPattern = AtomicPattern {
 
 /// Jinja comments: {# comment #}
 pub(crate) static SINGLE_JINJA_COMMENT: AtomicPattern = AtomicPattern {
-    _name: "single_jinja_comment",
     pattern: r"\{#.*?#\}",
     open_delim: "{#",
     close_delim: "#}",
@@ -42,7 +39,6 @@ pub(crate) static SINGLE_JINJA_COMMENT: AtomicPattern = AtomicPattern {
 
 /// Jinja variables: {{ variable }}
 pub(crate) static SINGLE_JINJA_VAR: AtomicPattern = AtomicPattern {
-    _name: "single_jinja_var",
     pattern: r"\{\{.*?\}\}",
     open_delim: "{{",
     close_delim: "}}",
@@ -52,7 +48,6 @@ pub(crate) static SINGLE_JINJA_VAR: AtomicPattern = AtomicPattern {
 
 /// HTML comments: <!-- comment -->
 pub(crate) static SINGLE_HTML_COMMENT: AtomicPattern = AtomicPattern {
-    _name: "single_html_comment",
     pattern: r"<!--.*?-->",
     open_delim: "<!--",
     close_delim: "-->",
@@ -62,7 +57,6 @@ pub(crate) static SINGLE_HTML_COMMENT: AtomicPattern = AtomicPattern {
 
 /// HTML/XML open tags: <tag>
 pub(crate) static HTML_OPEN_TAG: AtomicPattern = AtomicPattern {
-    _name: "html_open_tag",
     pattern: r"<[a-zA-Z][^>]*>",
     open_delim: "",
     close_delim: "",
@@ -72,7 +66,6 @@ pub(crate) static HTML_OPEN_TAG: AtomicPattern = AtomicPattern {
 
 /// HTML/XML close tags: </tag>
 pub(crate) static HTML_CLOSE_TAG: AtomicPattern = AtomicPattern {
-    _name: "html_close_tag",
     pattern: r"</[a-zA-Z][^>]*>",
     open_delim: "",
     close_delim: "",

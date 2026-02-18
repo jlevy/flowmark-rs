@@ -41,8 +41,42 @@ impl FromStr for ListSpacing {
     }
 }
 
-/// Default wrap width. Same as Black (88 characters).
+/// Default wrap width (88 characters).
 pub const DEFAULT_WRAP_WIDTH: usize = 88;
 
 /// Default minimum line length for sentence breaking.
 pub const DEFAULT_MIN_LINE_LEN: usize = 20;
+
+/// Options controlling Markdown formatting behavior.
+#[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct FormatOptions {
+    /// Line width (0 to disable wrapping).
+    pub width: usize,
+    /// Treat input as plaintext (no Markdown parsing).
+    pub plaintext: bool,
+    /// Use semantic (sentence-based) line breaks.
+    pub semantic: bool,
+    /// Apply safe cleanups (e.g., unbold headings).
+    pub cleanups: bool,
+    /// Convert straight quotes to curly quotes.
+    pub smartquotes: bool,
+    /// Convert `...` to ellipsis character.
+    pub ellipses: bool,
+    /// Control list item spacing.
+    pub list_spacing: ListSpacing,
+}
+
+impl Default for FormatOptions {
+    fn default() -> Self {
+        Self {
+            width: DEFAULT_WRAP_WIDTH,
+            plaintext: false,
+            semantic: false,
+            cleanups: false,
+            smartquotes: false,
+            ellipses: false,
+            list_spacing: ListSpacing::default(),
+        }
+    }
+}

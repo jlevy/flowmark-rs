@@ -1,3 +1,5 @@
+#![allow(clippy::unwrap_used)]
+
 use flowmark::wrapping::text_wrapping::{
     html_md_word_split, markdown_escape_word, simple_word_split, wrap_paragraph,
     wrap_paragraph_lines,
