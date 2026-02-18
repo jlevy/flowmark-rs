@@ -97,16 +97,14 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
             let sentences = split_sentences_regex(&text, 0);
 
             for sentence in &sentences {
-                let current_column =
+                let base_column =
                     if first_line { initial_indent_len } else { subsequent_indent_len };
 
-                let current_column = if !lines.is_empty()
-                    && lines.last().expect("non-empty lines").chars().count() < min_line_len
-                {
-                    current_column + lines.last().expect("non-empty lines").chars().count()
-                } else {
-                    current_column
-                };
+                let last_line_len = lines.last().map_or(0, |l: &String| l.chars().count());
+                let last_is_short = !lines.is_empty() && last_line_len < min_line_len;
+
+                let current_column =
+                    if last_is_short { base_column + last_line_len } else { base_column };
 
                 let mut wrapped = wrap_paragraph_lines(
                     sentence,
@@ -120,13 +118,9 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
                 );
 
                 // If last line is shorter than min_line_len, combine with next line.
-                if !lines.is_empty()
+                if last_is_short
                     && !wrapped.is_empty()
-                    && lines.last().expect("non-empty lines").chars().count() < min_line_len
-                    && lines.last().expect("non-empty lines").chars().count()
-                        + 1
-                        + wrapped[0].chars().count()
-                        <= width
+                    && last_line_len + 1 + wrapped[0].chars().count() <= width
                 {
                     let last = lines.last_mut().expect("non-empty lines");
                     *last = format!("{last} {}", wrapped[0]);

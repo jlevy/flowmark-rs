@@ -57,10 +57,7 @@ pub fn ellipses(text: &str) -> String {
         result.push_str(prefix);
 
         // Add space before ellipsis if word char with no existing space
-        if !prefix.is_empty()
-            && prefix.starts_with(is_word_char)
-            && spaces_before.is_empty()
-        {
+        if !prefix.is_empty() && prefix.starts_with(is_word_char) && spaces_before.is_empty() {
             result.push(' ');
         } else {
             result.push_str(spaces_before);

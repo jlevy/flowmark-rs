@@ -83,9 +83,7 @@ fn is_closing_fence(trimmed: &str, fence_str: &str) -> bool {
         return false;
     }
     let fence_char = fence_str.chars().next().unwrap_or('`');
-    trimmed[fence_str.len()..]
-        .chars()
-        .all(|c| c == fence_char || c.is_whitespace())
+    trimmed[fence_str.len()..].chars().all(|c| c == fence_char || c.is_whitespace())
 }
 
 /// Detect an opening code fence and return the fence string if found.
@@ -239,57 +237,46 @@ fn postprocess_period_escapes(text: &str) -> String {
 }
 
 /// Remove `\.` → `.` on a single line, but preserve content inside backtick code spans.
+///
+/// Uses byte indexing (all relevant delimiters are ASCII) to avoid `Vec<char>` allocation.
 fn remove_period_escapes_preserving_code(line: &str) -> String {
-    let mut result = String::new();
-    let chars: Vec<char> = line.chars().collect();
-    let len = chars.len();
+    let bytes = line.as_bytes();
+    let len = bytes.len();
+    let mut result = String::with_capacity(len);
     let mut i = 0;
 
     while i < len {
-        if chars[i] == '`' {
+        if bytes[i] == b'`' {
             // Found backtick(s) - measure opening sequence length
-            let bt_count = chars[i..].iter().take_while(|&&c| c == '`').count();
-            // Copy opening backticks
-            for _ in 0..bt_count {
-                result.push('`');
-            }
+            let bt_count = bytes[i..].iter().take_while(|&&b| b == b'`').count();
+            result.push_str(&line[i..i + bt_count]);
             i += bt_count;
 
             // Find matching closing backtick sequence (same length)
-            let mut found_close = false;
             while i < len {
-                if chars[i] == '`' {
-                    let close_count = chars[i..].iter().take_while(|&&c| c == '`').count();
+                if bytes[i] == b'`' {
+                    let close_count = bytes[i..].iter().take_while(|&&b| b == b'`').count();
+                    result.push_str(&line[i..i + close_count]);
+                    i += close_count;
                     if close_count == bt_count {
-                        // Matching close: copy and exit code span
-                        for _ in 0..close_count {
-                            result.push('`');
-                        }
-                        i += close_count;
-                        found_close = true;
                         break;
                     }
-                    // Non-matching backticks: copy as code content
-                    for _ in 0..close_count {
-                        result.push('`');
-                    }
-                    i += close_count;
                 } else {
-                    // Inside code span: copy literally (no escape processing)
-                    result.push(chars[i]);
-                    i += 1;
+                    // Inside code span: copy literally (no escape processing).
+                    // Advance one UTF-8 character at a time.
+                    let ch = line[i..].chars().next().expect("valid UTF-8");
+                    result.push(ch);
+                    i += ch.len_utf8();
                 }
             }
-            if !found_close {
-                // Unmatched backticks: already copied, continue
-            }
-        } else if chars[i] == '\\' && i + 1 < len && chars[i + 1] == '.' {
+        } else if bytes[i] == b'\\' && i + 1 < len && bytes[i + 1] == b'.' {
             // \. outside code span → just .
             result.push('.');
             i += 2;
         } else {
-            result.push(chars[i]);
-            i += 1;
+            let ch = line[i..].chars().next().expect("valid UTF-8");
+            result.push(ch);
+            i += ch.len_utf8();
         }
     }
 
@@ -576,9 +563,7 @@ fn render_block<'a>(
             });
             let fence: String = std::iter::repeat_n(fence_char, fence_len).collect();
 
-            let lang_text = if info.is_empty() { String::new() } else { info.clone() };
-
-            let _ = writeln!(output, "{prefix}{fence}{lang_text}");
+            let _ = writeln!(output, "{prefix}{fence}{info}");
             let empty_prefix = subsequent_prefix.trim_end();
             for line in code_content.split('\n') {
                 if line.is_empty() {
