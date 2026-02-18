@@ -308,8 +308,8 @@ All 27 playbook documents reviewed.
 
 ### Phase 9b: Code Review — DONE
 
-**Epic bead:** fmr-ow2t
-**PR:** [#2](https://github.com/jlevy/flowmark-rs/pull/2) (branch: `code-review-fixes`)
+**Epic bead:** fmr-ow2t **PR:** [#2](https://github.com/jlevy/flowmark-rs/pull/2)
+(branch: `code-review-fixes`)
 
 Comprehensive code review of the Rust codebase after Phase 9 completion.
 16 findings addressed across P0-P3, all implemented and CI-passing (251 tests).
@@ -429,26 +429,24 @@ lexicographically.
 `_walk_directory(root)`:
 1. Load tool ignore once per walk root: `_get_tool_ignore(root)` — walks up from root
    looking for `.flowmarkignore`, caches per `resolved` directory
-2. `os.walk(root)` loop:
-   a. Compute `rel_to_root = current.relative_to(root)`
-   b. Prune directories in-place: `dirnames[:] = [d for d if not
-      _is_dir_excluded(d, rel/d, current, tool_ignore, root)]`
+2. `os.walk(root)` loop: a. Compute `rel_to_root = current.relative_to(root)` b. Prune
+   directories in-place:
+   `dirnames[:] = [d for d if not _is_dir_excluded(d, rel/d, current, tool_ignore, root)]`
    c. Collect gitignore specs: `_get_gitignore_chain(current, root)` if
-      `respect_gitignore`
-   d. For each file: check `include_spec` → check `max_size` → check gitignore chain →
-      check tool ignore → yield
+   `respect_gitignore` d. For each file: check `include_spec` → check `max_size` → check
+   gitignore chain → check tool ignore → yield
 
 `_is_dir_excluded(dirname, rel_path, current_dir, tool_ignore, walk_root)`:
 1. Check `exclude_spec.match_file(dirname + "/")` — bare directory name
 2. Check `exclude_spec.match_file(str(rel_path) + "/")` — relative path
-3. If `respect_gitignore`: check all specs from `_get_gitignore_chain(current_dir, root)`
-   against `dirname + "/"`
-4. Check `tool_ignore.match_file(dirname + "/")` and `tool_ignore.match_file(str(rel) +
-   "/")` if tool_ignore exists
+3. If `respect_gitignore`: check all specs from
+   `_get_gitignore_chain(current_dir, root)` against `dirname + "/"`
+4. Check `tool_ignore.match_file(dirname + "/")` and
+   `tool_ignore.match_file(str(rel) + "/")` if tool_ignore exists
 
 `_should_include_explicit(path)`:
-1. If `force_exclude`: check `filename` and each `parent.parts[:-1]` component + "/" against
-   `exclude_spec`
+1. If `force_exclude`: check `filename` and each `parent.parts[:-1]` component + “/”
+   against `exclude_spec`
 2. Check `_exceeds_max_size(path)` (0 = no limit; `OSError` on `stat()` → return False,
    i.e., include)
 
@@ -474,18 +472,18 @@ expansion).
 
 Module structure:
 - [ ] `src/file_resolver/mod.rs` — public API re-exports
-- [ ] `src/file_resolver/config.rs` — `FileResolverConfig` struct with `effective_include()`
-  and `effective_exclude()` methods
-- [ ] `src/file_resolver/defaults.rs` — `DEFAULT_INCLUDES` and `DEFAULT_EXCLUDES` constants
-  (exact match with Python)
+- [ ] `src/file_resolver/config.rs` — `FileResolverConfig` struct with
+  `effective_include()` and `effective_exclude()` methods
+- [ ] `src/file_resolver/defaults.rs` — `DEFAULT_INCLUDES` and `DEFAULT_EXCLUDES`
+  constants (exact match with Python)
 - [ ] `src/file_resolver/gitignore.rs` — `read_ignore_file()`, `load_gitignore()`,
   `load_tool_ignore()` using `ignore::gitignore::GitignoreBuilder` or custom parsing
 - [ ] `src/file_resolver/resolver.rs` — `FileResolver` struct with `resolve()`,
   `walk_directory()`, `should_include_explicit()`, `is_dir_excluded()`, `expand_glob()`,
   `exceeds_max_size()`, `get_gitignore_chain()`, `get_tool_ignore()`
 - [ ] Register module in `src/lib.rs`: `pub mod file_resolver;`
-- [ ] Port all 31 tests to `tests/test_file_resolver.rs` (use `tempfile` crate for
-  temp directories)
+- [ ] Port all 31 tests to `tests/test_file_resolver.rs` (use `tempfile` crate for temp
+  directories)
 - [ ] Update `test-mapping.yaml`: change 31 entries from `excluded` → `mapped`
 
 **Rust test mapping (31 tests from `test_file_resolver.py`):**
@@ -509,7 +507,8 @@ Resolver core (7):
 
 Filter options (5):
 - `test_resolver_extend_include` — `extend_include=["*.mdx"]` adds patterns
-- `test_resolver_exclude_replaces_defaults` — `exclude=["custom_dir/"]` replaces defaults
+- `test_resolver_exclude_replaces_defaults` — `exclude=["custom_dir/"]` replaces
+  defaults
 - `test_resolver_extend_exclude` — `extend_exclude=["drafts/"]` adds to defaults
 - `test_resolver_files_max_size` — 2MB file excluded with default 1MB limit
 - `test_resolver_files_max_size_zero_disables` — `max_size=0` disables limit
@@ -529,9 +528,10 @@ Tool ignore (2):
 
 Gitignore specifics (5):
 - `test_resolver_nested_gitignore` — nested `.gitignore` in subdirectory
-- `test_resolver_nested_gitignore_combines_parent_rules` — parent `*.log` rule applies in
-  child
-- `test_resolver_gitignore_file_patterns` — `draft.md` file pattern (not just directories)
+- `test_resolver_nested_gitignore_combines_parent_rules` — parent `*.log` rule applies
+  in child
+- `test_resolver_gitignore_file_patterns` — `draft.md` file pattern (not just
+  directories)
 - `test_resolver_gitignore_wildcard_file_pattern` — `temp.*` wildcard pattern
 
 Ignore file internals (3):
@@ -544,8 +544,8 @@ Flowmarkignore positive (1):
 
 #### 10.2: Config Loading
 
-**Bead:** fmr-z8j5 | **Python source:** 184 lines | **Tests:** 20 |
-**Estimated Rust LOC:** 250-350
+**Bead:** fmr-z8j5 | **Python source:** 184 lines | **Tests:** 20 | **Estimated Rust
+LOC:** 250-350
 
 Port `config.py` (TOML-based config file loading with three-way merge).
 The existing `src/config.rs` (83 lines) has `ListSpacing` and `FormatOptions` but no
@@ -555,8 +555,8 @@ TOML loading — extend it or create `src/config/` module.
 
 **Python data structures:**
 
-`FlowmarkConfig` — all fields are `Option<T>` (Python `None`) to distinguish "not
-configured" from "explicitly set to default":
+`FlowmarkConfig` — all fields are `Option<T>` (Python `None`) to distinguish “not
+configured” from “explicitly set to default”:
 
 ```
 # Formatting
@@ -611,21 +611,20 @@ Auto-locked fields (not overridable by config in `--auto` mode):
 1. Parse TOML text; on `TOMLDecodeError`/`OSError`:
    `eprintln!("Warning: could not parse config file {config_path}")` and return empty
    config
-2. If `config_path.name == "pyproject.toml"`: extract `data["tool"]["flowmark"]` subsection
-3. Call `_parse_config_data(data)`:
-   a. Flatten nested sections: any `dict` value's sub-keys merge to top level
-   b. Map kebab-case → snake_case via lookup table (fallback: `key.replace("-", "_")`)
-   c. Validate against `FlowmarkConfig` field names
-   d. Unrecognized keys: `eprintln!("Warning: unrecognized config key '{key}'")`
-   e. Construct `FlowmarkConfig(**mapped)`
+2. If `config_path.name == "pyproject.toml"`: extract `data["tool"]["flowmark"]`
+   subsection
+3. Call `_parse_config_data(data)`: a. Flatten nested sections: any `dict` value’s
+   sub-keys merge to top level b. Map kebab-case → snake_case via lookup table
+   (fallback: `key.replace("-", "_")`) c. Validate against `FlowmarkConfig` field names
+   d. Unrecognized keys: `eprintln!("Warning: unrecognized config key '{key}'")` e.
+   Construct `FlowmarkConfig(**mapped)`
 
 `merge_cli_with_config(cli_opts, config, is_auto, explicit_flags)`:
 1. If `config` is `None`, return `cli_opts` unchanged
-2. For each field in `FlowmarkConfig`:
-   a. If field value is `None` → skip (not set in config)
-   b. If field name in `explicit_flags` → skip (CLI takes precedence)
-   c. If `is_auto` and field name in `auto_locked` → skip
-   d. Set `cli_opts.{field} = config_value`
+2. For each field in `FlowmarkConfig`: a. If field value is `None` → skip (not set in
+   config) b. If field name in `explicit_flags` → skip (CLI takes precedence) c. If
+   `is_auto` and field name in `auto_locked` → skip d. Set
+   `cli_opts.{field} = config_value`
 3. Return `cli_opts`
 
 **Rust implementation plan:**
@@ -634,8 +633,8 @@ New dependency: `toml` crate (add to `[dependencies]` with `optional = true` und
 feature, or unconditional if config loading belongs in lib).
 
 - [ ] Add `serde` and `toml` crates as dependencies
-- [ ] Create `FlowmarkConfig` struct with all-`Option<T>` fields (use `#[derive(Default,
-  Deserialize)]`)
+- [ ] Create `FlowmarkConfig` struct with all-`Option<T>` fields (use
+  `#[derive(Default, Deserialize)]`)
 - [ ] Implement `find_config_file(start_dir: &Path) -> Option<PathBuf>` — directory walk
   with per-directory search order
 - [ ] Implement `pyproject_has_flowmark_section(path: &Path) -> bool`
@@ -652,7 +651,8 @@ feature, or unconditional if config loading belongs in lib).
 
 Config file discovery (6):
 - `test_find_config_flowmark_toml` — finds `flowmark.toml`
-- `test_find_config_dot_flowmark_toml_takes_precedence` — `.flowmark.toml` > `flowmark.toml`
+- `test_find_config_dot_flowmark_toml_takes_precedence` — `.flowmark.toml` >
+  `flowmark.toml`
 - `test_find_config_pyproject_toml` — finds `pyproject.toml` with `[tool.flowmark]`
 - `test_find_config_pyproject_without_section_skipped` — skips `pyproject.toml` without
   section
@@ -697,7 +697,7 @@ loading, port argument validation and error messages.
 - Default `files = ["-"]` (stdin) — Python changed to `files = []` (empty, requires
   explicit input)
 
-**Missing flags (11 — Python has, Rust doesn't):**
+**Missing flags (11 — Python has, Rust doesn’t):**
 
 | Flag | clap Type | Default | Purpose |
 | --- | --- | --- | --- |
@@ -706,7 +706,7 @@ loading, port argument validation and error messages.
 | `--extend-exclude PATTERN` | `Vec<String>` (append) | `[]` | Add to default exclusions |
 | `--no-respect-gitignore` | `bool` (flag) | `false` | Disable .gitignore integration |
 | `--force-exclude` | `bool` (flag) | `false` | Apply exclusions to explicit files |
-| `--list-files` | `bool` (flag) | `false` | Print resolved paths, don't format |
+| `--list-files` | `bool` (flag) | `false` | Print resolved paths, don’t format |
 | `--files-max-size BYTES` | `usize` | `1_048_576` | Skip files larger than N bytes |
 | `--skill` | `bool` (flag) | `false` | Print SKILL.md content to stdout |
 | `--install-skill` | `bool` (flag) | `false` | Install skill to `~/.claude/` |
@@ -715,7 +715,7 @@ loading, port argument validation and error messages.
 
 **Already present in Rust (no action needed):**
 - `--version` — clap `version` derive (auto-generated from Cargo.toml)
-- `--verbose` (`-v`) — Rust-only addition (doesn't break drop-in compatibility)
+- `--verbose` (`-v`) — Rust-only addition (doesn’t break drop-in compatibility)
 
 **Critical behavior change: default files argument**
 
@@ -727,8 +727,9 @@ input). Rust must match:
 **Explicit-flag tracking (for config merge precedence):**
 
 Python uses a sentinel parser to detect which flags the user explicitly passed (even if
-the value matches the default). Rust approach options:
-- Use `clap`'s `value_source()` method to check if a value came from CLI vs default
+the value matches the default).
+Rust approach options:
+- Use `clap`’s `value_source()` method to check if a value came from CLI vs default
 - Or: parse with `Option<T>` for tracked fields, then apply defaults after detection
 
 Tracked flags (12): `width`, `semantic`, `cleanups`, `smartquotes`, `ellipses`,
@@ -830,10 +831,10 @@ Tool ignore (1):
 - `test_flowmarkignore` — `.flowmarkignore` respected in `--list-files` mode
 
 Edge cases (3):
-- `test_list_files_stdin_does_not_crash` — `--list-files - /dir` doesn't crash
+- `test_list_files_stdin_does_not_crash` — `--list-files - /dir` doesn’t crash
 - `test_stdin_explicit_dash` — explicit `-` reads stdin
-- `test_explicit_flag_detection_with_default_value` — `--width 88` (default value)
-  still detected as explicit flag
+- `test_explicit_flag_detection_with_default_value` — `--width 88` (default value) still
+  detected as explicit flag
 
 #### 10.3b: Skill System
 
@@ -861,7 +862,7 @@ Port `skill.py` and `skills/` — Claude Code skill installation.
 - Creates directories with `mkdir(parents=True, exist_ok=True)`
 - Writes SKILL.md content
 - Prints success message with location
-- If custom base: prints tip "Commit .claude/skills/ to share with team"
+- If custom base: prints tip “Commit .claude/skills/ to share with team”
 - On `PermissionError`: `"Permission denied: {e}"` to stderr, exit 1
 - On `OSError`: `"Installation failed: {e}"` to stderr, exit 1
 
@@ -873,11 +874,11 @@ Port `skill.py` and `skills/` — Claude Code skill installation.
 **Rust implementation plan:**
 
 Resources to embed at compile time:
-- `SKILL.md` — copy from Python's `skills/SKILL.md` into a Rust-accessible location
+- `SKILL.md` — copy from Python’s `skills/SKILL.md` into a Rust-accessible location
   (e.g., `src/skills/SKILL.md`), embed via `include_str!("skills/SKILL.md")`
 - Documentation content — embed README.md or equivalent via `include_str!()`
 
-Note: Python's `SKILL.md` references `uvx flowmark@latest` (Python distribution).
+Note: Python’s `SKILL.md` references `uvx flowmark@latest` (Python distribution).
 The Rust binary will need its own SKILL.md that references the Rust binary installation
 method (e.g., `cargo install flowmark`). This is an acceptable adaptation, not a parity
 violation.
@@ -892,8 +893,8 @@ Module structure:
   docs file)
 - [ ] Register module in `src/lib.rs`: `pub mod skill;`
 - [ ] Wire in CLI (`main.rs`): `--skill` → `print!(get_skill_content())`;
-  `--install-skill` → `install_skill(args.agent_base)`;
-  `--docs` → `print!(get_docs_content())`
+  `--install-skill` → `install_skill(args.agent_base)`; `--docs` →
+  `print!(get_docs_content())`
 - [ ] Handle errors: permission denied, OS errors
 - [ ] Add `dirs` crate for `home_dir()` or use `std::env::var("HOME")` on Unix
 - [ ] Port 9 tests to `tests/test_skill.rs`
@@ -915,8 +916,10 @@ Docs content loading (2):
 Skill installation (4):
 - `test_install_skill_default` — installs to `~/.claude/skills/flowmark/SKILL.md` (mock
   home dir)
-- `test_install_skill_custom_base` — installs to `{custom_base}/skills/flowmark/SKILL.md`
-- `test_install_skill_creates_directories` — creates nested `deep/nested/path/skills/...`
+- `test_install_skill_custom_base` — installs to
+  `{custom_base}/skills/flowmark/SKILL.md`
+- `test_install_skill_creates_directories` — creates nested
+  `deep/nested/path/skills/...`
 - `test_install_skill_overwrites_existing` — overwrites old SKILL.md content
 
 #### 10.4: Tryscript CLI Golden Tests
@@ -1004,10 +1007,10 @@ identical output.
 
 **Config-related tryscript tests (optional — may be better as unit tests):**
 
-Config interactions are complex (three-way merge, auto locking). These may be more
-reliably tested as Rust integration tests (already covered by the 20 config tests)
-rather than tryscript golden tests, since config behavior depends on which directory
-you're in.
+Config interactions are complex (three-way merge, auto locking).
+These may be more reliably tested as Rust integration tests (already covered by the 20
+config tests) rather than tryscript golden tests, since config behavior depends on which
+directory you’re in.
 
 **Implementation steps:**
 - [ ] Create fixture directory and files
@@ -1025,7 +1028,7 @@ you're in.
 | `ignore` | `pathspec` + `os.walk` | Gitignore-aware directory walking and glob matching |
 | `toml` | `tomllib` / `tomli` | TOML config file parsing |
 | `serde` | — | Deserialization for TOML config struct |
-| `glob` | `pathlib.Path.glob()` | Glob pattern expansion (if `ignore` doesn't cover all cases) |
+| `glob` | `pathlib.Path.glob()` | Glob pattern expansion (if `ignore` doesn’t cover all cases) |
 | `dirs` | — | Home directory resolution (for skill installation) |
 
 These are additions to the existing dependency table in the porting plan.
@@ -1168,14 +1171,14 @@ speedup. This is a key selling point for the Rust port.
     (`tests/testdocs/testdoc.orig.md`, 1,416 lines)
   - Both in `--auto` mode and plain mode
   - Single file and batch directory (once file resolver is ported)
-- Optionally add `criterion` benchmarks for library-level performance (internal only, not
-  for README)
+- Optionally add `criterion` benchmarks for library-level performance (internal only,
+  not for README)
 - Record results in a `benchmarks/` directory with reproduction instructions
 
 **Results for README** (in the build-publishing spec):
 - Include a simple comparison table in the Rust README showing wall-clock times
-- Example format: "flowmark (Rust) formats a 1,400-line Markdown file in Xms vs Yms for
-  Python — Z× faster"
+- Example format: “flowmark (Rust) formats a 1,400-line Markdown file in Xms vs Yms for
+  Python — Z× faster”
 
 ## Open Questions
 
@@ -1613,8 +1616,8 @@ output files:
 1 doc-test, and 7 edge case tests from previous implementation review.
 All passing, zero ignored.**
 
-**Note:** All 79 excluded tests are now in scope for Phase 10.
-Target after Phase 10: 281 mapped, 0 excluded, 0 missing, 0 partial.
+**Note:** All 79 excluded tests are now in scope for Phase 10. Target after Phase 10:
+281 mapped, 0 excluded, 0 missing, 0 partial.
 
 * * *
 
@@ -1674,7 +1677,7 @@ Largest Rust library files: `filling.rs` (1,270 total), `tag_handling.rs` (387),
   due to Python’s heavy use of triple-quoted docstrings for test fixtures vs Rust’s raw
   string literals which are more compact.
 - **79 Python tests (28%) were excluded** as infrastructure-only (CLI file discovery,
-  config, file resolver, skill system) during Phases 1-9.
-  **All 79 are now in scope for Phase 10** — see Phase 10 plan above.
+  config, file resolver, skill system) during Phases 1-9. **All 79 are now in scope for
+  Phase 10** — see Phase 10 plan above.
 - The Rust codebase has **zero `#[ignore]` tests, zero clippy warnings, and zero
   `unwrap()` calls** in library code.

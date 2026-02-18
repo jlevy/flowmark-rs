@@ -1,37 +1,36 @@
 # Code Review: flowmark-rs (Python-to-Rust Port)
 
-**Date:** 2026-02-17
-**Reviewer:** Claude Opus 4.6
-**Scope:** Full top-to-bottom review of Rust port against Python original (github.com/jlevy/flowmark)
-**Commit:** 0dda5de (branch: claude/setup-tbd-tool-tBXpO)
+**Date:** 2026-02-17 **Reviewer:** Claude Opus 4.6 **Scope:** Full top-to-bottom review
+of Rust port against Python original (github.com/jlevy/flowmark) **Commit:** 0dda5de
+(branch: claude/setup-tbd-tool-tBXpO)
 
 ## Executive Summary
 
-This is a high-quality port of the Python flowmark Markdown formatter to Rust. All 250
-tests pass, the module structure is clean, and the codebase demonstrates strong Rust
-practices overall (zero unsafe in library code, thiserror/anyhow split, feature-gated
-CLI, LazyLock regex patterns, deny.toml supply chain security). The test mapping is
-complete with 202 mapped and 79 intentionally excluded tests.
+This is a high-quality port of the Python flowmark Markdown formatter to Rust.
+All 250 tests pass, the module structure is clean, and the codebase demonstrates strong
+Rust practices overall (zero unsafe in library code, thiserror/anyhow split,
+feature-gated CLI, LazyLock regex patterns, deny.toml supply chain security).
+The test mapping is complete with 202 mapped and 79 intentionally excluded tests.
 
 However, there are several issues that should be addressed before release, ranging from
 dead dependencies that inflate compile times to clippy/formatting failures and code
 duplication.
 
----
+* * *
 
 ## Build & Test Status
 
 | Check | Result | Notes |
-|-------|--------|-------|
-| `cargo build` | PASS | |
+| --- | --- | --- |
+| `cargo build` | PASS |  |
 | `cargo build --no-default-features` | PASS | Library-only without CLI |
 | `cargo test` (250 tests) | PASS | 27 unit + 223 integration |
 | `cargo clippy -- -D warnings` | **FAIL** | 9 `inefficient_to_string` errors |
 | `cargo fmt --check` | **FAIL** | Extensive formatting diffs |
-| End-to-end CLI (stdin, --semantic, --cleanups, --smartquotes) | PASS | |
+| End-to-end CLI (stdin, --semantic, --cleanups, --smartquotes) | PASS |  |
 | Test mapping coverage | Complete | 202 mapped, 79 excluded, 0 missing |
 
----
+* * *
 
 ## Issues by Priority
 
@@ -39,7 +38,8 @@ duplication.
 
 #### 1. Clippy Failures: 9 `inefficient_to_string` Errors
 
-**Files:** `src/formatter/filling.rs` (6 occurrences), `src/wrapping/tag_handling.rs` (3 occurrences)
+**Files:** `src/formatter/filling.rs` (6 occurrences), `src/wrapping/tag_handling.rs` (3
+occurrences)
 
 **Problem:** Calling `.to_string()` on `&&str` uses a slower blanket `ToString` impl
 instead of the specialized `str::to_string()`.
@@ -58,16 +58,18 @@ instead of the specialized `str::to_string()`.
 - Line 277: `result_lines.push(line.to_string());`
 
 **Fix:** In all cases, change `line.to_string()` to `(*line).to_string()` or preferably
-`line.to_owned()` (which auto-derefs). Since these are all iterating `&lines` where
-`lines: Vec<&str>`, the loop variable is `&&str`.
+`line.to_owned()` (which auto-derefs).
+Since these are all iterating `&lines` where `lines: Vec<&str>`, the loop variable is
+`&&str`.
 
 #### 2. Formatting Violations
 
 **Problem:** `cargo fmt --check` shows diffs in nearly every source and test file.
-The project has `rustfmt.toml` configured (`max_width = 100`, `use_small_heuristics = "Max"`)
-but the code was not formatted with it.
+The project has `rustfmt.toml` configured (`max_width = 100`,
+`use_small_heuristics = "Max"`) but the code was not formatted with it.
 
-**Fix:** Run `cargo fmt` across the entire project. Key areas with diffs:
+**Fix:** Run `cargo fmt` across the entire project.
+Key areas with diffs:
 - `src/formatter/filling.rs` — import ordering, closure formatting, long conditionals
 - `src/wrapping/tag_handling.rs` — import ordering
 - `src/wrapping/line_wrappers.rs` — import ordering
@@ -75,7 +77,7 @@ but the code was not formatted with it.
 - `tests/test_tag_formatting.rs` — assert formatting
 - Multiple other test files
 
----
+* * *
 
 ### P1: Should Fix Before Release
 
@@ -95,7 +97,7 @@ serde = { version = "1.0", features = ["derive"] }
 **Verification:** `grep -r 'use (toml|serde|unicode.segmentation)' src/` returns zero
 matches. No `#[derive(Serialize, Deserialize)]` or `#[serde(...)]` attributes exist.
 
-These were likely carried over from the porting plan for config file loading (Python's
+These were likely carried over from the porting plan for config file loading (Python’s
 `.flowmark.toml` / `pyproject.toml` merging), which was intentionally not ported.
 
 **Impact:** These add significant compile time (serde alone pulls in proc-macros).
@@ -119,9 +121,10 @@ Neither `Error::Config` nor `Error::Other` is constructed anywhere in the codeba
 
 Only `Error::Io` (via `#[from] std::io::Error`) is ever used.
 
-**Fix:** Remove both variants. If config loading is added later, re-add `Config` then.
+**Fix:** Remove both variants.
+If config loading is added later, re-add `Config` then.
 
----
+* * *
 
 ### P2: Recommended Improvements
 
@@ -129,11 +132,11 @@ Only `Error::Io` (via `#[from] std::io::Error`) is ever used.
 
 **File:** `src/formatter/filling.rs`
 
-The pattern "iterate lines, track whether inside a fenced code block using fence_str
-state, process lines differently inside vs outside code" is copy-pasted three times:
+The pattern “iterate lines, track whether inside a fenced code block using fence_str
+state, process lines differently inside vs outside code” is copy-pasted three times:
 
 | Function | Lines | Purpose |
-|----------|-------|---------|
+| --- | --- | --- |
 | `collapse_blank_lines_outside_code` | 83-134 | Collapse multiple blank lines |
 | `protect_escapes_outside_code` | 138-185 | Replace escape chars with PUA placeholders |
 | `postprocess_period_escapes` | 192-270 | Remove unnecessary `\.` escapes |
@@ -170,12 +173,13 @@ if !WORD_CHAR_RE.is_match(&nc.to_string()) {  // allocates String for 1 char
 ```
 
 This compiles a regex, allocates a `String`, and runs a regex match — just to check if a
-single `char` is a word character. This happens in a hot loop over every ellipsis match.
+single `char` is a word character.
+This happens in a hot loop over every ellipsis match.
 
 **Fix:** Replace with `nc.is_alphanumeric() || nc == '_'` (which is what `\w` matches
 for ASCII). If full Unicode `\w` semantics are needed, use
-`nc.is_alphanumeric() || nc == '_'` which covers the relevant cases. This eliminates
-both the allocation and the regex overhead.
+`nc.is_alphanumeric() || nc == '_'` which covers the relevant cases.
+This eliminates both the allocation and the regex overhead.
 
 #### 7. Vec<char> Allocation in remove_period_escapes_preserving_code
 
@@ -195,10 +199,11 @@ the allocation while maintaining the same lookahead behavior.
 
 **File:** `src/lib.rs` lines 24-58
 
-`reformat_text` takes 8 parameters (5 booleans), `reformat_file` takes 11 parameters
-(7 booleans). Both have `#[allow(clippy::fn_params_excessive_bools)]`.
+`reformat_text` takes 8 parameters (5 booleans), `reformat_file` takes 11 parameters (7
+booleans). Both have `#[allow(clippy::fn_params_excessive_bools)]`.
 
-This is a faithful port of the Python API, but idiomatic Rust would use an options struct:
+This is a faithful port of the Python API, but idiomatic Rust would use an options
+struct:
 
 ```rust
 #[derive(Debug, Clone, Default)]
@@ -222,7 +227,8 @@ reformat_text(text, 88, false, true, true, true, true, ListSpacing::Preserve)
 reformat_text(text, &FormatOptions { semantic: true, cleanups: true, ..Default::default() })
 ```
 
-**Priority:** Consider for 1.0 release. Not urgent since the API is internal-facing for now.
+**Priority:** Consider for 1.0 release.
+Not urgent since the API is internal-facing for now.
 
 #### 9. Unused `_name` Field in AtomicPattern
 
@@ -235,9 +241,9 @@ pub(crate) struct AtomicPattern {
 }
 ```
 
-The `_name` field is assigned in all 6 static instances but never read. The underscore
-prefix is a Rust convention for "intentionally unused," but if this is truly unused,
-it should either:
+The `_name` field is assigned in all 6 static instances but never read.
+The underscore prefix is a Rust convention for “intentionally unused,” but if this is
+truly unused, it should either:
 - Be removed entirely, OR
 - Be renamed to `name` with `#[allow(dead_code)]` on the field (if kept for debugging)
 
@@ -258,8 +264,8 @@ let lang_text = if info.is_empty() {
 let _ = writeln!(output, "{prefix}{fence}{info}");
 // (empty info just produces no extra text)
 ```
-Since `info` is already a `String` reference and `writeln!` takes `Display` impls,
-no clone is needed.
+Since `info` is already a `String` reference and `writeln!` takes `Display` impls, no
+clone is needed.
 
 #### 11. Repeated `.expect()` Calls in line_wrappers.rs
 
@@ -270,7 +276,7 @@ repeatedly computing the same value.
 
 **Fix:** Extract to a local: `let last_line = lines.last().expect("non-empty lines");`
 
----
+* * *
 
 ### P3: Nice to Have
 
@@ -283,14 +289,14 @@ repeatedly computing the same value.
 pub const DEFAULT_WRAP_WIDTH: usize = 88;
 ```
 
-"Same as Black" is a Python formatter reference that's confusing in a Rust context.
+“Same as Black” is a Python formatter reference that’s confusing in a Rust context.
 Consider: `/// Default wrap width (88 characters).`
 
 #### 13. No Doc-Tests
 
-The library has doc comments but no `/// # Examples` with runnable code. Adding one
-doc-test for `reformat_text` or `fill_markdown` would improve API discoverability
-and serve as living documentation.
+The library has doc comments but no `/// # Examples` with runnable code.
+Adding one doc-test for `reformat_text` or `fill_markdown` would improve API
+discoverability and serve as living documentation.
 
 #### 14. simple_word_split Returns Owned Strings Unnecessarily
 
@@ -302,13 +308,14 @@ pub fn simple_word_split(text: &str) -> Vec<String> {
 }
 ```
 
-This allocates a new `String` for each word when `Vec<&str>` would suffice. However,
-this matches the `html_md_word_split` return type for interface compatibility, so
-changing it would require updating the `WordSplitter` trait/function pointer signature.
+This allocates a new `String` for each word when `Vec<&str>` would suffice.
+However, this matches the `html_md_word_split` return type for interface compatibility,
+so changing it would require updating the `WordSplitter` trait/function pointer
+signature.
 
 **Verdict:** Leave as-is unless the splitter interface is refactored.
 
----
+* * *
 
 ## Things Done Well
 
@@ -329,10 +336,11 @@ These are worth calling out as strong practices to maintain:
 
 5. **Release profile** — LTO, single codegen unit, panic=abort, strip — well-optimized
 
-6. **Supply chain security** — `deny.toml` with license allowlist and source restrictions
+6. **Supply chain security** — `deny.toml` with license allowlist and source
+   restrictions
 
-7. **Idiomatic patterns** — `LazyLock<Regex>` for compiled regexes, `Box<dyn Fn + Send + Sync>`
-   for composable wrappers, `Arc` for shared closure state
+7. **Idiomatic patterns** — `LazyLock<Regex>` for compiled regexes,
+   `Box<dyn Fn + Send + Sync>` for composable wrappers, `Arc` for shared closure state
 
 8. **MSRV** — Rust 1.85 specified with Edition 2024
 
@@ -341,14 +349,14 @@ These are worth calling out as strong practices to maintain:
 
 10. **Atomic file writes** — Correct tempfile + persist pattern preventing corruption
 
----
+* * *
 
 ## Test Coverage Assessment
 
 The test mapping is **complete and verified**:
 
 | Category | Count |
-|----------|-------|
+| --- | --- |
 | Mapped (Python test → Rust equivalent) | 202 |
 | Excluded (CLI/config/file-resolver/skill — not ported) | 79 |
 | Missing | 0 |
@@ -362,23 +370,23 @@ that individual unit tests might miss.
 
 No test coverage gaps were identified for ported functionality.
 
----
+* * *
 
 ## P0.5: Strict Lint & Build Configuration
 
-The project should fail the build on all warnings, both locally and in CI.
-Currently there is a gap between local and CI strictness.
+The project should fail the build on all warnings, both locally and in CI. Currently
+there is a gap between local and CI strictness.
 
 ### Current State
 
 - **Cargo.toml** sets clippy pedantic to `warn` (not `deny`), so `cargo clippy` alone
   succeeds even with lint violations
-- **No `warnings` deny** — compiler warnings (unused imports, dead code, etc.) don't
-  fail the build locally
-- **CI is stricter than local** — `ci.yml` line 32 passes `-D warnings` to clippy,
-  but a developer running `cargo clippy` locally sees warnings, not errors. This
-  disconnect means issues accumulate between CI runs.
-- **Test compilation not strict** — CI doesn't set `RUSTFLAGS="-D warnings"`, so test
+- **No `warnings` deny** — compiler warnings (unused imports, dead code, etc.)
+  don’t fail the build locally
+- **CI is stricter than local** — `ci.yml` line 32 passes `-D warnings` to clippy, but a
+  developer running `cargo clippy` locally sees warnings, not errors.
+  This disconnect means issues accumulate between CI runs.
+- **Test compilation not strict** — CI doesn’t set `RUSTFLAGS="-D warnings"`, so test
   code can have compiler warnings without failing CI
 
 ### Recommended Cargo.toml `[lints]` Section
@@ -441,20 +449,21 @@ discipline in library code.
 
 **2. Make mapping check non-informational:**
 
-Line 97 of `ci.yml`: `uv run flowmark-dev check-mapping || true` swallows failures
-with `|| true`. If mapping completeness should be enforced, remove the `|| true`.
+Line 97 of `ci.yml`: `uv run flowmark-dev check-mapping || true` swallows failures with
+`|| true`. If mapping completeness should be enforced, remove the `|| true`.
 
 **3. Consider adding `cargo-audit` or `cargo-vet`** alongside the existing `cargo-deny`
 for defense-in-depth on supply chain security.
 
----
+* * *
 
 ## Recommended Fix Order
 
 1. `cargo fmt` (trivial, fixes all formatting)
 2. Tighten `[lints]` in Cargo.toml: `warnings = "deny"`, clippy pedantic to `deny`
 3. Remove dead dependencies from Cargo.toml (toml, serde, unicode-segmentation)
-4. Fix 9 clippy `inefficient_to_string` errors (mechanical: `line.to_string()` → `(*line).to_string()`)
+4. Fix 9 clippy `inefficient_to_string` errors (mechanical: `line.to_string()` →
+   `(*line).to_string()`)
 5. Remove dead error variants `Error::Config` and `Error::Other`
 6. Add `RUSTFLAGS="-D warnings"` to CI test jobs
 7. Extract fence-tracking helper to eliminate 3x duplication in filling.rs
@@ -467,4 +476,5 @@ Items 1-6 are mechanical and low-risk — do these first and verify all 250 test
 pass. Items 7-10 are refactors that should each be a separate commit with a full test
 run. Item 11 is a design decision for pre-1.0.
 
-**Validation after each change:** `cargo fmt --check && cargo clippy -- -D warnings && cargo test`
+**Validation after each change:**
+`cargo fmt --check && cargo clippy -- -D warnings && cargo test`

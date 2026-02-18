@@ -4,8 +4,7 @@
 
 All porting work is finished.
 251 tests passing, 0 ignored, 100% of ported Python tests passing.
-See the [exact parity spec](../active/plan-2026-02-17-exact-parity.md) for
-full details.
+See the [exact parity spec](../active/plan-2026-02-17-exact-parity.md) for full details.
 
 ## Goal
 
@@ -167,6 +166,15 @@ All phases are complete.
 - [x] Cross-validation against Python on all test fixtures (202 mapped, 79 excluded)
 - [x] All differences documented with explicit decisions
 - [x] cargo fmt, cargo clippy, cargo test all passing
+
+## Syncing with Python Flowmark
+
+The Python flowmark source is tracked as a git submodule at `repos/flowmark`,
+currently pinned to `v0.6.4`. The porting playbook (also a submodule) is at
+`repos/rust-porting-playbook`.
+
+See [docs/port-sync-playbook.md](../../port-sync-playbook.md) for the full
+sync process.
 
 ## Key Pitfalls (from playbook + actual porting experience)
 
