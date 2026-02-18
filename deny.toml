@@ -1,5 +1,8 @@
 [advisories]
 version = 2
+# yaml-rust 0.4.5 is unmaintained (RUSTSEC-2024-0320) but is a transitive dep
+# of comrak via syntect. No action available until comrak updates syntect.
+ignore = ["RUSTSEC-2024-0320"]
 
 [licenses]
 version = 2
