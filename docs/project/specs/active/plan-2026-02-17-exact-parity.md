@@ -623,3 +623,65 @@ output files:
 
 **Total: 250 Rust tests covering 202 Python test behaviors, 27 Rust-specific unit tests,
 and 7 edge case tests from previous implementation review. All passing, zero ignored.**
+
+---
+
+## Appendix C: Lines of Code — Python vs Rust
+
+Comprehensive line counts for the original Python flowmark v0.6.4 and the Rust port.
+"Code lines" excludes blank lines, comments, and docstrings/doc comments.
+
+### Python (Original)
+
+| Category | Total | Blank | Comments | Docstrings | Code |
+|---|---:|---:|---:|---:|---:|
+| Library (`src/flowmark/`, 26 files) | 4,433 | 626 | 355 | 921 | 2,531 |
+| Tests (`tests/`, 20 files) | 5,619 | 1,085 | 346 | 1,440 | 2,748 |
+| **Combined** | **10,052** | **1,711** | **701** | **2,361** | **5,279** |
+
+Largest Python library files: `flowmark_markdown.py` (727 total / 421 code),
+`tag_handling.py` (531 / 255), `cli.py` (526 / 385), `text_wrapping.py` (258 / 134).
+
+### Rust (Port)
+
+| Category | Total | Blank | Comments | Doc comments | Code |
+|---|---:|---:|---:|---:|---:|
+| Library (`src/`, 22 files, excl. unit tests) | 3,221 | — | — | — | — |
+| Unit tests in `src/` (`#[cfg(test)]`, 7 files) | 264 | — | — | — | — |
+| All of `src/` | 3,485 | 450 | 171 | 254 | 2,610 |
+| Integration tests (`tests/`, 17 files) | 3,424 | 599 | 146 | 5 | 2,674 |
+| **Combined** | **6,909** | **1,049** | **317** | **259** | **5,284** |
+
+Largest Rust library files: `filling.rs` (1,270 total), `tag_handling.rs` (387),
+`text_wrapping.rs` (290), `quotes.rs` (189), `line_wrappers.rs` (170).
+
+### Comparison
+
+| Metric | Python | Rust | Ratio |
+|---|---:|---:|---|
+| **Library total lines** | 4,433 | 3,485 | 0.79x |
+| **Library code lines** | 2,531 | 2,610 | 1.03x |
+| **Test total lines** | 5,619 | 3,688 | 0.66x |
+| **Test code lines** | 2,748 | 2,674 | 0.97x |
+| **Combined total lines** | 10,052 | 6,909 | 0.69x |
+| **Combined code lines** | 5,279 | 5,284 | 1.00x |
+| Library files | 26 | 22 | — |
+| Test files | 20 | 17 | — |
+| Test functions | 281 | 250 | — |
+| Tests ported (mapped) | — | 202 | 72% of Python |
+| Tests excluded (infra) | — | 79 | 28% of Python |
+
+### Observations
+
+- **Code lines are essentially identical** (5,279 Python vs 5,284 Rust) — a 1:1 ratio.
+  The port neither expanded nor compressed the logic.
+- **Total lines are 31% smaller in Rust** (6,909 vs 10,052) because Python has
+  significantly more docstrings (2,361 lines, 23% of total) and comments (701 lines)
+  compared to Rust's doc comments (259 lines) and comments (317 lines).
+- **Test suite is 34% smaller by total lines** but nearly identical by code lines,
+  again due to Python's heavy use of triple-quoted docstrings for test fixtures vs
+  Rust's raw string literals which are more compact.
+- **79 Python tests (28%) were excluded** as infrastructure-only (CLI file discovery,
+  config, file resolver, skill system). The Rust port covers all behavioral tests.
+- The Rust codebase has **zero `#[ignore]` tests, zero clippy warnings, and zero
+  `unwrap()` calls** in library code.
