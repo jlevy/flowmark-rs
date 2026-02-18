@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Planning
+**Status:** In Progress
 
 **Epic bead:** fmr-8yos
 
@@ -100,31 +100,32 @@ polish.
 
 ## Implementation Plan
 
-### Phase 1: CI Quick Fixes — PENDING
+### Phase 1: CI Quick Fixes — DONE
 
 Minimal-effort improvements to the existing CI pipeline.
 
-- [ ] Add `--locked` to clippy job
+- [x] Add `--locked` to clippy job
   (`cargo clippy --locked --all-targets --all-features`) (fmr-mk46)
-- [ ] Add `--locked` to docs job (`cargo doc --locked --no-deps --all-features`)
+- [x] Add `--locked` to docs job (`cargo doc --locked --no-deps --all-features`)
   (fmr-9eda)
-- [ ] Add `CARGO_PROFILE_TEST_DEBUG: 0` to global `env:` block (fmr-b035)
+- [x] Add `CARGO_PROFILE_TEST_DEBUG: 0` to global `env:` block (fmr-b035)
 
-### Phase 2: CI Enhancements — PENDING
+### Phase 2: CI Enhancements — DONE
 
 Higher-impact CI additions.
 
-- [ ] Add code coverage job with `cargo-llvm-cov` and Codecov upload (fmr-hj6z)
-- [ ] Add `cargo-semver-checks` job for API breakage detection (fmr-8un1)
-- [ ] Add `.github/dependabot.yml` for weekly Cargo dependency updates (fmr-zvbe)
-- [ ] Consider `cargo-nextest` for faster test execution (fmr-rj25)
+- [x] Add code coverage job with `cargo-llvm-cov` and Codecov upload (fmr-hj6z)
+- [x] Add `cargo-semver-checks` job for API breakage detection (fmr-8un1)
+- [x] Add `.github/dependabot.yml` for weekly Cargo + GitHub Actions dependency updates
+  (fmr-zvbe)
+- [ ] Consider `cargo-nextest` for faster test execution (fmr-rj25) — deferred (P3)
 
-### Phase 3: Crates.io Readiness — PENDING
+### Phase 3: Crates.io Readiness — IN PROGRESS
 
 Prepare Cargo.toml metadata and verify publishability.
 
-- [ ] Add `readme = "README.md"` to Cargo.toml
-- [ ] Add `documentation = "https://docs.rs/flowmark"` to Cargo.toml
+- [x] Add `readme = "README.md"` to Cargo.toml
+- [x] Add `documentation = "https://docs.rs/flowmark"` to Cargo.toml
 - [ ] Bump version to `0.2.0` in Cargo.toml
 - [ ] Add `package.metadata.parity` with Python version reference
 - [ ] Verify `cargo publish --dry-run` succeeds

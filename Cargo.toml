@@ -5,7 +5,9 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 description = "A Markdown auto-formatter for clean diffs and semantic line breaks"
+readme = "README.md"
 repository = "https://github.com/jlevy/flowmark-rs"
+documentation = "https://docs.rs/flowmark"
 keywords = ["markdown", "formatter", "cli", "semantic-linebreaks"]
 categories = ["command-line-utilities", "text-processing"]
 
