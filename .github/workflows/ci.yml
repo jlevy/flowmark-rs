@@ -146,8 +146,26 @@ jobs:
           node-version: "20"
       - name: Build binary
         run: cargo build --locked --all-features
-      - name: Run tryscript golden tests
-        run: npx tryscript@latest run tests/tryscript/cli-golden.tryscript.md
+      - name: Run tryscript tests (parity-clean files)
+        run: |
+          npx tryscript@latest run \
+            tests/tryscript/cli-golden.tryscript.md \
+            tests/tryscript/auto-mode.tryscript.md \
+            tests/tryscript/config-interaction.tryscript.md \
+            tests/tryscript/errors-version.tryscript.md \
+            tests/tryscript/file-discovery.tryscript.md \
+            tests/tryscript/file-ops.tryscript.md \
+            tests/tryscript/list-spacing.tryscript.md \
+            tests/tryscript/stdin.tryscript.md \
+            tests/tryscript/verbose-docs.tryscript.md
+      - name: Run tryscript tests with known parity gaps (F10, T6)
+        continue-on-error: true
+        run: |
+          echo "These tests intentionally fail until parity gaps P1-P4 are fixed."
+          echo "See Appendix E of plan-2026-02-17-exact-parity.md for details."
+          npx tryscript@latest run \
+            tests/tryscript/formatting.tryscript.md \
+            tests/tryscript/typography-tests.tryscript.md
 
   check-mapping:
     name: Test mapping check
