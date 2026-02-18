@@ -48,14 +48,12 @@ static LINK_REF_DEF: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Regex for full reference links: `[text][label]`
-static FULL_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\[([^\]]+)\]\[([^\]]+)\]").expect("valid FULL_REF_LINK regex")
-});
+static FULL_REF_LINK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\[([^\]]+)\]").expect("valid FULL_REF_LINK regex"));
 
 /// Regex for collapsed reference links: `[text][]`
-static COLLAPSED_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\[([^\]]+)\]\[\]").expect("valid COLLAPSED_REF_LINK regex")
-});
+static COLLAPSED_REF_LINK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\[\]").expect("valid COLLAPSED_REF_LINK regex"));
 
 /// A link reference definition extracted from the source.
 #[derive(Debug, Clone)]
@@ -260,8 +258,8 @@ fn extract_link_ref_defs(text: &str) -> (Vec<LinkRefDef>, String) {
             continue;
         }
         if let Some(caps) = LINK_REF_DEF.captures(line) {
-            let label = caps.get(1).unwrap().as_str().to_string();
-            let url = caps.get(2).unwrap().as_str().to_string();
+            let label = caps[1].to_string();
+            let url = caps[2].to_string();
             let title = caps
                 .get(3)
                 .or(caps.get(4))
@@ -293,12 +291,12 @@ fn extract_link_ref_defs(text: &str) -> (Vec<LinkRefDef>, String) {
 
 /// HTML comment marker prefix for footnote definition placeholders.
 /// Multi-line: `<!-- FNDEF\n[^label]: content\ncontinuation\n-->`
-/// Comrak preserves these as HtmlBlock nodes at their original positions.
+/// Comrak preserves these as `HtmlBlock` nodes at their original positions.
 const FNDEF_MARKER_START: &str = "<!-- FNDEF";
 
 /// Extract footnote definitions from source text (outside code fences).
 /// Replaces each definition with an HTML comment marker that comrak will
-/// preserve as an HtmlBlock at the original position.
+/// preserve as an `HtmlBlock` at the original position.
 ///
 /// Without this, comrak moves referenced footnotes to the end of the AST
 /// and completely drops unreferenced ones.
@@ -347,7 +345,7 @@ fn extract_footnote_defs(text: &str) -> String {
             // Replace with FNDEF HTML comment marker (multi-line, type-2 HTML block)
             result_lines.push(FNDEF_MARKER_START.to_string());
             for dl in &def_lines {
-                result_lines.push(dl.to_string());
+                result_lines.push(dl.clone());
             }
             result_lines.push("-->".to_string());
             i = j;
@@ -387,7 +385,7 @@ fn encode_ref_links(text: &str, defs: &[LinkRefDef]) -> String {
                 let label = &caps[2];
                 if def_labels.contains(&label.to_lowercase()) {
                     // Encode as inline link with PUA-marked label-only URL
-                    format!("[{text_part}]({}{}{})", REF_LABEL_START, label, REF_LABEL_SEP)
+                    format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
                 } else {
                     caps[0].to_string() // Unknown label, leave as-is
                 }
@@ -403,7 +401,7 @@ fn encode_ref_links(text: &str, defs: &[LinkRefDef]) -> String {
                 let text_part = &caps[1];
                 let label = text_part; // Collapsed: label = text
                 if def_labels.contains(&label.to_lowercase()) {
-                    format!("[{text_part}]({}{}{})", REF_LABEL_START, label, REF_LABEL_SEP)
+                    format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
                 } else {
                     caps[0].to_string()
                 }
@@ -594,14 +592,15 @@ fn render_block_children<'a>(
 
         // Add blank line between consecutive block elements,
         // unless adjacent to a heading ending with a hard break
-        // or between consecutive REFDEF markers (definitions are grouped tightly)
-        if child_is_block
+        // or between consecutive REFDEF/FNDEF markers (definitions are grouped tightly)
+        #[allow(clippy::nonminimal_bool)]
+        let need_separator = child_is_block
             && prev_was_block
             && !prev_ended_with_double_newline
             && !prev_was_hard_break_heading
             && !child_is_hard_break_heading
-            && !(prev_was_refdef && child_is_refdef)
-        {
+            && !(prev_was_refdef && child_is_refdef);
+        if need_separator {
             output.push('\n');
         }
 
@@ -857,18 +856,18 @@ fn render_block<'a>(
                         // Format the footnote definition with line wrapping.
                         // Parse [^label]: from the first line to get prefix widths.
                         if let Some(caps) = FOOTNOTE_DEF_START.captures(fn_text) {
-                            let label = caps.get(1).unwrap().as_str();
+                            let label = caps[1].to_string();
+                            let match_end = caps.get(0).map_or(0, |m| m.end());
                             let label_prefix = format!("[^{label}]: ");
                             let fn_prefix = format!("{prefix}{label_prefix}");
                             let fn_subsequent = format!("{prefix}    ");
 
                             // Extract body: first line after `[^label]: `, plus
                             // continuation lines (stripped of 4-space indent).
-                            let body_start = caps.get(0).unwrap().end();
                             let mut body_parts: Vec<&str> = Vec::new();
                             for (li, line) in fn_text.lines().enumerate() {
                                 if li == 0 {
-                                    body_parts.push(&line[body_start..]);
+                                    body_parts.push(&line[match_end..]);
                                 } else {
                                     let stripped = line
                                         .strip_prefix("    ")
@@ -878,8 +877,7 @@ fn render_block<'a>(
                                 }
                             }
                             let body = body_parts.join(" ");
-                            let wrapped =
-                                line_wrapper(body.trim(), &fn_prefix, &fn_subsequent);
+                            let wrapped = line_wrapper(body.trim(), &fn_prefix, &fn_subsequent);
                             output.push_str(&wrapped);
                             output.push('\n');
                         } else {
@@ -1188,8 +1186,7 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
             // Detect PUA-encoded reference link: URL starts with REF_LABEL_START
             if link.url.starts_with(REF_LABEL_START) {
                 if let Some(sep_pos) = link.url.find(REF_LABEL_SEP) {
-                    let label =
-                        &link.url[REF_LABEL_START.len_utf8()..sep_pos];
+                    let label = &link.url[REF_LABEL_START.len_utf8()..sep_pos];
                     format!("[{inner}][{label}]")
                 } else {
                     // Malformed PUA marker — strip it and render as inline
