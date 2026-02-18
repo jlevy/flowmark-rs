@@ -512,6 +512,8 @@ fn test_read_ignore_file_missing() {
 
 #[test]
 fn test_read_ignore_file_unreadable() {
+    use flowmark::file_resolver::gitignore::read_ignore_file;
+
     // Create a file and make it unreadable
     let dir = tempfile::tempdir().expect("create temp dir");
     let path = dir.path().join(".gitignore");
@@ -524,7 +526,6 @@ fn test_read_ignore_file_unreadable() {
         std::fs::set_permissions(&path, perms).expect("set permissions");
     }
 
-    use flowmark::file_resolver::gitignore::read_ignore_file;
     let result = read_ignore_file(&path);
 
     // When running as root, permission-based read failures don't apply.
@@ -544,6 +545,8 @@ fn test_read_ignore_file_unreadable() {
 
 #[test]
 fn test_read_ignore_file_non_utf8() {
+    use flowmark::file_resolver::gitignore::read_ignore_file;
+
     let dir = tempfile::tempdir().expect("create temp dir");
     let path = dir.path().join(".gitignore");
 
@@ -552,7 +555,6 @@ fn test_read_ignore_file_non_utf8() {
     file.write_all(&[0xFF, 0xFE, 0x00, 0x01]).expect("write bytes");
     drop(file);
 
-    use flowmark::file_resolver::gitignore::read_ignore_file;
     let result = read_ignore_file(&path);
     // Non-UTF-8 should return None (std::fs::read_to_string fails on invalid UTF-8)
     assert!(result.is_none(), "non-UTF-8 file should return None");

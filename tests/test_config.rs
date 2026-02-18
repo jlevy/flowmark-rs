@@ -89,11 +89,11 @@ fn test_load_config_flowmark_toml() {
     let config_path = dir.path().join("flowmark.toml");
     fs::write(
         &config_path,
-        r#"
+        r"
 width = 72
 semantic = true
 cleanups = false
-"#,
+",
     )
     .expect("write config");
 
@@ -113,11 +113,11 @@ fn test_load_config_pyproject_toml() {
     let config_path = dir.path().join("pyproject.toml");
     fs::write(
         &config_path,
-        r#"
+        r"
 [tool.flowmark]
 width = 72
 semantic = true
-"#,
+",
     )
     .expect("write config");
 
