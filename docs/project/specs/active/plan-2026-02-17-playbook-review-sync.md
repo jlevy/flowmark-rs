@@ -149,9 +149,9 @@ The current port has a different set of workarounds than the old port.
 
 #### D3: `porting-checklist.md` is a Stale Duplicate
 
-`docs/project/specs/active/porting-checklist.md` in this repo is a copy of the playbook's
-`reference/python-to-rust-playbook.md`. It may be out of sync and creates maintenance
-burden.
+`docs/project/specs/active/porting-checklist.md` in this repo is a copy of the
+playbook’s `reference/python-to-rust-playbook.md`. It may be out of sync and creates
+maintenance burden.
 
 #### D4: `porting-plan.md` Has Incomplete Acceptance Criteria
 
@@ -502,7 +502,7 @@ Validation:
 
 ## Decisions Made
 
-1. **`porting-checklist.md`: Remove.** It's a stale duplicate of the playbook's
+1. **`porting-checklist.md`: Remove.** It’s a stale duplicate of the playbook’s
    `python-to-rust-playbook.md`. No backward compatibility needed for docs.
 
 2. **Case study versioning: Add “v2 port” sections.** Keep old port data and add v2

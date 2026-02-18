@@ -83,6 +83,23 @@ jobs:
         env:
           RUSTDOCFLAGS: "-D warnings"
 
+  markdown-fmt:
+    name: Markdown format
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Format markdown with flowmark
+        run: uvx flowmark@latest --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" .
+      - name: Check for formatting changes
+        run: |
+          if git diff --exit-code -- '*.md'; then
+            echo "All markdown files are properly formatted"
+          else
+            echo "::warning::Some markdown files need formatting. Run: uvx flowmark@latest --auto --extend-exclude tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude python/ ."
+          fi
+
   check-mapping:
     name: Test mapping check
     runs-on: ubuntu-latest
