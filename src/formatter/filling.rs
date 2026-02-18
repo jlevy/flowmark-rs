@@ -8,6 +8,7 @@
 //! parts of `flowmark/formats/flowmark_markdown.py`
 
 use regex::Regex;
+use std::collections::HashSet;
 use std::fmt::Write as _;
 use std::sync::LazyLock;
 
@@ -29,7 +30,7 @@ use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
 // Comrak resolves reference-style links during AST construction, losing the
 // reference label.  We preserve them through the pipeline by:
 // 1. Pre-parse: extract definitions, replace `[text][label]` with inline links
-//    whose URL is PUA-encoded as `\u{F000}label\u{F001}real_url`
+//    whose URL is PUA-encoded as `\u{F000}label\u{F001}` (label only, no real URL)
 // 2. Render: detect PUA prefix in link URLs and emit `[text][label]`
 // 3. Post-process: re-insert definitions at their original positions
 
@@ -54,19 +55,6 @@ static FULL_REF_LINK: LazyLock<Regex> =
 /// Regex for collapsed reference links: `[text][]`
 static COLLAPSED_REF_LINK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\[\]").expect("valid COLLAPSED_REF_LINK regex"));
-
-/// A link reference definition extracted from the source.
-#[derive(Debug, Clone)]
-#[allow(dead_code)]
-struct LinkRefDef {
-    label: String,
-    url: String,
-    title: String,
-    /// The original definition line(s) as written in the source.
-    original_text: String,
-    /// 0-based line index in the (post-frontmatter, pre-code-fence) source.
-    line_index: usize,
-}
 
 // ===== Regex patterns for normalization =====
 
@@ -225,7 +213,8 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
 /// HTML comment marker prefix for reference definition placeholders.
 /// The full definition text is encoded after the prefix so the render step
 /// can emit it without needing external context.
-const REFDEF_MARKER_PREFIX: &str = "<!-- REFDEF:";
+/// Uses a PUA character (\u{F002}) to prevent collision with user-authored HTML comments.
+const REFDEF_MARKER_PREFIX: &str = "<!-- \u{F002}REFDEF:";
 
 /// Regex for footnote definition start: `[^label]: content`
 static FOOTNOTE_DEF_START: LazyLock<Regex> = LazyLock::new(|| {
@@ -233,66 +222,27 @@ static FOOTNOTE_DEF_START: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Extract link reference definitions from source text (outside code fences).
-/// Returns the definitions and the text with definitions replaced by HTML comment
-/// markers (`<!-- REFDEF:label -->`).  These markers survive comrak parsing as
-/// `HtmlBlock` nodes, preserving the original position of each definition in the AST.
-fn extract_link_ref_defs(text: &str) -> (Vec<LinkRefDef>, String) {
-    let mut defs = Vec::new();
-    let mut result_lines: Vec<String> = Vec::new();
-    let lines: Vec<&str> = text.lines().collect();
-    let mut in_code = false;
-    let mut fence_str = String::new();
-
-    for (i, line) in lines.iter().enumerate() {
-        if in_code {
-            if is_closing_fence(line.trim(), &fence_str) {
-                in_code = false;
-            }
-            result_lines.push(line.to_string());
-            continue;
-        }
-        if let Some(fs) = detect_opening_fence(line.trim()) {
-            fence_str = fs;
-            in_code = true;
-            result_lines.push(line.to_string());
-            continue;
-        }
+/// Returns the set of lowercase labels and the text with definitions replaced by
+/// HTML comment markers.  These markers survive comrak parsing as `HtmlBlock` nodes,
+/// preserving the original position of each definition in the AST.
+fn extract_link_ref_defs(text: &str) -> (HashSet<String>, String) {
+    let mut labels: HashSet<String> = HashSet::new();
+    let result = transform_outside_code_fences(text, |line| {
         if let Some(caps) = LINK_REF_DEF.captures(line) {
-            let label = caps[1].to_string();
-            let url = caps[2].to_string();
-            let title = caps
-                .get(3)
-                .or(caps.get(4))
-                .or(caps.get(5))
-                .map_or(String::new(), |m| m.as_str().to_string());
-            defs.push(LinkRefDef {
-                label: label.clone(),
-                url,
-                title,
-                original_text: line.to_string(),
-                line_index: i,
-            });
-            // Replace definition with an HTML comment marker that comrak will
-            // preserve as an HtmlBlock node, keeping it at the right position.
-            // Encode the FULL original text so the render step can emit it
-            // without needing external context.
-            result_lines.push(format!("{REFDEF_MARKER_PREFIX}{line} -->"));
+            labels.insert(caps[1].to_lowercase());
+            vec![format!("{REFDEF_MARKER_PREFIX}{line} -->")]
         } else {
-            result_lines.push(line.to_string());
+            vec![line.to_string()]
         }
-    }
-
-    let mut output = result_lines.join("\n");
-    if text.ends_with('\n') && !output.ends_with('\n') {
-        output.push('\n');
-    }
-    (defs, output)
+    });
+    (labels, result)
 }
 
 /// HTML comment marker prefix for footnote definition placeholders.
-/// Multi-line: `<!-- FNDEF\n[^label]: content\ncontinuation\n-->`
+/// Multi-line: `<!-- \u{F002}FNDEF\n[^label]: content\ncontinuation\n-->`
 /// Comrak preserves these as `HtmlBlock` nodes at their original positions.
-const FNDEF_MARKER_START: &str = "<!-- FNDEF";
+/// Uses a PUA character (\u{F002}) to prevent collision with user-authored HTML comments.
+const FNDEF_MARKER_START: &str = "<!-- \u{F002}FNDEF";
 
 /// Extract footnote definitions from source text (outside code fences).
 /// Replaces each definition with an HTML comment marker that comrak will
@@ -362,55 +312,52 @@ fn extract_footnote_defs(text: &str) -> String {
     output
 }
 
-///
+/// Repeatedly apply a single-match `Regex::replace` until the text stabilises.
+fn replace_until_stable<F>(text: &mut String, re: &Regex, replacer: F)
+where
+    F: Fn(&regex::Captures) -> String,
+{
+    loop {
+        let new = re.replace(text.as_str(), &replacer);
+        if new == *text {
+            break;
+        }
+        *text = new.into_owned();
+    }
+}
+
 /// Encodes ONLY the label in the URL: `[text][label]` → `[text](\u{F000}label\u{F001})`
 /// This avoids expanding the real URL/title into the text, which would break table
 /// cells (titles containing `|`) and other contexts.  The real URL is not needed
 /// during comrak parsing — we only need the label to survive so we can emit
 /// `[text][label]` in the render step.
-fn encode_ref_links(text: &str, defs: &[LinkRefDef]) -> String {
-    if defs.is_empty() {
+fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
+    if labels.is_empty() {
         return text.to_string();
     }
-    // Build case-insensitive lookup: lowercase(label) → exists
-    let def_labels: std::collections::HashSet<String> =
-        defs.iter().map(|d| d.label.to_lowercase()).collect();
 
     transform_outside_code_fences(text, |line| {
         let mut result = line.to_string();
         // Replace full reference links: [text][label]
-        loop {
-            let new = FULL_REF_LINK.replace(&result, |caps: &regex::Captures| {
-                let text_part = &caps[1];
-                let label = &caps[2];
-                if def_labels.contains(&label.to_lowercase()) {
-                    // Encode as inline link with PUA-marked label-only URL
-                    format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
-                } else {
-                    caps[0].to_string() // Unknown label, leave as-is
-                }
-            });
-            if new == result {
-                break;
+        replace_until_stable(&mut result, &FULL_REF_LINK, |caps: &regex::Captures| {
+            let text_part = &caps[1];
+            let label = &caps[2];
+            if labels.contains(&label.to_lowercase()) {
+                format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
+            } else {
+                caps[0].to_string()
             }
-            result = new.into_owned();
-        }
+        });
         // Replace collapsed reference links: [text][]
-        loop {
-            let new = COLLAPSED_REF_LINK.replace(&result, |caps: &regex::Captures| {
-                let text_part = &caps[1];
-                let label = text_part; // Collapsed: label = text
-                if def_labels.contains(&label.to_lowercase()) {
-                    format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
-                } else {
-                    caps[0].to_string()
-                }
-            });
-            if new == result {
-                break;
+        replace_until_stable(&mut result, &COLLAPSED_REF_LINK, |caps: &regex::Captures| {
+            let text_part = &caps[1];
+            let label = text_part;
+            if labels.contains(&label.to_lowercase()) {
+                format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
+            } else {
+                caps[0].to_string()
             }
-            result = new.into_owned();
-        }
+        });
         vec![result]
     })
 }
@@ -593,13 +540,13 @@ fn render_block_children<'a>(
         // Add blank line between consecutive block elements,
         // unless adjacent to a heading ending with a hard break
         // or between consecutive REFDEF/FNDEF markers (definitions are grouped tightly)
-        #[allow(clippy::nonminimal_bool)]
+        let both_defs = prev_was_refdef && child_is_refdef;
         let need_separator = child_is_block
             && prev_was_block
             && !prev_ended_with_double_newline
             && !prev_was_hard_break_heading
             && !child_is_hard_break_heading
-            && !(prev_was_refdef && child_is_refdef);
+            && !both_defs;
         if need_separator {
             output.push('\n');
         }
@@ -1344,7 +1291,6 @@ pub fn fill_markdown(
 ) -> String {
     // Escaped characters to protect from comrak stripping.
     // comrak strips backslash escapes (e.g., \~ → ~, \* → *) in the AST for most chars.
-    // Period (\.) is handled by comrak's Escaped node, so we exclude it here.
     // We use Unicode Private Use Area placeholders to preserve escapes through the pipeline.
     // IMPORTANT: \\ must be first so \\X doesn't get partially matched as \X.
     // Period (.) IS included: comrak converts `1\.` to list items, losing the escape.
@@ -1380,8 +1326,8 @@ pub fn fill_markdown(
 
     // Extract link reference definitions and encode reference links with PUA markers
     // (must happen before escape placeholder substitution, which would mangle `\[` etc.)
-    let (ref_defs, text_without_defs) = extract_link_ref_defs(&text);
-    text = encode_ref_links(&text_without_defs, &ref_defs);
+    let (ref_labels, text_without_defs) = extract_link_ref_defs(&text);
+    text = encode_ref_links(&text_without_defs, &ref_labels);
 
     // Extract footnote definitions and replace with HTML comment markers.
     // Comrak moves FootnoteDefinition nodes to the end of the AST and drops
@@ -1554,4 +1500,162 @@ fn dedent(text: &str) -> String {
         .map(|l| if l.len() >= min_indent { &l[min_indent..] } else { l })
         .collect::<Vec<_>>()
         .join("\n")
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    // ---- extract_link_ref_defs ----
+
+    #[test]
+    fn extract_ref_defs_basic() {
+        let input = "Hello\n\n[foo]: https://example.com\n\nWorld\n";
+        let (labels, output) = extract_link_ref_defs(input);
+        assert!(labels.contains("foo"));
+        // Original bare definition line is replaced by a marker wrapping the text
+        assert!(output.contains(REFDEF_MARKER_PREFIX));
+        assert!(output.contains("https://example.com"));
+        assert!(output.contains("World"));
+    }
+
+    #[test]
+    fn extract_ref_defs_case_insensitive() {
+        let input = "[Foo]: https://example.com\n";
+        let (labels, _) = extract_link_ref_defs(input);
+        assert!(labels.contains("foo"));
+        assert!(!labels.contains("Foo"));
+    }
+
+    #[test]
+    fn extract_ref_defs_inside_code_fence_ignored() {
+        let input = "```\n[foo]: https://example.com\n```\n";
+        let (labels, output) = extract_link_ref_defs(input);
+        assert!(labels.is_empty());
+        assert!(output.contains("[foo]:"));
+        assert!(!output.contains(REFDEF_MARKER_PREFIX));
+    }
+
+    #[test]
+    fn extract_ref_defs_with_title() {
+        let input = "[bar]: https://example.com \"A title\"\n";
+        let (labels, output) = extract_link_ref_defs(input);
+        assert!(labels.contains("bar"));
+        assert!(output.contains(REFDEF_MARKER_PREFIX));
+    }
+
+    #[test]
+    fn extract_ref_defs_multiple() {
+        let input = "[a]: https://a.com\n[b]: https://b.com\n";
+        let (labels, _) = extract_link_ref_defs(input);
+        assert_eq!(labels.len(), 2);
+        assert!(labels.contains("a"));
+        assert!(labels.contains("b"));
+    }
+
+    // ---- extract_footnote_defs ----
+
+    #[test]
+    fn extract_footnote_basic() {
+        let input = "Text.\n\n[^note]: Footnote content.\n\nMore text.\n";
+        let output = extract_footnote_defs(input);
+        assert!(output.contains(FNDEF_MARKER_START));
+        assert!(output.contains("Footnote content."));
+        assert!(output.contains("More text."));
+        // The definition text is wrapped inside the FNDEF marker, not left bare.
+        // Verify the marker structure: starts with FNDEF_MARKER_START, ends with -->
+        assert!(output.contains("-->"));
+    }
+
+    #[test]
+    fn extract_footnote_multiline() {
+        let input = "[^long]: First line.\n    Continuation line.\n\nAfter.\n";
+        let output = extract_footnote_defs(input);
+        assert!(output.contains(FNDEF_MARKER_START));
+        assert!(output.contains("First line."));
+        assert!(output.contains("Continuation line."));
+    }
+
+    #[test]
+    fn extract_footnote_inside_code_fence_ignored() {
+        let input = "```\n[^note]: Not a footnote.\n```\n";
+        let output = extract_footnote_defs(input);
+        assert!(!output.contains(FNDEF_MARKER_START));
+        assert!(output.contains("[^note]:"));
+    }
+
+    // ---- encode_ref_links ----
+
+    #[test]
+    fn encode_full_ref_link() {
+        let mut labels = HashSet::new();
+        labels.insert("foo".to_string());
+        let input = "See [click here][foo] for details.\n";
+        let output = encode_ref_links(input, &labels);
+        assert!(output.contains(REF_LABEL_START));
+        assert!(output.contains(REF_LABEL_SEP));
+        assert!(!output.contains("[foo]"));
+    }
+
+    #[test]
+    fn encode_collapsed_ref_link() {
+        let mut labels = HashSet::new();
+        labels.insert("example".to_string());
+        let input = "See [Example][] for details.\n";
+        let output = encode_ref_links(input, &labels);
+        assert!(output.contains(REF_LABEL_START));
+    }
+
+    #[test]
+    fn encode_unknown_label_unchanged() {
+        let mut labels = HashSet::new();
+        labels.insert("known".to_string());
+        let input = "See [text][unknown] for details.\n";
+        let output = encode_ref_links(input, &labels);
+        assert_eq!(input, output);
+    }
+
+    #[test]
+    fn encode_empty_labels_passthrough() {
+        let labels = HashSet::new();
+        let input = "See [text][foo] for details.\n";
+        let output = encode_ref_links(input, &labels);
+        assert_eq!(input, output);
+    }
+
+    #[test]
+    fn encode_inside_code_fence_unchanged() {
+        let mut labels = HashSet::new();
+        labels.insert("foo".to_string());
+        let input = "```\n[text][foo]\n```\n";
+        let output = encode_ref_links(input, &labels);
+        assert!(output.contains("[text][foo]"));
+    }
+
+    // ---- replace_until_stable ----
+
+    #[test]
+    fn replace_until_stable_multiple_matches() {
+        let re = Regex::new(r"ab").unwrap();
+        let mut text = "ababab".to_string();
+        replace_until_stable(&mut text, &re, |_| "X".to_string());
+        assert_eq!(text, "XXX");
+    }
+
+    // ---- collision-resistant markers ----
+
+    #[test]
+    fn markers_contain_pua_char() {
+        assert!(REFDEF_MARKER_PREFIX.contains('\u{F002}'));
+        assert!(FNDEF_MARKER_START.contains('\u{F002}'));
+    }
+
+    #[test]
+    fn user_html_comment_not_treated_as_marker() {
+        // A normal HTML comment starting with "<!-- REFDEF:" should NOT be treated
+        // as our internal marker since it lacks the PUA character.
+        let user_comment = "<!-- REFDEF:see below -->";
+        assert!(!user_comment.starts_with(REFDEF_MARKER_PREFIX));
+    }
 }

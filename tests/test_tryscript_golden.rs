@@ -1,10 +1,10 @@
 //! Integration tests that run tryscript golden tests as part of `cargo test`.
 //!
 //! Each tryscript `.tryscript.md` file gets its own `#[test]` function so failures
-//! are reported per-file. Tests are skipped gracefully when `npx` is not available
-//! (e.g. environments without Node.js).
+//! are reported per-file. Requires `npx` (Node.js) to be installed — tests will
+//! fail if it is not available.
 //!
-//! Two files with known parity gaps are marked `#[ignore = "known parity gaps P1-P4, see plan-2026-02-17-exact-parity.md"]` so they don't block CI
+//! Two files with known parity gaps are marked `#[ignore]` so they don't block CI
 //! but can still be run explicitly with `cargo test -- --ignored`.
 #![cfg(feature = "cli")]
 #![allow(clippy::unwrap_used)]
@@ -17,18 +17,8 @@ fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
-/// Check whether `npx` is available on PATH.
-fn npx_available() -> bool {
-    Command::new("npx").arg("--version").output().is_ok_and(|o| o.status.success())
-}
-
 /// Run a single tryscript file and assert it passes.
 fn run_tryscript(file: &str) {
-    if !npx_available() {
-        eprintln!("npx not found — skipping tryscript test: {file}");
-        return;
-    }
-
     let root = project_root();
     let script = root.join("tests/tryscript").join(file);
     assert!(script.exists(), "tryscript file not found: {}", script.display());
@@ -38,7 +28,7 @@ fn run_tryscript(file: &str) {
         .env("TRYSCRIPT_GIT_ROOT", &root)
         .current_dir(&root)
         .output()
-        .expect("failed to execute npx tryscript");
+        .expect("failed to execute npx tryscript — is Node.js installed?");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
