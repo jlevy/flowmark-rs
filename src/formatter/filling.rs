@@ -957,13 +957,21 @@ fn render_table_row<'a>(row_node: &'a AstNode<'a>, options: &Options) -> String 
     format!("| {} |\n", cells.join(" | "))
 }
 
+/// Pattern matching backtick fence runs in code content.
+static BACKTICK_FENCE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^[ ]{0,3}(`{3,})").expect("valid backtick fence regex"));
+
+/// Pattern matching tilde fence runs in code content.
+static TILDE_FENCE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?m)^[ ]{0,3}(~{3,})").expect("valid tilde fence regex"));
+
 /// Calculate minimum fence length needed for code content.
 fn min_fence_length(code_content: &str, fence_char: char) -> usize {
-    let pattern = format!(
-        r"(?m)^[ ]{{0,3}}({escaped}{{3,}})",
-        escaped = regex::escape(&fence_char.to_string())
-    );
-    let re = Regex::new(&pattern).expect("valid fence length regex");
+    let re = match fence_char {
+        '`' => &*BACKTICK_FENCE_RE,
+        '~' => &*TILDE_FENCE_RE,
+        _ => return 3,
+    };
     let max_len = re
         .captures_iter(code_content)
         .map(|caps| caps.get(1).expect("capture group 1 always exists").as_str().len())

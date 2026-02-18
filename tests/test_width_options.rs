@@ -88,3 +88,27 @@ fn test_negative_width_disables_wrapping() {
     assert_eq!(lines.len(), 1, "Width 0 should disable wrapping and keep text on one line");
     assert_eq!(result.trim(), text, "Text should be unchanged except for whitespace normalization");
 }
+
+/// H1 regression test: `fill_text` with width < indent length must not panic.
+#[test]
+fn test_very_small_width_does_not_panic() {
+    use flowmark::fill_text;
+    use flowmark::wrapping::text_filling::Wrap;
+
+    // WrapIndent uses 4-char indent, width=2 would underflow without saturating_sub
+    let result = fill_text("Hello world test", Wrap::WrapIndent, 2, "", "", 0, None);
+    assert!(!result.is_empty(), "should produce output, not panic");
+
+    // Also test fill_markdown with very small width on a nested list
+    let result = reformat_text(
+        "- Item one with some text\n  - Nested item\n",
+        3,
+        false,
+        false,
+        false,
+        false,
+        false,
+        ListSpacing::Preserve,
+    );
+    assert!(!result.is_empty(), "fill_markdown with width=3 should not panic");
+}

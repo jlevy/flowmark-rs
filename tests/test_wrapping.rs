@@ -931,3 +931,30 @@ fn test_various_tag_types_with_tables() {
     let var_result = wrapper(var, "", "");
     assert!(var_result.contains("{{ header }}\n\n"));
 }
+
+/// M1 known limitation: sentence wrapper's `current_column` doesn't include +1 for
+/// the joining space when combining short lines. This can overshoot width by 1 char.
+/// Kept for parity with Python behavior.
+#[test]
+fn test_sentence_wrapper_combines_short_lines() {
+    use flowmark::wrapping::line_wrappers::line_wrap_by_sentence;
+
+    let width = 40;
+    let wrapper = line_wrap_by_sentence(width, 20, false);
+
+    // Input where short sentence + space + next word could exceed width by 1
+    let text = "Short sentence here. The next sentence should properly wrap.";
+    let result = wrapper(text, "", "");
+
+    // Verify the basic behavior: lines are produced
+    assert!(!result.is_empty(), "should produce output");
+    // Known limitation: combined lines may exceed width by at most 1 character
+    for (i, line) in result.lines().enumerate() {
+        let line_len = line.chars().count();
+        assert!(
+            line_len <= width + 1 || line.split_whitespace().count() == 1,
+            "Line {i} exceeds width+1 {}: {line_len} chars: {line:?}",
+            width + 1,
+        );
+    }
+}

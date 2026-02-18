@@ -353,3 +353,31 @@ fn test_smart_quotes_spanning_code_span_in_blockquote() {
     assert!(result.contains("\u{201c}First,"), "Opening quote should be converted");
     assert!(result.contains("command.\u{201d}"), "Closing quote should be converted");
 }
+
+/// H4 regression test: smart quotes redistribution across many interleaved inline elements.
+/// Verifies no text is lost when quotes span emphasis, strong, and other inline nodes.
+#[test]
+fn test_smart_quotes_complex_redistribution() {
+    // Many interleaved inline elements with quotes spanning across them
+    let text = "He said \"this *is* **really** 'quite' important\" to her.\n";
+    let result = fmt_sq(text);
+    assert!(result.contains("\u{201c}this"), "Opening double quote should be converted");
+    assert!(result.contains("important\u{201d}"), "Closing double quote should be converted");
+    // Note: single quotes inside double quotes are not converted (matches Python behavior)
+    assert!(result.contains("'quite'"), "Single quotes inside double quotes preserved");
+    // Verify no text lost (main purpose of this test)
+    assert!(result.contains("is"), "'is' should not be lost");
+    assert!(result.contains("really"), "'really' should not be lost");
+    assert!(result.contains("to her."), "'to her.' should not be lost");
+}
+
+/// H4 regression test: quotes at boundary between bold tokens.
+#[test]
+fn test_smart_quotes_boundary_on_bold() {
+    let text = "\"*bold*\" and \"*italic*\"\n";
+    let result = fmt_sq(text);
+    assert!(result.contains("\u{201c}"), "First opening quote should be converted");
+    assert!(result.contains("\u{201d}"), "First closing quote should be converted");
+    assert!(result.contains("bold"), "'bold' text should be preserved");
+    assert!(result.contains("italic"), "'italic' text should be preserved");
+}

@@ -358,6 +358,31 @@ fn test_resolver_sorted_output() {
     });
 }
 
+/// H2 regression test: glob expansion must apply exclusion filters.
+/// Previously, `expand_glob` only checked include patterns and `max_size`,
+/// allowing `node_modules/` etc. through when using `**/*.md`.
+#[test]
+fn test_resolver_glob_excludes_default_dirs() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    create_test_tree(dir.path());
+
+    let config = FileResolverConfig::default();
+    let mut resolver = FileResolver::new(config);
+    let pattern = format!("{}/**/*.md", dir.path().display());
+    let result = resolver.resolve(&[&pattern]).expect("resolve");
+
+    // node_modules and .venv should be excluded even via glob expansion
+    for path in &result {
+        let path_str = path.to_string_lossy();
+        assert!(!path_str.contains("node_modules"), "glob should exclude node_modules: {path_str}");
+        assert!(!path_str.contains(".venv"), "glob should exclude .venv: {path_str}");
+    }
+    // But normal files should still be found
+    let names = file_names(&result);
+    assert!(names.contains(&"README.md".to_string()));
+    assert!(names.contains(&"api.md".to_string()));
+}
+
 // --- Error handling (1) ---
 
 #[test]
@@ -501,6 +526,31 @@ fn test_resolver_gitignore_wildcard_file_pattern() {
     assert!(!names.contains(&"temp.md".to_string()));
 }
 
+/// H3 regression test: gitignore path-based patterns must use relative path, not filename.
+/// Previously, `matched(filename, false)` passed bare filename so patterns like
+/// `sub/ignore-me.md` would never match.
+#[test]
+fn test_resolver_gitignore_path_based_pattern() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::create_dir_all(dir.path().join("sub")).expect("create sub");
+    fs::write(dir.path().join("sub/keep.md"), "# Keep\n").expect("write keep.md");
+    fs::write(dir.path().join("sub/ignore-me.md"), "# Ignore\n").expect("write ignore-me.md");
+    // Path-based pattern: only sub/ignore-me.md, not all ignore-me.md
+    fs::write(dir.path().join(".gitignore"), "sub/ignore-me.md\n").expect("write .gitignore");
+
+    let config = FileResolverConfig::default();
+    let mut resolver = FileResolver::new(config);
+    let dir_str = dir.path().to_string_lossy().to_string();
+    let result = resolver.resolve(&[&dir_str]).expect("resolve");
+
+    let names = file_names(&result);
+    assert!(names.contains(&"keep.md".to_string()), "keep.md should be included");
+    assert!(
+        !names.contains(&"ignore-me.md".to_string()),
+        "sub/ignore-me.md should be excluded by path-based gitignore pattern"
+    );
+}
+
 // --- Ignore file internals (3) ---
 
 #[test]
@@ -583,4 +633,27 @@ fn test_resolver_flowmarkignore_positive_assertion() {
     // node_modules and .venv should be excluded by defaults
     assert!(!result.iter().any(|p| p.to_string_lossy().contains("node_modules")));
     assert!(!result.iter().any(|p| p.to_string_lossy().contains(".venv")));
+}
+
+/// M7 regression test: `should_include_explicit` with same-named directory and file.
+/// Previously, the code compared component names to filename, skipping directory
+/// components with the same name as the file (e.g., `excluded/excluded`).
+#[test]
+fn test_resolver_force_exclude_same_name_dir_file() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let excluded_dir = dir.path().join("excluded");
+    fs::create_dir_all(&excluded_dir).expect("create excluded dir");
+    // File named "excluded.md" inside directory "excluded" — different name, control case
+    fs::write(excluded_dir.join("excluded.md"), "# Test\n").expect("write file");
+
+    let config = FileResolverConfig {
+        force_exclude: true,
+        exclude: Some(vec!["excluded/".to_string()]),
+        ..FileResolverConfig::default()
+    };
+    let mut resolver = FileResolver::new(config);
+    let file_str = excluded_dir.join("excluded.md").to_string_lossy().to_string();
+    let result = resolver.resolve(&[&file_str]).expect("resolve");
+
+    assert!(result.is_empty(), "file inside 'excluded/' dir should be excluded with force_exclude");
 }

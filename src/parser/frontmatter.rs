@@ -39,9 +39,17 @@ pub fn split_frontmatter(text: &str) -> (String, String) {
 }
 
 /// Check if the text starts with YAML frontmatter.
+///
+/// Uses a quick check of the first non-empty line for `---` rather than
+/// parsing the entire document.
 pub fn has_frontmatter(text: &str) -> bool {
-    let (fm, _) = split_frontmatter(text);
-    !fm.is_empty()
+    let first_content_line = text.lines().find(|l| !l.trim().is_empty());
+    if first_content_line != Some("---") {
+        return false;
+    }
+    // Verify there's a closing `---` delimiter
+    let after_opening = text.lines().skip_while(|l| l.trim().is_empty()).skip(1); // skip the opening ---
+    after_opening.into_iter().any(|l| l.trim() == "---")
 }
 
 #[cfg(test)]
