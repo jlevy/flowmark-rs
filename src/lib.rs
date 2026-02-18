@@ -4,11 +4,9 @@
 
 pub mod config;
 pub mod error;
-#[cfg(feature = "cli")]
 pub mod file_resolver;
 pub mod formatter;
 pub mod parser;
-#[cfg(feature = "cli")]
 pub mod skills;
 pub mod transform;
 pub mod typography;
@@ -139,21 +137,10 @@ pub fn reformat_file(
 /// Writes to a temp file in the same directory, then persists (renames) to the
 /// target path. This prevents file corruption if the process is interrupted.
 fn atomic_write(path: &Path, content: &str) -> Result<()> {
+    use std::io::Write;
     let dir = path.parent().unwrap_or(Path::new("."));
-
-    #[cfg(feature = "cli")]
-    {
-        use std::io::Write;
-        let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
-        tmp.write_all(content.as_bytes())?;
-        tmp.persist(path).map_err(|e| Error::Io(e.error))?;
-    }
-
-    #[cfg(not(feature = "cli"))]
-    {
-        let _ = dir;
-        std::fs::write(path, content)?;
-    }
-
+    let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
+    tmp.write_all(content.as_bytes())?;
+    tmp.persist(path).map_err(|e| Error::Io(e.error))?;
     Ok(())
 }

@@ -1,4 +1,3 @@
-#![cfg(feature = "cli")]
 //! CLI integration tests for file discovery.
 //!
 //! Ported from Python: `test_cli_file_discovery.py` (19 tests)
