@@ -85,160 +85,199 @@
   rust_function: test_unbold_headings
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_list_files_no_args_errors
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_auto_list_files_no_args_errors
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_no_args_errors
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_auto_no_args_errors
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_with_dot_formats_cwd
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_auto_with_dot_formats_cwd
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_with_explicit_file
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_auto_with_explicit_file
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_explicit_file_still_works
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_explicit_file_still_works
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_explicit_flag_detection_with_default_value
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_explicit_flag_detection_with_default_value
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_flowmarkignore
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_flowmarkignore
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_directory
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_directory
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_extend_exclude
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_extend_exclude
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_extend_include
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_extend_include
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_force_exclude
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_force_exclude
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_max_size
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_max_size
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_no_args_errors
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_no_args_errors
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_no_respect_gitignore
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_no_respect_gitignore
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_skips_excluded_dirs
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_skips_excluded_dirs
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_stdin_does_not_crash
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_list_files_stdin_does_not_crash
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_no_args_errors
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_no_args_errors
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_stdin_explicit_dash
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_stdin_explicit_dash
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_stdin_still_works
-  status: excluded
-  notes: Python CLI infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_stdin_still_works
 - python_file: tests/test_config.py
   python_function: test_find_config_dot_flowmark_toml_takes_precedence
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_find_config_dot_flowmark_toml_takes_precedence
 - python_file: tests/test_config.py
   python_function: test_find_config_flowmark_toml
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_find_config_flowmark_toml
 - python_file: tests/test_config.py
   python_function: test_find_config_none_when_missing
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_find_config_none_when_missing
 - python_file: tests/test_config.py
   python_function: test_find_config_pyproject_toml
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_find_config_pyproject_toml
 - python_file: tests/test_config.py
   python_function: test_find_config_pyproject_without_section_skipped
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_find_config_pyproject_without_section_skipped
 - python_file: tests/test_config.py
   python_function: test_find_config_walks_up
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_find_config_walks_up
 - python_file: tests/test_config.py
   python_function: test_load_config_file_discovery_section
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_load_config_file_discovery_section
 - python_file: tests/test_config.py
   python_function: test_load_config_flowmark_toml
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_load_config_flowmark_toml
 - python_file: tests/test_config.py
   python_function: test_load_config_kebab_case
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_load_config_kebab_case
 - python_file: tests/test_config.py
   python_function: test_load_config_malformed_toml
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_load_config_malformed_toml
 - python_file: tests/test_config.py
   python_function: test_load_config_partial
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_load_config_partial
 - python_file: tests/test_config.py
   python_function: test_load_config_pyproject_toml
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_load_config_pyproject_toml
 - python_file: tests/test_config.py
   python_function: test_merge_auto_mode_overrides_formatting
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_merge_auto_mode_overrides_formatting
 - python_file: tests/test_config.py
   python_function: test_merge_auto_mode_width_from_config
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_merge_auto_mode_width_from_config
 - python_file: tests/test_config.py
   python_function: test_merge_config_overrides_defaults
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_merge_config_overrides_defaults
 - python_file: tests/test_config.py
   python_function: test_merge_explicit_cli_overrides_config
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_merge_explicit_cli_overrides_config
 - python_file: tests/test_config.py
   python_function: test_merge_extend_include_from_config
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_merge_extend_include_from_config
 - python_file: tests/test_config.py
   python_function: test_merge_file_discovery_from_config
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_merge_file_discovery_from_config
 - python_file: tests/test_config.py
   python_function: test_merge_no_config
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_merge_no_config
 - python_file: tests/test_config.py
   python_function: test_parse_config_warns_unknown_keys
-  status: excluded
-  notes: Python config system, Rust uses different config approach
+  status: mapped
+  rust_file: tests/test_config.rs
+  rust_function: test_parse_config_warns_unknown_keys
 - python_file: tests/test_ellipses.py
   python_function: test_ellipses
   status: mapped
@@ -386,128 +425,159 @@
   rust_function: test_tilde_fence_with_backticks_in_content
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_exclude_extended
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_config_effective_exclude_extended
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_exclude_replaced
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_config_effective_exclude_replaced
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_include
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_config_effective_include
 - python_file: tests/test_file_resolver.py
   python_function: test_config_effective_include_custom_base
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_config_effective_include_custom_base
 - python_file: tests/test_file_resolver.py
   python_function: test_read_ignore_file_missing
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_read_ignore_file_missing
 - python_file: tests/test_file_resolver.py
   python_function: test_read_ignore_file_non_utf8
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_read_ignore_file_non_utf8
 - python_file: tests/test_file_resolver.py
   python_function: test_read_ignore_file_unreadable
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_read_ignore_file_unreadable
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_deduplication
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_deduplication
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_directory_recursion
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_directory_recursion
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_exclude_replaces_defaults
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_exclude_replaces_defaults
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_excludes_default_dirs
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_excludes_default_dirs
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_explicit_files_bypass_exclusions_by_default
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_explicit_files_bypass_exclusions_by_default
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_extend_exclude
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_extend_exclude
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_extend_include
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_extend_include
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_file_not_found
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_file_not_found
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_files_max_size
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_files_max_size
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_files_max_size_zero_disables
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_files_max_size_zero_disables
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_flowmarkignore
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_flowmarkignore
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_flowmarkignore_positive_assertion
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_flowmarkignore_positive_assertion
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_force_exclude_filters_explicit_files
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_force_exclude_filters_explicit_files
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_gitignore_file_patterns
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_gitignore_file_patterns
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_gitignore_wildcard_file_pattern
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_gitignore_wildcard_file_pattern
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_glob_pattern
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_glob_pattern
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_mixed_inputs
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_mixed_inputs
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_nested_gitignore
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_nested_gitignore
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_nested_gitignore_combines_parent_rules
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_nested_gitignore_combines_parent_rules
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_no_respect_gitignore
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_no_respect_gitignore
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_respects_gitignore
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_respects_gitignore
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_single_file
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_single_file
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_sorted_output
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_sorted_output
 - python_file: tests/test_file_resolver.py
   python_function: test_resolver_tool_ignore_per_walk_root
-  status: excluded
-  notes: Python file resolution infrastructure, not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_file_resolver.rs
+  rust_function: test_resolver_tool_ignore_per_walk_root
 - python_file: tests/test_filling.py
   python_function: test_multi_paragraph_list_items
   status: mapped
@@ -700,48 +770,57 @@
 - python_file: tests/test_skill.py
   python_function: test_docs_content_is_readme
   python_class: TestGetDocsContent
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_docs_content_has_flowmark_reference
 - python_file: tests/test_skill.py
   python_function: test_docs_content_loads
   python_class: TestGetDocsContent
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_docs_content_loads
 - python_file: tests/test_skill.py
   python_function: test_skill_content_has_metadata
   python_class: TestGetSkillContent
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_skill_content_has_metadata
 - python_file: tests/test_skill.py
   python_function: test_skill_content_has_usage
   python_class: TestGetSkillContent
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_skill_content_has_usage
 - python_file: tests/test_skill.py
   python_function: test_skill_content_loads
   python_class: TestGetSkillContent
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_skill_content_loads
 - python_file: tests/test_skill.py
   python_function: test_install_skill_creates_directories
   python_class: TestInstallSkill
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_skill_creates_directories
 - python_file: tests/test_skill.py
   python_function: test_install_skill_custom_base
   python_class: TestInstallSkill
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_skill_custom_base
 - python_file: tests/test_skill.py
   python_function: test_install_skill_default
   python_class: TestInstallSkill
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_skill_default
 - python_file: tests/test_skill.py
   python_function: test_install_skill_overwrites_existing
   python_class: TestInstallSkill
-  status: excluded
-  notes: Python skill/plugin infrastructure (Claude Code SKILL.md), not applicable to Rust port
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_skill_overwrites_existing
 - python_file: tests/test_smartquotes.py
   python_function: test_apostrophes_and_contractions
   status: mapped

@@ -13,90 +13,93 @@
 - file: src/parser/frontmatter.rs
   function: test_split_frontmatter_present
   line_number: 52
+- file: src/src/lib.rs - FormatOptions.rs
+  function: reformat_text (line 34)
+  line_number: 0
 - file: src/typography/ellipses.rs
   function: test_basic_ellipsis
-  line_number: 91
+  line_number: 92
 - file: src/typography/ellipses.rs
   function: test_ellipsis_at_end
-  line_number: 101
+  line_number: 102
 - file: src/typography/ellipses.rs
   function: test_ellipsis_with_punct
-  line_number: 106
+  line_number: 107
 - file: src/typography/ellipses.rs
   function: test_ellipsis_with_space
-  line_number: 96
+  line_number: 97
 - file: src/typography/quotes.rs
   function: test_apostrophe
-  line_number: 169
+  line_number: 164
 - file: src/typography/quotes.rs
   function: test_code_like_unchanged
-  line_number: 185
+  line_number: 180
 - file: src/typography/quotes.rs
   function: test_double_quotes
-  line_number: 161
+  line_number: 159
 - file: src/typography/quotes.rs
   function: test_possessive_s
-  line_number: 174
+  line_number: 169
 - file: src/typography/quotes.rs
   function: test_template_tag_preserved
-  line_number: 179
+  line_number: 174
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_block_content
-  line_number: 102
+  line_number: 106
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_list_item_ordered
-  line_number: 84
+  line_number: 88
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_list_item_unordered
-  line_number: 67
+  line_number: 71
 - file: src/wrapping/block_heuristics.rs
   function: test_line_is_table_row
-  line_number: 53
+  line_number: 57
 - file: src/wrapping/sentence.rs
   function: test_first_sentence
-  line_number: 106
+  line_number: 104
 - file: src/wrapping/sentence.rs
   function: test_heuristic_end_of_sentence
-  line_number: 80
+  line_number: 78
 - file: src/wrapping/sentence.rs
   function: test_split_sentences
-  line_number: 90
+  line_number: 88
 - file: src/wrapping/sentence.rs
   function: test_split_sentences_no_min
-  line_number: 99
+  line_number: 97
 - file: src/wrapping/text_filling.rs
   function: test_split_paragraphs
-  line_number: 135
+  line_number: 136
 - file: src/wrapping/text_wrapping.rs
   function: test_html_md_word_split
-  line_number: 280
+  line_number: 266
 - file: src/wrapping/text_wrapping.rs
   function: test_html_md_word_split_links
-  line_number: 286
+  line_number: 272
 - file: src/wrapping/text_wrapping.rs
   function: test_markdown_escape_word
-  line_number: 232
+  line_number: 226
 - file: src/wrapping/text_wrapping.rs
   function: test_no_wrap
-  line_number: 264
+  line_number: 258
 - file: src/wrapping/text_wrapping.rs
   function: test_simple_wrapping
-  line_number: 246
+  line_number: 240
 - file: tests/test_alerts.rs
   function: test_alert_after_heading
-  line_number: 128
+  line_number: 140
 - file: tests/test_alerts.rs
   function: test_alert_with_code_block
-  line_number: 99
+  line_number: 111
 - file: tests/test_alerts.rs
   function: test_alert_with_list
-  line_number: 108
+  line_number: 120
 - file: tests/test_alerts.rs
   function: test_alert_with_multiline_content
-  line_number: 83
+  line_number: 94
 - file: tests/test_alerts.rs
   function: test_alert_with_multiple_paragraphs
-  line_number: 92
+  line_number: 104
 - file: tests/test_alerts.rs
   function: test_all_valid_alert_types
   line_number: 16
@@ -105,52 +108,169 @@
   line_number: 9
 - file: tests/test_alerts.rs
   function: test_empty_alert_type_preserves_quote
-  line_number: 147
+  line_number: 159
 - file: tests/test_alerts.rs
   function: test_lowercase_alert_normalized_to_uppercase
-  line_number: 28
+  line_number: 35
 - file: tests/test_alerts.rs
   function: test_malformed_alert_preserves_quote
-  line_number: 69
+  line_number: 76
 - file: tests/test_alerts.rs
   function: test_misspelled_alert_preserves_quote
-  line_number: 37
+  line_number: 44
 - file: tests/test_alerts.rs
   function: test_multiple_alerts_in_document
-  line_number: 117
+  line_number: 129
 - file: tests/test_alerts.rs
   function: test_quote_with_link_like_content
-  line_number: 155
+  line_number: 167
 - file: tests/test_alerts.rs
   function: test_regular_quote_still_works
-  line_number: 137
+  line_number: 149
 - file: tests/test_alerts.rs
   function: test_unknown_alert_types_preserve_quote
-  line_number: 54
+  line_number: 61
 - file: tests/test_cleanups.rs
   function: test_unbold_headings
   line_number: 9
+- file: tests/test_cli_file_discovery.rs
+  function: test_auto_list_files_no_args_errors
+  line_number: 240
+- file: tests/test_cli_file_discovery.rs
+  function: test_auto_no_args_errors
+  line_number: 195
+- file: tests/test_cli_file_discovery.rs
+  function: test_auto_with_dot_formats_cwd
+  line_number: 257
+- file: tests/test_cli_file_discovery.rs
+  function: test_auto_with_explicit_file
+  line_number: 316
+- file: tests/test_cli_file_discovery.rs
+  function: test_explicit_file_still_works
+  line_number: 274
+- file: tests/test_cli_file_discovery.rs
+  function: test_explicit_flag_detection_with_default_value
+  line_number: 403
+- file: tests/test_cli_file_discovery.rs
+  function: test_flowmarkignore
+  line_number: 334
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_directory
+  line_number: 45
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_extend_exclude
+  line_number: 106
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_extend_include
+  line_number: 89
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_force_exclude
+  line_number: 149
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_max_size
+  line_number: 175
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_no_args_errors
+  line_number: 210
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_no_respect_gitignore
+  line_number: 126
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_skips_excluded_dirs
+  line_number: 72
+- file: tests/test_cli_file_discovery.rs
+  function: test_list_files_stdin_does_not_crash
+  line_number: 357
+- file: tests/test_cli_file_discovery.rs
+  function: test_no_args_errors
+  line_number: 225
+- file: tests/test_cli_file_discovery.rs
+  function: test_stdin_explicit_dash
+  line_number: 377
+- file: tests/test_cli_file_discovery.rs
+  function: test_stdin_still_works
+  line_number: 290
+- file: tests/test_config.rs
+  function: test_find_config_dot_flowmark_toml_takes_precedence
+  line_number: 25
+- file: tests/test_config.rs
+  function: test_find_config_flowmark_toml
+  line_number: 14
+- file: tests/test_config.rs
+  function: test_find_config_none_when_missing
+  line_number: 77
+- file: tests/test_config.rs
+  function: test_find_config_pyproject_toml
+  line_number: 40
+- file: tests/test_config.rs
+  function: test_find_config_pyproject_without_section_skipped
+  line_number: 52
+- file: tests/test_config.rs
+  function: test_find_config_walks_up
+  line_number: 63
+- file: tests/test_config.rs
+  function: test_load_config_file_discovery_section
+  line_number: 156
+- file: tests/test_config.rs
+  function: test_load_config_flowmark_toml
+  line_number: 87
+- file: tests/test_config.rs
+  function: test_load_config_kebab_case
+  line_number: 130
+- file: tests/test_config.rs
+  function: test_load_config_malformed_toml
+  line_number: 314
+- file: tests/test_config.rs
+  function: test_load_config_partial
+  line_number: 181
+- file: tests/test_config.rs
+  function: test_load_config_pyproject_toml
+  line_number: 111
+- file: tests/test_config.rs
+  function: test_merge_auto_mode_overrides_formatting
+  line_number: 245
+- file: tests/test_config.rs
+  function: test_merge_auto_mode_width_from_config
+  line_number: 261
+- file: tests/test_config.rs
+  function: test_merge_config_overrides_defaults
+  line_number: 215
+- file: tests/test_config.rs
+  function: test_merge_explicit_cli_overrides_config
+  line_number: 230
+- file: tests/test_config.rs
+  function: test_merge_extend_include_from_config
+  line_number: 294
+- file: tests/test_config.rs
+  function: test_merge_file_discovery_from_config
+  line_number: 276
+- file: tests/test_config.rs
+  function: test_merge_no_config
+  line_number: 206
+- file: tests/test_config.rs
+  function: test_parse_config_warns_unknown_keys
+  line_number: 324
 - file: tests/test_edge_cases.rs
   function: test_bare_dollar_in_text
-  line_number: 83
+  line_number: 78
 - file: tests/test_edge_cases.rs
   function: test_code_block_trailing_content
-  line_number: 104
+  line_number: 91
 - file: tests/test_edge_cases.rs
   function: test_code_fence_with_indented_list_content
   line_number: 20
 - file: tests/test_edge_cases.rs
   function: test_display_math_latex
-  line_number: 67
+  line_number: 63
 - file: tests/test_edge_cases.rs
   function: test_footnote_with_reference
-  line_number: 119
+  line_number: 105
 - file: tests/test_edge_cases.rs
   function: test_inline_math_latex_backslashes
-  line_number: 56
+  line_number: 53
 - file: tests/test_edge_cases.rs
   function: test_multiple_footnotes
-  line_number: 135
+  line_number: 113
 - file: tests/test_ellipses.rs
   function: test_ellipses_at_boundaries
   line_number: 19
@@ -159,106 +279,199 @@
   line_number: 4
 - file: tests/test_ellipses.rs
   function: test_ellipses_code_like
-  line_number: 99
+  line_number: 93
 - file: tests/test_ellipses.rs
   function: test_ellipses_does_not_apply
-  line_number: 68
+  line_number: 62
 - file: tests/test_ellipses.rs
   function: test_ellipses_edge_cases
-  line_number: 90
+  line_number: 84
 - file: tests/test_ellipses.rs
   function: test_ellipses_four_dots
-  line_number: 107
+  line_number: 101
 - file: tests/test_ellipses.rs
   function: test_ellipses_multiline
-  line_number: 81
+  line_number: 75
 - file: tests/test_ellipses.rs
   function: test_ellipses_multiple
   line_number: 28
 - file: tests/test_ellipses.rs
   function: test_ellipses_punctuation
-  line_number: 52
+  line_number: 46
 - file: tests/test_ellipses.rs
   function: test_ellipses_quotes
-  line_number: 113
+  line_number: 107
 - file: tests/test_escape_handling.rs
   function: test_actual_list_no_escape
-  line_number: 43
+  line_number: 61
 - file: tests/test_escape_handling.rs
   function: test_escape_at_paragraph_start
-  line_number: 23
+  line_number: 29
 - file: tests/test_escape_handling.rs
   function: test_escape_in_heading
   line_number: 13
 - file: tests/test_escape_handling.rs
   function: test_escape_in_list_item
-  line_number: 99
+  line_number: 120
 - file: tests/test_escape_handling.rs
   function: test_escape_in_list_item_start_preserved
-  line_number: 106
+  line_number: 130
 - file: tests/test_escape_handling.rs
   function: test_escape_in_paragraph_middle
-  line_number: 33
+  line_number: 45
 - file: tests/test_escape_handling.rs
   function: test_escape_in_quote
-  line_number: 113
-- file: tests/test_escape_handling.rs
-  function: test_escape_in_table
-  line_number: 124
-- file: tests/test_escape_handling.rs
-  function: test_escaped_chars_at_line_start
-  line_number: 87
-- file: tests/test_escape_handling.rs
-  function: test_escaped_chars_in_headings
-  line_number: 77
-- file: tests/test_escape_handling.rs
-  function: test_mixed_escapes
-  line_number: 133
-- file: tests/test_escape_handling.rs
-  function: test_mixed_escapes_comprehensive
   line_number: 140
 - file: tests/test_escape_handling.rs
+  function: test_escape_in_table
+  line_number: 154
+- file: tests/test_escape_handling.rs
+  function: test_escaped_chars_at_line_start
+  line_number: 108
+- file: tests/test_escape_handling.rs
+  function: test_escaped_chars_in_headings
+  line_number: 95
+- file: tests/test_escape_handling.rs
+  function: test_mixed_escapes
+  line_number: 166
+- file: tests/test_escape_handling.rs
+  function: test_mixed_escapes_comprehensive
+  line_number: 173
+- file: tests/test_escape_handling.rs
   function: test_other_escaped_chars
-  line_number: 51
-- file: tests/test_fenced_code_blocks.rs
-  function: test_code_block_with_inline_backticks
-  line_number: 37
-- file: tests/test_fenced_code_blocks.rs
-  function: test_deeply_nested_code_blocks
-  line_number: 30
-- file: tests/test_fenced_code_blocks.rs
-  function: test_empty_lines_in_code_block_no_trailing_whitespace
-  line_number: 58
-- file: tests/test_fenced_code_blocks.rs
-  function: test_empty_lines_in_nested_code_block_no_trailing_whitespace
   line_number: 69
 - file: tests/test_fenced_code_blocks.rs
+  function: test_code_block_with_inline_backticks
+  line_number: 39
+- file: tests/test_fenced_code_blocks.rs
+  function: test_deeply_nested_code_blocks
+  line_number: 32
+- file: tests/test_fenced_code_blocks.rs
+  function: test_empty_lines_in_code_block_no_trailing_whitespace
+  line_number: 60
+- file: tests/test_fenced_code_blocks.rs
+  function: test_empty_lines_in_nested_code_block_no_trailing_whitespace
+  line_number: 71
+- file: tests/test_fenced_code_blocks.rs
   function: test_empty_lines_in_quoted_code_block_no_trailing_whitespace
-  line_number: 104
+  line_number: 114
 - file: tests/test_fenced_code_blocks.rs
   function: test_four_backtick_fence_preserved
-  line_number: 16
+  line_number: 18
 - file: tests/test_fenced_code_blocks.rs
   function: test_minimum_backticks_computed_from_content
-  line_number: 121
+  line_number: 131
 - file: tests/test_fenced_code_blocks.rs
   function: test_multiple_empty_lines_in_code_block
-  line_number: 112
+  line_number: 122
 - file: tests/test_fenced_code_blocks.rs
   function: test_nested_code_blocks
-  line_number: 23
+  line_number: 25
 - file: tests/test_fenced_code_blocks.rs
   function: test_simple_fenced_code_block
-  line_number: 9
+  line_number: 11
 - file: tests/test_fenced_code_blocks.rs
   function: test_tilde_fence_stays_tilde
-  line_number: 44
+  line_number: 46
 - file: tests/test_fenced_code_blocks.rs
   function: test_tilde_fence_with_backticks_in_content
-  line_number: 51
+  line_number: 53
+- file: tests/test_file_resolver.rs
+  function: test_config_effective_exclude_extended
+  line_number: 64
+- file: tests/test_file_resolver.rs
+  function: test_config_effective_exclude_replaced
+  line_number: 54
+- file: tests/test_file_resolver.rs
+  function: test_config_effective_include
+  line_number: 38
+- file: tests/test_file_resolver.rs
+  function: test_config_effective_include_custom_base
+  line_number: 44
+- file: tests/test_file_resolver.rs
+  function: test_read_ignore_file_missing
+  line_number: 507
+- file: tests/test_file_resolver.rs
+  function: test_read_ignore_file_non_utf8
+  line_number: 546
+- file: tests/test_file_resolver.rs
+  function: test_read_ignore_file_unreadable
+  line_number: 514
+- file: tests/test_file_resolver.rs
+  function: test_resolver_deduplication
+  line_number: 329
+- file: tests/test_file_resolver.rs
+  function: test_resolver_directory_recursion
+  line_number: 93
+- file: tests/test_file_resolver.rs
+  function: test_resolver_exclude_replaces_defaults
+  line_number: 214
+- file: tests/test_file_resolver.rs
+  function: test_resolver_excludes_default_dirs
+  line_number: 111
+- file: tests/test_file_resolver.rs
+  function: test_resolver_explicit_files_bypass_exclusions_by_default
+  line_number: 179
+- file: tests/test_file_resolver.rs
+  function: test_resolver_extend_exclude
+  line_number: 239
+- file: tests/test_file_resolver.rs
+  function: test_resolver_extend_include
+  line_number: 195
+- file: tests/test_file_resolver.rs
+  function: test_resolver_file_not_found
+  line_number: 364
+- file: tests/test_file_resolver.rs
+  function: test_resolver_files_max_size
+  line_number: 258
+- file: tests/test_file_resolver.rs
+  function: test_resolver_files_max_size_zero_disables
+  line_number: 276
+- file: tests/test_file_resolver.rs
+  function: test_resolver_flowmarkignore
+  line_number: 378
+- file: tests/test_file_resolver.rs
+  function: test_resolver_flowmarkignore_positive_assertion
+  line_number: 564
+- file: tests/test_file_resolver.rs
+  function: test_resolver_force_exclude_filters_explicit_files
+  line_number: 165
+- file: tests/test_file_resolver.rs
+  function: test_resolver_gitignore_file_patterns
+  line_number: 470
+- file: tests/test_file_resolver.rs
+  function: test_resolver_gitignore_wildcard_file_pattern
+  line_number: 487
+- file: tests/test_file_resolver.rs
+  function: test_resolver_glob_pattern
+  line_number: 293
+- file: tests/test_file_resolver.rs
+  function: test_resolver_mixed_inputs
+  line_number: 312
+- file: tests/test_file_resolver.rs
+  function: test_resolver_nested_gitignore
+  line_number: 427
+- file: tests/test_file_resolver.rs
+  function: test_resolver_nested_gitignore_combines_parent_rules
+  line_number: 447
+- file: tests/test_file_resolver.rs
+  function: test_resolver_no_respect_gitignore
+  line_number: 147
+- file: tests/test_file_resolver.rs
+  function: test_resolver_respects_gitignore
+  line_number: 129
+- file: tests/test_file_resolver.rs
+  function: test_resolver_single_file
+  line_number: 79
+- file: tests/test_file_resolver.rs
+  function: test_resolver_sorted_output
+  line_number: 342
+- file: tests/test_file_resolver.rs
+  function: test_resolver_tool_ignore_per_walk_root
+  line_number: 392
 - file: tests/test_filling.rs
   function: test_multi_paragraph_list_items
-  line_number: 246
+  line_number: 247
 - file: tests/test_filling.rs
   function: test_normalize_markdown
   line_number: 218
@@ -369,97 +582,124 @@
   line_number: 48
 - file: tests/test_ref_docs.rs
   function: test_reference_doc_formats
-  line_number: 6
+  line_number: 16
 - file: tests/test_sentences.rs
   function: test_first_sentence
-  line_number: 21
+  line_number: 18
 - file: tests/test_sentences.rs
   function: test_split_sentences
   line_number: 8
+- file: tests/test_skill.rs
+  function: test_docs_content_has_flowmark_reference
+  line_number: 42
+- file: tests/test_skill.rs
+  function: test_docs_content_loads
+  line_number: 36
+- file: tests/test_skill.rs
+  function: test_install_skill_creates_directories
+  line_number: 84
+- file: tests/test_skill.rs
+  function: test_install_skill_custom_base
+  line_number: 70
+- file: tests/test_skill.rs
+  function: test_install_skill_default
+  line_number: 53
+- file: tests/test_skill.rs
+  function: test_install_skill_overwrites_existing
+  line_number: 95
+- file: tests/test_skill.rs
+  function: test_skill_content_has_metadata
+  line_number: 18
+- file: tests/test_skill.rs
+  function: test_skill_content_has_usage
+  line_number: 26
+- file: tests/test_skill.rs
+  function: test_skill_content_loads
+  line_number: 12
 - file: tests/test_smartquotes.rs
   function: test_apostrophes_and_contractions
-  line_number: 28
+  line_number: 25
 - file: tests/test_smartquotes.rs
   function: test_basic_double_quotes
   line_number: 6
 - file: tests/test_smartquotes.rs
   function: test_basic_single_quotes
-  line_number: 19
+  line_number: 16
 - file: tests/test_smartquotes.rs
   function: test_complex_cases_unchanged
-  line_number: 164
+  line_number: 128
 - file: tests/test_smartquotes.rs
   function: test_complex_sentences
-  line_number: 145
+  line_number: 112
 - file: tests/test_smartquotes.rs
   function: test_edge_cases
-  line_number: 122
+  line_number: 92
 - file: tests/test_smartquotes.rs
   function: test_mixed_quotes_and_apostrophes
-  line_number: 110
+  line_number: 80
 - file: tests/test_smartquotes.rs
   function: test_multiple_quotes_in_text
-  line_number: 133
+  line_number: 100
 - file: tests/test_smartquotes.rs
   function: test_patterns_left_unchanged
-  line_number: 61
+  line_number: 46
 - file: tests/test_smartquotes.rs
   function: test_possessives_at_end_of_words
-  line_number: 39
+  line_number: 36
 - file: tests/test_smartquotes.rs
   function: test_quotes_at_boundaries
-  line_number: 98
+  line_number: 71
 - file: tests/test_smartquotes.rs
   function: test_quotes_with_newlines
-  line_number: 181
+  line_number: 145
 - file: tests/test_smartquotes.rs
   function: test_quotes_with_punctuation
-  line_number: 72
+  line_number: 57
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_apostrophe_spanning_code_span
-  line_number: 346
+  line_number: 288
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_apostrophes_in_table_cells
-  line_number: 292
+  line_number: 227
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_blockquote_multiline_with_code_span
-  line_number: 364
-- file: tests/test_smartquotes.rs
-  function: test_smart_quotes_complex_table
-  line_number: 374
-- file: tests/test_smartquotes.rs
-  function: test_smart_quotes_in_strikethrough
-  line_number: 299
-- file: tests/test_smartquotes.rs
-  function: test_smart_quotes_in_table_cells
-  line_number: 284
-- file: tests/test_smartquotes.rs
-  function: test_smart_quotes_in_table_preserve_code_spans
-  line_number: 389
-- file: tests/test_smartquotes.rs
-  function: test_smart_quotes_in_table_with_bold
-  line_number: 397
-- file: tests/test_smartquotes.rs
-  function: test_smart_quotes_not_modifying_code_content
-  line_number: 339
-- file: tests/test_smartquotes.rs
-  function: test_smart_quotes_spanning_code_span
   line_number: 307
 - file: tests/test_smartquotes.rs
+  function: test_smart_quotes_complex_table
+  line_number: 317
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_in_strikethrough
+  line_number: 235
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_in_table_cells
+  line_number: 218
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_in_table_preserve_code_spans
+  line_number: 332
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_in_table_with_bold
+  line_number: 340
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_not_modifying_code_content
+  line_number: 280
+- file: tests/test_smartquotes.rs
+  function: test_smart_quotes_spanning_code_span
+  line_number: 244
+- file: tests/test_smartquotes.rs
   function: test_smart_quotes_spanning_code_span_in_blockquote
-  line_number: 404
+  line_number: 350
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_spanning_emphasis
-  line_number: 315
+  line_number: 253
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_spanning_link
-  line_number: 331
+  line_number: 271
 - file: tests/test_smartquotes.rs
   function: test_smart_quotes_spanning_strong_emphasis
-  line_number: 323
+  line_number: 262
 - file: tests/test_smartquotes.rs
   function: test_technical_content_unchanged
-  line_number: 153
+  line_number: 120
 - file: tests/test_strikethrough.rs
   function: test_double_tilde_strikethrough
   line_number: 22
@@ -495,259 +735,259 @@
   line_number: 47
 - file: tests/test_tag_formatting.rs
   function: test_adjacent_closing_tags_roundtrip
-  line_number: 93
+  line_number: 98
 - file: tests/test_tag_formatting.rs
   function: test_fill_markdown_with_list_in_tags
-  line_number: 153
+  line_number: 155
 - file: tests/test_tag_formatting.rs
   function: test_html_comment_multiline_closing
-  line_number: 164
+  line_number: 166
 - file: tests/test_tag_formatting.rs
   function: test_html_comment_tags_with_quotes
-  line_number: 83
+  line_number: 85
 - file: tests/test_tag_formatting.rs
   function: test_jinja_comment_tags
-  line_number: 76
+  line_number: 78
 - file: tests/test_tag_formatting.rs
   function: test_jinja_variable_tags_in_prose
-  line_number: 68
+  line_number: 70
 - file: tests/test_tag_formatting.rs
   function: test_line_wrapper_preserves_multiline_tags
-  line_number: 173
+  line_number: 175
 - file: tests/test_tag_formatting.rs
   function: test_list_item_with_tag_on_continuation_line
-  line_number: 185
+  line_number: 187
 - file: tests/test_tag_formatting.rs
   function: test_multiline_opening_tag_closing_on_own_line
-  line_number: 195
+  line_number: 199
 - file: tests/test_tag_formatting.rs
   function: test_multiline_tag_through_pipeline
-  line_number: 204
+  line_number: 208
 - file: tests/test_tag_formatting.rs
   function: test_multiline_tag_with_surrounding_text
-  line_number: 222
+  line_number: 226
 - file: tests/test_tag_formatting.rs
   function: test_pipeline_preserves_tag_quotes
-  line_number: 103
+  line_number: 108
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_already_spaced
-  line_number: 146
+  line_number: 148
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_inline_tags
-  line_number: 234
+  line_number: 238
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_lists
-  line_number: 130
+  line_number: 132
 - file: tests/test_tag_formatting.rs
   function: test_preprocess_tag_block_spacing_tables
-  line_number: 139
+  line_number: 141
 - file: tests/test_tag_formatting.rs
   function: test_selection_field_with_task_list
-  line_number: 244
+  line_number: 250
 - file: tests/test_tag_formatting.rs
   function: test_single_line_paired_tags_not_split
-  line_number: 254
+  line_number: 260
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_converts_prose_but_not_tags
-  line_number: 60
+  line_number: 62
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_multiline_tag_with_prose
-  line_number: 263
+  line_number: 269
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_apostrophe_in_jinja_variable
-  line_number: 53
+  line_number: 55
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_quotes_in_html_comments
-  line_number: 46
+  line_number: 48
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_quotes_in_include
-  line_number: 25
+  line_number: 27
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_quotes_in_jinja_comments
-  line_number: 39
+  line_number: 41
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_quotes_in_tags
-  line_number: 17
+  line_number: 19
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_preserves_single_quotes_in_attributes
-  line_number: 32
+  line_number: 34
 - file: tests/test_tag_formatting.rs
   function: test_smart_quotes_with_nunjucks_raw_block
-  line_number: 121
+  line_number: 123
 - file: tests/test_tag_formatting.rs
   function: test_tag_newlines_preserved_in_pipeline
-  line_number: 274
+  line_number: 280
 - file: tests/test_tag_formatting.rs
   function: test_tag_with_array_spanning_lines
-  line_number: 283
+  line_number: 289
 - file: tests/test_tag_formatting.rs
   function: test_tag_with_embedded_percent_brace
-  line_number: 290
+  line_number: 296
 - file: tests/test_tag_formatting.rs
   function: test_tag_with_object_spanning_lines
-  line_number: 300
+  line_number: 306
 - file: tests/test_tag_formatting.rs
   function: test_word_splitter_handles_multiline_tags
-  line_number: 307
+  line_number: 313
 - file: tests/test_width_options.rs
   function: test_existing_behavior_unchanged
-  line_number: 59
+  line_number: 61
 - file: tests/test_width_options.rs
   function: test_negative_width_disables_wrapping
-  line_number: 75
+  line_number: 80
 - file: tests/test_width_options.rs
   function: test_normal_width_wrapping
   line_number: 5
 - file: tests/test_width_options.rs
   function: test_width_zero_with_markdown
-  line_number: 39
+  line_number: 41
 - file: tests/test_width_options.rs
   function: test_width_zero_with_markdown_semantic
-  line_number: 49
+  line_number: 51
 - file: tests/test_width_options.rs
   function: test_width_zero_with_semantic
-  line_number: 30
+  line_number: 32
 - file: tests/test_width_options.rs
   function: test_zero_width_disables_wrapping
-  line_number: 20
+  line_number: 22
 - file: tests/test_wrapping.rs
   function: test_adjacent_html_comment_tags_no_space
-  line_number: 360
+  line_number: 305
 - file: tests/test_wrapping.rs
   function: test_adjacent_jinja_comment_tags_no_space
-  line_number: 404
+  line_number: 370
 - file: tests/test_wrapping.rs
   function: test_adjacent_jinja_tags_no_space
-  line_number: 339
+  line_number: 284
 - file: tests/test_wrapping.rs
   function: test_adjacent_jinja_variable_tags_no_space
-  line_number: 421
+  line_number: 387
 - file: tests/test_wrapping.rs
   function: test_adjacent_tags_full_pipeline
-  line_number: 381
+  line_number: 326
 - file: tests/test_wrapping.rs
   function: test_backslash_in_tag_attributes
-  line_number: 438
+  line_number: 404
 - file: tests/test_wrapping.rs
   function: test_block_heuristics_blank_line_normalization
-  line_number: 450
+  line_number: 416
 - file: tests/test_wrapping.rs
   function: test_block_heuristics_list_items
-  line_number: 463
+  line_number: 435
 - file: tests/test_wrapping.rs
   function: test_block_heuristics_mixed_content
-  line_number: 479
+  line_number: 451
 - file: tests/test_wrapping.rs
   function: test_block_heuristics_only_with_tags
-  line_number: 494
+  line_number: 466
 - file: tests/test_wrapping.rs
   function: test_block_heuristics_preserves_existing_blank_lines
-  line_number: 505
+  line_number: 477
 - file: tests/test_wrapping.rs
   function: test_block_heuristics_table_blank_lines
-  line_number: 529
+  line_number: 501
 - file: tests/test_wrapping.rs
   function: test_block_heuristics_table_rows
-  line_number: 542
+  line_number: 514
 - file: tests/test_wrapping.rs
   function: test_closing_tag_spacing_function
-  line_number: 558
+  line_number: 530
 - file: tests/test_wrapping.rs
   function: test_html_comments_kept_together
-  line_number: 285
+  line_number: 239
 - file: tests/test_wrapping.rs
   function: test_inline_code_in_table_cells
-  line_number: 592
+  line_number: 564
 - file: tests/test_wrapping.rs
   function: test_inline_code_with_spaces
-  line_number: 277
+  line_number: 231
 - file: tests/test_wrapping.rs
   function: test_inline_code_with_surrounding_punctuation
-  line_number: 613
+  line_number: 585
 - file: tests/test_wrapping.rs
   function: test_line_wrap_to_width_with_markdown_breaks
-  line_number: 311
+  line_number: 262
 - file: tests/test_wrapping.rs
   function: test_list_content_gets_blank_lines
-  line_number: 626
+  line_number: 598
 - file: tests/test_wrapping.rs
   function: test_long_html_tags
-  line_number: 639
+  line_number: 614
 - file: tests/test_wrapping.rs
   function: test_long_jinja_comments
-  line_number: 647
+  line_number: 623
 - file: tests/test_wrapping.rs
   function: test_long_template_tags
-  line_number: 655
+  line_number: 631
 - file: tests/test_wrapping.rs
   function: test_markdown_escape_word_function
-  line_number: 7
+  line_number: 9
 - file: tests/test_wrapping.rs
   function: test_mixed_content_blank_lines_correct
-  line_number: 670
+  line_number: 648
 - file: tests/test_wrapping.rs
   function: test_mixed_html_and_template_tags
-  line_number: 267
+  line_number: 221
 - file: tests/test_wrapping.rs
   function: test_multiple_single_word_inline_codes
-  line_number: 682
+  line_number: 663
 - file: tests/test_wrapping.rs
   function: test_nested_tags_newlines_preserved
-  line_number: 692
+  line_number: 673
 - file: tests/test_wrapping.rs
   function: test_newline_after_opening_tag
-  line_number: 707
+  line_number: 688
 - file: tests/test_wrapping.rs
   function: test_newline_before_closing_tag
-  line_number: 727
+  line_number: 708
 - file: tests/test_wrapping.rs
   function: test_paired_tags_not_broken
-  line_number: 742
+  line_number: 723
 - file: tests/test_wrapping.rs
   function: test_paragraph_only_content_various_tags
-  line_number: 767
+  line_number: 748
 - file: tests/test_wrapping.rs
   function: test_paragraph_text_no_extra_blank_lines
-  line_number: 789
+  line_number: 770
 - file: tests/test_wrapping.rs
   function: test_self_closing_html_comment_tags
-  line_number: 809
+  line_number: 795
 - file: tests/test_wrapping.rs
   function: test_self_closing_jinja_comment_tags
-  line_number: 834
+  line_number: 820
 - file: tests/test_wrapping.rs
   function: test_self_closing_jinja_tags
-  line_number: 850
+  line_number: 836
 - file: tests/test_wrapping.rs
   function: test_self_closing_jinja_variable_tags
-  line_number: 879
+  line_number: 865
 - file: tests/test_wrapping.rs
   function: test_single_word_inline_code_not_coalesced
-  line_number: 298
+  line_number: 252
 - file: tests/test_wrapping.rs
   function: test_smart_splitter
-  line_number: 94
+  line_number: 77
 - file: tests/test_wrapping.rs
   function: test_table_content_gets_blank_lines
-  line_number: 899
+  line_number: 885
 - file: tests/test_wrapping.rs
   function: test_tag_with_list_items
-  line_number: 912
+  line_number: 901
 - file: tests/test_wrapping.rs
   function: test_template_tag_splitter
-  line_number: 217
+  line_number: 171
 - file: tests/test_wrapping.rs
   function: test_template_tag_wrapping
-  line_number: 246
+  line_number: 200
 - file: tests/test_wrapping.rs
   function: test_various_tag_types_with_tables
-  line_number: 923
+  line_number: 912
 - file: tests/test_wrapping.rs
   function: test_wrap_paragraph_lines_markdown_escaping
-  line_number: 37
+  line_number: 39
 - file: tests/test_wrapping.rs
   function: test_wrap_text
-  line_number: 139
+  line_number: 116
 - file: tests/test_wrapping.rs
   function: test_wrap_width
-  line_number: 203
+  line_number: 161
