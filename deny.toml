@@ -1,8 +1,12 @@
 [advisories]
 version = 2
-# yaml-rust 0.4.5 is unmaintained (RUSTSEC-2024-0320) but is a transitive dep
-# of comrak via syntect. No action available until comrak updates syntect.
-ignore = ["RUSTSEC-2024-0320"]
+# All three are transitive deps of comrak via syntect. No action available
+# until comrak updates syntect.
+ignore = [
+    "RUSTSEC-2024-0320", # yaml-rust 0.4.5 unmaintained
+    "RUSTSEC-2025-0141", # bincode 1.3.3 unmaintained (syntect dep)
+    "RUSTSEC-2026-0009", # time 0.3.x DoS via stack exhaustion (syntect dep)
+]
 
 [licenses]
 version = 2
