@@ -229,6 +229,11 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
 /// can emit it without needing external context.
 const REFDEF_MARKER_PREFIX: &str = "<!-- REFDEF:";
 
+/// Regex for footnote definition start: `[^label]: content`
+static FOOTNOTE_DEF_START: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[ \t]{0,3}\[\^([^\]]+)\]:[ \t]+").expect("valid FOOTNOTE_DEF_START regex")
+});
+
 /// Extract link reference definitions from source text (outside code fences).
 /// Returns the definitions and the text with definitions replaced by HTML comment
 /// markers (`<!-- REFDEF:label -->`).  These markers survive comrak parsing as
@@ -286,7 +291,79 @@ fn extract_link_ref_defs(text: &str) -> (Vec<LinkRefDef>, String) {
     (defs, output)
 }
 
-/// Replace reference link usages with PUA-encoded inline links (outside code fences).
+/// HTML comment marker prefix for footnote definition placeholders.
+/// Multi-line: `<!-- FNDEF\n[^label]: content\ncontinuation\n-->`
+/// Comrak preserves these as HtmlBlock nodes at their original positions.
+const FNDEF_MARKER_START: &str = "<!-- FNDEF";
+
+/// Extract footnote definitions from source text (outside code fences).
+/// Replaces each definition with an HTML comment marker that comrak will
+/// preserve as an HtmlBlock at the original position.
+///
+/// Without this, comrak moves referenced footnotes to the end of the AST
+/// and completely drops unreferenced ones.
+fn extract_footnote_defs(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let had_trailing_newline = text.ends_with('\n');
+    let mut result_lines: Vec<String> = Vec::new();
+    let mut in_code = false;
+    let mut fence_str = String::new();
+    let mut i = 0;
+
+    while i < lines.len() {
+        let line = lines[i];
+        if in_code {
+            if is_closing_fence(line.trim(), &fence_str) {
+                in_code = false;
+            }
+            result_lines.push(line.to_string());
+            i += 1;
+            continue;
+        }
+        if let Some(fs) = detect_opening_fence(line.trim()) {
+            fence_str = fs;
+            in_code = true;
+            result_lines.push(line.to_string());
+            i += 1;
+            continue;
+        }
+        if FOOTNOTE_DEF_START.is_match(line) {
+            // Collect definition lines: first line + indented continuation lines
+            let mut def_lines = vec![line.to_string()];
+            let mut j = i + 1;
+            while j < lines.len() {
+                let cont = lines[j];
+                if cont.starts_with("    ") || cont.starts_with('\t') || cont.trim().is_empty() {
+                    def_lines.push(cont.to_string());
+                    j += 1;
+                } else {
+                    break;
+                }
+            }
+            // Trim trailing blank lines from the definition block
+            while def_lines.last().is_some_and(|l| l.trim().is_empty()) {
+                def_lines.pop();
+            }
+            // Replace with FNDEF HTML comment marker (multi-line, type-2 HTML block)
+            result_lines.push(FNDEF_MARKER_START.to_string());
+            for dl in &def_lines {
+                result_lines.push(dl.to_string());
+            }
+            result_lines.push("-->".to_string());
+            i = j;
+        } else {
+            result_lines.push(line.to_string());
+            i += 1;
+        }
+    }
+
+    let mut output = result_lines.join("\n");
+    if had_trailing_newline && !output.ends_with('\n') {
+        output.push('\n');
+    }
+    output
+}
+
 ///
 /// Encodes ONLY the label in the URL: `[text][label]` → `[text](\u{F000}label\u{F001})`
 /// This avoids expanding the real URL/title into the text, which would break table
@@ -480,10 +557,11 @@ fn inline_ends_with_hard_break<'a>(node: &'a AstNode<'a>) -> bool {
     false
 }
 
-/// Check if a node is an HTML block containing a REFDEF marker.
-fn is_refdef_marker(node: &AstNode) -> bool {
+/// Check if a node is an HTML block containing a REFDEF or FNDEF marker.
+fn is_def_marker(node: &AstNode) -> bool {
     if let NodeValue::HtmlBlock(html) = &node.data.borrow().value {
-        html.literal.trim().starts_with(REFDEF_MARKER_PREFIX)
+        let trimmed = html.literal.trim();
+        trimmed.starts_with(REFDEF_MARKER_PREFIX) || trimmed.starts_with(FNDEF_MARKER_START)
     } else {
         false
     }
@@ -507,7 +585,7 @@ fn render_block_children<'a>(
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
-        let child_is_refdef = is_refdef_marker(child);
+        let child_is_refdef = is_def_marker(child);
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -766,6 +844,52 @@ fn render_block<'a>(
                     let def_text = def_text.trim();
                     let _ = writeln!(output, "{prefix}{def_text}");
                     return output;
+                }
+            }
+
+            // Check for footnote definition marker: <!-- FNDEF\n[^label]: content\n-->
+            if trimmed.starts_with(FNDEF_MARKER_START) {
+                // Extract content between first line and closing -->
+                if let Some(first_nl) = literal.find('\n') {
+                    let rest = &literal[first_nl + 1..];
+                    if let Some(end_pos) = rest.rfind("-->") {
+                        let fn_text = rest[..end_pos].trim_end();
+                        // Format the footnote definition with line wrapping.
+                        // Parse [^label]: from the first line to get prefix widths.
+                        if let Some(caps) = FOOTNOTE_DEF_START.captures(fn_text) {
+                            let label = caps.get(1).unwrap().as_str();
+                            let label_prefix = format!("[^{label}]: ");
+                            let fn_prefix = format!("{prefix}{label_prefix}");
+                            let fn_subsequent = format!("{prefix}    ");
+
+                            // Extract body: first line after `[^label]: `, plus
+                            // continuation lines (stripped of 4-space indent).
+                            let body_start = caps.get(0).unwrap().end();
+                            let mut body_parts: Vec<&str> = Vec::new();
+                            for (li, line) in fn_text.lines().enumerate() {
+                                if li == 0 {
+                                    body_parts.push(&line[body_start..]);
+                                } else {
+                                    let stripped = line
+                                        .strip_prefix("    ")
+                                        .or_else(|| line.strip_prefix('\t'))
+                                        .unwrap_or(line);
+                                    body_parts.push(stripped);
+                                }
+                            }
+                            let body = body_parts.join(" ");
+                            let wrapped =
+                                line_wrapper(body.trim(), &fn_prefix, &fn_subsequent);
+                            output.push_str(&wrapped);
+                            output.push('\n');
+                        } else {
+                            // Fallback: output content lines as-is
+                            for line in fn_text.lines() {
+                                let _ = writeln!(output, "{prefix}{line}");
+                            }
+                        }
+                        return output;
+                    }
                 }
             }
 
@@ -1261,6 +1385,13 @@ pub fn fill_markdown(
     // (must happen before escape placeholder substitution, which would mangle `\[` etc.)
     let (ref_defs, text_without_defs) = extract_link_ref_defs(&text);
     text = encode_ref_links(&text_without_defs, &ref_defs);
+
+    // Extract footnote definitions and replace with HTML comment markers.
+    // Comrak moves FootnoteDefinition nodes to the end of the AST and drops
+    // unreferenced ones entirely.  By extracting definitions before comrak
+    // and replacing them with FNDEF markers (preserved as HtmlBlock nodes),
+    // we keep definitions at their original positions.
+    text = extract_footnote_defs(&text);
 
     let mut escape_placeholders: Vec<(String, String)> = Vec::new();
     for &ch in ESCAPE_CHARS {

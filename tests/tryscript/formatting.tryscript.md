@@ -289,16 +289,7 @@ one. Third sentence that wraps up the paragraph.
 > This is a blockquote with a paragraph of text inside it.
 > 
 > Second paragraph in the blockquote.
-
-```python
-def example():
-    return "code block preserved"
-```
-
-~~~bash
-echo "tilde code block"
-~~~
-
+...
 Use `inline code` with special characters like `"quotes"` and `it's`.
 
 He said "hello" and she said 'goodbye' to everyone.

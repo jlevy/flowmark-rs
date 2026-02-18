@@ -57,6 +57,9 @@ high-stakes decisions for those who give and *receive it*. Blah blah blah and bl
 
 - Additional parameters become options (e.g., `model=gpt-4o`, `language=en`)
 
+[^uptimenote]: In engineering, "counting nines" traditionally refers to *service
+    availability* (uptime)—99.99% uptime means ≤ 52 minutes of downtime per year.
+
 ## Some apostrophes and quotes--and dashes, too
 
 “Hello,” he said! “What’s … your specialty?”
@@ -948,8 +951,13 @@ threshold leverage to block an IPO.[^210]
    modules with large *cumulative* times at the top level or deep in the call stack.
    These are the primary candidates for further investigation.<sup>1</sup>
 
+[^2]: Aulet, Bill. *Disciplined Entrepreneurship*: 24 Steps to a Successful Startup (Kindle
+    Location 1220). Wiley, 2013. Kindle Edition.
 [^191]: http://paulgraham.com/fr.html
+[^177]: Carnegie, Dale. *How To Win Friends and Influence People* (p. 35). Simon & Schuster.
+    Kindle Edition.
 [^207]: [https://bostonvcblog.typepad.com/vc/2009/07/in-vc-deals-price-doesnt-matter-but-the-promote-does.html](https://bostonvcblog.typepad.com/vc/2009/07/in-vc-deals-price-doesnt-matter-but-the-promote-does.html)
+[^210]: FM16, p. 80
 
 Links like these underline ones come up from some exports.
 And let’s try some links with angle brackets.
@@ -957,7 +965,22 @@ And let’s try some links with angle brackets.
 [^52]: [[https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com]{.underline}](https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com)
 [^53]: <https://www.fastcompany.com/90216464/the-29-billion-battle-to-own-how-america-sleeps>
 [^axioscomth.1lioru]: <https://www.axios.com/the-rise-of-pre-seed-venture-capital-1513305959-13da61c8-15f8-441e-b016-d29902bff8bf.html>
+[^carnegieda.327r3k]: Carnegie, Dale. *How To Win Friends and Influence People* (p. 35). Simon & Schuster.
+    Kindle Edition.
 [^53]: <https://www.fastcompany.com/90216464/the-29-billion-battle-to-own-how-america-sleeps>
+[^217]: Testing - : Is Ketamine Contraindicated in Patients with Psychiatric Disorders?
+    - REBEL EM - more words - accessed April 24, 2025,
+
+[https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/](https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/)
+
+[^multiline]: The distinction between “hiring” and “recruiting” isn’t universally agreed
+    upon. Some people think of hiring as a superset of recruiting, some consider it to be
+    the other way around.
+    However you think of it, both recruiting and hiring involve selling candidates on
+    the value proposition of a company and ensuring the alignment of interests between
+    the two parties.
+[^multiparagraph]: This is an even longer footnote... Paragraph 1. > And even a > block
+    quote. Paragraph 3.
 
 And by contrast here a bare link is like this
 [https://www.google.com/](https://www.google.com/)
@@ -1700,9 +1723,3 @@ She read “the [documentation](https://example.com) first.”
 ## Summary
 
 All these corner cases should format consistently and predictably.
-
-[^177]: Carnegie, Dale. *How To Win Friends and Influence People* (p. 35). Simon & Schuster.
-    Kindle Edition.
-
-[^210]: FM16, p. 80
-
