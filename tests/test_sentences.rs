@@ -1,4 +1,5 @@
-use flowmark::{first_sentence, split_sentences_regex};
+use flowmark::split_sentences_regex;
+use flowmark::wrapping::sentence::first_sentence;
 
 const LONG_TEXT: &str = "End of sentence must be two letters or more, with the last letter lowercase, followed by a period, exclamation point, question mark. A final or preceding parenthesis or quote is allowed. Does not break on colon or semicolon as that seems to have false positives too often with code or other syntax.";
 

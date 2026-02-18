@@ -103,6 +103,8 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
                 let last_line_len = lines.last().map_or(0, |l: &String| l.chars().count());
                 let last_is_short = !lines.is_empty() && last_line_len < min_line_len;
 
+                // Note: does not add +1 for the joining space, matching Python behavior.
+                // This can overshoot width by 1 char on combined lines (known parity issue).
                 let current_column =
                     if last_is_short { base_column + last_line_len } else { base_column };
 

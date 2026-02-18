@@ -328,6 +328,48 @@ fn test_flowmarkignore() {
     assert!(!stdout.contains("skip"), "skip/ should be excluded by .flowmarkignore");
 }
 
+// --- Permission preservation (C3 regression) ---
+
+#[cfg(unix)]
+#[test]
+fn test_auto_preserves_permissions_644() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let file = dir.path().join("test.md");
+    fs::write(&file, "# Hello\n\nSome text.\n").expect("write test.md");
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o644)).expect("set permissions");
+
+    let output = Command::new(flowmark_bin())
+        .args(["--auto", file.to_str().expect("path to str")])
+        .output()
+        .expect("run flowmark");
+
+    assert!(output.status.success(), "exit code should be 0");
+    let mode = file.metadata().expect("file metadata").permissions().mode() & 0o777;
+    assert_eq!(mode, 0o644, "permissions should be preserved as 0o644, got 0o{mode:o}");
+}
+
+#[cfg(unix)]
+#[test]
+fn test_auto_preserves_permissions_755() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let file = dir.path().join("test.md");
+    fs::write(&file, "# Hello\n\nSome text.\n").expect("write test.md");
+    fs::set_permissions(&file, fs::Permissions::from_mode(0o755)).expect("set permissions");
+
+    let output = Command::new(flowmark_bin())
+        .args(["--auto", file.to_str().expect("path to str")])
+        .output()
+        .expect("run flowmark");
+
+    assert!(output.status.success(), "exit code should be 0");
+    let mode = file.metadata().expect("file metadata").permissions().mode() & 0o777;
+    assert_eq!(mode, 0o755, "permissions should be preserved as 0o755, got 0o{mode:o}");
+}
+
 // --- Edge cases (3 tests) ---
 
 #[test]

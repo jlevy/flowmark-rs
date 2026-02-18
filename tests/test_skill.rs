@@ -108,3 +108,21 @@ fn test_install_skill_overwrites_existing() {
     assert!(!content.contains("old content"), "old content should be overwritten");
     assert!(content.contains("name: flowmark"), "should contain name: flowmark");
 }
+
+/// M5 regression test: `install_skill` with path traversal should be rejected.
+#[test]
+fn test_install_skill_rejects_path_traversal() {
+    let result = install_skill(Some("../../tmp/evil"));
+    assert!(result.is_err(), "path traversal should be rejected");
+    let err = result.expect_err("should error");
+    assert!(err.contains(".."), "error message should mention '..' traversal: {err}");
+}
+
+/// M5: `install_skill` with safe relative path should work.
+#[test]
+fn test_install_skill_safe_relative_path() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let safe_path = dir.path().join("project").join(".claude");
+    install_skill(Some(safe_path.to_str().expect("path to str"))).expect("install skill");
+    assert!(safe_path.join("skills/flowmark/SKILL.md").exists());
+}

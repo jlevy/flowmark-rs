@@ -18,11 +18,9 @@ pub use config::{DEFAULT_WRAP_WIDTH, FormatOptions, ListSpacing};
 pub use error::{Error, Result};
 pub use formatter::filling::fill_markdown;
 pub use wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
-pub use wrapping::sentence::{first_sentence, first_sentences, split_sentences_regex};
+pub use wrapping::sentence::split_sentences_regex;
 pub use wrapping::text_filling::{Wrap, fill_text};
-pub use wrapping::text_wrapping::{
-    html_md_word_split, simple_word_split, wrap_paragraph, wrap_paragraph_lines,
-};
+pub use wrapping::text_wrapping::{html_md_word_split, wrap_paragraph, wrap_paragraph_lines};
 
 impl FormatOptions {
     /// Reformat a Markdown or plain text string.
@@ -136,11 +134,24 @@ pub fn reformat_file(
 ///
 /// Writes to a temp file in the same directory, then persists (renames) to the
 /// target path. This prevents file corruption if the process is interrupted.
+/// On Unix, preserves the original file's permissions if it already exists.
 fn atomic_write(path: &Path, content: &str) -> Result<()> {
     use std::io::Write;
+
+    // Read original permissions before overwriting (Unix only).
+    #[cfg(unix)]
+    let original_permissions = path.metadata().ok().map(|m| m.permissions());
+
     let dir = path.parent().unwrap_or(Path::new("."));
     let mut tmp = tempfile::NamedTempFile::new_in(dir)?;
     tmp.write_all(content.as_bytes())?;
     tmp.persist(path).map_err(|e| Error::Io(e.error))?;
+
+    // Restore original permissions after persist.
+    #[cfg(unix)]
+    if let Some(perms) = original_permissions {
+        std::fs::set_permissions(path, perms)?;
+    }
+
     Ok(())
 }

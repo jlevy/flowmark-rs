@@ -73,3 +73,27 @@ fn test_markdown_with_frontmatter() {
     assert!(normalized.contains("This is sentence one."));
     assert!(normalized.contains("This is sentence two."));
 }
+
+/// M4 regression test: CRLF line endings in frontmatter should not corrupt content.
+/// `text.lines()` strips `\r\n` but rejoins with `\n`, silently converting CRLF files.
+#[test]
+fn test_split_frontmatter_crlf() {
+    let text = "---\r\ntitle: Test\r\n---\r\n\r\n# Content\r\n";
+    let (fm, content) = split_frontmatter(text);
+    // Frontmatter should be extracted (line endings may be normalized)
+    assert!(!fm.is_empty(), "Frontmatter should be detected with CRLF");
+    assert!(fm.contains("title: Test"), "Title should be in frontmatter");
+    // Content should not be corrupted
+    assert!(content.contains("# Content"), "Content should be preserved");
+}
+
+/// M4 regression test: full pipeline with CRLF input.
+#[test]
+fn test_markdown_with_crlf_frontmatter() {
+    let input = "---\r\ntitle: CRLF Test\r\n---\r\n\r\n# Heading\r\n\r\nParagraph text.\r\n";
+    let result =
+        fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve);
+    // Content should not be corrupted
+    assert!(result.contains("# Heading"), "Heading preserved with CRLF input");
+    assert!(result.contains("Paragraph text."), "Paragraph preserved with CRLF input");
+}

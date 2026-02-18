@@ -1672,7 +1672,7 @@ This section tests smart quoting in various container types.
 
 | Description | Command |
 | --- | --- |
-| “There’s a bug where ...” | `tbd create "..." --type=bug` |
+| “There’s a bug where …” | `tbd create "..." --type=bug` |
 | “Create a task” | `tbd create "..." --type=task` or `--type=feature` |
 
 ### Blockquote with Quotes Spanning Code Spans
