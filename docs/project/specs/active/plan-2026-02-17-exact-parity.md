@@ -1681,3 +1681,235 @@ Largest Rust library files: `filling.rs` (1,270 total), `tag_handling.rs` (387),
   Phase 10** — see Phase 10 plan above.
 - The Rust codebase has **zero `#[ignore]` tests, zero clippy warnings, and zero
   `unwrap()` calls** in library code.
+
+## Appendix D: Senior Engineering Review — Bugs & Issues (2026-02-17)
+
+Fresh code review findings from an end-to-end build + test + source review.
+All 339 tests pass, CI clippy clean, release build succeeds.
+
+### Critical
+
+| # | Issue | Location | Description |
+| --- | --- | --- | --- |
+| C1 | Regex compiled in loop | `filling.rs:961-973` | `min_fence_length` compiles a new `Regex` per code block. Only 2 possible patterns (`` ` `` or `~`), should be `LazyLock<Regex>` statics. |
+| C2 | Ellipsis+smartquotes interaction bug | `ellipses.rs:11`, `filling.rs:1046-1051` | When both `--smartquotes` and `--ellipses` are enabled (including `--auto`), `...` followed by a curly double quote `\u{201d}` is NOT converted. Root cause: `ELLIPSIS_PATTERN` group 4 doesn't include `\u{201c}`/`\u{201d}`, so boundary check fails. **Affects `--auto` mode.** |
+| C3 | Inplace mode loses file permissions | `lib.rs:139-146` | `atomic_write` uses `tempfile::NamedTempFile` then `persist()`, which creates the new file with `0600` permissions regardless of original mode. Confirmed: `755` → `600`. |
+
+### High
+
+| # | Issue | Location | Description |
+| --- | --- | --- | --- |
+| H1 | `usize` underflow in `fill_text` | `text_filling.rs:103` | `width - subsequent_indent.chars().count()` panics if indent wider than width (e.g., `width=2` with 4-space indent). |
+| H2 | Glob expansion skips exclusion filters | `resolver.rs:230-248` | `expand_glob` doesn't apply exclude/gitignore/tool-ignore patterns. `flowmark "**/*.md"` would include `node_modules/`, `.git/`, etc. |
+| H3 | Gitignore matching uses filename only | `resolver.rs:163` | `matched(filename, false)` passes bare filename, not relative path. Patterns like `docs/*.md` never match. |
+| H4 | Smart quotes char-boundary redistribution fragile | `filling.rs:1107-1149` | Redistribution across AST nodes assumes `smart_quotes` preserves character count. Invariant is implicit and undocumented. |
+
+### Medium
+
+| # | Issue | Location | Description |
+| --- | --- | --- | --- |
+| M1 | Column off-by-one in sentence wrapper | `line_wrappers.rs:103-107` | `current_column` doesn't account for the joining space, can overshoot width by 1. |
+| M2 | PUA placeholder collision | `filling.rs:1028-1029` | U+E000–U+E07A used as escape placeholders. Input containing these PUA chars would be corrupted. |
+| M3 | O(n*m) placeholder restoration | `text_wrapping.rs:40-52` | Every token tested against every construct via `String::replace`. Could use HashMap. |
+| M4 | CRLF line endings not preserved | `frontmatter.rs:30-32` | `text.lines()` strips `\r\n` but rejoins with `\n`. Windows CRLF files silently converted. |
+| M5 | `install_skill` path traversal | `skills/mod.rs:51-75` | `--agent-base` accepts arbitrary paths with no validation. |
+| M6 | `read_ignore_file` silently drops all patterns on one bad line | `gitignore.rs:34` | `builder.add_line(...).ok()?` returns `None` if any line invalid, discarding entire file. |
+| M7 | `should_include_explicit` skips same-named directory component | `resolver.rs:96-98` | Path `foo/foo` skips the directory `foo` because it matches the filename. |
+
+### Low
+
+| # | Issue | Location | Description |
+| --- | --- | --- | --- |
+| L1 | `has_frontmatter` parses entire document | `frontmatter.rs:42-45` | Allocates and splits full document just to check existence. Could check first chars. |
+| L2 | `simple_word_split` appears unused in production | `text_wrapping.rs:75-77` | `pub` but only used in tests. Should be `pub(crate)` or `#[cfg(test)]`. |
+| L3 | `first_sentence`/`first_sentences` unused | `sentence.rs:61-71` | Public functions not called from anywhere in the codebase. |
+| L4 | Misleading error message in `install_skill` | `skills/mod.rs:64` | Always says "Permission denied" but `create_dir_all` can fail for many reasons. |
+| L5 | `in_heading` threaded as `&mut bool` through deep call chain | `filling.rs:328+` | Fragile mutable shared state. A rendering context struct would be cleaner. |
+| L6 | `byte_indexing` in `markdown_escape_word` | `text_wrapping.rs:84-85` | Relies on last char being ASCII. Safe today but fragile if regex broadened. |
+
+### Test Coverage Gap Analysis
+
+Every bug above was missed because no existing test covers the specific condition.
+Below is the gap analysis and required test for each.
+
+#### C1 — Regex compiled in loop
+
+- **Existing coverage:** 6 tests in `test_fenced_code_blocks.rs` test correctness of fence
+  length computation, all pass because the function returns correct values regardless of
+  compilation cost.
+- **Gap:** No performance test exists. The fix is to use `LazyLock<Regex>` statics (only 2
+  patterns), at which point existing correctness tests suffice.
+- **Required test:** None beyond the fix itself. Existing tests validate correctness.
+
+#### C2 — Ellipsis + smartquotes interaction (PARITY BUG)
+
+- **Existing coverage:** `test_ellipses_quotes` tests `ellipses()` with straight quotes only.
+  `test_ref_docs` "auto" mode enables both features on the reference doc, but the doc's
+  `...` + quote patterns have a space between `...` and the closing quote, so the bug isn't
+  triggered.
+- **Gap:** No test calls `fill_markdown` with both `smartquotes: true` and `ellipses: true` on
+  input where `...` is directly adjacent to a closing quote (`word..."`).
+- **Required test (integration, `test_ellipses.rs`):**
+  - Input: `He said "well..."` with both features → expect
+    `He said \u{201c}well \u{2026}\u{201d}`
+  - Input: `"Hello..." she said` → expect
+    `\u{201c}Hello \u{2026}\u{201d} she said`
+  - Input: `'Maybe...'` → single-quote variant
+
+#### C3 — Inplace mode loses file permissions
+
+- **Existing coverage:** `test_auto_with_dot_formats_cwd` and `test_auto_with_explicit_file`
+  verify file content after `--auto` but never check permissions.
+- **Gap:** Zero permission tests in the entire test suite.
+- **Required test (integration, `test_cli_file_discovery.rs`, `#[cfg(unix)]`):**
+  - Create file with `0o644` permissions, run `--auto`, assert permissions are `0o644` after.
+  - Create file with `0o755` permissions, run `--auto`, assert permissions are `0o755` after.
+
+#### H1 — `usize` underflow in `fill_text`
+
+- **Existing coverage:** `test_width_options.rs` tests widths 0, 40, 88, 200.
+  `test_wrapping.rs` tests `wrap_paragraph_lines` directly with widths 5–80.
+  No test calls `fill_text` with `width < indent_length`.
+- **Gap:** No small-width test with indented content (e.g., `width=2` with `Wrap::WrapIndent`
+  which uses 4-char indent).
+- **Required test (unit, `test_width_options.rs`):**
+  - Call `fill_text` with `width=2` and `Wrap::WrapIndent` — must not panic, should degrade
+    gracefully.
+  - Call `fill_markdown` with `width=3` on a nested list item — must not panic.
+
+#### H2 — `expand_glob` skips exclusion filters
+
+- **Existing coverage:** `test_resolver_glob_pattern` tests `"docs/*.md"` but only checks
+  include filtering (`.txt` excluded), not directory exclusion.
+  `test_resolver_excludes_default_dirs` tests directory exclusion via `walk_directory`, not
+  glob expansion.
+- **Gap:** No test resolves a glob like `"**/*.md"` and verifies excluded directories
+  (`node_modules/`, etc.) are filtered.
+- **Required test (integration, `test_file_resolver.rs`):**
+  - Create `docs/api.md`, `node_modules/pkg/README.md`. Resolve with `"**/*.md"`.
+    Assert `node_modules/` file is excluded.
+  - Create `.gitignore` with `build/`, create `build/output.md`. Resolve with `"**/*.md"`.
+    Assert `build/output.md` is excluded.
+
+#### H3 — Gitignore matching uses filename only
+
+- **Existing coverage:** 5 gitignore tests all use bare-filename patterns (`draft.md`,
+  `temp.*`, `*.log`) or directory patterns (`build/`). All pass because they don't need
+  path-based matching.
+- **Gap:** No test uses a path-based gitignore pattern like `docs/draft.md` or
+  `sub/specific.md`.
+- **Required test (unit, `test_file_resolver.rs`):**
+  - Create `sub/keep.md`, `sub/ignore-me.md`, `.gitignore` with `sub/ignore-me.md`.
+    Assert `ignore-me.md` is excluded via directory walk.
+
+#### H4 — Smart quotes char-boundary redistribution fragile
+
+- **Existing coverage:** 6 spanning-quote tests in `test_smartquotes.rs` verify quotes across
+  inline elements (code spans, emphasis, links). All work because `"` → curly quote is 1:1
+  char replacement.
+- **Gap:** No test with many interleaved inline elements or text nodes where boundary falls
+  exactly on a quote character.
+- **Required test (integration, `test_smartquotes.rs`):**
+  - Input: `He said "this *is* **really** 'quite' important" to her.`
+    Verify all quotes converted and no text lost.
+  - Input with boundary on quote: `"*bold*" and "*italic*"` — verify correct redistribution.
+
+#### H5/M6 — `read_ignore_file` drops all patterns on bad line
+
+- **Existing coverage:** 3 tests for complete failure modes (missing, unreadable, non-UTF-8).
+- **Gap:** No test with a mix of valid and invalid patterns.
+- **Required test (unit, `test_file_resolver.rs`):**
+  - Create `.gitignore` with valid patterns and one potentially invalid line. Verify valid
+    patterns still apply.
+  - Note: `GitignoreBuilder::add_line` is lenient, so may need to check what actually
+    triggers an error and test that specific case.
+
+#### M1 — Column off-by-one in sentence wrapper
+
+- **Existing coverage:** `test_wrap_width` tests `wrap_paragraph_lines` at width 80 (not the
+  sentence combiner). Golden test uses width 88, unlikely to hit the exact boundary.
+- **Gap:** No test targets boundary-width cases in `line_wrap_by_sentence`.
+- **Required test (unit, `test_wrapping.rs`):**
+  - Construct input where a short sentence + joining space + next word = exactly `width`.
+    Call `line_wrap_by_sentence` and assert no line exceeds width.
+
+#### M2 — PUA placeholder collision
+
+- **Existing coverage:** Escape tests cover backslash escapes but zero tests include PUA
+  characters (U+E000–U+E07A) in input.
+- **Gap:** No test with PUA chars in input text.
+- **Required test (unit, `test_escape_handling.rs`):**
+  - Input: `"Text with \u{E000} and \u{E05C} characters."` — assert PUA chars preserved
+    unchanged.
+  - Input with PUA adjacent to backslash escape: `"\*test\u{E000}"` — assert both preserved.
+
+#### M3 — O(n*m) placeholder restoration
+
+- **Gap:** No performance benchmarks exist at all (`benches/` directory missing).
+- **Required:** Consider adding a `benches/` directory with `criterion` benchmarks for
+  `html_md_word_split` and wrapping on large documents. Not blocking.
+
+#### M4 — CRLF not preserved
+
+- **Existing coverage:** 9 frontmatter tests, all use `\n` exclusively.
+- **Gap:** Zero CRLF tests.
+- **Required test (unit, `test_frontmatter.rs`):**
+  - Input: `"---\r\ntitle: Test\r\n---\r\n\r\n# Content\r\n"` — verify frontmatter section
+    preserves `\r\n` line endings (or at minimum that the content is not corrupted).
+
+#### M5 — `install_skill` path traversal
+
+- **Existing coverage:** 4 install tests, all use safe tempdir paths.
+- **Gap:** No test with `..` path components.
+- **Required test (unit, `test_skill.rs`):**
+  - Call `install_skill(Some("../../tmp/evil"))` and verify it either rejects the path or
+    canonicalizes it safely.
+
+#### M7 — `should_include_explicit` skips same-named directory
+
+- **Existing coverage:** `force_exclude` test uses `node_modules/README.md` where names
+  differ.
+- **Gap:** No test where directory and file share the same name.
+- **Required test (unit, `test_file_resolver.rs`):**
+  - Create `excluded/excluded` (file named `excluded` inside directory `excluded`). Add
+    `excluded/` to exclude patterns with `force_exclude`. Assert the file is excluded.
+
+### Appendix D Learnings: Testing Gaps and Backfill Tracker
+
+All bugs in this review were missed because no test in either Python or Rust covers the
+specific condition.
+The test mapping system (`test-mapping.yaml`) is Python-centric — it tracks whether every
+Python test has a Rust equivalent.
+New tests for these bugs will be Rust-only (`extra_rust` in `check-mapping` output).
+Consider upstreaming tests to Python flowmark for cross-language gaps (marked below).
+
+| # | Bug | Sev | Python test? | Rust test? | Required test file | Test type | Upstream candidate? | Bead |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| C1 | Regex in loop | Crit | No | No (fix only) | N/A — existing tests suffice after fix | Code fix | No | fmr-he1d |
+| C2 | Ellipsis+smartquotes | Crit | No | No | `test_ellipses.rs` | Integration | **Yes** | fmr-wbsk |
+| C3 | Permissions lost | Crit | No | No | `test_cli_file_discovery.rs` | Integration (`#[cfg(unix)]`) | **Yes** | fmr-7o1d |
+| H1 | `usize` underflow | High | No | No | `test_width_options.rs` | Unit | No | fmr-86se |
+| H2 | Glob skips excludes | High | No | No | `test_file_resolver.rs` | Integration | **Yes** | fmr-a4on |
+| H3 | Gitignore filename only | High | No | No | `test_file_resolver.rs` | Unit | **Yes** | fmr-albo |
+| H4 | Char redistribution | High | No | No | `test_smartquotes.rs` | Integration | No | fmr-afg0 |
+| H5 | Ignore file drops all | Med | No | No | `test_file_resolver.rs` | Unit | No | fmr-gpi6 |
+| M1 | Column off-by-one | Med | No | No | `test_wrapping.rs` | Unit | No | fmr-myhs |
+| M2 | PUA collision | Med | No | No | `test_escape_handling.rs` | Unit | No | fmr-draa |
+| M3 | O(n*m) restore | Med | No | No | `benches/` (new) | Benchmark | No | fmr-wjjm |
+| M4 | CRLF not preserved | Med | No | No | `test_frontmatter.rs` | Unit | **Yes** | fmr-9s7o |
+| M5 | Path traversal | Med | No | No | `test_skill.rs` | Unit | No | fmr-ol08 |
+| M7 | Same-name dir/file | Med | No | No | `test_file_resolver.rs` | Unit | No | fmr-n6ve |
+| L1 | `has_frontmatter` inefficient | Low | No | No | N/A — perf optimization | Code fix | No | fmr-xado |
+| L2 | `simple_word_split` unused | Low | No | No | N/A — visibility fix | Code fix | No | fmr-jcsj |
+| L3 | `first_sentence` unused | Low | No | No | N/A — dead code removal | Code fix | No | fmr-wonk |
+| L4 | Misleading error msg | Low | No | No | N/A — string fix | Code fix | No | fmr-zygd |
+| L5 | `in_heading` mut bool | Low | No | No | N/A — refactor | Code fix | No | fmr-kqxb |
+| L6 | Byte indexing fragile | Low | No | No | N/A — defensive fix | Code fix | No | fmr-m7o8 |
+
+**After implementation:**
+
+1. Write each test (test should fail before fix, pass after).
+2. Run `flowmark-dev discover-rust` to update `rust-tests.yaml`.
+3. New tests appear in `extra_rust` section of `flowmark-dev check-mapping`.
+4. For upstream candidates (marked **Yes**): consider filing issues or PRs against Python
+   flowmark to add equivalent tests.
