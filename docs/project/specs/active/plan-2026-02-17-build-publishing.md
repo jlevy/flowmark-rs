@@ -130,65 +130,118 @@ Higher-impact CI additions.
 
 ### Phase 3: Crates.io Readiness — IN PROGRESS
 
-Prepare Cargo.toml metadata and verify publishability.
+Prepare Cargo.toml metadata, write README, and verify publishability.
 
-- [x] Add `readme = "README.md"` to Cargo.toml
-- [x] Add `documentation = "https://docs.rs/flowmark"` to Cargo.toml
-- [ ] Bump version to `0.2.0` in Cargo.toml
-- [ ] Add `package.metadata.parity` with Python version reference
-- [ ] Verify `cargo publish --dry-run` succeeds
-- [ ] Write root README.md (see README Structure below)
-- [ ] Set up trusted publishing (OIDC) on crates.io — register GitHub repo as trusted
-  publisher at https://crates.io/settings/tokens (mirrors Python flowmark’s PyPI OIDC
-  setup)
-- [ ] First publish: manual `cargo publish` or via trusted publishing workflow
+- [x] Add `readme = "README.md"` to `Cargo.toml` (line 8)
+- [x] Add `documentation = "https://docs.rs/flowmark"` to `Cargo.toml` (line 10)
+- [ ] **Bump version to `0.2.0`** (fmr-xnxy) — `Cargo.toml` line 3: change
+  `version = "0.1.0"` → `version = "0.2.0"`. Run `cargo check` to verify lockfile
+  updates cleanly.
+- [ ] **Rename `package.metadata.python_source` to `package.metadata.parity`**
+  (fmr-7cf1) — `Cargo.toml` lines 58-59: rename section header from
+  `[package.metadata.python_source]` to `[package.metadata.parity]` and keep
+  `version = "0.6.4"`. This aligns with the Version Convention in this spec. Grep for
+  `python_source` in `python/` tooling to update any references (e.g.,
+  `python/src/flowmark_dev/` scripts that read this metadata).
+- [ ] **Write root README.md** (fmr-swma) — Create `/README.md` following the README
+  Structure section below. Sections: project description (1-2 paragraphs linking to
+  [flowmark](https://github.com/jlevy/flowmark) Python project and
+  [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook)),
+  installation (`cargo install flowmark`, pre-built binaries from GitHub Releases),
+  library usage (brief `use flowmark::FormatOptions` example, link to docs.rs), badges
+  (CI, crates.io, docs.rs, MSRV). Keep it minimal — do not duplicate Python project
+  docs.
+- [ ] **Verify `cargo publish --dry-run` succeeds** (fmr-6evz) — Run
+  `cargo publish --dry-run --allow-dirty` to verify metadata, README, and crate
+  packaging are correct. Fix any warnings. Depends on: fmr-swma (README).
+- [ ] **(Manual) Set up trusted publishing (OIDC) on crates.io** (fmr-db47) — Register
+  GitHub repo as trusted publisher at https://crates.io/settings/tokens. Configure:
+  owner `jlevy/flowmark-rs`, workflow `publish.yml`, environment (none). This is a
+  one-time manual web UI step.
+- [ ] **(Manual) First publish** (fmr-tm0t) — After publish workflow is in place, create
+  a GitHub Release tagged `v0.2.0` to trigger the automated publish. Or run
+  `cargo publish` manually for the first time. Depends on: fmr-aarf (publish workflow),
+  fmr-db47 (OIDC setup).
 
 ### Phase 4: Publish Workflow — PENDING
 
-Create a `publish.yml` workflow mirroring the Python project's `publish.yml` pattern.
+Create `.github/workflows/publish.yml` for automated crates.io publishing, and write
+the publishing docs.
 
-- [ ] Create `.github/workflows/publish.yml` triggered on `release: types: [published]`
-  plus `workflow_dispatch` (manual trigger — matches Python project pattern)
-- [ ] Workflow runs `cargo test --locked --all-features` before publishing (mirrors
-  Python's "run pytest before publish" safety check)
-- [ ] Publish to crates.io via trusted publishing (OIDC `id-token: write` permission)
-- [ ] Write `docs/publishing.md` with pre-release checklist and step-by-step
-  instructions (following the Python project's `docs/publishing.md` structure)
+- [ ] **Create `.github/workflows/publish.yml`** (fmr-aarf) — New file with:
+  - Triggers: `on: release: types: [published]` and `on: workflow_dispatch` (manual)
+  - Permissions: `id-token: write` (for OIDC trusted publishing), `contents: read`
+  - Single job `publish` on `ubuntu-latest`:
+    1. `actions/checkout@v4`
+    2. `dtolnay/rust-toolchain@stable`
+    3. `Swatinem/rust-cache@v2`
+    4. `cargo test --locked --all-features` (safety check before publishing)
+    5. `cargo publish` (uses OIDC token — no `CARGO_REGISTRY_TOKEN` secret needed)
+  - Match the pattern of the Python project's `publish.yml` (trigger on release +
+    manual dispatch, test before publish)
+- [ ] **Write `docs/publishing.md`** (fmr-67o0) — New file with:
+  - Pre-release checklist (adapted from Pre-Release Checklist section below)
+  - Step-by-step instructions for creating a release
+  - How trusted publishing (OIDC) works
+  - Troubleshooting section (common publish failures)
 
 ### Phase 5: Binary Release Workflow — PENDING
 
 Set up automated cross-platform binary builds via cargo-dist.
 
-- [ ] Install and run `cargo dist init` to bootstrap configuration
-- [ ] Configure targets: `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`,
-  `x86_64-apple-darwin`, `aarch64-apple-darwin`
-- [ ] Configure installers: shell
-- [ ] Review and customize generated `.github/workflows/release.yml`
-- [ ] Ensure release workflow integrates with publish workflow (tag → build binaries →
-  create GitHub Release → trigger crates.io publish)
-- [ ] Test release workflow with a `v0.2.0` tag
-- [ ] Verify artifacts: tarball contents include binary + LICENSE + README
+- [ ] **Run `cargo dist init` and configure** (fmr-t8qq) — Install cargo-dist
+  (`cargo install cargo-dist`) and run `cargo dist init` to bootstrap configuration.
+  This generates:
+  - `[workspace.metadata.dist]` section in `Cargo.toml`
+  - `.github/workflows/release.yml`
+  - `dist-workspace.toml` (or equivalent config)
+  Configure targets: `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`,
+  `x86_64-apple-darwin`, `aarch64-apple-darwin`. Enable `shell` installer (generates
+  `curl | sh` one-liner). Homebrew installer deferred to future.
+- [ ] **Review generated release workflow** (fmr-c1l6) — Review
+  `.github/workflows/release.yml` for correctness. Depends on: fmr-t8qq.
+  - Triggers on tag push (`v*`)
+  - Builds binaries for all 4 targets
+  - Creates GitHub Release with artifacts
+  - Uploads tarballs containing: binary, LICENSE, README.md
+- [ ] **Coordinate with publish workflow** (fmr-ttf7) — Ensure release creation
+  triggers the publish workflow (Phase 4). Depends on: fmr-aarf, fmr-c1l6. The flow:
+  push tag → release.yml builds binaries and creates GitHub Release → publish.yml
+  triggers on release published → publishes to crates.io.
+- [ ] **(Manual) Test with `v0.2.0` tag** (fmr-ya3n) — Push `v0.2.0` tag, verify
+  release workflow creates artifacts, verify publish workflow publishes to crates.io.
+  Depends on: fmr-ttf7.
 
 ### Phase 6: Documentation and Community — PENDING
 
-Standard open source project documentation, following the Python project's conventions.
+Standard open source project documentation.
 
-- [ ] Write CONTRIBUTING.md (build instructions, test commands, PR guidelines —
-  following Python project's `docs/development.md` structure adapted for Rust/cargo)
-- [ ] Add CHANGELOG.md (can be minimal initially; automate later with git-cliff)
-- [ ] Add badges to README (CI status, crates.io version, docs.rs, codecov, MSRV)
-- [ ] Write `docs/publishing.md` with pre-release checklist (adapted from Python
-  project's `docs/publishing.md`):
-  - Verify all changes committed and pushed
-  - Run linting and tests locally (`cargo fmt --check`, `cargo clippy`, `cargo test`)
-  - Confirm CI is passing (`gh run list --limit 3`)
-  - Determine version number (semver) and update Cargo.toml
-  - Create GitHub Release with structured release notes
-  - Verify publish workflow succeeded
-- [ ] Review and update LICENSE file if needed
-- [ ] Ensure `cargo doc` output is clean and useful for library consumers
-- [ ] Add `--version` output that includes parity info:
-  `flowmark 0.2.0 (parity: flowmark-py 0.6.4)` (via build script or `vergen`)
+- [ ] **Write CONTRIBUTING.md** (fmr-nc8i) — New file `/CONTRIBUTING.md` with:
+  - Prerequisites (Rust 1.85+, cargo)
+  - Build: `cargo build --all-features`
+  - Test: `cargo test --all-features`
+  - Lint: `cargo fmt --check && cargo clippy --all-targets --all-features`
+  - PR guidelines (run CI locally before submitting, keep PRs focused)
+  - Link to docs/publishing.md for release process
+- [ ] **Add CHANGELOG.md** (fmr-4v5g) — New file `/CHANGELOG.md` with initial entry for
+  v0.2.0. Minimal format: `## [0.2.0] - YYYY-MM-DD` with bullet summary of changes.
+  Automate with git-cliff later.
+- [ ] **Add badges to README.md** (fmr-7ayu) — Add to top of README.md after title.
+  Depends on: fmr-swma (README).
+  - CI: `![CI](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml/badge.svg)`
+  - crates.io: `[![crates.io](https://img.shields.io/crates/v/flowmark.svg)](https://crates.io/crates/flowmark)`
+  - docs.rs: `[![docs.rs](https://docs.rs/flowmark/badge.svg)](https://docs.rs/flowmark)`
+  - MSRV: `![MSRV](https://img.shields.io/badge/MSRV-1.85-blue)`
+  - Codecov: `[![codecov](https://codecov.io/gh/jlevy/flowmark-rs/graph/badge.svg)](https://codecov.io/gh/jlevy/flowmark-rs)`
+- [ ] **Add `--version` parity info** (fmr-19zr) — Modify `src/main.rs` line 21: change
+  `#[command(name = "flowmark", version, about = ...)]` to use a custom version string
+  via `version = env!("CARGO_PKG_VERSION")` or add a `long_version` that includes
+  parity info: `flowmark 0.2.0 (parity: flowmark-py 0.6.4)`. Read parity version from
+  `Cargo.toml` metadata at build time using a `build.rs` script that emits
+  `cargo::rustc-env=PARITY_VERSION=0.6.4`.
+- [ ] **Verify `cargo doc` output** (fmr-ghvq) — Run
+  `cargo doc --no-deps --all-features --open` and review the generated documentation.
+  Ensure public API items have doc comments. Fix any broken links or missing docs.
 
 ### Future: Homebrew Tap — DEFERRED
 
@@ -333,11 +386,8 @@ Adapted from Python project’s `docs/publishing.md`:
 - [cargo-dist documentation](https://opensource.axo.dev/cargo-dist/)
 - [crates.io trusted publishing](https://doc.rust-lang.org/cargo/reference/registry-authentication.html)
 - [ripgrep release workflow](https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml)
-- [Orhun’s automated Rust releases guide](https://blog.orhun.dev/automated-rust-releases/)
-- Python flowmark publishing: `attic/flowmark/docs/publishing.md` (reference for
-  process)
-- Python flowmark publish workflow: `attic/flowmark/.github/workflows/publish.yml` (OIDC
-  trusted publishing pattern)
-- Python flowmark README: `attic/flowmark/README.md` (reference for structure)
+- [Orhun's automated Rust releases guide](https://blog.orhun.dev/automated-rust-releases/)
+- Python flowmark project: https://github.com/jlevy/flowmark (reference for README
+  structure, publishing process, release notes format)
 - Current CI config: `.github/workflows/ci.yml`
 - Current Cargo.toml: `Cargo.toml`
