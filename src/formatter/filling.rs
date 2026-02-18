@@ -146,7 +146,7 @@ fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -
 
     for line in &lines {
         if in_code {
-            result.push(line.to_string());
+            result.push((*line).to_string());
             // Check for closing fence
             let trimmed = line.trim();
             if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
@@ -168,10 +168,10 @@ fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -
                 let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
                 fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
                 in_code = true;
-                result.push(line.to_string());
+                result.push((*line).to_string());
             } else {
                 // Apply placeholder replacements outside code blocks
-                let mut processed = line.to_string();
+                let mut processed = (*line).to_string();
                 for (escaped, placeholder) in placeholders {
                     processed = processed.replace(escaped.as_str(), placeholder.as_str());
                 }
@@ -201,7 +201,7 @@ fn postprocess_period_escapes(text: &str) -> String {
 
     for line in &lines {
         if in_fenced_code {
-            result.push(line.to_string());
+            result.push((*line).to_string());
             let trimmed = line.trim();
             if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
                 let rest = &trimmed[fence_str.len()..];
@@ -224,7 +224,7 @@ fn postprocess_period_escapes(text: &str) -> String {
             let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
             fence_str = std::iter::repeat_n(fence_char, fence_len).collect();
             in_fenced_code = true;
-            result.push(line.to_string());
+            result.push((*line).to_string());
             continue;
         }
 
@@ -258,7 +258,7 @@ fn postprocess_period_escapes(text: &str) -> String {
 
             if digit_end > 0 && after_list_marker[digit_end..].starts_with("\\.") {
                 // DIGITS\. at effective line start: keep the escape to prevent list interpretation
-                result.push(line.to_string());
+                result.push((*line).to_string());
             } else {
                 // No list-like pattern at start: remove period escapes, preserving code spans
                 result.push(remove_period_escapes_preserving_code(line));
