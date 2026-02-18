@@ -1001,9 +1001,11 @@ pub fn fill_markdown(
     // We use Unicode Private Use Area placeholders to preserve escapes through the pipeline.
     // IMPORTANT: \\ must be first so \\X doesn't get partially matched as \X.
     // Period (.) IS included: comrak converts `1\.` to list items, losing the escape.
+    // All 32 CommonMark-escapable ASCII punctuation characters.
+    // See https://spec.commonmark.org/0.31.2/#backslash-escapes
     const ESCAPE_CHARS: &[char] = &[
         '\\', '~', '*', '#', '-', '+', '>', '.', '!', '[', ']', '(', ')', '{', '}', '$', '_', '|',
-        '`',
+        '`', '"', '%', '&', '\'', ',', '/', ':', ';', '<', '=', '?', '@', '^',
     ];
 
     let line_wrapper = line_wrapper.unwrap_or_else(|| {
