@@ -5,11 +5,12 @@ title: "10.2: Port config loading — TOML, three-way merge (20 tests)"
 kind: task
 status: open
 priority: 1
-version: 2
-labels: []
+version: 3
+labels:
+  - phase-10
 dependencies:
   - type: blocks
     target: is-01khq6y6mwx8xz165vdgg9akzj
 created_at: 2026-02-18T01:48:19.474Z
-updated_at: 2026-02-18T01:48:36.034Z
+updated_at: 2026-02-18T02:10:58.483Z
 ---

@@ -5,11 +5,12 @@ title: "10.5: Update test mapping and CI — 281 mapped, 0 excluded, tryscript C
 kind: task
 status: open
 priority: 1
-version: 2
-labels: []
+version: 3
+labels:
+  - phase-10
 dependencies:
   - type: blocks
     target: is-01khq6ycp082g4rkxb704fq7sg
 created_at: 2026-02-18T01:48:24.795Z
-updated_at: 2026-02-18T01:48:36.615Z
+updated_at: 2026-02-18T02:10:58.967Z
 ---
