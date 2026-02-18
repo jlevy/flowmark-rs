@@ -2,19 +2,26 @@
 
 #[cfg(feature = "cli")]
 mod cli {
-    use anyhow::{Context, Result};
-    use clap::Parser;
+    use anyhow::{Context, Result, bail};
+    use clap::{ArgMatches, CommandFactory, FromArgMatches, Parser, parser::ValueSource};
     use std::io::{BufWriter, Read, Write};
-    use std::path::PathBuf;
+    use std::path::{Path, PathBuf};
 
-    use flowmark::{DEFAULT_WRAP_WIDTH, FormatOptions, ListSpacing};
+    use flowmark::config::{
+        ConfigValue, DEFAULT_WRAP_WIDTH, FormatOptions, ListSpacing, find_config_file, load_config,
+        merge_cli_with_config,
+    };
+    use flowmark::file_resolver::{FileResolver, FileResolverConfig};
+    use flowmark::skills;
+
+    /// Characters that indicate a path is a glob pattern.
+    const GLOB_CHARS: &[char] = &['*', '?', '['];
 
     #[derive(Parser, Debug)]
     #[command(name = "flowmark", version, about = "Markdown auto-formatter for clean diffs")]
     #[allow(clippy::struct_excessive_bools)]
     pub struct Args {
-        /// Input files or directories; use `-` for stdin
-        #[arg(default_value = "-")]
+        /// Input files or directories; use `-` for stdin, `.` for current directory
         pub files: Vec<String>,
 
         /// Output file (- for stdout)
@@ -64,10 +71,146 @@ mod cli {
         /// Show verbose output (e.g., which files are being formatted)
         #[arg(short, long)]
         pub verbose: bool,
+
+        // --- File discovery options ---
+        /// Additional file patterns to include (e.g., '*.mdx'). Can be repeated
+        #[arg(long, value_name = "PATTERN")]
+        pub extend_include: Vec<String>,
+
+        /// Replace all default exclusion patterns. Can be repeated
+        #[arg(long, value_name = "PATTERN")]
+        pub exclude: Option<Vec<String>>,
+
+        /// Add to default exclusion patterns (e.g., 'drafts/'). Can be repeated
+        #[arg(long, value_name = "PATTERN")]
+        pub extend_exclude: Vec<String>,
+
+        /// Disable .gitignore integration
+        #[arg(long)]
+        pub no_respect_gitignore: bool,
+
+        /// Apply exclusion patterns even to files named explicitly on the command line
+        #[arg(long)]
+        pub force_exclude: bool,
+
+        /// Print resolved file paths without formatting
+        #[arg(long)]
+        pub list_files: bool,
+
+        /// Skip files larger than this size in bytes (0 = no limit)
+        #[arg(long, default_value_t = 1_048_576, value_name = "BYTES")]
+        pub files_max_size: u64,
+
+        // --- Agent skill options ---
+        /// Print skill instructions (SKILL.md content) for Claude Code
+        #[arg(long)]
+        pub skill: bool,
+
+        /// Install Claude Code skill for flowmark
+        #[arg(long)]
+        pub install_skill: bool,
+
+        /// Agent config directory for skill installation (default: ~/.claude)
+        #[arg(long, value_name = "DIR")]
+        pub agent_base: Option<String>,
+
+        /// Print full documentation
+        #[arg(long)]
+        pub docs: bool,
+    }
+
+    /// Detect which flags the user explicitly passed on the command line.
+    fn detect_explicit_flags(matches: &ArgMatches) -> Vec<&'static str> {
+        let tracked: &[(&str, &str)] = &[
+            ("width", "width"),
+            ("semantic", "semantic"),
+            ("cleanups", "cleanups"),
+            ("smartquotes", "smartquotes"),
+            ("ellipses", "ellipses"),
+            ("list_spacing", "list_spacing"),
+            ("extend_include", "extend_include"),
+            ("exclude", "exclude"),
+            ("extend_exclude", "extend_exclude"),
+            ("no_respect_gitignore", "respect_gitignore"),
+            ("force_exclude", "force_exclude"),
+            ("files_max_size", "files_max_size"),
+        ];
+
+        let mut explicit = Vec::new();
+        for &(arg_id, field_name) in tracked {
+            if matches.value_source(arg_id) == Some(ValueSource::CommandLine) {
+                explicit.push(field_name);
+            }
+        }
+        explicit
+    }
+
+    /// Check if any input paths need file resolution (directories or globs).
+    fn needs_file_resolution(files: &[String]) -> bool {
+        for f in files {
+            if f == "-" {
+                continue;
+            }
+            if Path::new(f).is_dir() {
+                return true;
+            }
+            if f.contains(GLOB_CHARS) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Resolve files using the file resolver if needed.
+    #[allow(clippy::too_many_arguments)]
+    fn resolve_files(
+        files: &[String],
+        list_files: bool,
+        extend_include: &[String],
+        exclude: Option<&Vec<String>>,
+        extend_exclude: &[String],
+        respect_gitignore: bool,
+        force_exclude: bool,
+        files_max_size: u64,
+    ) -> Result<Vec<String>> {
+        if !needs_file_resolution(files) && !list_files {
+            return Ok(files.to_vec());
+        }
+
+        // Filter out stdin marker before passing to resolver
+        let resolvable: Vec<&str> =
+            files.iter().filter(|f| *f != "-").map(String::as_str).collect();
+        let stdin_present = resolvable.len() < files.len();
+
+        let config = FileResolverConfig {
+            extend_include: extend_include.to_vec(),
+            exclude: exclude.cloned(),
+            extend_exclude: extend_exclude.to_vec(),
+            respect_gitignore,
+            force_exclude,
+            files_max_size,
+            ..FileResolverConfig::default()
+        };
+
+        let mut file_resolver = FileResolver::new(config);
+        let found = file_resolver.resolve(&resolvable).context("failed to resolve file paths")?;
+
+        let mut result: Vec<String> =
+            found.iter().map(|p| p.to_string_lossy().to_string()).collect();
+
+        if stdin_present {
+            result.insert(0, "-".to_string());
+        }
+
+        Ok(result)
     }
 
     pub fn run() -> Result<()> {
-        let mut args = Args::parse();
+        // Parse args, keeping matches for explicit flag detection
+        let matches = Args::command().get_matches();
+        let mut args = Args::from_arg_matches(&matches).context("failed to parse arguments")?;
+        let explicit_flags = detect_explicit_flags(&matches);
+        let is_auto = args.auto;
 
         // Handle --auto shortcut
         if args.auto {
@@ -77,6 +220,84 @@ mod cli {
             args.cleanups = true;
             args.smartquotes = true;
             args.ellipses = true;
+        }
+
+        // Early exit: --install-skill
+        if args.install_skill {
+            if let Err(e) = skills::install_skill(args.agent_base.as_deref()) {
+                bail!("{e}");
+            }
+            return Ok(());
+        }
+
+        // Early exit: --skill
+        if args.skill {
+            print!("{}", skills::get_skill_content());
+            return Ok(());
+        }
+
+        // Early exit: --docs
+        if args.docs {
+            print!("{}", skills::get_docs_content());
+            return Ok(());
+        }
+
+        // Validate: files required
+        if args.files.is_empty() {
+            if is_auto {
+                eprintln!(
+                    "Error: --auto requires at least one file or directory argument \
+                     (use '.' for current directory, --help for more options)"
+                );
+                std::process::exit(1);
+            }
+            if args.list_files {
+                eprintln!(
+                    "Error: --list-files requires at least one file or directory argument \
+                     (use '.' for current directory, --help for more options)"
+                );
+                std::process::exit(1);
+            }
+            eprintln!(
+                "Error: No input specified. Provide files, directories \
+                 (use '.' for current directory), or '-' for stdin. \
+                 Use --help for more options."
+            );
+            std::process::exit(1);
+        }
+
+        // Derive respect_gitignore (inverted from --no-respect-gitignore)
+        let mut respect_gitignore = !args.no_respect_gitignore;
+
+        // Load and merge config file settings
+        if let Ok(cwd) = std::env::current_dir() {
+            if let Some(config_path) = find_config_file(&cwd) {
+                let config = load_config(&config_path);
+                let explicit_refs: Vec<&str> = explicit_flags.clone();
+                merge_cli_with_config(Some(&config), is_auto, &explicit_refs, |name, value| {
+                    apply_config_field(&mut args, &mut respect_gitignore, name, value);
+                });
+            }
+        }
+
+        // Resolve files
+        let resolved_files = resolve_files(
+            &args.files,
+            args.list_files,
+            &args.extend_include,
+            args.exclude.as_ref(),
+            &args.extend_exclude,
+            respect_gitignore,
+            args.force_exclude,
+            args.files_max_size,
+        )?;
+
+        // Handle --list-files mode
+        if args.list_files {
+            for f in &resolved_files {
+                println!("{f}");
+            }
+            return Ok(());
         }
 
         let opts = FormatOptions {
@@ -89,7 +310,17 @@ mod cli {
             list_spacing: args.list_spacing,
         };
 
-        for file in &args.files {
+        // Validate: cannot use --output with multiple files
+        let has_explicit_output = args.output != "-";
+        if has_explicit_output && resolved_files.len() > 1 {
+            eprintln!(
+                "Error: Cannot specify output file when processing multiple files \
+                 (use --inplace instead)"
+            );
+            std::process::exit(1);
+        }
+
+        for file in &resolved_files {
             if file == "-" {
                 let mut input = String::new();
                 std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
@@ -113,6 +344,80 @@ mod cli {
         }
 
         Ok(())
+    }
+
+    /// Apply a config field value to the args.
+    fn apply_config_field(
+        args: &mut Args,
+        respect_gitignore: &mut bool,
+        name: &str,
+        value: &ConfigValue,
+    ) {
+        match name {
+            "width" => {
+                if let ConfigValue::Usize(v) = value {
+                    args.width = *v;
+                }
+            }
+            "semantic" => {
+                if let ConfigValue::Bool(v) = value {
+                    args.semantic = *v;
+                }
+            }
+            "cleanups" => {
+                if let ConfigValue::Bool(v) = value {
+                    args.cleanups = *v;
+                }
+            }
+            "smartquotes" => {
+                if let ConfigValue::Bool(v) = value {
+                    args.smartquotes = *v;
+                }
+            }
+            "ellipses" => {
+                if let ConfigValue::Bool(v) = value {
+                    args.ellipses = *v;
+                }
+            }
+            "list_spacing" => {
+                if let ConfigValue::String(v) = value {
+                    if let Ok(ls) = v.parse::<ListSpacing>() {
+                        args.list_spacing = ls;
+                    }
+                }
+            }
+            "extend_include" => {
+                if let ConfigValue::StringList(v) = value {
+                    args.extend_include.clone_from(v);
+                }
+            }
+            "exclude" => {
+                if let ConfigValue::StringList(v) = value {
+                    args.exclude = Some(v.clone());
+                }
+            }
+            "extend_exclude" => {
+                if let ConfigValue::StringList(v) = value {
+                    args.extend_exclude.clone_from(v);
+                }
+            }
+            "respect_gitignore" => {
+                if let ConfigValue::Bool(v) = value {
+                    *respect_gitignore = *v;
+                }
+            }
+            "force_exclude" => {
+                if let ConfigValue::Bool(v) = value {
+                    args.force_exclude = *v;
+                }
+            }
+            "files_max_size" => {
+                if let ConfigValue::U64(v) = value {
+                    args.files_max_size = *v;
+                }
+            }
+            _ => {}
+        }
     }
 }
 

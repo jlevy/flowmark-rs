@@ -8,6 +8,8 @@ pub mod error;
 pub mod file_resolver;
 pub mod formatter;
 pub mod parser;
+#[cfg(feature = "cli")]
+pub mod skills;
 pub mod transform;
 pub mod typography;
 pub mod wrapping;
