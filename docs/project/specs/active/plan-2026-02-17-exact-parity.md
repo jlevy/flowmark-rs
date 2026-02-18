@@ -120,7 +120,7 @@ All 4 previously ignored tests now pass.**
 | `typography/ellipses.py` | `typography/ellipses.rs` | Implemented |
 | `typography/smartquotes.py` | `typography/quotes.rs` | Implemented |
 | `transforms/doc_cleanups.py` | `transform/cleanups.rs` | Implemented |
-| `transforms/doc_transforms.py` | `transform/cleanups.rs` (partial) | Review needed |
+| `transforms/doc_transforms.py` | `transform/cleanups.rs` | Implemented (covered via integration tests) |
 | `reformat_api.py` | `lib.rs` (`reformat_text`, `reformat_file`) | Implemented |
 | `config.py` | `config.rs` | Partial — no TOML loading |
 | `cli.py` | `main.rs` | Partial — missing file discovery flags |
@@ -157,11 +157,10 @@ All of these files must be ported for exact parity:
 
 | File | # Tests | Feature |
 | --- | --- | --- |
-| `test_cli_file_discovery.py` | 18 | CLI arg handling, `--auto` mode, file discovery, error messages |
-| `test_config.py` | 18 | TOML config loading, pyproject.toml, three-way merge |
-| `test_file_resolver.py` | 28 | Directory recursion, glob expansion, gitignore, exclude patterns |
+| `test_cli_file_discovery.py` | 19 | CLI arg handling, `--auto` mode, file discovery, error messages |
+| `test_config.py` | 20 | TOML config loading, pyproject.toml, three-way merge |
+| `test_file_resolver.py` | 31 | Directory recursion, glob expansion, gitignore, exclude patterns |
 | `test_skill.py` | 9 | Claude Code skill installation (`--skill`, `--install-skill`, `--docs`) |
-| *(6 from other files)* | 6 | Individual tests within otherwise-ported files |
 
 ## Design
 
@@ -309,9 +308,24 @@ All 27 playbook documents reviewed.
 
 ### Phase 10: CLI & Feature Parity
 
+**Epic bead:** fmr-7mmt
+
 Port all remaining Python CLI features to achieve exact behavioral parity at the CLI
 level. Every Python CLI flag must have an equivalent Rust flag with identical behavior.
 Use tryscript-based golden tests for end-to-end CLI validation.
+
+**Beads (dependency order — implement top-down):**
+
+| Bead | Task | Tests | Depends On |
+| --- | --- | --- | --- |
+| **fmr-t834** | 10.1: Port file resolver module | 31 | — |
+| **fmr-z8j5** | 10.2: Port config loading (TOML, three-way merge) | 20 | — |
+| **fmr-4sc5** | 10.3: CLI flag parity (add 11 missing flags) | 19 | fmr-t834, fmr-z8j5 |
+| **fmr-qa6p** | 10.3b: Port skill system (`--skill`, `--install-skill`, `--docs`) | 9 | fmr-4sc5 |
+| **fmr-t3va** | 10.4: Tryscript CLI golden tests | — | fmr-4sc5, fmr-qa6p |
+| **fmr-v2de** | 10.5: Update test mapping and CI (281 mapped, 0 excluded) | — | fmr-t3va |
+| **fmr-03xy** | 10.6: Upstream contributions (PR tests to Python repo) | — | fmr-t3va |
+| **fmr-h01s** | 10.7: Final acceptance (review all mappings, sign off) | — | fmr-v2de |
 
 #### 10.1: File Resolver Module
 
@@ -325,47 +339,102 @@ This is the largest gap.
   patterns)
 - `file_resolver/gitignore.py` — `.gitignore` and `.flowmarkignore` loading
 
+**Python behavior (from `resolver.py`, `types.py`, `defaults.py`, `gitignore.py`):**
+
+`FileResolver.resolve(paths)` dispatches each input path:
+- **Existing file** → pass through (apply `force_exclude` and `max_size` checks)
+- **Existing directory** → recursive walk with all filters (include, exclude, gitignore,
+  tool ignore, max size)
+- **Contains glob chars** (`*`, `?`, `[`) → expand via `Path.glob()`, filter results
+- **Otherwise** → raise `FileNotFoundError(f"Path not found: {raw_path}")`
+
+Directory walking (`_walk_directory`):
+- Uses `os.walk()` with in-place directory pruning (mutates `dirnames[:]` to skip
+  excluded directories)
+- Gitignore chain: collects `.gitignore` specs from walk root down to current directory
+  (inclusive), cached per directory
+- Tool ignore (`.flowmarkignore`): walks up from start directory to root, uses first
+  found file, cached per resolved start directory
+- File inclusion: checks `include_spec.match_file(filename)`, then max size, then
+  gitignore chain, then tool ignore
+- Directory exclusion: checks exclude patterns with both `dirname + "/"` and relative
+  path + `"/"`, then gitignore chain, then tool ignore
+
+Explicit file filtering (`_should_include_explicit`):
+- If `force_exclude=True`: check filename and parent directory components against exclude
+  patterns
+- Always check `_exceeds_max_size()` (0 = no limit, `OSError` treated as pass)
+
+Result: deduplicated by `Path.resolve()`, sorted lexicographically.
+
 **Rust implementation plan:**
 - [ ] Create `src/file_resolver/` module with `mod.rs`, `resolver.rs`, `config.rs`,
   `defaults.rs`, `gitignore.rs`
 - [ ] Use the `ignore` crate (provides gitignore parsing, directory walking, and glob
-  matching — replaces Python’s `pathspec` + `os.walk`)
+  matching — replaces Python's `pathspec` + `os.walk`)
 - [ ] Port `FileResolverConfig` with all fields: `tool_name`, `include`,
   `extend_include`, `exclude`, `extend_exclude`, `respect_gitignore`, `force_exclude`,
   `files_max_size`
 - [ ] Port `DEFAULT_INCLUDES` (`["*.md"]`) and `DEFAULT_EXCLUDES` (30+ directory
   patterns) exactly
-- [ ] Port `FileResolver.resolve()`: file → pass through, directory → walk, glob →
-  expand, else → error
-- [ ] Port gitignore chain loading (ancestor directories) and `.flowmarkignore` support
+- [ ] Port `FileResolver.resolve()` dispatch: file → pass through, directory → walk,
+  glob → expand, else → error
+- [ ] Port directory walking with in-place directory pruning and all filter layers
+- [ ] Port gitignore chain loading (ancestor directories) with per-directory caching
+- [ ] Port `.flowmarkignore` support: walk up from start directory, use first found file
 - [ ] Port `_should_include_explicit()` logic (force_exclude filtering)
-- [ ] Port `_exceeds_max_size()` (0 = no limit)
-- [ ] Deduplication and sorted output
-- [ ] Port 28 tests from `test_file_resolver.py`
-- [ ] Update `test-mapping.yaml`: change 28 entries from `excluded` → `mapped`
+- [ ] Port `_exceeds_max_size()` (0 = no limit, `OSError` treated as pass)
+- [ ] Deduplication by resolved path and sorted output
+- [ ] Port 31 tests from `test_file_resolver.py`
+- [ ] Update `test-mapping.yaml`: change 31 entries from `excluded` → `mapped`
 
 #### 10.2: Config Loading
 
 Port `config.py` (TOML-based config file loading with three-way merge).
 
-**Python behavior:**
-- Search order: `.flowmark.toml` > `flowmark.toml` > `pyproject.toml [tool.flowmark]`
-- Walk up from cwd to filesystem root
-- TOML sections (`[formatting]`, `[file-discovery]`) flatten to top-level
-- Kebab-case keys mapped to snake_case
-- Three-way merge: explicit CLI flags > config file > built-in defaults
-- In `--auto` mode, formatting presets are locked (only `width` and file discovery
-  settings come from config)
+**Python behavior (from `config.py`):**
+
+`FlowmarkConfig` — all fields are `Option<T>` (Python `None`) to distinguish "not
+configured" from "explicitly set to default":
+- Formatting: `width`, `semantic`, `cleanups`, `smartquotes`, `ellipses`, `list_spacing`
+- File discovery: `include`, `extend_include`, `exclude`, `extend_exclude`,
+  `files_max_size`, `respect_gitignore`, `force_exclude`
+
+`find_config_file(start_dir)` — walks up directory tree:
+- Per-directory search order: `.flowmark.toml` > `flowmark.toml` > `pyproject.toml`
+- For `pyproject.toml`: only returns it if it contains `[tool.flowmark]` section (checked
+  via `_pyproject_has_flowmark_section()` which catches `TOMLDecodeError`/`OSError`)
+- Stops at filesystem root (`parent == current`)
+- Returns first match or `None`
+
+`load_config(config_path)` — TOML parsing:
+- For `pyproject.toml`: extracts `data["tool"]["flowmark"]` section
+- Nested sections (`[formatting]`, `[file-discovery]`) flattened to top-level
+- Kebab-case keys mapped to snake_case via lookup table
+- Unrecognized keys: `Warning: unrecognized config key '{key}'` to stderr
+- On any parse error: returns empty config, logs
+  `Warning: could not parse config file {config_path}` to stderr
+
+`merge_cli_with_config(cli_opts, config, is_auto, explicit_flags)` — three-way merge:
+- Precedence: explicit CLI flags > config file values > built-in defaults
+- In `--auto` mode, formatting fields are locked: `semantic`, `cleanups`, `smartquotes`,
+  `ellipses`, `inplace`, `nobackup` cannot be overridden by config
+- Only `width` and file discovery settings come from config in auto mode
+- Iterates `FlowmarkConfig` fields; skips if `None`, if in `explicit_flags`, or if
+  auto-locked
 
 **Rust implementation plan:**
-- [ ] Add `toml` crate as dependency (was previously dead — now actually needed)
-- [ ] Port `find_config_file()` — directory walk searching for config files
-- [ ] Port `load_config()` — TOML parsing with section flattening
-- [ ] Port `FlowmarkConfig` struct with all fields (formatting + file discovery)
+- [ ] Add `toml` crate as dependency
+- [ ] Port `FlowmarkConfig` struct with all-`Option` fields (formatting + file discovery)
+- [ ] Port `find_config_file()` — directory walk with per-directory search order
+- [ ] Port `_pyproject_has_flowmark_section()` — check for `[tool.flowmark]` section
+- [ ] Port `load_config()` — TOML parsing with section flattening and kebab→snake mapping
+- [ ] Port unrecognized key and parse error warnings (exact messages to stderr)
 - [ ] Port `merge_cli_with_config()` — three-way merge with explicit-flag tracking
-- [ ] Handle `pyproject.toml` `[tool.flowmark]` section extraction
-- [ ] Port 18 tests from `test_config.py`
-- [ ] Update `test-mapping.yaml`: change 18 entries from `excluded` → `mapped`
+- [ ] Port auto-mode field locking (formatting presets locked, only width and file
+  discovery from config)
+- [ ] Port 20 tests from `test_config.py`
+- [ ] Update `test-mapping.yaml`: change 20 entries from `excluded` → `mapped`
 
 #### 10.3: CLI Flag Parity
 
@@ -387,6 +456,11 @@ Add all missing Python CLI flags to `main.rs`.
 | `--agent-base DIR` | string | `None` | Custom agent config dir for skill install |
 | `--docs` | bool | `false` | Print full documentation (README content) |
 
+**Already present in Rust:**
+- `--version` — exists via clap `version` derive (auto-generated from Cargo.toml)
+- `--verbose` (`-v`) — Rust-only addition, not in Python (doesn't break drop-in
+  compatibility)
+
 **Implementation plan:**
 - [ ] Add all 11 flags to `Args` struct in `main.rs` with clap derive attributes
 - [ ] Wire `--list-files` mode (resolve files → print → exit)
@@ -398,8 +472,8 @@ Add all missing Python CLI flags to `main.rs`.
 - [ ] Port explicit-flag tracking (for config merge precedence)
 - [ ] Port multi-file processing: `reformat_files` behavior (multiple files with
   `--inplace`, error on `--output` with multiple files)
-- [ ] Port 18 tests from `test_cli_file_discovery.py`
-- [ ] Update `test-mapping.yaml`: change 18 entries from `excluded` → `mapped`
+- [ ] Port 19 tests from `test_cli_file_discovery.py`
+- [ ] Update `test-mapping.yaml`: change 19 entries from `excluded` → `mapped`
 
 #### 10.3b: Skill System
 
@@ -525,6 +599,16 @@ Create test fixture directory (`tests/tryscript/fixtures/`) with:
 - [ ] Use `[..]` for variable output (paths, timestamps), `...` for multi-line elision
 - [ ] Define `[PATTERN]` regex patterns in YAML frontmatter for platform-specific paths
 
+#### 10.4b: New Dependencies for Phase 10
+
+| Rust Crate | Replaces (Python) | Purpose |
+| --- | --- | --- |
+| `ignore` | `pathspec` + `os.walk` | Gitignore-aware directory walking and glob matching |
+| `toml` | `tomllib` / `tomli` | TOML config file parsing |
+| `glob` | `pathlib.Path.glob()` | Glob pattern expansion (if `ignore` doesn't cover all cases) |
+
+These are additions to the existing dependency table in the porting plan.
+
 #### 10.5: Update Test Mapping and CI
 
 Update the test mapping system and CI gates to reflect the new scope.
@@ -617,15 +701,16 @@ Zero informational-only steps.**
 
 #### Phase 10 Work (CLI & Feature Parity)
 
-| Item | Priority | Notes |
-| --- | --- | --- |
-| **File resolver module** | P1 | Port `file_resolver/` — directory walk, glob, gitignore, .flowmarkignore |
-| **Config loading** | P1 | Port `config.py` — TOML config, three-way merge |
-| **CLI flag parity** | P1 | Add 8 missing flags to `main.rs` |
-| **Multi-file batch processing** | P1 | Port `reformat_files()` multi-file loop |
-| **Port all 79 previously-excluded tests** | P1 | Move from `excluded` → `mapped` in test-mapping |
-| **Tryscript CLI golden tests** | P1 | End-to-end CLI validation using tryscript |
-| **Update CI gates** | P1 | Update mapping counts, add tryscript job |
+| Bead | Item | Priority | Notes |
+| --- | --- | --- | --- |
+| fmr-t834 | **File resolver module** | P1 | Port `file_resolver/` — 31 tests |
+| fmr-z8j5 | **Config loading** | P1 | Port `config.py` — 20 tests |
+| fmr-4sc5 | **CLI flag parity** | P1 | Add 11 missing flags — 19 tests |
+| fmr-qa6p | **Skill system** | P1 | Port `skill.py` — 9 tests |
+| fmr-t3va | **Tryscript CLI golden tests** | P1 | End-to-end CLI validation |
+| fmr-v2de | **Update test mapping and CI** | P1 | 281 mapped, 0 excluded, tryscript CI |
+| fmr-03xy | **Upstream contributions** | P2 | PR tryscript tests to Python repo |
+| fmr-h01s | **Final acceptance** | P1 | Review all mappings, sign off |
 
 #### Future Work (tracked as separate beads or deferred)
 
@@ -679,11 +764,10 @@ Every one must be ported:
 
 | File | # Tests | Feature |
 | --- | --- | --- |
-| `test_cli_file_discovery.py` | 18 | CLI arg handling, `--auto` mode, `--list-files`, error messages |
-| `test_config.py` | 18 | TOML config loading, pyproject.toml, three-way merge |
-| `test_file_resolver.py` | 28 | Directory recursion, glob expansion, gitignore, exclude patterns |
+| `test_cli_file_discovery.py` | 19 | CLI arg handling, `--auto` mode, `--list-files`, error messages |
+| `test_config.py` | 20 | TOML config loading, pyproject.toml, three-way merge |
+| `test_file_resolver.py` | 31 | Directory recursion, glob expansion, gitignore, exclude patterns |
 | `test_skill.py` | 9 | Claude Code skill installation (`--skill`, `--install-skill`, `--docs`) |
-| *(scattered in other files)* | 6 | Individual infra-only tests in otherwise-ported files |
 
 Total: **79 tests** moving from `excluded` → `mapped` in `test-mapping.yaml`.
 
@@ -1060,7 +1144,7 @@ output files:
 | **docs** | `cargo doc -D warnings` — documentation builds clean |
 | **check-mapping** | Python smoke tests + cross-language mapping completeness |
 
-### Cross-Language Mapping Final Summary
+### Cross-Language Mapping Summary (end of Phase 9)
 
 | Status | Count | Description |
 | --- | --- | --- |
@@ -1073,6 +1157,9 @@ output files:
 **Total: 250 Rust tests covering 202 Python test behaviors, 27 Rust-specific unit tests,
 and 7 edge case tests from previous implementation review.
 All passing, zero ignored.**
+
+**Note:** All 79 excluded tests are now in scope for Phase 10.
+Target after Phase 10: 281 mapped, 0 excluded, 0 missing, 0 partial.
 
 * * *
 
@@ -1132,7 +1219,7 @@ Largest Rust library files: `filling.rs` (1,270 total), `tag_handling.rs` (387),
   due to Python’s heavy use of triple-quoted docstrings for test fixtures vs Rust’s raw
   string literals which are more compact.
 - **79 Python tests (28%) were excluded** as infrastructure-only (CLI file discovery,
-  config, file resolver, skill system).
-  The Rust port covers all behavioral tests.
+  config, file resolver, skill system) during Phases 1-9.
+  **All 79 are now in scope for Phase 10** — see Phase 10 plan above.
 - The Rust codebase has **zero `#[ignore]` tests, zero clippy warnings, and zero
   `unwrap()` calls** in library code.
