@@ -65,7 +65,7 @@ This spec addresses that gap.
 
 | Document | Lines | Current Status | Notes |
 | --- | --- | --- | --- |
-| `porting-plan.md` | 137 | Stale | Architecture/plan — work is complete |
+| `project/specs/done/porting-plan.md` | 137 | Complete | Updated and moved to specs/done |
 | `porting-checklist.md` | 643 | Duplicate | Copy of playbook’s `python-to-rust-playbook.md` |
 | `code-review-2026-02-17.md` | 471 | Current | Fresh review with P0-P3 issues |
 | `specs/active/plan-2026-02-17-exact-parity.md` | 751 | Complete | Comprehensive parity spec |
@@ -100,14 +100,15 @@ This spec addresses that gap.
 | `guidelines/rust-project-setup.md` | ~626 | Project setup — critical for accuracy |
 | `guidelines/test-coverage-for-porting.md` | ~286 | Test coverage — review |
 
-**Case studies (7 files, ~5,000 lines):**
+**Case studies (8 files, ~5,400 lines):**
 
 | Document | Lines | Status |
 | --- | --- | --- |
 | `case-studies/flowmark/flowmark-port-analysis.md` | ~326 | STALE — describes old port |
 | `case-studies/flowmark/flowmark-port-library-choices.md` | ~257 | Partially current |
 | `case-studies/flowmark/flowmark-port-decision-log.md` | ~523 | STALE — old decisions |
-| `case-studies/flowmark/flowmark-port-migration-plan.md` | ~3,339 | STALE — old migration |
+| `case-studies/flowmark/flowmark-port-migration-plan-v1.md` | ~3,339 | Renamed — v1 port |
+| `case-studies/flowmark/flowmark-port-migration-plan-v2.md` | ~400 | NEW — v2 port |
 | `case-studies/flowmark/flowmark-port-cross-validation.md` | ~189 | STALE — old validation |
 | `case-studies/flowmark/flowmark-port-comrak-bug.md` | ~211 | Partially current |
 | `case-studies/flowmark/flowmark-port-wrapping-solution.md` | ~155 | STALE — old approach |
@@ -253,9 +254,9 @@ Before making new changes, verify what has already been done.
 
 Ensure this project’s own docs are accurate.
 
-- [ ] **`porting-plan.md`**: Check all acceptance criteria boxes that are now met.
-  Add “Status: Complete” header.
-  Verify module mapping matches actual `src/` layout.
+- [x] **`porting-plan.md`**: Updated with “Status: Complete” header, checked acceptance
+  criteria, verified module mapping against actual `src/` layout, moved to
+  `docs/project/specs/done/porting-plan.md`.
 - [ ] **`porting-checklist.md`**: Determine if this should be removed (it’s a duplicate
   of the playbook). If kept, verify it matches the current playbook version.
   Decision: remove or convert to a project-specific checklist with checked items.
@@ -499,28 +500,127 @@ Validation:
 - **Phase 7**: All links in playbook README resolve correctly
 - **Phase 8**: All action items have associated beads
 
+## Decisions Made
+
+1. **`docs/porting-checklist.md`: Remove.** It’s a stale duplicate of the playbook’s
+   `python-to-rust-playbook.md`. No backward compatibility needed for docs.
+
+2. **Case study versioning: Add “v2 port” sections.** Keep old port data and add v2
+   sections to each case study doc.
+   We can consolidate learnings later, but preserving both ports’ data is valuable for
+   comparing approaches.
+
+3. **Test mapping system: New reference doc.** Create a new reference doc in the
+   playbook (e.g., `reference/cross-language-test-mapping.md`) and link from the
+   playbook’s Phase 5, the test coverage playbook, and the README.
+
+4. **`porting-plan.md`: Updated and moved to `specs/done/`.** Updated with accurate
+   module layout, checked acceptance criteria, current metrics, and “Status: Complete”
+   header. Moved from `docs/porting-plan.md` to
+   `docs/project/specs/done/porting-plan.md`.
+
+5. **Migration plan: Renamed v1, created v2.** Renamed the existing 3,339-line migration
+   plan to `flowmark-port-migration-plan-v1.md` with a note pointing to v2. Created new
+   `flowmark-port-migration-plan-v2.md` documenting the current port’s architecture,
+   implementation, and lessons.
+   Updated cross-references in all case study docs.
+
 ## Open Questions
 
-1. **Should `docs/porting-checklist.md` be removed?** It’s a duplicate of the playbook.
-   Options: (a) remove and reference playbook directly, (b) convert to a
-   project-specific filled-in checklist, (c) keep as-is.
+None remaining. All decisions resolved.
 
-2. **Should the playbook case study describe both ports?** Options: (a) update all docs
-   to reflect only the current port, (b) keep old port data and add “v2 port” sections,
-   (c) maintain both as separate case study entries.
+* * *
 
-3. **Where should the test mapping system be documented in the playbook?** It’s a
-   significant contribution.
-   Options: (a) new reference doc, (b) section in `test-coverage-for-porting.md`, (c)
-   section in the playbook itself under Phase 5.
+## Appendix: Library Decision Comparison (v1 vs v2 Port)
 
-4. **Should `porting-plan.md` be updated or archived?** The work is complete.
-   Options: (a) update with “Complete” status and checked boxes, (b) move to
-   `docs/project/specs/completed/`, (c) leave as historical record.
+### Architectural Approach: Fundamentally Different
 
-5. **How to handle the migration plan doc (3,339 lines)?** It describes the old port in
-   great detail. Options: (a) rewrite for current port, (b) add appendix for current
-   port, (c) archive old and create new, (d) leave as historical.
+The two ports used the **same core library (comrak)** but took fundamentally different
+architectural approaches to handling its behavioral differences:
+
+**v1 Port (flowmark-rs-1): Post-processing pipeline**
+- Used comrak’s built-in renderer, then applied a chain of 14 `fix_*` functions to
+  correct output differences
+- Each workaround was a separate function marked with `XXX:` comments
+- 17 behavioral differences identified, 14 fixed via post-processing, 2 via
+  pre-processing, 3 accepted as unfixable
+- Wrapping: hybrid approach using `render.width=999999` + custom `wrap_paragraphs()`
+  + `hardbreaks=true` (~240 lines custom wrapping code)
+
+**v2 Port (current flowmark-rs): Custom AST renderer**
+- Wrote a complete custom AST renderer (`render_block`, `render_inline`, etc.
+  in `filling.rs`, ~1,000 lines) that walks comrak’s AST directly
+- Uses Unicode PUA (Private Use Area) placeholder system to preserve escape characters
+  through comrak’s AST parsing (comrak strips backslash escapes during parsing)
+- Zero `HACK:`/`XXX:`/`FIXME:` comments — the custom renderer handles differences by
+  design rather than patching output
+- Normalization functions (`normalize_comrak_output`) handle remaining cosmetic diffs
+- Wrapping: sentence-aware wrapping integrated into the rendering pipeline
+
+### Dependency Comparison
+
+| Dependency | v1 Port | v2 Port | Notes |
+| --- | --- | --- | --- |
+| **comrak** | 0.29 | 0.36 | Same library, different versions |
+| **clap** | 4.x | 4.5 | Same, derive API |
+| **regex** | 1.x | 1.11 | Same |
+| **thiserror** | 1.x | 2.0 | Same (major version bump) |
+| **anyhow** | 1.x | 1.0 | Same (CLI-only) |
+| **tempfile** | 3.x | 3.10 | Same (CLI-only) |
+| **libc** | - | 0.2 | v2 added for SIGPIPE handling |
+| **color-eyre** | Used | Removed | v2 uses anyhow instead |
+| **tracing** | Used | Removed | v2 doesn’t use structured logging |
+| **tracing-subscriber** | Used | Removed | v2 doesn’t use structured logging |
+| **once_cell** | Used | Removed | v2 uses `std::sync::LazyLock` (Edition 2024) |
+| **serde** | Used | Dead (should remove) | v2 declared but never imported |
+| **toml** | Used | Dead (should remove) | v2 declared but never imported |
+| **unicode-segmentation** | Used | Dead (should remove) | v2 declared but never imported |
+
+**Key difference:** v2 has a leaner dependency set (removed color-eyre, tracing,
+once_cell) but has 3 dead dependencies that should be cleaned up (serde, toml,
+unicode-segmentation — carried over from the porting plan but never used since config
+loading was not ported).
+
+### Pros/Cons of Each Approach
+
+**v1 Post-processing pipeline:**
+- Pro: Simpler initial implementation — use the library as-is, fix output after
+- Pro: Each workaround is independent and testable
+- Pro: Less code to write initially
+- Con: Workarounds interact in unexpected ways (the 12th fix is harder than the 1st)
+- Con: Can’t fix issues where comrak destroys information during parsing
+- Con: Maintenance burden of 14 separate workaround functions
+- Con: `XXX:` comments throughout the codebase signal technical debt
+
+**v2 Custom AST renderer:**
+- Pro: No workaround functions needed — differences handled by design
+- Pro: Zero `HACK:`/`FIXME:` comments — cleaner codebase
+- Pro: Full control over output formatting
+- Pro: PUA placeholder system elegantly solves the escape-preservation problem
+- Con: More code upfront (~1,000 lines for the custom renderer)
+- Con: Must handle every AST node type (tables, footnotes, alerts, etc.)
+- Con: Tighter coupling to comrak’s AST structure
+
+**Verdict:** The v2 approach (custom renderer) proved superior for this project.
+Despite more upfront code, it eliminated the entire workaround maintenance burden and
+produced a cleaner codebase.
+The PUA placeholder innovation was particularly valuable — it solved the
+escape-preservation problem that was the source of multiple v1 workarounds.
+
+### What This Means for the Playbook
+
+The playbook’s Phase 6 (Handle Library Differences) currently recommends the
+post-processing pipeline approach.
+This is valid for small numbers of differences, but the v2 experience suggests that when
+differences are numerous (>5-10), writing a custom renderer/processor may be more
+maintainable than accumulating workarounds.
+
+**Proposed playbook addition:** In Phase 6, add a decision framework:
+- **Few differences (1-5):** Post-processing pipeline (current recommendation)
+- **Many differences (6+):** Consider custom rendering/processing that handles
+  differences by design
+- **Information-loss differences:** Pre-processing or custom rendering required (cannot
+  be fixed via post-processing)
 
 ## References
 
@@ -528,7 +628,7 @@ Validation:
 - Test mapping spec:
   `docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md`
 - Code review: `docs/code-review-2026-02-17.md`
-- Porting plan: `docs/porting-plan.md`
+- Porting plan: `docs/project/specs/done/porting-plan.md`
 - Porting checklist: `docs/porting-checklist.md`
 - Playbook repo: `attic/rust-porting-playbook/`
 - Playbook README: `attic/rust-porting-playbook/README.md`
