@@ -55,7 +55,7 @@ unwrap_used = "deny"
 unsafe_code = "deny"
 warnings = "deny"
 
-[package.metadata.python_source]
+[package.metadata.parity]
 version = "0.6.4"
 
 [profile.release]

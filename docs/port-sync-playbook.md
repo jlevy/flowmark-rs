@@ -15,7 +15,7 @@ repos/
 The current Python version is tracked in `Cargo.toml`:
 
 ```toml
-[package.metadata.python_source]
+[package.metadata.parity]
 version = "0.6.4"
 ```
 
@@ -79,7 +79,7 @@ cd ..
 In `Cargo.toml`:
 
 ```toml
-[package.metadata.python_source]
+[package.metadata.parity]
 version = "0.X.Y"
 ```
 
