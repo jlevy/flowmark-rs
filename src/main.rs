@@ -7,7 +7,7 @@ mod cli {
     use std::io::{BufWriter, Read, Write};
     use std::path::PathBuf;
 
-    use flowmark::{DEFAULT_WRAP_WIDTH, ListSpacing};
+    use flowmark::{DEFAULT_WRAP_WIDTH, FormatOptions, ListSpacing};
 
     #[derive(Parser, Debug)]
     #[command(name = "flowmark", version, about = "Markdown auto-formatter for clean diffs")]
@@ -79,21 +79,22 @@ mod cli {
             args.ellipses = true;
         }
 
+        let opts = FormatOptions {
+            width: args.width,
+            plaintext: args.plaintext,
+            semantic: args.semantic,
+            cleanups: args.cleanups,
+            smartquotes: args.smartquotes,
+            ellipses: args.ellipses,
+            list_spacing: args.list_spacing,
+        };
+
         for file in &args.files {
             if file == "-" {
                 let mut input = String::new();
                 std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
 
-                let output = flowmark::reformat_text(
-                    &input,
-                    args.width,
-                    args.plaintext,
-                    args.semantic,
-                    args.cleanups,
-                    args.smartquotes,
-                    args.ellipses,
-                    args.list_spacing,
-                );
+                let output = opts.reformat_text(&input);
                 let stdout = std::io::stdout().lock();
                 let mut writer = BufWriter::new(stdout);
                 writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
@@ -106,20 +107,8 @@ mod cli {
                     eprintln!("formatting {}", path.display());
                 }
 
-                flowmark::reformat_file(
-                    &path,
-                    output_path.as_deref(),
-                    args.width,
-                    args.inplace,
-                    args.nobackup,
-                    args.plaintext,
-                    args.semantic,
-                    args.cleanups,
-                    args.smartquotes,
-                    args.ellipses,
-                    args.list_spacing,
-                )
-                .with_context(|| format!("failed to format {}", path.display()))?;
+                opts.reformat_file(&path, output_path.as_deref(), args.inplace, args.nobackup)
+                    .with_context(|| format!("failed to format {}", path.display()))?;
             }
         }
 
