@@ -1,6 +1,9 @@
 //! CLI integration tests for file discovery.
 //!
 //! Ported from Python: `test_cli_file_discovery.py` (19 tests)
+//!
+//! These tests require the `cli` feature (they run the flowmark binary).
+#![cfg(feature = "cli")]
 
 use std::fs;
 use std::path::{Path, PathBuf};
