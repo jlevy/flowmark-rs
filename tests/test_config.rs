@@ -1,3 +1,4 @@
+#![cfg(feature = "cli")]
 //! Tests for the config loading module.
 //!
 //! Ported from Python: `test_config.py` (20 tests)

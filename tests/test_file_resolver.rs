@@ -1,3 +1,4 @@
+#![cfg(feature = "cli")]
 //! Tests for the file resolver module.
 //!
 //! Ported from Python: `test_file_resolver.py` (31 tests)

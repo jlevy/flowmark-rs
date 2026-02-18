@@ -1,3 +1,4 @@
+#![cfg(feature = "cli")]
 //! CLI integration tests for file discovery.
 //!
 //! Ported from Python: `test_cli_file_discovery.py` (19 tests)
@@ -57,12 +58,7 @@ fn test_list_files_directory() {
     let mut names: Vec<String> = stdout
         .lines()
         .filter(|l| !l.is_empty())
-        .filter_map(|line| {
-            Path::new(line)
-                .file_name()
-                .and_then(|n| n.to_str())
-                .map(String::from)
-        })
+        .filter_map(|line| Path::new(line).file_name().and_then(|n| n.to_str()).map(String::from))
         .collect();
     names.sort();
     assert_eq!(names, vec!["README.md", "api.md", "guide.md"]);
@@ -139,10 +135,7 @@ fn test_list_files_no_respect_gitignore() {
 
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        stdout.contains("found.md"),
-        "--no-respect-gitignore should include gitignored files"
-    );
+    assert!(stdout.contains("found.md"), "--no-respect-gitignore should include gitignored files");
 }
 
 #[test]
@@ -154,11 +147,7 @@ fn test_list_files_force_exclude() {
 
     let explicit_path = nm.join("README.md");
     let output = Command::new(flowmark_bin())
-        .args([
-            "--list-files",
-            "--force-exclude",
-            explicit_path.to_str().expect("path to str"),
-        ])
+        .args(["--list-files", "--force-exclude", explicit_path.to_str().expect("path to str")])
         .current_dir(dir.path())
         .output()
         .expect("run flowmark");
@@ -193,10 +182,7 @@ fn test_list_files_max_size() {
 
 #[test]
 fn test_auto_no_args_errors() {
-    let output = Command::new(flowmark_bin())
-        .args(["--auto"])
-        .output()
-        .expect("run flowmark");
+    let output = Command::new(flowmark_bin()).args(["--auto"]).output().expect("run flowmark");
 
     assert!(!output.status.success(), "should exit with error");
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -208,10 +194,8 @@ fn test_auto_no_args_errors() {
 
 #[test]
 fn test_list_files_no_args_errors() {
-    let output = Command::new(flowmark_bin())
-        .args(["--list-files"])
-        .output()
-        .expect("run flowmark");
+    let output =
+        Command::new(flowmark_bin()).args(["--list-files"]).output().expect("run flowmark");
 
     assert!(!output.status.success(), "should exit with error");
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -229,10 +213,7 @@ fn test_no_args_errors() {
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert!(stderr.contains("No input specified"), "should contain 'No input specified'");
     assert!(stderr.contains("'-' for stdin"), "should mention stdin");
-    assert!(
-        stderr.contains("'.' for current directory"),
-        "should mention current directory"
-    );
+    assert!(stderr.contains("'.' for current directory"), "should mention current directory");
     assert!(stderr.contains("--help"), "should mention --help");
 }
 
@@ -256,8 +237,7 @@ fn test_auto_list_files_no_args_errors() {
 #[test]
 fn test_auto_with_dot_formats_cwd() {
     let dir = tempfile::tempdir().expect("create temp dir");
-    fs::write(dir.path().join("test.md"), "# Test\n\nSome text here.\n")
-        .expect("write test.md");
+    fs::write(dir.path().join("test.md"), "# Test\n\nSome text here.\n").expect("write test.md");
 
     let output = Command::new(flowmark_bin())
         .args(["--auto", "."])
@@ -299,12 +279,7 @@ fn test_stdin_still_works() {
         .spawn()
         .expect("spawn flowmark");
 
-    child
-        .stdin
-        .take()
-        .expect("get stdin")
-        .write_all(b"# From stdin\n")
-        .expect("write to stdin");
+    child.stdin.take().expect("get stdin").write_all(b"# From stdin\n").expect("write to stdin");
 
     let output = child.wait_with_output().expect("wait for flowmark");
     assert!(output.status.success());
@@ -359,11 +334,7 @@ fn test_list_files_stdin_does_not_crash() {
     fs::write(dir.path().join("README.md"), "# Root\n").expect("write README.md");
 
     let output = Command::new(flowmark_bin())
-        .args([
-            "--list-files",
-            "-",
-            dir.path().to_str().expect("path to str"),
-        ])
+        .args(["--list-files", "-", dir.path().to_str().expect("path to str")])
         .current_dir(dir.path())
         .output()
         .expect("run flowmark");
@@ -386,12 +357,7 @@ fn test_stdin_explicit_dash() {
         .spawn()
         .expect("spawn flowmark");
 
-    child
-        .stdin
-        .take()
-        .expect("get stdin")
-        .write_all(b"# Via dash\n")
-        .expect("write to stdin");
+    child.stdin.take().expect("get stdin").write_all(b"# Via dash\n").expect("write to stdin");
 
     let output = child.wait_with_output().expect("wait for flowmark");
     assert!(output.status.success());

@@ -1,3 +1,4 @@
+#![cfg(feature = "cli")]
 //! Tests for the skill installation module.
 //!
 //! Ported from Python: `test_skill.py` (9 tests)

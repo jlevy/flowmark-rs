@@ -114,7 +114,7 @@ jobs:
       - name: Build binary
         run: cargo build --locked --all-features
       - name: Run tryscript golden tests
-        run: npx tryscript@latest tests/tryscript/cli-golden.tryscript.md
+        run: npx tryscript@latest run tests/tryscript/cli-golden.tryscript.md
 
   check-mapping:
     name: Test mapping check
