@@ -2,10 +2,11 @@
 sandbox: true
 env:
   NO_COLOR: "1"
+  LC_ALL: C
 path:
   - $TRYSCRIPT_GIT_ROOT/target/debug
 patterns:
-  VERSION: 'flowmark \d+\.\d+\.\d+\S*'
+  VERSION: 'flowmark \d+\.\d+\.\d+.*'
 before: |
   mkdir -p project/docs project/node_modules/pkg project/.venv/lib project/drafts
   printf '# Root\n' > project/README.md
@@ -114,7 +115,7 @@ output.md
 ## File discovery: force-exclude
 
 ```console
-$ flowmark --list-files --force-exclude project/node_modules/pkg/README.md | wc -l
+$ flowmark --list-files --force-exclude project/node_modules/pkg/README.md | wc -l | tr -d ' '
 0
 ```
 
