@@ -991,3 +991,38 @@
 - file: tests/test_wrapping.rs
   function: test_wrap_width
   line_number: 161
+
+# Tryscript golden tests (binary-agnostic CLI tests, one entry per file)
+- file: tests/tryscript/auto-mode.tryscript.md
+  function: auto-mode
+  line_number: 0
+- file: tests/tryscript/cli-golden.tryscript.md
+  function: cli-golden
+  line_number: 0
+- file: tests/tryscript/config-interaction.tryscript.md
+  function: config-interaction
+  line_number: 0
+- file: tests/tryscript/errors-version.tryscript.md
+  function: errors-version
+  line_number: 0
+- file: tests/tryscript/file-discovery.tryscript.md
+  function: file-discovery
+  line_number: 0
+- file: tests/tryscript/file-ops.tryscript.md
+  function: file-ops
+  line_number: 0
+- file: tests/tryscript/formatting.tryscript.md
+  function: formatting
+  line_number: 0
+- file: tests/tryscript/list-spacing.tryscript.md
+  function: list-spacing
+  line_number: 0
+- file: tests/tryscript/stdin.tryscript.md
+  function: stdin
+  line_number: 0
+- file: tests/tryscript/typography-tests.tryscript.md
+  function: typography-tests
+  line_number: 0
+- file: tests/tryscript/verbose-docs.tryscript.md
+  function: verbose-docs
+  line_number: 0

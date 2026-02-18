@@ -681,16 +681,169 @@ Every failure is either:
 - [ ] Configure CI to fail on any tryscript test mismatch
 - [ ] Verify tests pass on both Ubuntu and macOS CI runners
 
-### Phase 5: Upstream to Python Repo
+### Phase 5: Backfill to Python Repo
 
-- [ ] Copy `tests/tryscript/fixtures/` and all tryscript test files to the Python
-  `flowmark` repo (same directory structure: `tests/tryscript/`)
-- [ ] Add tryscript CI job to the Python repo's CI workflow
-- [ ] Verify all tests pass against the Python binary in the Python repo's CI
-- [ ] Document the shared test contract in both repos' contributing guides
-- [ ] Establish a sync protocol: changes to fixtures or test files originate in one repo
-  and are copied to the other (recommend: Rust repo is upstream for test changes, since
-  that's where parity work happens)
+The tryscript test files and fixtures are designed to be **identical** across both repos.
+This phase copies the entire test suite to the Python `flowmark` repo and integrates it
+into that repo's CI pipeline.
+Since the tryscript files are binary-agnostic, they should work without modification —
+the only difference is which binary is on `PATH`.
+
+#### 5.1: Copy Test Files and Fixtures
+
+Copy the entire `tests/tryscript/` directory tree from `flowmark-rs` to the Python
+`flowmark` repo, preserving the exact same directory structure:
+
+```bash
+# From the flowmark-rs repo root:
+PYTHON_REPO=../flowmark  # adjust path to your Python flowmark checkout
+
+# Copy all tryscript test files (10 .tryscript.md files)
+cp tests/tryscript/formatting.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/typography-tests.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/list-spacing.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/auto-mode.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/file-ops.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/stdin.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/file-discovery.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/config-interaction.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/verbose-docs.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+cp tests/tryscript/errors-version.tryscript.md "$PYTHON_REPO/tests/tryscript/"
+
+# Copy all fixtures (preserving directory structure)
+cp -r tests/tryscript/fixtures/ "$PYTHON_REPO/tests/tryscript/fixtures/"
+```
+
+Files that need `.gitignore` handling in the Python repo (same as Rust repo):
+- `tests/tryscript/fixtures/project/skip/ignored.md` — caught by the fixture's own
+  `.gitignore`; must be force-added with `git add -f`
+- `tests/tryscript/fixtures/project/nested/generated/output.md` — caught by the nested
+  `.gitignore`; must be force-added with `git add -f`
+
+#### 5.2: Adapt Tryscript Frontmatter for Python
+
+The tryscript files use a `path:` frontmatter field to locate the binary.
+In the Rust repo, this points to `$TRYSCRIPT_GIT_ROOT/target/debug`.
+For the Python repo, this must point to wherever the `flowmark` binary is installed.
+
+**Option A: Use the system PATH (simplest)**
+
+If `flowmark` is already installed in the Python repo's CI environment (via
+`pip install -e .` or `uv pip install -e .`), it will be on PATH by default.
+In this case, the `path:` frontmatter can either be removed or set to the virtualenv
+bin directory.
+
+Update each tryscript file's frontmatter from:
+
+```yaml
+path:
+  - $TRYSCRIPT_GIT_ROOT/target/debug
+```
+
+To:
+
+```yaml
+path:
+  - $TRYSCRIPT_GIT_ROOT/.venv/bin
+```
+
+Or, if using a system-wide install, simply remove the `path:` field entirely and rely on
+the flowmark binary being on the default PATH.
+
+**Option B: Use an environment variable (more flexible)**
+
+Set `FLOWMARK_BIN_DIR` in CI and reference it in frontmatter:
+
+```yaml
+path:
+  - $FLOWMARK_BIN_DIR
+```
+
+This is the most portable approach and matches the design in the "Tryscript
+Configuration" section above.
+
+#### 5.3: Add CI Job to Python Repo
+
+Add a tryscript job to the Python repo's CI workflow (e.g., `.github/workflows/ci.yml`
+or equivalent):
+
+```yaml
+tryscript:
+  name: Tryscript golden tests
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+    - uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+    - name: Install flowmark
+      run: pip install -e .
+    - name: Force-add gitignored fixtures
+      run: |
+        # These fixtures are intentionally gitignored by their parent dirs
+        # but need to exist for tests to work
+        git add -f tests/tryscript/fixtures/project/skip/ignored.md
+        git add -f tests/tryscript/fixtures/project/nested/generated/output.md
+    - name: Run tryscript golden tests
+      run: npx tryscript@latest run tests/tryscript/
+```
+
+**Key CI considerations:**
+- Node.js is required for `npx tryscript@latest`
+- The Python binary must be installed and on PATH before tryscript runs
+- `NO_COLOR=1` is set in the tryscript frontmatter, so no CI-level env override needed
+- Force-adding gitignored fixtures may not be needed if they're committed with `-f`
+  during the initial copy
+
+#### 5.4: Validate All Tests Pass in Python CI
+
+- [ ] Run the full tryscript suite locally against the Python binary:
+  ```bash
+  cd $PYTHON_REPO
+  pip install -e .
+  npx tryscript@latest run tests/tryscript/
+  ```
+- [ ] Verify all 79 scenarios pass (same count as the Rust repo)
+- [ ] Push and confirm the CI job passes in the Python repo's CI pipeline
+- [ ] If any tests fail, investigate whether it's a frontmatter/path issue or a real
+  parity difference
+
+#### 5.5: Establish Sync Protocol
+
+Since the test files are identical across repos, changes must be synced:
+
+- **Upstream direction**: The Rust repo (`flowmark-rs`) is the upstream source for
+  tryscript test changes.
+  All new test scenarios, fixture changes, and golden output updates originate here.
+- **Sync trigger**: After any tryscript change merges to `main` in `flowmark-rs`, the
+  same change should be copied to the Python repo.
+- **Sync verification**: After copying, run the tryscript suite against the Python binary
+  to confirm parity.
+- **Divergence handling**: If a test must differ between repos (e.g., due to an accepted
+  parity gap), document the divergence in both repos and use `[..]` or `...` patterns to
+  accommodate both outputs.
+
+#### 5.6: Update Test Mapping
+
+Add entries for each tryscript file to `port-coverage-mapping/test-mapping.yaml`,
+`port-coverage-mapping/python-tests.yaml`, and `port-coverage-mapping/rust-tests.yaml`
+so the mapping framework tracks that these golden tests exist in both repos.
+One entry per tryscript file is sufficient since the files are identical.
+
+#### Phase 5 Checklist
+
+- [ ] Copy all 10 tryscript test files to Python repo
+- [ ] Copy all fixture directories to Python repo
+- [ ] Force-add any gitignored fixture files
+- [ ] Adapt `path:` frontmatter for Python binary location
+- [ ] Add tryscript CI job to Python repo's workflow
+- [ ] Validate all 79 scenarios pass against the Python binary locally
+- [ ] Validate CI passes in the Python repo
+- [ ] Document the sync protocol in both repos
+- [ ] Add tryscript entries to the test mapping YAML files
 
 ### Phase 6: Retire Old Tryscript File
 

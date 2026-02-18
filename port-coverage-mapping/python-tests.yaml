@@ -1350,3 +1350,60 @@
   function: test_wrap_width
   test_type: unit
   line_number: 211
+
+# Tryscript golden tests (binary-agnostic CLI tests, identical in both repos)
+- file: tests/tryscript/auto-mode.tryscript.md
+  function: auto-mode
+  test_type: golden
+  line_number: 0
+  doc_string: Auto mode formatting tests (6 scenarios)
+- file: tests/tryscript/cli-golden.tryscript.md
+  function: cli-golden
+  test_type: golden
+  line_number: 0
+  doc_string: Basic CLI golden tests — version, errors, file discovery (31 scenarios)
+- file: tests/tryscript/config-interaction.tryscript.md
+  function: config-interaction
+  test_type: golden
+  line_number: 0
+  doc_string: Config file interaction tests (9 scenarios)
+- file: tests/tryscript/errors-version.tryscript.md
+  function: errors-version
+  test_type: golden
+  line_number: 0
+  doc_string: Error handling and version info tests (8 scenarios)
+- file: tests/tryscript/file-discovery.tryscript.md
+  function: file-discovery
+  test_type: golden
+  line_number: 0
+  doc_string: File discovery with patterns and exclusions (13 scenarios)
+- file: tests/tryscript/file-ops.tryscript.md
+  function: file-ops
+  test_type: golden
+  line_number: 0
+  doc_string: File operations — inplace, backup, output (8 scenarios)
+- file: tests/tryscript/formatting.tryscript.md
+  function: formatting
+  test_type: golden
+  line_number: 0
+  doc_string: Core formatting tests — width, plaintext, semantic, cleanups (12 scenarios)
+- file: tests/tryscript/list-spacing.tryscript.md
+  function: list-spacing
+  test_type: golden
+  line_number: 0
+  doc_string: List spacing behavior — preserve, loose, tight (6 scenarios)
+- file: tests/tryscript/stdin.tryscript.md
+  function: stdin
+  test_type: golden
+  line_number: 0
+  doc_string: Stdin input tests (4 scenarios)
+- file: tests/tryscript/typography-tests.tryscript.md
+  function: typography-tests
+  test_type: golden
+  line_number: 0
+  doc_string: Typography features — smartquotes, ellipses (8 scenarios)
+- file: tests/tryscript/verbose-docs.tryscript.md
+  function: verbose-docs
+  test_type: golden
+  line_number: 0
+  doc_string: Verbose output, skills, and docs tests (5 scenarios)
