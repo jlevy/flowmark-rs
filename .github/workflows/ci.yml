@@ -100,6 +100,22 @@ jobs:
             echo "::warning::Some markdown files need formatting. Run: uvx flowmark@latest --auto --extend-exclude tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude python/ ."
           fi
 
+  tryscript:
+    name: Tryscript golden tests
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Build binary
+        run: cargo build --locked --all-features
+      - name: Run tryscript golden tests
+        run: npx tryscript@latest tests/tryscript/cli-golden.tryscript.md
+
   check-mapping:
     name: Test mapping check
     runs-on: ubuntu-latest
