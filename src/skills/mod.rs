@@ -50,7 +50,12 @@ pub fn get_docs_content() -> String {
 /// Returns an error if the directory cannot be created or the file cannot be written.
 pub fn install_skill(agent_base: Option<&str>) -> Result<(), String> {
     let base: PathBuf = if let Some(custom) = agent_base {
-        PathBuf::from(custom)
+        let p = PathBuf::from(custom);
+        // Reject paths with parent-directory traversal components
+        if p.components().any(|c| matches!(c, std::path::Component::ParentDir)) {
+            return Err(format!("invalid --agent-base path (contains '..'): {custom}"));
+        }
+        p
     } else {
         let Some(home) = dirs::home_dir() else {
             return Err("Could not determine home directory".to_string());
@@ -61,9 +66,11 @@ pub fn install_skill(agent_base: Option<&str>) -> Result<(), String> {
     let skill_dir = base.join("skills").join("flowmark");
     let skill_path = skill_dir.join("SKILL.md");
 
-    std::fs::create_dir_all(&skill_dir).map_err(|e| format!("Permission denied: {e}"))?;
+    std::fs::create_dir_all(&skill_dir)
+        .map_err(|e| format!("failed to create skill directory: {e}"))?;
 
-    std::fs::write(&skill_path, SKILL_CONTENT).map_err(|e| format!("Installation failed: {e}"))?;
+    std::fs::write(&skill_path, SKILL_CONTENT)
+        .map_err(|e| format!("failed to write skill file: {e}"))?;
 
     eprintln!("Installed flowmark skill to {}", skill_path.display());
 

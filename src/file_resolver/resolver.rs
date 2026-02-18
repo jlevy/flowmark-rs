@@ -93,14 +93,14 @@ impl FileResolver {
                     return false;
                 }
             }
-            for component in path.components() {
-                if Some(component.as_os_str()) == path.file_name() {
-                    continue;
-                }
-                let part = component.as_os_str().to_string_lossy();
-                let dir_with_slash = format!("{part}/");
-                if matches_any_pattern(&self.exclude_patterns, &dir_with_slash) {
-                    return false;
+            // Check directory components only (skip the last component which is the filename).
+            if let Some(parent) = path.parent() {
+                for component in parent.components() {
+                    let part = component.as_os_str().to_string_lossy();
+                    let dir_with_slash = format!("{part}/");
+                    if matches_any_pattern(&self.exclude_patterns, &dir_with_slash) {
+                        return false;
+                    }
                 }
             }
         }
@@ -160,7 +160,9 @@ impl FileResolver {
             if self.exceeds_max_size(filepath) {
                 continue;
             }
-            if gitignore_specs.iter().any(|spec| spec.matched(filename, false).is_ignore()) {
+            // Use relative path for gitignore matching so path-based patterns work
+            let rel_path = filepath.strip_prefix(root).unwrap_or(filepath);
+            if gitignore_specs.iter().any(|spec| spec.matched(rel_path, false).is_ignore()) {
                 continue;
             }
             if let Some(ti_patterns) = tool_ignore_patterns {
@@ -226,7 +228,8 @@ impl FileResolver {
         false
     }
 
-    /// Expand a glob pattern, then apply all filters.
+    /// Expand a glob pattern, then apply all filters (include, exclude,
+    /// gitignore, tool-ignore, and max-size).
     fn expand_glob(&self, pattern: &str) -> Vec<PathBuf> {
         let mut results = Vec::new();
         let Ok(entries) = glob::glob(pattern) else {
@@ -235,16 +238,38 @@ impl FileResolver {
 
         for entry in entries.flatten() {
             if entry.is_file() {
-                if let Some(name) = entry.file_name().and_then(|n| n.to_str()) {
-                    if matches_any_pattern(&self.include_patterns, name)
-                        && !self.exceeds_max_size(&entry)
-                    {
-                        results.push(entry);
-                    }
+                if !self.glob_entry_passes_filters(&entry) {
+                    continue;
                 }
+                results.push(entry);
             }
         }
         results
+    }
+
+    /// Check whether a glob-expanded file entry passes all configured filters.
+    fn glob_entry_passes_filters(&self, entry: &Path) -> bool {
+        let Some(name) = entry.file_name().and_then(|n| n.to_str()) else {
+            return false;
+        };
+        if !matches_any_pattern(&self.include_patterns, name) {
+            return false;
+        }
+        if self.exceeds_max_size(entry) {
+            return false;
+        }
+        // Check directory components against exclude patterns
+        for component in entry.components() {
+            if Some(component.as_os_str()) == entry.file_name() {
+                continue;
+            }
+            let part = component.as_os_str().to_string_lossy();
+            let dir_with_slash = format!("{part}/");
+            if matches_any_pattern(&self.exclude_patterns, &dir_with_slash) {
+                return false;
+            }
+        }
+        true
     }
 
     /// Check if a file exceeds the configured max size. 0 = no limit.

@@ -100,7 +100,7 @@ pub fn fill_text(
     let mut initial_indent = format!("{extra_indent}{}", text_wrap.initial_indent());
     let subsequent_indent = format!("{extra_indent}{}", text_wrap.subsequent_indent());
 
-    let width = width - subsequent_indent.chars().count();
+    let width = width.saturating_sub(subsequent_indent.chars().count());
     let replace_whitespace = text_wrap.replace_whitespace();
 
     let paragraphs = split_paragraphs(text);

@@ -25,13 +25,15 @@ pub fn read_ignore_patterns(path: &Path) -> Option<Vec<String>> {
 
 /// Read an ignore file (gitignore syntax) and return a compiled `Gitignore` matcher.
 /// Returns `None` if the file has no active rules or cannot be read.
+/// Invalid lines are skipped rather than causing the entire file to be discarded.
 pub fn read_ignore_file(path: &Path) -> Option<Gitignore> {
     let patterns = read_ignore_patterns(path)?;
 
     let root = path.parent().unwrap_or(Path::new("."));
     let mut builder = GitignoreBuilder::new(root);
     for line in &patterns {
-        builder.add_line(None, line).ok()?;
+        // Skip invalid lines instead of discarding the entire file
+        let _ = builder.add_line(None, line);
     }
     builder.build().ok()
 }

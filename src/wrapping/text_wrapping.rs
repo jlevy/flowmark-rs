@@ -72,6 +72,7 @@ pub fn html_md_word_split(text: &str) -> Vec<String> {
 }
 
 /// Simple word splitter that splits on whitespace.
+/// Not used in the production pipeline — available for tests and external consumers.
 pub fn simple_word_split(text: &str) -> Vec<String> {
     text.split_whitespace().map(String::from).collect()
 }
@@ -80,9 +81,10 @@ pub fn simple_word_split(text: &str) -> Vec<String> {
 /// that need escaping at the start of a wrapped line.
 pub fn markdown_escape_word(word: &str) -> String {
     if MD_NUMERAL_PAT.is_match(word) {
-        // Insert backslash before the `.` or `)`
-        let last = &word[word.len() - 1..];
-        let prefix = &word[..word.len() - 1];
+        // Insert backslash before the last character (`.` or `)`)
+        let last_char_len = word.chars().next_back().map_or(0, char::len_utf8);
+        let prefix = &word[..word.len() - last_char_len];
+        let last = &word[word.len() - last_char_len..];
         format!("{prefix}\\{last}")
     } else if MD_SPECIALS_PAT.is_match(word) {
         format!("\\{word}")

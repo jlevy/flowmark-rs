@@ -175,3 +175,39 @@ fn test_mixed_escapes_comprehensive() {
     let expected = "## 1. Heading with \\* asterisk\n\nText with 1. period and \\* asterisk and \\# hash.\n\n1\\. Not a list (period escape kept) \\* Not a list (asterisk escape kept)\n\nCost: \\$100 (dollar escape kept)\n";
     assert_eq!(fmt(input), expected);
 }
+
+/// M2 test: PUA characters NOT used as placeholders should survive formatting.
+/// The formatter uses U+E000 + (ASCII code) as placeholders for escape chars.
+/// U+E000 (maps to NUL, not an escape char) and U+E080 (outside range) should
+/// be preserved. U+E05C (maps to backslash, IS an escape char) will be corrupted.
+#[test]
+fn test_pua_chars_safe_range_preserved() {
+    // U+E080 is outside the placeholder range (ESCAPE_CHARS are ASCII 0x21-0x7E)
+    let input = "Text with \u{E080} characters.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains('\u{E080}'),
+        "PUA char U+E080 (outside placeholder range) should be preserved: {result:?}"
+    );
+}
+
+/// M2 known limitation: PUA chars that collide with escape placeholders are corrupted.
+/// U+E05C = U+E000 + 0x5C (backslash), used as the `\\` placeholder.
+#[test]
+fn test_pua_placeholder_collision_known_limitation() {
+    let input = "Text with \u{E05C} inside.\n";
+    let result = fmt(input);
+    // This documents the known collision: U+E05C gets replaced with `\\`
+    assert!(
+        !result.contains('\u{E05C}'),
+        "PUA char U+E05C collides with backslash placeholder and is corrupted (known limitation)"
+    );
+}
+
+/// M2 test: PUA char adjacent to backslash escape, safe range.
+#[test]
+fn test_pua_adjacent_to_escape() {
+    let input = "\\*test\u{E080}\n";
+    let result = fmt(input);
+    assert!(result.contains('\u{E080}'), "PUA char should be preserved next to escape: {result:?}");
+}

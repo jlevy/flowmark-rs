@@ -58,6 +58,7 @@ pub fn split_sentences_regex(text: &str, min_length: usize) -> Vec<String> {
 }
 
 /// Return the first n sentences from the text.
+/// Not used in the production formatting pipeline.
 pub fn first_sentences(text: &str, n: usize, min_length: usize) -> Vec<String> {
     let sentences = split_sentences_regex(text, min_length);
     sentences.into_iter().take(n).collect()
@@ -65,6 +66,7 @@ pub fn first_sentences(text: &str, n: usize, min_length: usize) -> Vec<String> {
 
 /// Return the first sentence from the text. Returns input text unchanged if no
 /// sentences are found.
+/// Not used in the production formatting pipeline.
 pub fn first_sentence(text: &str, min_length: usize) -> String {
     let sentences = split_sentences_regex(text, min_length);
     sentences.into_iter().next().unwrap_or_else(|| text.to_string())
