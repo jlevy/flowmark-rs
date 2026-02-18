@@ -279,4 +279,347 @@ in `test-mapping.yaml` with `status: excluded` and individual notes.
 - Porting plan: `docs/porting-plan.md`
 - Previous Rust implementation: `attic/flowmark-rs-1/`
 - Porting playbook: `attic/rust-porting-playbook/`
-- Meta-playbook (improving the playbook): `attic/rust-porting-playbook/reference/meta-improving-this-playbook.md`
+- Meta-playbook (improving the playbook):
+  `attic/rust-porting-playbook/reference/meta-improving-this-playbook.md`
+
+---
+
+## Appendix A: Full Commit Log and Porting Synopsis
+
+This appendix provides a complete record of the flowmark Python-to-Rust porting effort
+as captured in the branch commit history (25 substantive commits, excluding tbd
+bookkeeping). Each commit is annotated with what changed, the test state at that point,
+and the architectural significance.
+
+### Phase 0: Core Implementation (2 commits)
+
+#### `f245a4b` — Initial Rust implementation of flowmark
+
+The project scaffold: Cargo.toml, module structure, CLI with clap (feature-gated), and
+all core library modules ported from Python. Established the module layout that persisted
+through the entire port:
+
+| Python Module | Rust Module |
+|---|---|
+| `linewrapping/text_wrapping.py` | `wrapping/text_wrapping.rs` |
+| `linewrapping/text_filling.py` | `wrapping/text_filling.rs` |
+| `linewrapping/sentence_split_regex.py` | `wrapping/sentence.rs` |
+| `linewrapping/line_wrappers.py` | `wrapping/line_wrappers.rs` |
+| `linewrapping/tag_handling.py` | `wrapping/tag_handling.rs` |
+| `linewrapping/block_heuristics.py` | `wrapping/block_heuristics.rs` |
+| `linewrapping/atomic_patterns.py` | `wrapping/atomic_patterns.rs` |
+| `formats/flowmark_markdown.py` | `formatter/filling.rs` |
+| `formats/frontmatter.py` | `parser/frontmatter.rs` |
+| `typography/ellipses.py` | `typography/ellipses.rs` |
+| `typography/smartquotes.py` | `typography/quotes.rs` |
+| `transforms/doc_cleanups.py` | `transform/cleanups.rs` |
+| `reformat_api.py` | `lib.rs` |
+| `config.py` | `config.rs` |
+| `cli.py` | `main.rs` |
+
+**Tests: 27 unit tests passing.** No integration tests yet.
+
+#### `0e45b63` — Complete Markdown formatting pipeline with 177 passing tests
+
+The largest single commit (11,262 lines added). Rewrote `render_node` as a proper
+block/inline AST renderer with blank line separation, blockquote/alert paragraph spacing,
+and list item formatting. Key innovations:
+
+- Unicode PUA placeholder system for preserving escape characters (`\*`, `\#`, `\-`,
+  etc.) through comrak's AST, which strips backslash escapes.
+- Code-span-aware period escape post-processing.
+- Smart quotes applied at the paragraph level to work across inline elements.
+- Code fence blank line preservation.
+- Sentence-break detection after links/parens.
+
+Added 16 integration test files with golden/reference document tests (4 modes: plain,
+cleaned, semantic, auto) on a 1,416-line reference document.
+
+**Tests: 177 passing (150 integration + 27 unit) across 16 integration test files.**
+
+### Phase 1: Test Mapping Infrastructure (7 commits)
+
+#### `af0784f` — Add plan spec for cross-language test mapping meta-test
+
+Spec-only commit. Designed the systematic test provenance tracking system: Python
+discovery scripts (AST-based), Rust discovery, hand-maintained YAML mapping, and
+completeness checker.
+
+#### `44a0143` — Add port coverage mapping: Python CLI, discovery scripts, and YAML
+
+Implemented the `flowmark-dev` Python CLI with four subcommands: `discover-python` (281
+tests found at v0.6.4), `discover-rust` (151 integration tests found via regex),
+`init-mapping` (skeleton mapping), `check-mapping` (completeness validation). Generated
+initial YAML artifacts. 14 files added.
+
+#### `a1648d9` — Update test mapping spec: cargo-based discovery, idempotent merge
+
+Spec update: switched Rust discovery to `cargo test -- --list` (compiler-authoritative,
+finds all 178 tests including 27 unit tests). Documented idempotent additive merge
+semantics for all commands.
+
+#### `be6598c` — Implement cargo-based discovery, idempotent merge, and lint fixes
+
+Implementation of the spec updates: `discover-rust` now uses cargo as primary strategy
+(178 tests: 151 integration + 27 unit), with regex fallback. Both discovery commands
+preserve hand-added YAML entries. All Python code passes ruff and basedpyright.
+
+#### `1753a59` — Populate test-mapping.yaml with exact gap counts
+
+All 281 Python tests reviewed and mapped: 137 mapped, 79 excluded, 64 missing, 1
+partial. This commit established the precise gap that needed closing.
+
+#### `a5b1b3f` — Add exact parity spec
+
+Created this spec document, outlining the full roadmap from "64 missing tests" to "exact
+behavioral parity."
+
+#### `4f05cbe` — Finalize both specs: mark completed phases
+
+Updated both specs to reflect completed mapping work. The 64 missing tests enumerated by
+file with exact counts.
+
+### Phase 2: Test Infrastructure and CI (3 commits)
+
+#### `25e8c1a` — TDD smoke tests for cross-language test mapping
+
+Added 9 Python smoke tests validating the dev-tools pipeline end-to-end: YAML round-trip
+serialization, discovery counts, and mapping completeness checks.
+
+#### `a4a13b6` — Enforce deterministic YAML serialization
+
+Moved record sorting into `write_*_yaml()` functions for canonical ordering. Added
+`TestYamlDeterminism` suite verifying stable output and checked-in files match canonical
+form.
+
+#### `616859a` — CI: GitHub Actions workflow
+
+Initial CI with Rust tests (cargo test with caching) and check-mapping (Python smoke
+tests as hard gate, completeness check informational).
+
+### Phase 3: Porting the 64 Missing Tests (3 commits)
+
+#### `7c2b3bf` — Port 64 missing Python tests to Rust (61 pass, 4 known bugs)
+
+The second-largest commit. All 64 missing tests ported:
+
+- 32 wrapping tests (all pass)
+- 15 tag formatting tests (1 ignored: fmr-5ojk)
+- 5 escape handling tests (2 ignored: fmr-2tll)
+- 5 smartquotes integration tests (all pass)
+- 2 alert, 2 strikethrough, 1 heading spacing, 1 code block, 1 width options
+
+3 Rust implementation bugs identified and tracked: fmr-2tll (escape at list item start),
+fmr-4l1x (extra blank line before heading in list), fmr-5ojk (extra blank line before
+HTML comment tag on list continuation).
+
+**Tests: 243 passing, 4 ignored (known bugs).**
+
+#### `881a30a` — Achieve full test mapping (0 missing)
+
+Updated test-mapping.yaml: all 64 entries changed from `missing` to `mapped`.
+Regenerated rust-tests.yaml. Mapping: 201 mapped, 79 excluded, 1 partial, 0 missing.
+
+#### `b74c856` / `7fdc5bd` — Spec status corrections
+
+Spec initially marked "Implemented" prematurely, then corrected to "In Progress" with
+addition of Phases 3-8 covering bug fixes, code quality, previous impl review, playbook
+audit, meta-playbook review, and final verification. 18 new beads created.
+
+### Phase 4: Bug Fixes and Code Quality (3 commits)
+
+#### `5b64d8c` — Fix 3 bugs and complete partial test
+
+All 3 blocking bugs fixed:
+
+- **fmr-2tll**: `postprocess_period_escapes` now strips list markers before checking for
+  digit-period patterns.
+- **fmr-4l1x**: Added `child_is_hard_break_heading` check to `render_list_item` spacing.
+- **fmr-5ojk**: Detect tag-only HTML blocks and suppress blank line before them in list
+  items.
+- **fmr-p2pr**: Completed `test_other_escaped_chars` with full escape assertions.
+
+Updated golden test files. All 4 previously ignored tests now passing.
+
+**Tests: 247 passing, 0 ignored, 0 failures.**
+
+#### `e544c7e` — Fix all 70 clippy warnings across 15 files
+
+Zero-warning build achieved. Key changes: `push_str(&format!())` to `write!`/`writeln!`,
+doc-comment backticking, `repeat_n()`, `is_some_and()`, collapsed nested `if`s, raw
+string literals. Updated mapping: `test_other_escaped_chars` from `partial` to `mapped`.
+
+**Tests: 250 passing, 0 ignored. Mapping: 202 mapped, 0 partial.**
+
+#### `06a43b3` — Update parity spec (Phases 3-4 DONE) and refresh rust-tests.yaml
+
+Spec and YAML artifacts updated to reflect bug fixes and code quality work.
+
+### Phase 5: Porting Playbook Best Practices (4 commits)
+
+#### `a9762b3` — P1: Refactor main() with anyhow, ExitCode, SIGPIPE; atomic writes
+
+- `anyhow::Result` replacing `Box<dyn Error>`
+- `ExitCode` from `main()` (runs destructors properly)
+- SIGPIPE reset on Unix via `libc` (piping to `head`/`grep` works)
+- `tempfile::NamedTempFile::persist()` for atomic file writes
+- Removed unused `color-eyre`, `tracing`, `tracing-subscriber` deps
+- Standard `eprintln!("error: {e:#}")` format
+
+#### `a8567e1` — P1: Overhaul CI workflow, add deny.toml and project config
+
+CI expanded from 2 to 8 parallel jobs: fmt, clippy, test (ubuntu + macOS matrix),
+test-lib-only, MSRV (1.85), cargo-deny, docs, check-mapping. Added `deny.toml` (license
+allowlist, source restrictions), `rustfmt.toml` (edition 2024, max_width 100), Cargo.toml
+metadata (keywords, categories).
+
+#### `c4905d2` — P2: Add edge case tests from previous implementation review
+
+7 tests covering edge cases from reviewing `attic/flowmark-rs-1`: code fence with
+indented YAML/list content (comrak parse edge case), inline and display math with LaTeX
+backslashes, bare dollar signs, code block content preservation, footnote
+references/definitions. All passed without code changes, validating the current renderer.
+
+**Tests: 250 passing.**
+
+#### `8b6e33b` — P2: Restrict visibility with pub(crate) and remove dead code
+
+~50 items changed from `pub` to `pub(crate)`. Removed 4 unused functions and 1 unused
+constant. Public API (re-exported from lib.rs) unchanged.
+
+### Phase 6: Finalization (2 commits)
+
+#### `111ca3a` — Mark exact parity spec as Complete — all 8 phases done
+
+Final spec update: 250 tests, 0 ignored, 0 partial, check-mapping PASS, golden test
+PASS, zero clippy warnings. All open questions resolved.
+
+#### `100b2cd` — P3: CLI polish and replace unwrap() with expect()
+
+Final polish: `ValueEnum` derive for `ListSpacing` (rich `--help`), `BufWriter` for
+stdout, `--verbose` flag, all 33 `unwrap()` in library code replaced with descriptive
+`expect()` messages.
+
+### Test Count Evolution
+
+| Commit | Tests | Ignored | Status |
+|---|---|---|---|
+| `f245a4b` Initial impl | 27 | 0 | Unit tests only |
+| `0e45b63` Pipeline complete | 177 | 0 | +16 integration test files |
+| `7c2b3bf` Port 64 missing | 243 | 4 | 3 bugs found |
+| `5b64d8c` Fix 3 bugs | 247 | 0 | All bugs fixed |
+| `e544c7e` Clippy cleanup | 250 | 0 | +3 during cleanup |
+| `c4905d2` Edge case tests | 250 | 0 | +7 (replaced 7 unused) |
+| `100b2cd` Final polish | **250** | **0** | **Final state** |
+
+### Mapping Status Evolution
+
+| Commit | Mapped | Excluded | Missing | Partial |
+|---|---|---|---|---|
+| `1753a59` Initial mapping | 137 | 79 | 64 | 1 |
+| `881a30a` Full mapping | 201 | 79 | 0 | 1 |
+| `e544c7e` Partial resolved | **202** | **79** | **0** | **0** |
+
+---
+
+## Appendix B: Current Test Suite Catalog
+
+### Codebase Size
+
+**Library source (`src/`):** 3,485 lines across 21 files.
+**Integration tests (`tests/`):** 3,424 lines across 17 test files + golden test docs.
+
+#### Source Files by Size
+
+| Source File | Lines | Description |
+|---|---|---|
+| `formatter/filling.rs` | 1,270 | Core Markdown filling/normalization pipeline |
+| `wrapping/tag_handling.rs` | 387 | Jinja/Markdoc/HTML tag handling |
+| `wrapping/text_wrapping.rs` | 290 | Word splitting and paragraph wrapping |
+| `typography/quotes.rs` | 189 | Smart quote conversion |
+| `wrapping/line_wrappers.rs` | 170 | Line wrapper factory functions |
+| `main.rs` | 158 | CLI entry point (feature-gated) |
+| `wrapping/text_filling.rs` | 143 | Multi-paragraph text filling |
+| `lib.rs` | 127 | Public API: `reformat_text`, `reformat_file` |
+| `wrapping/atomic_patterns.rs` | 120 | Atomic construct regex patterns |
+| `wrapping/block_heuristics.rs` | 111 | Block content detection heuristics |
+| `wrapping/sentence.rs` | 111 | Sentence splitting regex |
+| `typography/ellipses.rs` | 109 | Ellipsis conversion |
+| `parser/frontmatter.rs` | 80 | YAML frontmatter parsing |
+| `transform/cleanups.rs` | 69 | Document transforms (unbold headings) |
+| `formatter/markdown.rs` | 57 | Comrak options and AST rendering helpers |
+| `config.rs` | 48 | Configuration types |
+| `error.rs` | 17 | Error type definitions |
+
+### Integration Tests (223 tests across 17 files)
+
+| Test File | Tests | Lines | Coverage Area |
+|---|---|---|---|
+| `test_wrapping.rs` | 47 | 944 | Word splitting, paragraph wrapping, tag handling, block heuristics |
+| `test_tag_formatting.rs` | 32 | 319 | Jinja/HTML tag normalization, multiline tags, smart quotes with tags |
+| `test_smartquotes.rs` | 28 | 409 | Smart quote conversion, apostrophes, edge cases |
+| `test_list_spacing.rs` | 19 | 256 | Tight/loose/preserve list spacing modes |
+| `test_alerts.rs` | 15 | 160 | GitHub-flavored Markdown alert blocks |
+| `test_escape_handling.rs` | 13 | 144 | Backslash escape preservation across contexts |
+| `test_fenced_code_blocks.rs` | 12 | 130 | Code fence preservation, nesting, tilde fences |
+| `test_strikethrough.rs` | 11 | 80 | Strikethrough formatting |
+| `test_ellipses.rs` | 10 | 128 | Ellipsis conversion |
+| `test_heading_spacing.rs` | 9 | 79 | Blank lines around headings, hard breaks |
+| `test_edge_cases.rs` | 7 | 148 | Math LaTeX, footnotes, code fence edge cases |
+| `test_frontmatter.rs` | 7 | 74 | YAML frontmatter split/preserve |
+| `test_width_options.rs` | 7 | 85 | Width=0, semantic+width=0, normal width |
+| `test_filling.rs` | 2 | 268 | Multi-paragraph list items, normalize pipeline |
+| `test_sentences.rs` | 2 | 26 | Sentence splitting, first sentence extraction |
+| `test_ref_docs.rs` | 1 | 108 | Golden test: 4 formatting modes on reference doc |
+| `test_cleanups.rs` | 1 | 66 | Unbold headings transform |
+
+### Unit Tests (27 tests across 7 modules in `src/`)
+
+| Module | Tests | Coverage |
+|---|---|---|
+| `typography::quotes` | 6 | Double/single quotes, apostrophes, possessives, code-like, tags |
+| `wrapping::text_wrapping` | 5 | Markdown escaping, HTML/MD word split, simple wrapping, no-wrap |
+| `parser::frontmatter` | 4 | `has_frontmatter`, `split_frontmatter` (present/absent/unclosed) |
+| `wrapping::block_heuristics` | 4 | Table rows, ordered/unordered list items, block content |
+| `typography::ellipses` | 4 | Basic, end-of-line, with space, with punctuation |
+| `wrapping::sentence` | 3 | End-of-sentence heuristic, splitting, first sentence |
+| `wrapping::text_filling` | 1 | Paragraph splitting |
+
+### Golden/Reference Document Test
+
+`test_ref_docs.rs` runs the full formatting pipeline on a substantial reference document
+(`tests/testdocs/testdoc.orig.md`, 1,416 lines) in 4 modes and compares against expected
+output files:
+
+| Mode | Expected File | Options |
+|---|---|---|
+| Plain text | `testdoc.expected.plain.md` | `plaintext=true` |
+| Cleaned | `testdoc.expected.cleaned.md` | `cleanups=true` |
+| Semantic | `testdoc.expected.semantic.md` | `semantic=true, cleanups=true` |
+| Auto | `testdoc.expected.auto.md` | `semantic+cleanups+smartquotes+ellipses` |
+
+### CI Pipeline (8 parallel jobs)
+
+| Job | What It Checks |
+|---|---|
+| **fmt** | `cargo fmt --check` — code formatting |
+| **clippy** | `cargo clippy -D warnings` — lint (pedantic enabled) |
+| **test** | `cargo test --locked` on ubuntu + macOS |
+| **test-lib-only** | `cargo test --no-default-features` — library without CLI |
+| **msrv** | `cargo check` with Rust 1.85 — minimum supported version |
+| **deny** | `cargo-deny` — license allowlist, source restrictions |
+| **docs** | `cargo doc -D warnings` — documentation builds clean |
+| **check-mapping** | Python smoke tests + cross-language mapping completeness |
+
+### Cross-Language Mapping Final Summary
+
+| Status | Count | Description |
+|---|---|---|
+| **Mapped** | 202 | Python test has a verified Rust equivalent |
+| **Excluded** | 79 | Infrastructure-only (CLI, config, file resolver, skill system) |
+| **Missing** | 0 | All gaps closed |
+| **Partial** | 0 | All partial coverage completed |
+| **Extra Rust** | 27 | Unit tests in `src/` not mapped to Python (Rust-native) |
+
+**Total: 250 Rust tests covering 202 Python test behaviors, 27 Rust-specific unit tests,
+and 7 edge case tests from previous implementation review. All passing, zero ignored.**
