@@ -4,8 +4,7 @@
 //! are reported per-file. Requires `npx` (Node.js) to be installed — tests will
 //! fail if it is not available.
 //!
-//! Two files with known parity gaps are marked `#[ignore]` so they don't block CI
-//! but can still be run explicitly with `cargo test -- --ignored`.
+//! All tryscript files are tested as part of the normal test suite.
 #![cfg(feature = "cli")]
 #![allow(clippy::unwrap_used)]
 
@@ -86,17 +85,12 @@ fn tryscript_verbose_docs() {
     run_tryscript("verbose-docs.tryscript.md");
 }
 
-// --- Tests with known parity gaps (ignored until P1-P4 are fixed) ---
-// Run with: cargo test -- --ignored
-
 #[test]
-#[ignore = "known parity gaps P1-P4, see plan-2026-02-17-exact-parity.md"]
 fn tryscript_formatting() {
     run_tryscript("formatting.tryscript.md");
 }
 
 #[test]
-#[ignore = "known parity gaps P1-P4, see plan-2026-02-17-exact-parity.md"]
 fn tryscript_typography_tests() {
     run_tryscript("typography-tests.tryscript.md");
 }

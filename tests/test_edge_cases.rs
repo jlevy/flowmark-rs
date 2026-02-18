@@ -123,3 +123,13 @@ fn test_multiple_footnotes() {
         "Multiple footnote definitions should be preserved: got {result:?}"
     );
 }
+
+#[test]
+fn test_footnote_autolink_blank_lines() {
+    let input = "[^2]: <https://example.com/path>\n\n[^3]: <https://example.com/other>\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("\n\n[^3]:"),
+        "Blank line between footnote defs with autolinks should be preserved: got {result:?}"
+    );
+}

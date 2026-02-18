@@ -210,6 +210,97 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
     output
 }
 
+/// PUA characters for autolink placeholder boundaries.
+/// We wrap `<url>` as `\u{F003}url\u{F004}` to prevent comrak from parsing it
+/// as an autolink. After rendering, we restore angle brackets.
+const AUTOLINK_OPEN: char = '\u{F003}';
+const AUTOLINK_CLOSE: char = '\u{F004}';
+
+/// Regex for angle-bracket autolinks: `<scheme://...>` or `<email@host>`.
+/// Matches URLs with scheme or email addresses wrapped in angle brackets.
+static ANGLE_AUTOLINK_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"<((?:https?|ftp|mailto):[^\s>]+|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})>")
+        .expect("valid ANGLE_AUTOLINK_RE regex")
+});
+
+/// Extract angle-bracket autolinks and replace with PUA-wrapped text.
+/// This prevents comrak from parsing them, so they survive round-tripping.
+/// Skips content inside code fences and FNDEF/REFDEF HTML comment markers.
+fn protect_autolinks(text: &str) -> String {
+    let lines: Vec<&str> = text.lines().collect();
+    let had_trailing_newline = text.ends_with('\n');
+    let mut result_lines: Vec<String> = Vec::new();
+    let mut in_code = false;
+    let mut fence_str = String::new();
+    let mut in_html_comment = false;
+
+    for line in &lines {
+        if in_code {
+            result_lines.push(line.to_string());
+            if is_closing_fence(line.trim(), &fence_str) {
+                in_code = false;
+            }
+            continue;
+        }
+        if in_html_comment {
+            result_lines.push(line.to_string());
+            if line.contains("-->") {
+                in_html_comment = false;
+            }
+            continue;
+        }
+        if let Some(fs) = detect_opening_fence(line.trim()) {
+            fence_str = fs;
+            in_code = true;
+            result_lines.push(line.to_string());
+            continue;
+        }
+        // Skip FNDEF/REFDEF markers — their content contains raw autolinks
+        // that should be preserved as-is (they're rendered from the marker, not by comrak).
+        if line.trim().starts_with(FNDEF_MARKER_START) || line.trim().starts_with(REFDEF_MARKER_PREFIX) {
+            result_lines.push(line.to_string());
+            if !line.contains("-->") {
+                in_html_comment = true;
+            }
+            continue;
+        }
+        let replaced = ANGLE_AUTOLINK_RE.replace_all(line, |caps: &regex::Captures| {
+            format!("{AUTOLINK_OPEN}{}{AUTOLINK_CLOSE}", &caps[1])
+        });
+        result_lines.push(replaced.into_owned());
+    }
+
+    let mut output = result_lines.join("\n");
+    if had_trailing_newline && !output.ends_with('\n') {
+        output.push('\n');
+    }
+    output
+}
+
+/// Restore PUA-wrapped autolinks back to angle-bracket form.
+fn restore_autolinks(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if ch == AUTOLINK_OPEN {
+            // Collect until AUTOLINK_CLOSE
+            let mut url = String::new();
+            for inner_ch in chars.by_ref() {
+                if inner_ch == AUTOLINK_CLOSE {
+                    break;
+                }
+                url.push(inner_ch);
+            }
+            result.push('<');
+            result.push_str(&url);
+            result.push('>');
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 /// HTML comment marker prefix for reference definition placeholders.
 /// The full definition text is encoded after the prefix so the render step
 /// can emit it without needing external context.
@@ -229,7 +320,12 @@ fn extract_link_ref_defs(text: &str) -> (HashSet<String>, String) {
     let mut labels: HashSet<String> = HashSet::new();
     let result = transform_outside_code_fences(text, |line| {
         if let Some(caps) = LINK_REF_DEF.captures(line) {
-            labels.insert(caps[1].to_lowercase());
+            let label = &caps[1];
+            // Skip footnote definitions (labels starting with ^)
+            if label.starts_with('^') {
+                return vec![line.to_string()];
+            }
+            labels.insert(label.to_lowercase());
             vec![format!("{REFDEF_MARKER_PREFIX}{line} -->")]
         } else {
             vec![line.to_string()]
@@ -281,16 +377,18 @@ fn extract_footnote_defs(text: &str) -> String {
             let mut j = i + 1;
             while j < lines.len() {
                 let cont = lines[j];
-                if cont.starts_with("    ") || cont.starts_with('\t') || cont.trim().is_empty() {
+                if cont.starts_with("  ") || cont.starts_with('\t') || cont.trim().is_empty() {
                     def_lines.push(cont.to_string());
                     j += 1;
                 } else {
                     break;
                 }
             }
-            // Trim trailing blank lines from the definition block
+            // Count and trim trailing blank lines from the definition block
+            let mut trailing_blanks = 0;
             while def_lines.last().is_some_and(|l| l.trim().is_empty()) {
                 def_lines.pop();
+                trailing_blanks += 1;
             }
             // Replace with FNDEF HTML comment marker (multi-line, type-2 HTML block)
             result_lines.push(FNDEF_MARKER_START.to_string());
@@ -298,6 +396,10 @@ fn extract_footnote_defs(text: &str) -> String {
                 result_lines.push(dl.clone());
             }
             result_lines.push("-->".to_string());
+            // Re-emit trailing blank lines so spacing between definitions is preserved
+            for _ in 0..trailing_blanks {
+                result_lines.push(String::new());
+            }
             i = j;
         } else {
             result_lines.push(line.to_string());
@@ -503,10 +605,13 @@ fn inline_ends_with_hard_break<'a>(node: &'a AstNode<'a>) -> bool {
 }
 
 /// Check if a node is an HTML block containing a REFDEF or FNDEF marker.
-fn is_def_marker(node: &AstNode) -> bool {
+/// Check if a node is a REFDEF marker (link reference definition).
+/// Consecutive refdefs are grouped tightly (no blank line between them).
+/// Footnote definition markers (FNDEF) are NOT included here because
+/// Python separates consecutive footnote defs with blank lines.
+fn is_refdef_marker(node: &AstNode) -> bool {
     if let NodeValue::HtmlBlock(html) = &node.data.borrow().value {
-        let trimmed = html.literal.trim();
-        trimmed.starts_with(REFDEF_MARKER_PREFIX) || trimmed.starts_with(FNDEF_MARKER_START)
+        html.literal.trim().starts_with(REFDEF_MARKER_PREFIX)
     } else {
         false
     }
@@ -526,11 +631,11 @@ fn render_block_children<'a>(
     let mut prev_was_block = false;
     let mut prev_ended_with_double_newline = false;
     let mut prev_was_hard_break_heading = false;
-    let mut prev_was_refdef = false;
+    let mut prev_was_refdef_only = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
-        let child_is_refdef = is_def_marker(child);
+        let child_is_refdef_only = is_refdef_marker(child);
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -539,14 +644,15 @@ fn render_block_children<'a>(
 
         // Add blank line between consecutive block elements,
         // unless adjacent to a heading ending with a hard break
-        // or between consecutive REFDEF/FNDEF markers (definitions are grouped tightly)
-        let both_defs = prev_was_refdef && child_is_refdef;
+        // or between consecutive REFDEF markers (link reference defs are grouped tightly).
+        // Note: footnote defs DO get blank lines between them (matching Python).
+        let both_refdefs = prev_was_refdef_only && child_is_refdef_only;
         let need_separator = child_is_block
             && prev_was_block
             && !prev_ended_with_double_newline
             && !prev_was_hard_break_heading
             && !child_is_hard_break_heading
-            && !both_defs;
+            && !both_refdefs;
         if need_separator {
             output.push('\n');
         }
@@ -565,7 +671,7 @@ fn render_block_children<'a>(
             && inline_ends_with_hard_break(child);
         output.push_str(&block_output);
         prev_was_block = child_is_block;
-        prev_was_refdef = child_is_refdef;
+        prev_was_refdef_only = child_is_refdef_only;
     }
 
     output
@@ -811,22 +917,74 @@ fn render_block<'a>(
 
                             // Extract body: first line after `[^label]: `, plus
                             // continuation lines (stripped of 4-space indent).
-                            let mut body_parts: Vec<&str> = Vec::new();
+                            // Preserve paragraph structure for multi-paragraph footnotes.
+                            let mut body_lines: Vec<&str> = Vec::new();
                             for (li, line) in fn_text.lines().enumerate() {
                                 if li == 0 {
-                                    body_parts.push(&line[match_end..]);
+                                    body_lines.push(&line[match_end..]);
                                 } else {
                                     let stripped = line
                                         .strip_prefix("    ")
                                         .or_else(|| line.strip_prefix('\t'))
                                         .unwrap_or(line);
-                                    body_parts.push(stripped);
+                                    body_lines.push(stripped);
                                 }
                             }
-                            let body = body_parts.join(" ");
-                            let wrapped = line_wrapper(body.trim(), &fn_prefix, &fn_subsequent);
-                            output.push_str(&wrapped);
-                            output.push('\n');
+
+                            // Check if this is a multi-paragraph footnote (contains blank lines)
+                            let has_blank_lines = body_lines.iter().skip(1).any(|l| l.trim().is_empty());
+                            if has_blank_lines {
+                                // Multi-paragraph footnote: split into paragraphs and wrap each.
+                                let mut paragraphs: Vec<Vec<&str>> = vec![Vec::new()];
+                                for line in &body_lines {
+                                    if line.trim().is_empty() {
+                                        if !paragraphs.last().unwrap().is_empty() {
+                                            paragraphs.push(Vec::new());
+                                        }
+                                    } else {
+                                        paragraphs.last_mut().unwrap().push(line);
+                                    }
+                                }
+                                if paragraphs.last().is_some_and(|p| p.is_empty()) {
+                                    paragraphs.pop();
+                                }
+                                for (pi, para) in paragraphs.iter().enumerate() {
+                                    // Detect blockquote paragraphs: lines starting with >
+                                    let is_blockquote = para.iter().all(|l| l.starts_with('>'));
+                                    if is_blockquote {
+                                        // Strip > prefix, join, wrap with blockquote prefix
+                                        let bq_body: Vec<&str> = para.iter().map(|l| {
+                                            l.strip_prefix("> ").unwrap_or(l.strip_prefix('>').unwrap_or(l))
+                                        }).collect();
+                                        let joined = bq_body.join(" ");
+                                        let bq_prefix = if pi == 0 {
+                                            format!("{fn_prefix}> ")
+                                        } else {
+                                            format!("{fn_subsequent}> ")
+                                        };
+                                        let bq_subsequent = format!("{fn_subsequent}> ");
+                                        let wrapped = line_wrapper(joined.trim(), &bq_prefix, &bq_subsequent);
+                                        output.push_str(&wrapped);
+                                    } else {
+                                        let joined = para.join(" ");
+                                        let (p, sp) = if pi == 0 {
+                                            (fn_prefix.clone(), fn_subsequent.clone())
+                                        } else {
+                                            (fn_subsequent.clone(), fn_subsequent.clone())
+                                        };
+                                        let wrapped = line_wrapper(joined.trim(), &p, &sp);
+                                        output.push_str(&wrapped);
+                                    }
+                                    output.push_str("\n\n");
+                                }
+                            } else {
+                                // Single-paragraph footnote
+                                let body = body_lines.join(" ");
+                                let wrapped = line_wrapper(body.trim(), &fn_prefix, &fn_subsequent);
+                                output.push_str(&wrapped);
+                                // Footnote definitions end with a blank line (matching Python behavior)
+                                output.push_str("\n\n");
+                            }
                         } else {
                             // Fallback: output content lines as-is
                             for line in fn_text.lines() {
@@ -1099,6 +1257,26 @@ fn render_inline_children<'a>(
     output
 }
 
+/// Check if a Link node is an autolink (inner text matches URL).
+/// Autolinks are created by comrak for `<url>`, `<email>`, and bare URLs.
+fn is_autolink(node: &AstNode, link: &comrak::nodes::NodeLink) -> bool {
+    // Must have exactly one child that is a Text node
+    let first_child = match node.first_child() {
+        Some(c) => c,
+        None => return false,
+    };
+    if first_child.next_sibling().is_some() {
+        return false;
+    }
+    let text = match &first_child.data.borrow().value {
+        NodeValue::Text(t) => t.clone(),
+        _ => return false,
+    };
+    // Inner text matches URL (autolink) or URL minus "mailto:" (email autolink)
+    let url = &link.url;
+    text == *url || url.strip_prefix("mailto:").is_some_and(|stripped| text == stripped)
+}
+
 /// Render a single inline node to string.
 fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool) -> String {
     match &node.data.borrow().value {
@@ -1145,6 +1323,12 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
                     };
                     format!("[{inner}]({url}{title})")
                 }
+            } else if link.title.is_empty() && is_autolink(node, link) {
+                // Autolink: inner text matches URL — render as bare text.
+                // Angle-bracket autolinks (<url>) are protected by PUA markers
+                // during preprocessing and restored during postprocessing,
+                // so any autolinks reaching this point were bare in the source.
+                inner.to_string()
             } else {
                 let title = if link.title.is_empty() {
                     String::new()
@@ -1336,6 +1520,12 @@ pub fn fill_markdown(
     // we keep definitions at their original positions.
     text = extract_footnote_defs(&text);
 
+    // Protect angle-bracket autolinks from comrak parsing.
+    // Comrak's autolink extension converts both <url> and bare url to Link nodes,
+    // making it impossible to distinguish them later. By replacing <url> with
+    // PUA-marked text, we preserve the angle brackets for round-tripping.
+    text = protect_autolinks(&text);
+
     let mut escape_placeholders: Vec<(String, String)> = Vec::new();
     for &ch in ESCAPE_CHARS {
         let escaped = format!("\\{ch}");
@@ -1379,6 +1569,9 @@ pub fn fill_markdown(
 
     // Remove unnecessary period escapes (keep only at line starts where they prevent list interpretation)
     let result = postprocess_period_escapes(&result);
+
+    // Restore autolink angle brackets from PUA placeholders
+    let result = restore_autolinks(&result);
 
     // Apply text-level normalizations
     let result = normalize_comrak_output(&result);
@@ -1575,6 +1768,46 @@ mod tests {
         assert!(output.contains(FNDEF_MARKER_START));
         assert!(output.contains("First line."));
         assert!(output.contains("Continuation line."));
+    }
+
+    #[test]
+    fn extract_footnote_consecutive_blank_line_preserved() {
+        let input = "[^1]: First.\n\n[^2]: Second.\n";
+        let output = extract_footnote_defs(input);
+        // Both definitions should be extracted
+        let marker_count = output.matches(FNDEF_MARKER_START).count();
+        assert_eq!(marker_count, 2, "Should have two FNDEF markers, got:\n{output}");
+        // The blank line between them should be preserved
+        assert!(
+            output.contains("-->\n\n"),
+            "Blank line between defs should be preserved, got:\n{output}"
+        );
+    }
+
+    #[test]
+    fn extract_footnote_with_autolink_blank_line_preserved() {
+        let input = "[^2]: <https://example.com/path>\n\n[^3]: <https://example.com/other>\n";
+        let extracted = extract_footnote_defs(input);
+        let marker_count = extracted.matches(FNDEF_MARKER_START).count();
+        assert_eq!(marker_count, 2, "Should have two FNDEF markers, got:\n{extracted}");
+        assert!(
+            extracted.contains("-->\n\n"),
+            "Blank line between defs should be preserved after extraction, got:\n{extracted}"
+        );
+        // Also check that protect_autolinks doesn't destroy the blank line
+        let protected = protect_autolinks(&extracted);
+        assert!(
+            protected.contains("-->\n\n"),
+            "Blank line between defs should be preserved after autolink protection, got:\n{protected}"
+        );
+
+        // Check the full pipeline output
+        use crate::config::ListSpacing;
+        let result = fill_markdown(input, true, 88, false, false, false, false, None, ListSpacing::Preserve);
+        assert!(
+            result.contains("\n\n[^3]:"),
+            "Full pipeline should preserve blank line between footnote defs with autolinks, got:\n{result}"
+        );
     }
 
     #[test]
