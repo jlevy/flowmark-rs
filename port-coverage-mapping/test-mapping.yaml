@@ -1505,8 +1505,6 @@
   status: mapped
   rust_file: tests/test_wrapping.rs
   rust_function: test_wrap_width
-
-# Tryscript golden tests (binary-agnostic, identical files in both repos)
 - python_file: tests/tryscript/auto-mode.tryscript.md
   python_function: auto-mode
   status: mapped

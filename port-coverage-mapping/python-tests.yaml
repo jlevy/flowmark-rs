@@ -1350,8 +1350,6 @@
   function: test_wrap_width
   test_type: unit
   line_number: 211
-
-# Tryscript golden tests (binary-agnostic CLI tests, identical in both repos)
 - file: tests/tryscript/auto-mode.tryscript.md
   function: auto-mode
   test_type: golden

@@ -991,8 +991,6 @@
 - file: tests/test_wrapping.rs
   function: test_wrap_width
   line_number: 161
-
-# Tryscript golden tests (binary-agnostic CLI tests, one entry per file)
 - file: tests/tryscript/auto-mode.tryscript.md
   function: auto-mode
   line_number: 0
