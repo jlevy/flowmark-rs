@@ -1145,16 +1145,37 @@ Zero informational-only steps.**
 
 #### Future Work (tracked as separate beads or deferred)
 
-| Item | Priority | Notes |
-| --- | --- | --- |
-| **Phase 7C**: Integrate meta-playbook observations into playbook docs | P3 | Requires human review of 13 observations |
-| **CI drift detection**: Re-run discovery in CI and diff against committed YAML | P4 | Optional — current canonical-form test catches most drift |
-| **Property-based testing** (proptest) | P3 | Idempotency, width invariants, round-trip properties |
-| **justfile** for common dev workflows | P3 | `just test`, `just lint`, `just check-mapping` |
-| **Release workflow** (GitHub Actions) | P3 | Automated binary builds + crates.io publish |
-| **README and CHANGELOG** | P3 | Public-facing documentation |
-| **`clap_complete` shell completions** | P4 | Generate bash/zsh/fish completions |
-| **Color flag** (`--color auto/always/never`) | P4 | Standard CLI convention |
+| Item | Priority | Bead | Notes |
+| --- | --- | --- | --- |
+| **Performance benchmarks** (Rust vs Python) | P2 | fmr-aq8o | Benchmark both on reference docs; publish results in README (see build-publishing spec) |
+| **Phase 7C**: Integrate meta-playbook observations into playbook docs | P3 | — | Requires human review of 13 observations |
+| **CI drift detection**: Re-run discovery in CI and diff against committed YAML | P4 | — | Optional — current canonical-form test catches most drift |
+| **Property-based testing** (proptest) | P3 | — | Idempotency, width invariants, round-trip properties |
+| **justfile** for common dev workflows | P3 | — | `just test`, `just lint`, `just check-mapping` |
+| **Release workflow** (GitHub Actions) | P3 | — | Automated binary builds + crates.io publish (see build-publishing spec) |
+| **README and CHANGELOG** | P3 | — | Public-facing documentation (see build-publishing spec) |
+| **`clap_complete` shell completions** | P4 | — | Generate bash/zsh/fish completions |
+| **Color flag** (`--color auto/always/never`) | P4 | — | Standard CLI convention |
+
+#### Performance Benchmarks (fmr-aq8o)
+
+Benchmark the Rust binary against Python flowmark on the same inputs to quantify the
+speedup. This is a key selling point for the Rust port.
+
+**Approach:**
+- Use `hyperfine` (standard CLI benchmarking tool) to compare:
+  - `flowmark` (Rust) vs `uvx flowmark` (Python) on the reference doc
+    (`tests/testdocs/testdoc.orig.md`, 1,416 lines)
+  - Both in `--auto` mode and plain mode
+  - Single file and batch directory (once file resolver is ported)
+- Optionally add `criterion` benchmarks for library-level performance (internal only, not
+  for README)
+- Record results in a `benchmarks/` directory with reproduction instructions
+
+**Results for README** (in the build-publishing spec):
+- Include a simple comparison table in the Rust README showing wall-clock times
+- Example format: "flowmark (Rust) formats a 1,400-line Markdown file in Xms vs Yms for
+  Python — Z× faster"
 
 ## Open Questions
 
