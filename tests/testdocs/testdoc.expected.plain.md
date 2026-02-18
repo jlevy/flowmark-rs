@@ -141,9 +141,9 @@ be paying $\$0.55116 \times \$0.80$ per share, or $0.44093 per share. And $\$420
 | --- | --- | --- | --- | --- | --- |
 | **Primary scope** | Full REST contract: paths, verbs, auth, servers **plus** data shapes | *Input-only* definition of a function’s parameters for `/chat/completions` `tools=[…]` | Same for `/v1/messages` `tools=[…]`; also used in Claude server-tools | Tool discovery & invocation over JSON-RPC / SSE; adds output contract & rich result types | In-process data validation; can emit JSON-Schema or OpenAPI components |
 | **Where it lives / transport** | `.yaml`/`.json` served over HTTPS or bundled with code | Embedded inside a chat request | Embedded inside a chat request | Separate MCP server; clients list and call tools via `tools/*` RPC methods | Python code emits schema at runtime (`model_json_schema()` or `.schema_json()`) |
-| **JSON-Schema dialect** | Official OAS dialect, built on **draft 2020-12**([spec.openapis.org](https://spec.openapis.org/oas/3.1/dialect/2024-11-10.html "JSON Schema dialect for OpenAPI \| OpenAPI Initiative Publications")) | Fixed **draft 07 subset** (no `$ref` across docs, no `oneOf` of heterogeneous types)([community.openai.com](https://community.openai.com/t/the-assistant-will-never-recognize-a-required-parameter-that-is-of-object-type-in-function-tools/614154?utm_source=chatgpt.com "The Assistant will never recognize a required parameter that is of ..."), [community.openai.com](https://community.openai.com/t/extended-or-minimal-schemas-for-tool-parameters/578636?utm_source=chatgpt.com "Extended or minimal Schemas for tool parameters? - API")) | **draft 2020-12** (full vocabulary)([docs.anthropic.com](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview "Tool use with Claude - Anthropic")) | **draft 2020-12** for both `inputSchema` & `outputSchema`([modelcontextprotocol.io](https://modelcontextprotocol.io/specification/2025-06-18/server/tools "Tools - Model Context Protocol")) | **draft 2020-12** (and emits OpenAPI 3.1 when asked)([docs.pydantic.dev](https://docs.pydantic.dev/latest/concepts/json_schema/ "JSON Schema - Pydantic")) |
+| **JSON-Schema dialect** | Official OAS dialect, built on **draft 2020-12**([spec.openapis.org][1]) | Fixed **draft 07 subset** (no `$ref` across docs, no `oneOf` of heterogeneous types)([community.openai.com][2], [community.openai.com][3]) | **draft 2020-12** (full vocabulary)([docs.anthropic.com][4]) | **draft 2020-12** for both `inputSchema` & `outputSchema`([modelcontextprotocol.io][5]) | **draft 2020-12** (and emits OpenAPI 3.1 when asked)([docs.pydantic.dev][6]) |
 | **Advanced keywords allowed** (`$ref`, `oneOf`, `allOf`, `format`, …) | All JSON-Schema 2020-12, plus OAS extensions | **Limited** – many validators ignored, `$ref` must stay within the same object | **Allowed** – `$ref`, `enum`, `oneOf`, formats, examples | Fully allowed; additionally supports `annotations` object for T\&S metadata | Whatever the target dialect allows; user may disable/enable `$ref` flattening |
-| **Output schema support** | Yes (`components.schemas`, responses) | **No** – output is free-form chat or follow-up `tool` message | **No** (planned) | **Yes** – `outputSchema` field; clients are encouraged to validate results([modelcontextprotocol.io](https://modelcontextprotocol.io/specification/2025-06-18/server/tools "Tools - Model Context Protocol")) | Yes – any Pydantic model’s JSON-Schema can describe outputs |
+| **Output schema support** | Yes (`components.schemas`, responses) | **No** – output is free-form chat or follow-up `tool` message | **No** (planned) | **Yes** – `outputSchema` field; clients are encouraged to validate results([modelcontextprotocol.io][5]) | Yes – any Pydantic model’s JSON-Schema can describe outputs |
 | **Streaming / partial results** | Via HTTP chunked or SSE, not part of schema | Supported in chat streaming but schema is unaffected | `stream:"auto"` yields incremental `tool_use` blocks | Built-in: server can stream intermediate `notifications/tools/*` & progress events | Not applicable (library) |
 | **Runtime validation guarantee** | External validators or server framework (e.g., FastAPI) | **Caller must validate**; model may hallucinate | **Caller must validate** | MCP server **must** validate both inputs & outputs | Core-runtime C/Rust validation; raises `ValidationError` on failure |
 | **Versioning cadence** | IETF-style spec; v3.1 is current | Implicit in OpenAI API releases | Versioned via `anthropic-version` header; schema fields stable | dated revisions (e.g., 2025-06-18) with change log | Semantic-versioned PyPI releases |
@@ -161,6 +161,13 @@ be paying $\$0.55116 \times \$0.80$ per share, or $0.44093 per share. And $\$420
 * **Pydantic v2** remains the Python “source-of-truth” generator: you can compile the
   **same** model into OpenAPI, plain JSON-Schema, OpenAI-tools, Anthropic-tools, or MCP
   definitions with one line of code.
+
+[1]: https://spec.openapis.org/oas/3.1/dialect/2024-11-10.html "JSON Schema dialect for OpenAPI | OpenAPI Initiative Publications"
+[2]: https://community.openai.com/t/the-assistant-will-never-recognize-a-required-parameter-that-is-of-object-type-in-function-tools/614154?utm_source=chatgpt.com "The Assistant will never recognize a required parameter that is of ..."
+[3]: https://community.openai.com/t/extended-or-minimal-schemas-for-tool-parameters/578636?utm_source=chatgpt.com "Extended or minimal Schemas for tool parameters? - API"
+[4]: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview "Tool use with Claude - Anthropic"
+[5]: https://modelcontextprotocol.io/specification/2025-06-18/server/tools "Tools - Model Context Protocol"
+[6]: https://docs.pydantic.dev/latest/concepts/json_schema/ "JSON Schema - Pydantic"
 
 ## Wrapping tests
 
@@ -902,8 +909,16 @@ threshold leverage to block an IPO.[^210]
    modules with large *cumulative* times at the top level or deep in the call stack.
    These are the primary candidates for further investigation.<sup>1</sup>
 
+[^191]: http://paulgraham.com/fr.html
+[^207]: [https://bostonvcblog.typepad.com/vc/2009/07/in-vc-deals-price-doesnt-matter-but-the-promote-does.html](https://bostonvcblog.typepad.com/vc/2009/07/in-vc-deals-price-doesnt-matter-but-the-promote-does.html)
+
 Links like these underline ones come up from some exports. And let's try some links with
 angle brackets.
+
+[^52]: [[https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com]{.underline}](https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com)
+[^53]: <https://www.fastcompany.com/90216464/the-29-billion-battle-to-own-how-america-sleeps>
+[^axioscomth.1lioru]: <https://www.axios.com/the-rise-of-pre-seed-venture-capital-1513305959-13da61c8-15f8-441e-b016-d29902bff8bf.html>
+[^53]: <https://www.fastcompany.com/90216464/the-29-billion-battle-to-own-how-america-sleeps>
 
 And by contrast here a bare link is like this
 [https://www.google.com/](https://www.google.com/)
@@ -1636,8 +1651,6 @@ first."
 ## Summary
 
 All these corner cases should format consistently and predictably.
-
-[^191]: [http://paulgraham.com/fr.html](http://paulgraham.com/fr.html)
 
 [^177]: Carnegie, Dale. *How To Win Friends and Influence People* (p. 35). Simon &
     Schuster. Kindle Edition.

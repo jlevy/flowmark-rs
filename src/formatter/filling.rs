@@ -24,6 +24,52 @@ use crate::wrapping::LineWrapper;
 use crate::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
 use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
 
+// ===== PUA markers for reference link preservation =====
+//
+// Comrak resolves reference-style links during AST construction, losing the
+// reference label.  We preserve them through the pipeline by:
+// 1. Pre-parse: extract definitions, replace `[text][label]` with inline links
+//    whose URL is PUA-encoded as `\u{F000}label\u{F001}real_url`
+// 2. Render: detect PUA prefix in link URLs and emit `[text][label]`
+// 3. Post-process: re-insert definitions at their original positions
+
+/// PUA marker: start of reference label in URL.
+const REF_LABEL_START: char = '\u{F000}';
+/// PUA marker: separator between reference label and real URL.
+const REF_LABEL_SEP: char = '\u{F001}';
+
+/// Regex for link reference definitions: `[label]: url` or `[label]: url "title"`
+/// Handles optional angle-bracket URLs and single/double-quoted or paren-quoted titles.
+static LINK_REF_DEF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?m)^[ \t]{0,3}\[([^\]]+)\]:[ \t]+<?([^\s>]+)>?(?:[ \t]+(?:"([^"]*)"|'([^']*)'|\(([^)]*)\)))?[ \t]*$"#,
+    )
+    .expect("valid LINK_REF_DEF regex")
+});
+
+/// Regex for full reference links: `[text][label]`
+static FULL_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[([^\]]+)\]\[([^\]]+)\]").expect("valid FULL_REF_LINK regex")
+});
+
+/// Regex for collapsed reference links: `[text][]`
+static COLLAPSED_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[([^\]]+)\]\[\]").expect("valid COLLAPSED_REF_LINK regex")
+});
+
+/// A link reference definition extracted from the source.
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+struct LinkRefDef {
+    label: String,
+    url: String,
+    title: String,
+    /// The original definition line(s) as written in the source.
+    original_text: String,
+    /// 0-based line index in the (post-frontmatter, pre-code-fence) source.
+    line_index: usize,
+}
+
 // ===== Regex patterns for normalization =====
 
 /// Pattern for blank lines with trailing whitespace.
@@ -178,6 +224,122 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
     output
 }
 
+/// HTML comment marker prefix for reference definition placeholders.
+/// The full definition text is encoded after the prefix so the render step
+/// can emit it without needing external context.
+const REFDEF_MARKER_PREFIX: &str = "<!-- REFDEF:";
+
+/// Extract link reference definitions from source text (outside code fences).
+/// Returns the definitions and the text with definitions replaced by HTML comment
+/// markers (`<!-- REFDEF:label -->`).  These markers survive comrak parsing as
+/// `HtmlBlock` nodes, preserving the original position of each definition in the AST.
+fn extract_link_ref_defs(text: &str) -> (Vec<LinkRefDef>, String) {
+    let mut defs = Vec::new();
+    let mut result_lines: Vec<String> = Vec::new();
+    let lines: Vec<&str> = text.lines().collect();
+    let mut in_code = false;
+    let mut fence_str = String::new();
+
+    for (i, line) in lines.iter().enumerate() {
+        if in_code {
+            if is_closing_fence(line.trim(), &fence_str) {
+                in_code = false;
+            }
+            result_lines.push(line.to_string());
+            continue;
+        }
+        if let Some(fs) = detect_opening_fence(line.trim()) {
+            fence_str = fs;
+            in_code = true;
+            result_lines.push(line.to_string());
+            continue;
+        }
+        if let Some(caps) = LINK_REF_DEF.captures(line) {
+            let label = caps.get(1).unwrap().as_str().to_string();
+            let url = caps.get(2).unwrap().as_str().to_string();
+            let title = caps
+                .get(3)
+                .or(caps.get(4))
+                .or(caps.get(5))
+                .map_or(String::new(), |m| m.as_str().to_string());
+            defs.push(LinkRefDef {
+                label: label.clone(),
+                url,
+                title,
+                original_text: line.to_string(),
+                line_index: i,
+            });
+            // Replace definition with an HTML comment marker that comrak will
+            // preserve as an HtmlBlock node, keeping it at the right position.
+            // Encode the FULL original text so the render step can emit it
+            // without needing external context.
+            result_lines.push(format!("{REFDEF_MARKER_PREFIX}{line} -->"));
+        } else {
+            result_lines.push(line.to_string());
+        }
+    }
+
+    let mut output = result_lines.join("\n");
+    if text.ends_with('\n') && !output.ends_with('\n') {
+        output.push('\n');
+    }
+    (defs, output)
+}
+
+/// Replace reference link usages with PUA-encoded inline links (outside code fences).
+///
+/// Encodes ONLY the label in the URL: `[text][label]` → `[text](\u{F000}label\u{F001})`
+/// This avoids expanding the real URL/title into the text, which would break table
+/// cells (titles containing `|`) and other contexts.  The real URL is not needed
+/// during comrak parsing — we only need the label to survive so we can emit
+/// `[text][label]` in the render step.
+fn encode_ref_links(text: &str, defs: &[LinkRefDef]) -> String {
+    if defs.is_empty() {
+        return text.to_string();
+    }
+    // Build case-insensitive lookup: lowercase(label) → exists
+    let def_labels: std::collections::HashSet<String> =
+        defs.iter().map(|d| d.label.to_lowercase()).collect();
+
+    transform_outside_code_fences(text, |line| {
+        let mut result = line.to_string();
+        // Replace full reference links: [text][label]
+        loop {
+            let new = FULL_REF_LINK.replace(&result, |caps: &regex::Captures| {
+                let text_part = &caps[1];
+                let label = &caps[2];
+                if def_labels.contains(&label.to_lowercase()) {
+                    // Encode as inline link with PUA-marked label-only URL
+                    format!("[{text_part}]({}{}{})", REF_LABEL_START, label, REF_LABEL_SEP)
+                } else {
+                    caps[0].to_string() // Unknown label, leave as-is
+                }
+            });
+            if new == result {
+                break;
+            }
+            result = new.into_owned();
+        }
+        // Replace collapsed reference links: [text][]
+        loop {
+            let new = COLLAPSED_REF_LINK.replace(&result, |caps: &regex::Captures| {
+                let text_part = &caps[1];
+                let label = text_part; // Collapsed: label = text
+                if def_labels.contains(&label.to_lowercase()) {
+                    format!("[{text_part}]({}{}{})", REF_LABEL_START, label, REF_LABEL_SEP)
+                } else {
+                    caps[0].to_string()
+                }
+            });
+            if new == result {
+                break;
+            }
+            result = new.into_owned();
+        }
+        vec![result]
+    })
+}
+
 /// Replace escaped characters with placeholders, but only outside fenced code blocks.
 /// This prevents comrak from stripping backslash escapes during parsing.
 fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
@@ -318,6 +480,15 @@ fn inline_ends_with_hard_break<'a>(node: &'a AstNode<'a>) -> bool {
     false
 }
 
+/// Check if a node is an HTML block containing a REFDEF marker.
+fn is_refdef_marker(node: &AstNode) -> bool {
+    if let NodeValue::HtmlBlock(html) = &node.data.borrow().value {
+        html.literal.trim().starts_with(REFDEF_MARKER_PREFIX)
+    } else {
+        false
+    }
+}
+
 /// Render block children with proper blank line separation between them.
 fn render_block_children<'a>(
     node: &'a AstNode<'a>,
@@ -332,9 +503,11 @@ fn render_block_children<'a>(
     let mut prev_was_block = false;
     let mut prev_ended_with_double_newline = false;
     let mut prev_was_hard_break_heading = false;
+    let mut prev_was_refdef = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
+        let child_is_refdef = is_refdef_marker(child);
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -343,11 +516,13 @@ fn render_block_children<'a>(
 
         // Add blank line between consecutive block elements,
         // unless adjacent to a heading ending with a hard break
+        // or between consecutive REFDEF markers (definitions are grouped tightly)
         if child_is_block
             && prev_was_block
             && !prev_ended_with_double_newline
             && !prev_was_hard_break_heading
             && !child_is_hard_break_heading
+            && !(prev_was_refdef && child_is_refdef)
         {
             output.push('\n');
         }
@@ -366,6 +541,7 @@ fn render_block_children<'a>(
             && inline_ends_with_hard_break(child);
         output.push_str(&block_output);
         prev_was_block = child_is_block;
+        prev_was_refdef = child_is_refdef;
     }
 
     output
@@ -582,9 +758,19 @@ fn render_block<'a>(
 
         NodeValue::HtmlBlock(html) => {
             let literal = &html.literal;
+            let trimmed = literal.trim();
+
+            // Check for reference definition marker: <!-- REFDEF:original_def_text -->
+            if let Some(rest) = trimmed.strip_prefix(REFDEF_MARKER_PREFIX) {
+                if let Some(def_text) = rest.strip_suffix("-->") {
+                    let def_text = def_text.trim();
+                    let _ = writeln!(output, "{prefix}{def_text}");
+                    return output;
+                }
+            }
+
             // Check if this HTML block has wrappable text content
             // (e.g., HTML comments/tags mixed with regular text)
-            let trimmed = literal.trim();
             let has_text_content = !trimmed.is_empty()
                 && trimmed.contains(|c: char| c.is_alphabetic())
                 && trimmed.chars().filter(|&c| c == '<').count() > 0;
@@ -875,12 +1061,30 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
 
         NodeValue::Link(link) => {
             let inner = render_inline_children(node, options, in_heading);
-            let title = if link.title.is_empty() {
-                String::new()
+            // Detect PUA-encoded reference link: URL starts with REF_LABEL_START
+            if link.url.starts_with(REF_LABEL_START) {
+                if let Some(sep_pos) = link.url.find(REF_LABEL_SEP) {
+                    let label =
+                        &link.url[REF_LABEL_START.len_utf8()..sep_pos];
+                    format!("[{inner}][{label}]")
+                } else {
+                    // Malformed PUA marker — strip it and render as inline
+                    let url = &link.url[REF_LABEL_START.len_utf8()..];
+                    let title = if link.title.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" \"{}\"", link.title.replace('"', "\\\""))
+                    };
+                    format!("[{inner}]({url}{title})")
+                }
             } else {
-                format!(" \"{}\"", link.title.replace('"', "\\\""))
-            };
-            format!("[{inner}]({}{})", link.url, title)
+                let title = if link.title.is_empty() {
+                    String::new()
+                } else {
+                    format!(" \"{}\"", link.title.replace('"', "\\\""))
+                };
+                format!("[{inner}]({}{})", link.url, title)
+            }
         }
 
         NodeValue::Image(image) => {
@@ -1052,6 +1256,12 @@ pub fn fill_markdown(
 
     // Preprocess: ensure proper blank lines around block content within tags
     text = preprocess_tag_block_spacing(&text);
+
+    // Extract link reference definitions and encode reference links with PUA markers
+    // (must happen before escape placeholder substitution, which would mangle `\[` etc.)
+    let (ref_defs, text_without_defs) = extract_link_ref_defs(&text);
+    text = encode_ref_links(&text_without_defs, &ref_defs);
+
     let mut escape_placeholders: Vec<(String, String)> = Vec::new();
     for &ch in ESCAPE_CHARS {
         let escaped = format!("\\{ch}");
