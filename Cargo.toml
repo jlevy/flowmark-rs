@@ -25,10 +25,7 @@ cli = ["clap", "anyhow", "tempfile"]
 [dependencies]
 comrak = "0.36"
 regex = "1.11"
-unicode-segmentation = "1.11"
 thiserror = "2.0"
-toml = "0.8"
-serde = { version = "1.0", features = ["derive"] }
 
 # CLI-only dependencies
 clap = { version = "4.5", features = ["derive", "cargo"], optional = true }

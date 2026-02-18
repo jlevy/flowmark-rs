@@ -5,12 +5,6 @@
 pub enum Error {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
-
-    #[error("Configuration error: {0}")]
-    Config(String),
-
-    #[error("{0}")]
-    Other(String),
 }
 
 /// Result type alias for flowmark operations.
