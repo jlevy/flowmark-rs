@@ -358,7 +358,6 @@ realize abnormally large returns (200%+).
   [**liquidation preference**](http://www.investopedia.com/terms/l/liquidation-preference.asp),
   meaning the preferred stock owner will be paid before the common stock owners upon
   liquidation.
-
   - [**Liquidation overhang**](https://equityzen.com/blog/startup-valuations-and-liquidation-preference-overhang/)
     can occur when the value of a company just doesn’t reach the number of dollars
     investors put into it.
@@ -385,13 +384,11 @@ realize abnormally large returns (200%+).
   [has evolved](http://www.industryventures.com/2014/12/02/employee-liquidity-good-for-private-companies/)
   [in recent years](https://techcrunch.com/2015/10/14/selling-private-company-shares-2-0/).
   Some companies do see value in offering (mostly limited) opportunities for sale.
-
   - [SharesPost](http://sharespost.com/), [Equidate](https://www.equidateinc.com/), and
     [EquityZen](https://equityzen.com/) have sought to establish a market around
     secondary sales, particularly for well-known pre-IPO companies.
 
 - **NSOs**: You pay full taxes at exercise, and the sale is like any investment gain:
-
   - At grant and vesting:
     - No tax if granted at FMV
   - At exercise:
@@ -402,7 +399,6 @@ realize abnormally large returns (200%+).
     - Ordinary tax otherwise (including immediate sale)
 
 - **ISOs**: You might pay less tax at exercise, but it’s complicated:
-
   - At grant and vesting:
     - No tax if granted at FMV
   - At exercise:
@@ -534,7 +530,6 @@ for managing temporary files and directories.
 Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
 
 * **APIs:**
-
   + mkstemp(3\): Generates a unique filename based on a template (prefixXXXXXX), creates
     the file with 0600 permissions, opens it, and returns a file descriptor.
     It uses O\_EXCL for atomic creation, preventing race conditions.<sup>19</sup> The
@@ -549,7 +544,6 @@ Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
     file descriptors.<sup>59</sup>
 
 * **Recommended Python Approach for Atomic Writes:**
-
   1. **Use a Library:** Employing a dedicated library like atomicwriter or atomicfile is
      generally the most robust approach, as they handle temporary file creation in the
      correct location, atomic renaming (os.replace), and error cleanup across platforms.

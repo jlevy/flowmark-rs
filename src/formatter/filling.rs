@@ -797,7 +797,29 @@ fn render_list_item<'a>(
                     false
                 };
 
-            if !prev_ended_double && !current_is_hard_break_heading && !current_is_tag_block {
+            // In Preserve mode, don't add a blank line before a nested list
+            // unless the original source had one.  Comrak marks the whole
+            // parent list as loose when *any* sibling pair has a blank line,
+            // which would insert blanks inside every item.  Python/Marko only
+            // inserts the blank when the author actually wrote one.
+            let suppress_nested_blank = if matches!(child.data.borrow().value, NodeValue::List(_))
+                && !parent_is_tight
+                && list_spacing == ListSpacing::Preserve
+                && i > 0
+            {
+                let prev_end = children[i - 1].data.borrow().sourcepos.end.line;
+                let curr_start = child.data.borrow().sourcepos.start.line;
+                // No blank line in original source → suppress
+                curr_start <= prev_end + 1
+            } else {
+                false
+            };
+
+            if !prev_ended_double
+                && !current_is_hard_break_heading
+                && !current_is_tag_block
+                && !suppress_nested_blank
+            {
                 output.push('\n');
             }
         }

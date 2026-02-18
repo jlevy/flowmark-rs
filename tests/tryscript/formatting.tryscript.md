@@ -287,7 +287,7 @@ one. Third sentence that wraps up the paragraph.
 3. Ordered item three
 
 > This is a blockquote with a paragraph of text inside it.
->
+> 
 > Second paragraph in the blockquote.
 
 ```python
