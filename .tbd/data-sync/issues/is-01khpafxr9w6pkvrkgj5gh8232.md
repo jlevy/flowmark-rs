@@ -5,7 +5,7 @@ title: Complete test-mapping.yaml with all 281 entries
 kind: task
 status: closed
 priority: 0
-version: 10
+version: 11
 spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 labels: []
 dependencies:
@@ -13,7 +13,7 @@ dependencies:
     target: is-01khpafy7fa9tmfksdv96tnpgg
 parent_id: is-01khpafdvq7w2a5ghmh11eptj3
 created_at: 2026-02-17T17:31:13.033Z
-updated_at: 2026-02-17T23:55:17.894Z
+updated_at: 2026-02-18T00:29:46.725Z
 closed_at: 2026-02-17T17:36:24.225Z
 close_reason: "Complete: test-mapping.yaml fully populated with verified entries."
 ---

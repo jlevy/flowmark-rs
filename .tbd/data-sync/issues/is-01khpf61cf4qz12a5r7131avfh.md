@@ -5,11 +5,11 @@ title: "Complete partial test: test_other_escaped_chars (add dollar, underscore,
 kind: task
 status: closed
 priority: 1
-version: 5
+version: 6
 labels: []
 dependencies: []
 created_at: 2026-02-17T18:53:11.950Z
-updated_at: 2026-02-17T23:55:17.982Z
+updated_at: 2026-02-18T00:29:46.806Z
 closed_at: 2026-02-17T19:33:45.563Z
 close_reason: "Completed: added dollar, underscore, bracket, and backtick escape assertions"
 ---

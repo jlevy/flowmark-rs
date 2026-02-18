@@ -5,7 +5,7 @@ title: Add Python smoke test for YAML round-trip serialization
 kind: task
 status: closed
 priority: 1
-version: 16
+version: 17
 spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 labels: []
 dependencies:
@@ -23,7 +23,7 @@ dependencies:
     target: is-01khpag0hnf95kds97f0s1jy80
 parent_id: is-01khp8htxza841kmtcchwgqqm2
 created_at: 2026-02-17T17:31:43.476Z
-updated_at: 2026-02-17T23:55:17.947Z
+updated_at: 2026-02-18T00:29:46.775Z
 closed_at: 2026-02-17T17:43:40.520Z
 close_reason: "Smoke tests created: 7 pass, 2 expected TDD failures (64 missing tests, check-mapping exit 1)"
 ---

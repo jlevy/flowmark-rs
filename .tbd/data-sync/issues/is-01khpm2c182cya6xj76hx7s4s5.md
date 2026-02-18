@@ -5,11 +5,11 @@ title: "P2: Project metadata, tooling config (rustfmt.toml, justfile, deny.toml,
 kind: task
 status: closed
 priority: 2
-version: 3
+version: 4
 labels: []
 dependencies: []
 created_at: 2026-02-17T20:18:34.663Z
-updated_at: 2026-02-17T23:55:18.165Z
+updated_at: 2026-02-18T00:29:46.958Z
 closed_at: 2026-02-17T20:23:45.332Z
 close_reason: Added rustfmt.toml, deny.toml, Cargo.toml keywords/categories
 ---

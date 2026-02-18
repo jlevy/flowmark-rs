@@ -5,11 +5,11 @@ title: Implement typography transforms (smart quotes, ellipses)
 kind: task
 status: closed
 priority: 1
-version: 10
+version: 11
 labels: []
 dependencies: []
 created_at: 2026-02-17T09:48:18.063Z
-updated_at: 2026-02-17T23:55:17.754Z
+updated_at: 2026-02-18T00:29:46.616Z
 closed_at: 2026-02-17T17:30:36.102Z
 close_reason: "Complete: typography/quotes.rs, typography/ellipses.rs implemented and tested."
 ---

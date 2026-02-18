@@ -5,7 +5,7 @@ title: "Spec: Cross-Language Test Mapping (Port Coverage)"
 kind: epic
 status: closed
 priority: 1
-version: 17
+version: 18
 spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 labels: []
 dependencies: []
@@ -19,7 +19,7 @@ child_order_hints:
   - is-01khp8m7h9gqxkgk36g3t7bmd4
   - is-01khpagvfp14nmd04m1qz4yk28
 created_at: 2026-02-17T16:57:18.526Z
-updated_at: 2026-02-17T23:55:17.806Z
+updated_at: 2026-02-18T00:29:46.663Z
 closed_at: 2026-02-17T20:36:46.779Z
 close_reason: "Test mapping complete: 202 mapped, 79 excluded, 0 partial, 0 missing. check-mapping PASS."
 ---

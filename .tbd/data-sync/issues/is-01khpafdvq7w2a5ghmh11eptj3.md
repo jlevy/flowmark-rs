@@ -5,7 +5,7 @@ title: "Spec: Exact Cross-Language Parity"
 kind: epic
 status: closed
 priority: 0
-version: 22
+version: 23
 spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 labels: []
 dependencies:
@@ -34,7 +34,7 @@ child_order_hints:
   - is-01khpag10s391w5f4j22nprfgm
   - is-01khparv02wpxxktcme0tqpyk2
 created_at: 2026-02-17T17:30:56.758Z
-updated_at: 2026-02-17T23:55:17.884Z
+updated_at: 2026-02-18T00:29:46.717Z
 closed_at: 2026-02-17T20:36:46.374Z
 close_reason: All 8 phases complete. 250 tests pass, 0 ignored, 0 partial, zero warnings, check-mapping PASS, golden test PASS.
 ---

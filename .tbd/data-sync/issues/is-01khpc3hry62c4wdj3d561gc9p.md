@@ -5,11 +5,11 @@ title: "Bug: Extra blank line before heading in list item with hard break"
 kind: bug
 status: closed
 priority: 1
-version: 7
+version: 8
 labels: []
 dependencies: []
 created_at: 2026-02-17T17:59:24.701Z
-updated_at: 2026-02-17T23:55:17.975Z
+updated_at: 2026-02-18T00:29:46.800Z
 closed_at: 2026-02-17T19:33:37.625Z
 close_reason: "Fixed: render_list_item skips blank line before headings with hard breaks"
 ---
