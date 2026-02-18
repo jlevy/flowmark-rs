@@ -12,6 +12,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md
 status: closed
 title: "Phase 1: Python project scaffold and discovery CLI prototype"
 type: is
-updated_at: 2026-02-17T23:55:17.814Z
-version: 10
+updated_at: 2026-02-18T00:29:46.671Z
+version: 11
 ---

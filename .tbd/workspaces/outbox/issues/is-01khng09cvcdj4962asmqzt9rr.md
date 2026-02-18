@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: Implement Markdown formatter with comrak
 type: is
-updated_at: 2026-02-17T23:55:17.747Z
-version: 10
+updated_at: 2026-02-18T00:29:46.610Z
+version: 11
 ---

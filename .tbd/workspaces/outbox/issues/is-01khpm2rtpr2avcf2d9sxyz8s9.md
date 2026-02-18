@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "P3: Replace unwrap() with expect() in library code"
 type: is
-updated_at: 2026-02-17T23:55:18.187Z
-version: 4
+updated_at: 2026-02-18T00:29:46.977Z
+version: 5
 ---

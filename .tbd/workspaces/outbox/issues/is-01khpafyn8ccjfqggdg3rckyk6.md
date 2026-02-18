@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: closed
 title: Port 15 missing tag formatting tests (test_tag_formatting.rs)
 type: is
-updated_at: 2026-02-17T23:55:17.907Z
-version: 10
+updated_at: 2026-02-18T00:29:46.737Z
+version: 11
 ---

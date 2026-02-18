@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: closed
 title: Port 32 missing wrapping tests (test_wrapping.rs)
 type: is
-updated_at: 2026-02-17T23:55:17.915Z
-version: 10
+updated_at: 2026-02-18T00:29:46.744Z
+version: 11
 ---

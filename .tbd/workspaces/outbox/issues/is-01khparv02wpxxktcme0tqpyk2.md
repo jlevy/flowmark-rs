@@ -14,6 +14,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: closed
 title: Port 5 missing smartquotes integration tests (test_smartquotes.rs)
 type: is
-updated_at: 2026-02-17T23:55:17.954Z
-version: 9
+updated_at: 2026-02-18T00:29:46.781Z
+version: 10
 ---

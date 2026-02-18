@@ -10,6 +10,6 @@ priority: 1
 status: closed
 title: "Bug: Extra blank line before heading in list item with hard break"
 type: is
-updated_at: 2026-02-17T23:55:17.975Z
-version: 7
+updated_at: 2026-02-18T00:29:46.800Z
+version: 8
 ---

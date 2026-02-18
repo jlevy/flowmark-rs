@@ -10,6 +10,6 @@ priority: 3
 status: closed
 title: "P3: CLI polish - ValueEnum, color, BufWriter, verbose flag"
 type: is
-updated_at: 2026-02-17T23:55:18.180Z
-version: 4
+updated_at: 2026-02-18T00:29:46.970Z
+version: 5
 ---

@@ -24,6 +24,6 @@ spec_path: docs/project/specs/active/plan-2026-02-17-exact-parity.md
 status: closed
 title: Run check-mapping and capture baseline gap report
 type: is
-updated_at: 2026-02-17T23:55:17.901Z
-version: 16
+updated_at: 2026-02-18T00:29:46.731Z
+version: 17
 ---
