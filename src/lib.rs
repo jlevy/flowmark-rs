@@ -4,6 +4,8 @@
 
 pub mod config;
 pub mod error;
+#[cfg(feature = "cli")]
+pub mod file_resolver;
 pub mod formatter;
 pub mod parser;
 pub mod transform;
