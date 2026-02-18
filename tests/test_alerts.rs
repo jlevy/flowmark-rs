@@ -1,5 +1,5 @@
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 fn fmt(input: &str) -> String {
     fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)
@@ -16,10 +16,17 @@ fn test_basic_note_alert() {
 fn test_all_valid_alert_types() {
     let alert_types = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"];
     for alert_type in &alert_types {
-        let input = format!("> [!{alert_type}]\n> Content for {} alert.", alert_type.to_lowercase());
+        let input =
+            format!("> [!{alert_type}]\n> Content for {} alert.", alert_type.to_lowercase());
         let result = fmt(&input);
-        assert!(result.contains(&format!("> [!{alert_type}]")), "Alert type {alert_type} was not preserved");
-        assert!(result.contains(&format!("{} alert", alert_type.to_lowercase())), "Content for {alert_type} was lost");
+        assert!(
+            result.contains(&format!("> [!{alert_type}]")),
+            "Alert type {alert_type} was not preserved"
+        );
+        assert!(
+            result.contains(&format!("{} alert", alert_type.to_lowercase())),
+            "Content for {alert_type} was lost"
+        );
         assert!(result.starts_with('>'), "Quote formatting lost for {alert_type}");
     }
 }
@@ -75,13 +82,18 @@ fn test_malformed_alert_preserves_quote() {
     ];
     for input in &test_cases {
         let result = fmt(input);
-        assert!(result.starts_with('>'), "Quote formatting lost for: {}", &input[..30.min(input.len())]);
+        assert!(
+            result.starts_with('>'),
+            "Quote formatting lost for: {}",
+            &input[..30.min(input.len())]
+        );
     }
 }
 
 #[test]
 fn test_alert_with_multiline_content() {
-    let input = "> [!NOTE]\n> First line of content.\n> Second line of content.\n> Third line of content.";
+    let input =
+        "> [!NOTE]\n> First line of content.\n> Second line of content.\n> Third line of content.";
     let result = fmt(input);
     assert!(result.contains("> [!NOTE]"));
     assert!(result.contains("First line"));

@@ -1,6 +1,6 @@
-use flowmark::typography::quotes::smart_quotes;
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
+use flowmark::typography::quotes::smart_quotes;
 
 #[test]
 fn test_basic_double_quotes() {
@@ -8,10 +8,7 @@ fn test_basic_double_quotes() {
         smart_quotes("I'm there with \"George\""),
         "I\u{2019}m there with \u{201c}George\u{201d}"
     );
-    assert_eq!(
-        smart_quotes("\"Hello,\" he said."),
-        "\u{201c}Hello,\u{201d} he said."
-    );
+    assert_eq!(smart_quotes("\"Hello,\" he said."), "\u{201c}Hello,\u{201d} he said.");
     assert_eq!(smart_quotes("\"I know!\""), "\u{201c}I know!\u{201d}");
 }
 
@@ -38,23 +35,11 @@ fn test_apostrophes_and_contractions() {
 #[test]
 fn test_possessives_at_end_of_words() {
     assert_eq!(smart_quotes("James'"), "James\u{2019}");
-    assert_eq!(
-        smart_quotes("The students' books"),
-        "The students\u{2019} books"
-    );
-    assert_eq!(
-        smart_quotes("Mr. Jones' house"),
-        "Mr. Jones\u{2019} house"
-    );
+    assert_eq!(smart_quotes("The students' books"), "The students\u{2019} books");
+    assert_eq!(smart_quotes("Mr. Jones' house"), "Mr. Jones\u{2019} house");
     assert_eq!(smart_quotes("The cats' toys"), "The cats\u{2019} toys");
-    assert_eq!(
-        smart_quotes("Jesus' disciples"),
-        "Jesus\u{2019} disciples"
-    );
-    assert_eq!(
-        smart_quotes("The class' performance"),
-        "The class\u{2019} performance"
-    );
+    assert_eq!(smart_quotes("Jesus' disciples"), "Jesus\u{2019} disciples");
+    assert_eq!(smart_quotes("The class' performance"), "The class\u{2019} performance");
 }
 
 #[test]
@@ -76,30 +61,15 @@ fn test_quotes_with_punctuation() {
     assert_eq!(smart_quotes("\"Really?\""), "\u{201c}Really?\u{201d}");
     assert_eq!(smart_quotes("\"Yes!\""), "\u{201c}Yes!\u{201d}");
     assert_eq!(smart_quotes("\"End.\""), "\u{201c}End.\u{201d}");
-    assert_eq!(
-        smart_quotes("\"Em dash\"\u{2014}"),
-        "\u{201c}Em dash\u{201d}\u{2014}"
-    );
-    assert_eq!(
-        smart_quotes("\"Parenthesis\")"),
-        "\u{201c}Parenthesis\u{201d})"
-    );
-    assert_eq!(
-        smart_quotes("'Single em dash'\u{2014}"),
-        "\u{2018}Single em dash\u{2019}\u{2014}"
-    );
-    assert_eq!(
-        smart_quotes("'Single parenthesis')"),
-        "\u{2018}Single parenthesis\u{2019})"
-    );
+    assert_eq!(smart_quotes("\"Em dash\"\u{2014}"), "\u{201c}Em dash\u{201d}\u{2014}");
+    assert_eq!(smart_quotes("\"Parenthesis\")"), "\u{201c}Parenthesis\u{201d})");
+    assert_eq!(smart_quotes("'Single em dash'\u{2014}"), "\u{2018}Single em dash\u{2019}\u{2014}");
+    assert_eq!(smart_quotes("'Single parenthesis')"), "\u{2018}Single parenthesis\u{2019})");
 }
 
 #[test]
 fn test_quotes_at_boundaries() {
-    assert_eq!(
-        smart_quotes("\"Start of sentence\""),
-        "\u{201c}Start of sentence\u{201d}"
-    );
+    assert_eq!(smart_quotes("\"Start of sentence\""), "\u{201c}Start of sentence\u{201d}");
     assert_eq!(
         smart_quotes("He said \"middle of sentence\" and continued"),
         "He said \u{201c}middle of sentence\u{201d} and continued"
@@ -122,10 +92,7 @@ fn test_mixed_quotes_and_apostrophes() {
 fn test_edge_cases() {
     assert_eq!(smart_quotes(""), "");
     assert_eq!(smart_quotes("No quotes here"), "No quotes here");
-    assert_eq!(
-        smart_quotes("Just \"quotes\""),
-        "Just \u{201c}quotes\u{201d}"
-    );
+    assert_eq!(smart_quotes("Just \"quotes\""), "Just \u{201c}quotes\u{201d}");
     assert_eq!(smart_quotes("'Single'"), "\u{2018}Single\u{2019}");
 }
 
@@ -151,10 +118,7 @@ fn test_complex_sentences() {
 
 #[test]
 fn test_technical_content_unchanged() {
-    assert_eq!(
-        smart_quotes("function(\"param\")"),
-        "function(\"param\")"
-    );
+    assert_eq!(smart_quotes("function(\"param\")"), "function(\"param\")");
     assert_eq!(smart_quotes("array['key']"), "array['key']");
     assert_eq!(smart_quotes("height=\"100px\""), "height=\"100px\"");
     assert_eq!(smart_quotes("class='my-class'"), "class='my-class'");
@@ -180,10 +144,7 @@ fn test_complex_cases_unchanged() {
 #[test]
 fn test_quotes_with_newlines() {
     // Double quotes with newlines
-    assert_eq!(
-        smart_quotes("\"Hello\nWorld\""),
-        "\u{201c}Hello\nWorld\u{201d}"
-    );
+    assert_eq!(smart_quotes("\"Hello\nWorld\""), "\u{201c}Hello\nWorld\u{201d}");
     assert_eq!(
         smart_quotes("He said \"Hello\nWorld\" today"),
         "He said \u{201c}Hello\nWorld\u{201d} today"
@@ -194,10 +155,7 @@ fn test_quotes_with_newlines() {
     );
 
     // Single quotes with newlines
-    assert_eq!(
-        smart_quotes("'Hello\nWorld'"),
-        "\u{2018}Hello\nWorld\u{2019}"
-    );
+    assert_eq!(smart_quotes("'Hello\nWorld'"), "\u{2018}Hello\nWorld\u{2019}");
     assert_eq!(
         smart_quotes("She said 'Hello\nWorld' today"),
         "She said \u{2018}Hello\nWorld\u{2019} today"
@@ -208,18 +166,9 @@ fn test_quotes_with_newlines() {
     );
 
     // With punctuation after newline quotes
-    assert_eq!(
-        smart_quotes("\"Hello\nWorld\"."),
-        "\u{201c}Hello\nWorld\u{201d}."
-    );
-    assert_eq!(
-        smart_quotes("\"Hello\nWorld\"!"),
-        "\u{201c}Hello\nWorld\u{201d}!"
-    );
-    assert_eq!(
-        smart_quotes("'Hello\nWorld'?"),
-        "\u{2018}Hello\nWorld\u{2019}?"
-    );
+    assert_eq!(smart_quotes("\"Hello\nWorld\"."), "\u{201c}Hello\nWorld\u{201d}.");
+    assert_eq!(smart_quotes("\"Hello\nWorld\"!"), "\u{201c}Hello\nWorld\u{201d}!");
+    assert_eq!(smart_quotes("'Hello\nWorld'?"), "\u{2018}Hello\nWorld\u{2019}?");
 
     // Mixed with contractions
     assert_eq!(
@@ -238,28 +187,13 @@ fn test_quotes_with_newlines() {
     assert_eq!(smart_quotes(text), expected);
 
     // Basic paragraph break
-    assert_eq!(
-        smart_quotes("\"Para 1.\n\nPara 2.\""),
-        "\"Para 1.\n\nPara 2.\""
-    );
-    assert_eq!(
-        smart_quotes("'Para 1.\n\nPara 2.'"),
-        "'Para 1.\n\nPara 2.'"
-    );
+    assert_eq!(smart_quotes("\"Para 1.\n\nPara 2.\""), "\"Para 1.\n\nPara 2.\"");
+    assert_eq!(smart_quotes("'Para 1.\n\nPara 2.'"), "'Para 1.\n\nPara 2.'");
 
     // Paragraph break with spaces
-    assert_eq!(
-        smart_quotes("\"Para 1.\n \nPara 2.\""),
-        "\"Para 1.\n \nPara 2.\""
-    );
-    assert_eq!(
-        smart_quotes("\"Para 1.\n  \nPara 2.\""),
-        "\"Para 1.\n  \nPara 2.\""
-    );
-    assert_eq!(
-        smart_quotes("\"Para 1.\n\t\nPara 2.\""),
-        "\"Para 1.\n\t\nPara 2.\""
-    );
+    assert_eq!(smart_quotes("\"Para 1.\n \nPara 2.\""), "\"Para 1.\n \nPara 2.\"");
+    assert_eq!(smart_quotes("\"Para 1.\n  \nPara 2.\""), "\"Para 1.\n  \nPara 2.\"");
+    assert_eq!(smart_quotes("\"Para 1.\n\t\nPara 2.\""), "\"Para 1.\n\t\nPara 2.\"");
 
     // Multiple paragraph breaks
     assert_eq!(
@@ -283,7 +217,8 @@ fn test_quotes_with_newlines() {
 #[test]
 fn test_smart_quotes_in_table_cells() {
     let text = "| User Says | Response |\n| --- | --- |\n| \"Hello there\" | \"Goodbye\" |\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("\u{201c}Hello there\u{201d}"));
     assert!(result.contains("\u{201c}Goodbye\u{201d}"));
 }
@@ -291,14 +226,16 @@ fn test_smart_quotes_in_table_cells() {
 #[test]
 fn test_smart_quotes_apostrophes_in_table_cells() {
     let text = "| User Says |\n| --- |\n| There's a bug |\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("There\u{2019}s"));
 }
 
 #[test]
 fn test_smart_quotes_in_strikethrough() {
     let text = "~~\"Hello\" and don't~~ rest of text\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("\u{201c}Hello\u{201d}"));
     assert!(result.contains("don\u{2019}t"));
 }
@@ -306,7 +243,8 @@ fn test_smart_quotes_in_strikethrough() {
 #[test]
 fn test_smart_quotes_spanning_code_span() {
     let text = "**Tell the user:** \"First, install the `markform` command.\"\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("\u{201c}First,"));
     assert!(result.contains("command.\u{201d}"));
 }
@@ -314,7 +252,8 @@ fn test_smart_quotes_spanning_code_span() {
 #[test]
 fn test_smart_quotes_spanning_emphasis() {
     let text = "He said \"this is *really* important.\"\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("\u{201c}this"));
     assert!(result.contains("important.\u{201d}"));
 }
@@ -322,7 +261,8 @@ fn test_smart_quotes_spanning_emphasis() {
 #[test]
 fn test_smart_quotes_spanning_strong_emphasis() {
     let text = "She said \"this is **very** important.\"\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("\u{201c}this"));
     assert!(result.contains("important.\u{201d}"));
 }
@@ -330,7 +270,8 @@ fn test_smart_quotes_spanning_strong_emphasis() {
 #[test]
 fn test_smart_quotes_spanning_link() {
     let text = "Read \"the [documentation](https://example.com) first.\"\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("\u{201c}the"));
     assert!(result.contains("first.\u{201d}"));
 }
@@ -338,14 +279,16 @@ fn test_smart_quotes_spanning_link() {
 #[test]
 fn test_smart_quotes_not_modifying_code_content() {
     let text = "Use \"the `x=\"value\"` syntax\" for this.\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("`x=\"value\"`"));
 }
 
 #[test]
 fn test_smart_quotes_apostrophe_spanning_code_span() {
     let text = "I'll use the `markform` tool and it'll work.\n";
-    let result = fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
+    let result =
+        fill_markdown(text, true, 88, false, false, true, false, None, ListSpacing::Preserve);
     assert!(result.contains("I\u{2019}ll"));
     assert!(result.contains("it\u{2019}ll"));
 }
@@ -378,7 +321,7 @@ fn test_smart_quotes_complex_table() {
     assert!(
         result.contains("\u{201c}There\u{2019}s a bug where \u{2026}\u{201d}")
             || result.contains("\u{201c}There\u{2019}s a bug where ...\u{201d}"),
-        "Prose quotes should be converted in table: {}", result
+        "Prose quotes should be converted in table: {result}"
     );
     // Code spans should be unchanged
     assert!(result.contains("`tbd create \"...\" --type=bug`"), "Code spans should be unchanged");
@@ -397,7 +340,10 @@ fn test_smart_quotes_in_table_preserve_code_spans() {
 fn test_smart_quotes_in_table_with_bold() {
     let text = "| Column |\n| --- |\n| **Issues/Beads** |\n| \"There's a bug\" |\n";
     let result = fmt_sq(text);
-    assert!(result.contains("\u{201c}There\u{2019}s a bug\u{201d}"), "Smart quotes should be applied in table with bold");
+    assert!(
+        result.contains("\u{201c}There\u{2019}s a bug\u{201d}"),
+        "Smart quotes should be applied in table with bold"
+    );
 }
 
 #[test]

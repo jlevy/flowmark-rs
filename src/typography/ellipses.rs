@@ -24,7 +24,9 @@ pub fn ellipses(text: &str) -> String {
     let mut last_end = 0;
 
     for m in ELLIPSIS_PATTERN.find_iter(text) {
-        let caps = ELLIPSIS_PATTERN.captures(&text[m.start()..]).expect("captures must succeed after find");
+        let caps = ELLIPSIS_PATTERN
+            .captures(&text[m.start()..])
+            .expect("captures must succeed after find");
         let full_match_start = m.start();
         let full_match_end = m.end();
 
@@ -64,9 +66,7 @@ pub fn ellipses(text: &str) -> String {
 
         // Add space after ellipsis if word char follows with no space and no punct
         if let Some(nc) = next_char {
-            if WORD_CHAR_RE.is_match(&nc.to_string())
-                && spaces_after.is_empty()
-                && punct.is_empty()
+            if WORD_CHAR_RE.is_match(&nc.to_string()) && spaces_after.is_empty() && punct.is_empty()
             {
                 result.push(' ');
             } else {

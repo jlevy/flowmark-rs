@@ -1,5 +1,5 @@
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 // Helper to call fill_markdown with default options
 fn fmt(input: &str, list_spacing: ListSpacing) -> String {

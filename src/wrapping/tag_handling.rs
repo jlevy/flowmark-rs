@@ -5,11 +5,11 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
+use crate::wrapping::LineWrapper;
 use crate::wrapping::atomic_patterns::{
     SINGLE_HTML_COMMENT, SINGLE_JINJA_COMMENT, SINGLE_JINJA_TAG, SINGLE_JINJA_VAR,
 };
 use crate::wrapping::block_heuristics::line_is_block_content;
-use crate::wrapping::LineWrapper;
 
 /// Pattern to match complete template tags (for protecting content inside tags).
 pub(crate) static TEMPLATE_TAG_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
@@ -77,7 +77,9 @@ pub fn normalize_adjacent_tags(text: &str) -> String {
             let groups: Vec<Option<regex::Match<'_>>> =
                 (1..=caps.len()).map(|i| caps.get(i)).collect();
             for i in (0..groups.len()).step_by(2) {
-                if let (Some(a), Some(b)) = (&groups.get(i).copied().flatten(), &groups.get(i + 1).copied().flatten()) {
+                if let (Some(a), Some(b)) =
+                    (&groups.get(i).copied().flatten(), &groups.get(i + 1).copied().flatten())
+                {
                     return format!("{} {}", a.as_str(), b.as_str());
                 }
             }
@@ -93,7 +95,9 @@ pub fn denormalize_adjacent_tags(text: &str) -> String {
             let groups: Vec<Option<regex::Match<'_>>> =
                 (1..=caps.len()).map(|i| caps.get(i)).collect();
             for i in (0..groups.len()).step_by(2) {
-                if let (Some(a), Some(b)) = (&groups.get(i).copied().flatten(), &groups.get(i + 1).copied().flatten()) {
+                if let (Some(a), Some(b)) =
+                    (&groups.get(i).copied().flatten(), &groups.get(i + 1).copied().flatten())
+                {
                     return format!("{}{}", a.as_str(), b.as_str());
                 }
             }
@@ -254,12 +258,17 @@ pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
         if !is_tag_start {
             if let Some(_m) = MULTILINE_CLOSING_PATTERN.find(line) {
                 // Find which named group matched
-                let caps = MULTILINE_CLOSING_PATTERN.captures(line).expect("captures must succeed after find");
+                let caps = MULTILINE_CLOSING_PATTERN
+                    .captures(line)
+                    .expect("captures must succeed after find");
                 let mut found = false;
                 for group_name in &["closing_tag", "closing_comment", "closing_var", "closing_html"]
                 {
                     if caps.name(group_name).is_some() {
-                        let split_pos = caps.name(group_name).expect("named group must exist after is_some check").start();
+                        let split_pos = caps
+                            .name(group_name)
+                            .expect("named group must exist after is_some check")
+                            .start();
                         let before = line[..split_pos].trim_end();
                         let closing = line[split_pos..].trim_start();
                         result_lines.push(before.to_string());
@@ -283,7 +292,9 @@ pub fn fix_multiline_opening_tag_with_closing(text: &str) -> String {
 /// Augments a `LineWrapper` to preserve newlines around Jinja/Markdoc tags
 /// and HTML comments.
 #[allow(clippy::type_complexity)]
-pub(crate) fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str) -> String + Send + Sync>) -> LineWrapper {
+pub(crate) fn add_tag_newline_handling(
+    base_wrapper: Box<dyn Fn(&str, &str, &str) -> String + Send + Sync>,
+) -> LineWrapper {
     Box::new(move |text: &str, initial_indent: &str, subsequent_indent: &str| -> String {
         // If no newlines in input, just wrap and apply post-processing fixes.
         if !text.contains('\n') {
@@ -299,9 +310,8 @@ pub(crate) fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str
         }
 
         // Check if there are any tags in the text
-        let has_tags = lines
-            .iter()
-            .any(|line| line_ends_with_tag(line) || line_starts_with_tag(line));
+        let has_tags =
+            lines.iter().any(|line| line_ends_with_tag(line) || line_starts_with_tag(line));
 
         // Group lines into segments
         let mut segments: Vec<String> = Vec::new();
@@ -309,14 +319,14 @@ pub(crate) fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str
 
         for (i, line) in lines.iter().enumerate() {
             let is_first_line = i == 0;
-            let prev_ends_with_tag =
-                !is_first_line && line_ends_with_tag(lines[i - 1]);
+            let prev_ends_with_tag = !is_first_line && line_ends_with_tag(lines[i - 1]);
             let curr_starts_with_tag = is_unindented_tag_line(line);
             let curr_is_block = has_tags && line_is_block_content(line);
-            let prev_is_block =
-                has_tags && !is_first_line && line_is_block_content(lines[i - 1]);
+            let prev_is_block = has_tags && !is_first_line && line_is_block_content(lines[i - 1]);
 
-            if (prev_ends_with_tag || curr_starts_with_tag || curr_is_block || prev_is_block) && !current_segment_lines.is_empty() {
+            if (prev_ends_with_tag || curr_starts_with_tag || curr_is_block || prev_is_block)
+                && !current_segment_lines.is_empty()
+            {
                 segments.push(current_segment_lines.join("\n"));
                 current_segment_lines.clear();
             }
@@ -337,11 +347,7 @@ pub(crate) fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str
         let mut wrapped_segments: Vec<String> = Vec::new();
         for (i, segment) in segments.iter().enumerate() {
             let is_first = i == 0;
-            let cur_initial_indent = if is_first {
-                initial_indent
-            } else {
-                subsequent_indent
-            };
+            let cur_initial_indent = if is_first { initial_indent } else { subsequent_indent };
             let wrapped = base_wrapper(segment, cur_initial_indent, subsequent_indent);
             wrapped_segments.push(wrapped);
         }
@@ -357,12 +363,8 @@ pub(crate) fn add_tag_newline_handling(base_wrapper: Box<dyn Fn(&str, &str, &str
             let prev_segment = &segments[i - 1];
             let curr_segment = &segments[i];
 
-            let prev_is_block = prev_segment
-                .split('\n')
-                .any(line_is_block_content);
-            let curr_is_block = curr_segment
-                .split('\n')
-                .any(line_is_block_content);
+            let prev_is_block = prev_segment.split('\n').any(line_is_block_content);
+            let curr_is_block = curr_segment.split('\n').any(line_is_block_content);
 
             let prev_last_line = prev_segment.split('\n').next_back().unwrap_or("");
             let curr_first_line = curr_segment.split('\n').next().unwrap_or("");

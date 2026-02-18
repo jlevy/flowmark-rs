@@ -89,9 +89,9 @@ jobs:
       - name: Install Python dev tools
         working-directory: python
         run: uv sync --group dev
-      - name: Run smoke tests (determinism + round-trip)
+      - name: Run smoke tests (all, including mapping completeness)
         working-directory: python
-        run: uv run pytest tests/test_smoke.py -v -k "not MappingCompleteness"
-      - name: Check mapping completeness (informational)
+        run: uv run pytest tests/test_smoke.py -v
+      - name: Check mapping completeness
         working-directory: python
-        run: uv run flowmark-dev check-mapping || true
+        run: uv run flowmark-dev check-mapping

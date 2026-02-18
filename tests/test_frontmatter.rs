@@ -1,5 +1,5 @@
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 // Re-export frontmatter functions for testing
 fn split_frontmatter(text: &str) -> (String, String) {
@@ -61,7 +61,8 @@ fn test_has_frontmatter() {
 fn test_markdown_with_frontmatter() {
     let input = "---\ntitle: Test Document\ndate: 2023-01-01\nauthor: Test Author\n---\n\n# Heading\n\nThis is sentence one. This is sentence two.";
 
-    let normalized = fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve);
+    let normalized =
+        fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve);
 
     // Verify the frontmatter is preserved
     let (fm, _) = split_frontmatter(&normalized);

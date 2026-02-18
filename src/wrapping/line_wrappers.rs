@@ -5,10 +5,10 @@
 use regex::Regex;
 use std::sync::{Arc, LazyLock};
 
+use crate::wrapping::LineWrapper;
 use crate::wrapping::sentence::split_sentences_regex;
 use crate::wrapping::tag_handling::{add_tag_newline_handling, denormalize_adjacent_tags};
 use crate::wrapping::text_wrapping::{wrap_paragraph, wrap_paragraph_lines};
-use crate::wrapping::LineWrapper;
 
 /// Pattern to match Markdown hard line breaks.
 static LINE_BREAK_RE: LazyLock<Regex> =
@@ -40,11 +40,7 @@ fn add_markdown_hard_break_handling(base_wrapper: LineWrapper) -> LineWrapper {
             let is_first = i == 0;
             let is_last = i == segments.len() - 1;
 
-            let cur_initial_indent = if is_first {
-                initial_indent
-            } else {
-                subsequent_indent
-            };
+            let cur_initial_indent = if is_first { initial_indent } else { subsequent_indent };
             let wrapped = base(segment, cur_initial_indent, subsequent_indent);
             if is_last {
                 wrapped_segments.push(wrapped);
@@ -83,11 +79,7 @@ pub fn line_wrap_to_width(width: usize, is_markdown: bool) -> LineWrapper {
 }
 
 /// Wrap lines of text to a given width but also keep sentences on their own lines.
-pub fn line_wrap_by_sentence(
-    width: usize,
-    min_line_len: usize,
-    is_markdown: bool,
-) -> LineWrapper {
+pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: bool) -> LineWrapper {
     let line_wrapper: LineWrapper =
         Box::new(move |text: &str, initial_indent: &str, subsequent_indent: &str| -> String {
             let text = text.replace('\n', " ");
@@ -105,11 +97,8 @@ pub fn line_wrap_by_sentence(
             let sentences = split_sentences_regex(&text, 0);
 
             for sentence in &sentences {
-                let current_column = if first_line {
-                    initial_indent_len
-                } else {
-                    subsequent_indent_len
-                };
+                let current_column =
+                    if first_line { initial_indent_len } else { subsequent_indent_len };
 
                 let current_column = if !lines.is_empty()
                     && lines.last().expect("non-empty lines").chars().count() < min_line_len
@@ -134,7 +123,9 @@ pub fn line_wrap_by_sentence(
                 if !lines.is_empty()
                     && !wrapped.is_empty()
                     && lines.last().expect("non-empty lines").chars().count() < min_line_len
-                    && lines.last().expect("non-empty lines").chars().count() + 1 + wrapped[0].chars().count()
+                    && lines.last().expect("non-empty lines").chars().count()
+                        + 1
+                        + wrapped[0].chars().count()
                         <= width
                 {
                     let last = lines.last_mut().expect("non-empty lines");
@@ -167,4 +158,3 @@ pub fn line_wrap_by_sentence(
         line_wrapper
     }
 }
-

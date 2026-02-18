@@ -1,5 +1,5 @@
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 static ORIGINAL_DOC: &str = "\
 # This is a header
@@ -216,7 +216,8 @@ Complex should be possible.*\" —Alan Kay </p>
 
 #[test]
 fn test_normalize_markdown() {
-    let normalized_doc = fill_markdown(ORIGINAL_DOC, true, 88, true, false, false, false, None, ListSpacing::Loose);
+    let normalized_doc =
+        fill_markdown(ORIGINAL_DOC, true, 88, true, false, false, false, None, ListSpacing::Loose);
 
     if normalized_doc != EXPECTED_DOC {
         // Print a diff to help debug
@@ -225,8 +226,8 @@ fn test_normalize_markdown() {
         for (i, (exp, act)) in expected_lines.iter().zip(actual_lines.iter()).enumerate() {
             if exp != act {
                 eprintln!("First difference at line {}:", i + 1);
-                eprintln!("  Expected: {:?}", exp);
-                eprintln!("  Actual:   {:?}", act);
+                eprintln!("  Expected: {exp:?}");
+                eprintln!("  Actual:   {act:?}");
                 break;
             }
         }
@@ -262,7 +263,8 @@ fn test_multi_paragraph_list_items() {
   Removes the target even if it's a file, directory, or symlink.
 ";
 
-    let normalized_doc = fill_markdown(input_doc, true, 88, true, false, false, false, None, ListSpacing::Preserve);
+    let normalized_doc =
+        fill_markdown(input_doc, true, 88, true, false, false, false, None, ListSpacing::Preserve);
 
     assert_eq!(normalized_doc, expected_doc);
 }

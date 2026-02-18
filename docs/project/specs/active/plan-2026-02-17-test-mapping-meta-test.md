@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Draft — prototype implemented, spec under review
+**Status:** Implemented — all phases complete, CI enforced
 
 ## Overview
 
@@ -72,7 +72,7 @@ The system has four components:
 The flowmark-rs project is a Rust port of the Python
 [flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter.
 As of v0.6.4, the Python test suite has **281 test functions** across 20 files.
-The Rust port currently has **178 test functions** (151 integration tests in `tests/` +
+The Rust port currently has **250 test functions** (223 integration tests in `tests/` +
 27 unit tests in `src/` modules).
 
 There is no current mechanism to track which Python tests have been ported, which are
@@ -403,7 +403,7 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
 - [x] Add idempotent merge to `discover-rust`: same behavior
 - [x] Re-generate `rust-tests.yaml` with full 178-test list (151 integration + 27 unit)
 - [x] Run ruff and basedpyright, fix any lint/type issues
-- [ ] Add a basic smoke test in `python/tests/`
+- [x] Add a basic smoke test in `python/tests/`
 
 ### Phase 3: Populate the Mapping (Agent Labor) — DONE
 
@@ -414,18 +414,18 @@ uv run --project python flowmark-dev check-mapping  # Fails: all missing
   `test_split_frontmatter` → 5 Rust functions)
 - [x] Mark infrastructure tests (`test_skill`, `test_cli_file_discovery`,
   `test_file_resolver`, `test_config`) as `excluded` with notes
-- [ ] Verify `flowmark-dev check-mapping` passes with exit code 0 (currently fails:
-  64 `missing` entries remain — tracked in parity spec)
+- [x] Verify `flowmark-dev check-mapping` passes with exit code 0
 - [x] Document `partial` entry: `test_other_escaped_chars` covers subset of escape types
 
-**Mapping results:** 137 mapped, 79 excluded, 64 missing, 1 partial.
-Remaining work to reach check-mapping pass is tracked in the parity spec
-(`plan-2026-02-17-exact-parity.md`).
+**Mapping results:** 202 mapped, 79 excluded, 0 missing, 0 partial.
+`flowmark-dev check-mapping` passes with exit code 0.
 
-### Phase 4: CI Integration (Future)
+### Phase 4: CI Integration — DONE
 
-- [ ] Add a CI step that runs `flowmark-dev check-mapping` and fails the build if
+- [x] Add a CI step that runs `flowmark-dev check-mapping` and fails the build if
   incomplete
+- [x] Run all 13 smoke tests (including `TestMappingCompleteness`) as hard CI gates
+- [x] Exact Rust test count assertion (250) instead of lower bound
 - [ ] Optionally: CI re-runs discovery scripts and checks for drift between committed
   YAML and actual test trees
 

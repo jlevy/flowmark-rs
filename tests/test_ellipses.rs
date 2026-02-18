@@ -30,14 +30,8 @@ fn test_ellipses_multiple() {
         ellipses("I think... well... maybe..."),
         "I think \u{2026} well \u{2026} maybe \u{2026}"
     );
-    assert_eq!(
-        ellipses("First...second...third"),
-        "First \u{2026} second \u{2026} third"
-    );
-    assert_eq!(
-        ellipses("Wait... what... really?"),
-        "Wait \u{2026} what \u{2026} really?"
-    );
+    assert_eq!(ellipses("First...second...third"), "First \u{2026} second \u{2026} third");
+    assert_eq!(ellipses("Wait... what... really?"), "Wait \u{2026} what \u{2026} really?");
     assert_eq!(
         ellipses("I was thinking... maybe we should go."),
         "I was thinking \u{2026} maybe we should go."

@@ -35,10 +35,7 @@ fn test_markdown_escape_word_function() {
 
 #[test]
 fn test_wrap_paragraph_lines_markdown_escaping() {
-    assert_eq!(
-        wrap_paragraph_lines("- word", 10, 0, 0, true, true, None, true),
-        vec!["- word"]
-    );
+    assert_eq!(wrap_paragraph_lines("- word", 10, 0, 0, true, true, None, true), vec!["- word"]);
 
     let text = "word - word * word + word > word # word ## word 1. word 2) word";
 
@@ -60,33 +57,17 @@ fn test_wrap_paragraph_lines_markdown_escaping() {
 
     assert_eq!(
         wrap_paragraph_lines(text, 15, 0, 0, true, true, None, true),
-        vec![
-            "word - word *",
-            "word + word >",
-            "word # word ##",
-            "word 1. word 2)",
-            "word",
-        ]
+        vec!["word - word *", "word + word >", "word # word ##", "word 1. word 2)", "word",]
     );
 
     assert_eq!(
         wrap_paragraph_lines(text, 20, 0, 0, true, true, None, true),
-        vec![
-            "word - word * word +",
-            "word > word # word",
-            "\\## word 1. word 2)",
-            "word",
-        ]
+        vec!["word - word * word +", "word > word # word", "\\## word 1. word 2)", "word",]
     );
 
     assert_eq!(
         wrap_paragraph_lines(text, 20, 0, 0, true, true, None, false),
-        vec![
-            "word - word * word +",
-            "word > word # word",
-            "## word 1. word 2)",
-            "word",
-        ]
+        vec!["word - word * word +", "word > word # word", "## word 1. word 2)", "word",]
     );
 }
 
@@ -125,32 +106,16 @@ fn test_smart_splitter() {
     let mixed_text = "Text with <b>bold</b> and [a link](https://example.com).";
     assert_eq!(
         html_md_word_split(mixed_text),
-        vec![
-            "Text",
-            "with",
-            "<b>bold</b>",
-            "and",
-            "[a link](https://example.com).",
-        ]
+        vec!["Text", "with", "<b>bold</b>", "and", "[a link](https://example.com).",]
     );
 }
 
 #[test]
 fn test_wrap_text() {
-    let sample_text =
-        "This is a sample text with a [Markdown link](https://example.com) and an <a href='#'>tag</a>. It should demonstrate the functionality of our enhanced text wrapping implementation.";
+    let sample_text = "This is a sample text with a [Markdown link](https://example.com) and an <a href='#'>tag</a>. It should demonstrate the functionality of our enhanced text wrapping implementation.";
 
-    let filled = wrap_paragraph(
-        sample_text,
-        40,
-        ">",
-        ">>",
-        0,
-        true,
-        true,
-        Some(&simple_word_split),
-        false,
-    );
+    let filled =
+        wrap_paragraph(sample_text, 40, ">", ">>", 0, true, true, Some(&simple_word_split), false);
     let filled_expected = "\
 >This is a sample text with a [Markdown
 >>link](https://example.com) and an <a
@@ -158,17 +123,8 @@ fn test_wrap_text() {
 >>demonstrate the functionality of our
 >>enhanced text wrapping implementation.";
 
-    let filled_smart = wrap_paragraph(
-        sample_text,
-        40,
-        ">",
-        ">>",
-        0,
-        true,
-        true,
-        Some(&html_md_word_split),
-        false,
-    );
+    let filled_smart =
+        wrap_paragraph(sample_text, 40, ">", ">>", 0, true, true, Some(&html_md_word_split), false);
     let filled_smart_expected = "\
 >This is a sample text with a
 >>[Markdown link](https://example.com)
@@ -205,11 +161,7 @@ fn test_wrap_width() {
     let width = 80;
     let wrapped = wrap_paragraph_lines(text, width, 0, 0, true, true, None, false);
     for line in &wrapped {
-        assert!(
-            line.chars().count() <= width,
-            "Line exceeds width: {:?}",
-            line
-        );
+        assert!(line.chars().count() <= width, "Line exceeds width: {line:?}");
     }
 }
 
@@ -299,10 +251,7 @@ fn test_single_word_inline_code_not_coalesced() {
     let text = "access env vars via `getRequiredEnv()` and must live in files";
     let result = html_md_word_split(text);
     assert!(result.contains(&"`getRequiredEnv()`".to_string()));
-    let code_token = result
-        .iter()
-        .find(|r| r.contains("`getRequiredEnv()`"))
-        .unwrap();
+    let code_token = result.iter().find(|r| r.contains("`getRequiredEnv()`")).unwrap();
     assert_eq!(code_token, "`getRequiredEnv()`");
     assert!(result.contains(&"and".to_string()));
 }
@@ -316,18 +265,12 @@ fn test_line_wrap_to_width_with_markdown_breaks() {
     // Test trailing space line breaks
     let text_with_spaces = "This line ends with spaces  \nThis is a new line";
     let wrapped_spaces = wrapper(text_with_spaces, "", "");
-    assert_eq!(
-        wrapped_spaces,
-        "This line ends with spaces\\\nThis is a new line"
-    );
+    assert_eq!(wrapped_spaces, "This line ends with spaces\\\nThis is a new line");
 
     // Test backslash line breaks
     let text_with_backslash = "This line ends with backslash\\\nThis is a new line";
     let wrapped_backslash = wrapper(text_with_backslash, "", "");
-    assert_eq!(
-        wrapped_backslash,
-        "This line ends with backslash\\\nThis is a new line"
-    );
+    assert_eq!(wrapped_backslash, "This line ends with backslash\\\nThis is a new line");
 
     // Test single segment (no line breaks)
     let single_segment = "Text with no breaks";
@@ -337,9 +280,9 @@ fn test_line_wrap_to_width_with_markdown_breaks() {
 
 #[test]
 fn test_adjacent_jinja_tags_no_space() {
+    use flowmark::config::DEFAULT_MIN_LINE_LEN;
     use flowmark::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
     use flowmark::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacent_tags};
-    use flowmark::config::DEFAULT_MIN_LINE_LEN;
 
     let original = "{% field kind='string' %}{% /field %}";
     let normalized = normalize_adjacent_tags(original);
@@ -358,9 +301,9 @@ fn test_adjacent_jinja_tags_no_space() {
 
 #[test]
 fn test_adjacent_html_comment_tags_no_space() {
+    use flowmark::config::DEFAULT_MIN_LINE_LEN;
     use flowmark::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
     use flowmark::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacent_tags};
-    use flowmark::config::DEFAULT_MIN_LINE_LEN;
 
     let original = "<!-- f:field kind=\"string\" id=\"name\" --><!-- /f:field -->";
     let normalized = normalize_adjacent_tags(original);
@@ -379,22 +322,43 @@ fn test_adjacent_html_comment_tags_no_space() {
 
 #[test]
 fn test_adjacent_tags_full_pipeline() {
-    use flowmark::fill_markdown;
     use flowmark::config::ListSpacing;
+    use flowmark::fill_markdown;
 
     // Jinja tags
     let jinja_input = "{% field kind='string' %}{% /field %}";
-    let jinja_result = fill_markdown(jinja_input, true, 88, true, false, false, false, None, ListSpacing::Preserve);
+    let jinja_result = fill_markdown(
+        jinja_input,
+        true,
+        88,
+        true,
+        false,
+        false,
+        false,
+        None,
+        ListSpacing::Preserve,
+    );
     assert_eq!(jinja_result.trim(), jinja_input);
 
     // HTML comment tags
     let html_input = "<!-- f:field kind=\"string\" id=\"name\" --><!-- /f:field -->";
-    let html_result = fill_markdown(html_input, true, 88, true, false, false, false, None, ListSpacing::Preserve);
+    let html_result =
+        fill_markdown(html_input, true, 88, true, false, false, false, None, ListSpacing::Preserve);
     assert_eq!(html_result.trim(), html_input);
 
     // With surrounding text
     let mixed_input = "Before {% field %}{% /field %} after.";
-    let mixed_result = fill_markdown(mixed_input, true, 88, true, false, false, false, None, ListSpacing::Preserve);
+    let mixed_result = fill_markdown(
+        mixed_input,
+        true,
+        88,
+        true,
+        false,
+        false,
+        false,
+        None,
+        ListSpacing::Preserve,
+    );
     assert!(mixed_result.contains("{% field %}{% /field %}"));
 }
 
@@ -402,9 +366,9 @@ fn test_adjacent_tags_full_pipeline() {
 
 #[test]
 fn test_adjacent_jinja_comment_tags_no_space() {
+    use flowmark::config::DEFAULT_MIN_LINE_LEN;
     use flowmark::wrapping::line_wrappers::line_wrap_by_sentence;
     use flowmark::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacent_tags};
-    use flowmark::config::DEFAULT_MIN_LINE_LEN;
 
     let original = "{# first #}{# second #}";
     let normalized = normalize_adjacent_tags(original);
@@ -419,9 +383,9 @@ fn test_adjacent_jinja_comment_tags_no_space() {
 
 #[test]
 fn test_adjacent_jinja_variable_tags_no_space() {
+    use flowmark::config::DEFAULT_MIN_LINE_LEN;
     use flowmark::wrapping::line_wrappers::line_wrap_by_sentence;
     use flowmark::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacent_tags};
-    use flowmark::config::DEFAULT_MIN_LINE_LEN;
 
     let original = "{{ a }}{{ b }}";
     let normalized = normalize_adjacent_tags(original);
@@ -437,7 +401,7 @@ fn test_adjacent_jinja_variable_tags_no_space() {
 #[test]
 fn test_backslash_in_tag_attributes() {
     let tag_with_backslash = r"{% field pattern='^[^@]+\.[^@]+$' %}";
-    let text = format!("Use {} for email.", tag_with_backslash);
+    let text = format!("Use {tag_with_backslash} for email.");
     let result = html_md_word_split(&text);
     assert!(result.contains(&tag_with_backslash.to_string()));
 
@@ -455,8 +419,14 @@ fn test_block_heuristics_blank_line_normalization() {
     let text = "{% field %}\n- Item 1\n- Item 2\n{% /field %}";
     let result = wrapper(text, "", "");
 
-    assert!(result.contains("{% field %}\n\n"), "Expected blank line after opening tag, got: {}", result);
-    assert!(result.contains("\n\n{% /field %}"), "Expected blank line before closing tag, got: {}", result);
+    assert!(
+        result.contains("{% field %}\n\n"),
+        "Expected blank line after opening tag, got: {result}"
+    );
+    assert!(
+        result.contains("\n\n{% /field %}"),
+        "Expected blank line before closing tag, got: {result}"
+    );
 }
 
 #[test]
@@ -522,7 +492,7 @@ fn test_block_heuristics_preserves_existing_blank_lines() {
             current = 0;
         }
     }
-    assert!(max_consecutive_empty <= 1, "Too many consecutive blank lines: {}", result);
+    assert!(max_consecutive_empty <= 1, "Too many consecutive blank lines: {result}");
 }
 
 #[test]
@@ -631,14 +601,18 @@ fn test_list_content_gets_blank_lines() {
     let text = "{% field %}\n- Item 1\n- Item 2\n{% /field %}";
     let result = wrapper(text, "", "");
 
-    assert!(result.contains("{% field %}\n\n"), "Expected blank line after opening tag: {}", result);
-    assert!(result.contains("\n\n{% /field %}"), "Expected blank line before closing tag: {}", result);
+    assert!(result.contains("{% field %}\n\n"), "Expected blank line after opening tag: {result}");
+    assert!(
+        result.contains("\n\n{% /field %}"),
+        "Expected blank line before closing tag: {result}"
+    );
 }
 
 #[test]
 fn test_long_html_tags() {
-    let long_html = "<div class='container' id='main' data-value='test' style='color: red'>content</div>";
-    let text = format!("Before {} after.", long_html);
+    let long_html =
+        "<div class='container' id='main' data-value='test' style='color: red'>content</div>";
+    let text = format!("Before {long_html} after.");
     let result = html_md_word_split(&text);
     assert!(result.contains(&long_html.to_string()));
 }
@@ -646,7 +620,7 @@ fn test_long_html_tags() {
 #[test]
 fn test_long_jinja_comments() {
     let long_comment = "{# This is a long comment that spans many words here #}";
-    let text = format!("Before {} after.", long_comment);
+    let text = format!("Before {long_comment} after.");
     let result = html_md_word_split(&text);
     assert!(result.contains(&long_comment.to_string()));
 }
@@ -654,14 +628,16 @@ fn test_long_jinja_comments() {
 #[test]
 fn test_long_template_tags() {
     // 10-word template tag
-    let long_tag = "{% component name='widget' type='button' size='large' color='blue' disabled=true %}";
-    let text = format!("Before {} after.", long_tag);
+    let long_tag =
+        "{% component name='widget' type='button' size='large' color='blue' disabled=true %}";
+    let text = format!("Before {long_tag} after.");
     let result = html_md_word_split(&text);
     assert!(result.contains(&long_tag.to_string()));
 
     // 12-word template tag (at the limit)
-    let very_long_tag = "{% table columns=[a, b, c] rows=[1, 2, 3] border=true striped=true hover=true %}";
-    let text2 = format!("Before {} after.", very_long_tag);
+    let very_long_tag =
+        "{% table columns=[a, b, c] rows=[1, 2, 3] border=true striped=true hover=true %}";
+    let text2 = format!("Before {very_long_tag} after.");
     let result2 = html_md_word_split(&text2);
     assert!(result2.contains(&very_long_tag.to_string()));
 }
@@ -675,7 +651,10 @@ fn test_mixed_content_blank_lines_correct() {
     let text = "{% field %}\nSome intro text.\n- Item 1\n- Item 2\n{% /field %}";
     let result = wrapper(text, "", "");
 
-    assert!(result.contains("\n\n{% /field %}"), "Expected blank line before closing tag: {}", result);
+    assert!(
+        result.contains("\n\n{% /field %}"),
+        "Expected blank line before closing tag: {result}"
+    );
 }
 
 #[test]
@@ -705,8 +684,8 @@ fn test_nested_tags_newlines_preserved() {
 
 #[test]
 fn test_newline_after_opening_tag() {
-    use flowmark::wrapping::line_wrappers::{line_wrap_to_width, line_wrap_by_sentence};
     use flowmark::config::DEFAULT_MIN_LINE_LEN;
+    use flowmark::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
 
     let wrapper = line_wrap_to_width(80, true);
 
@@ -741,7 +720,7 @@ fn test_newline_before_closing_tag() {
 #[test]
 fn test_paired_tags_not_broken() {
     let paired = "{% field kind='string' id='email' %}{% /field %}";
-    let text = format!("Some text before {} and after.", paired);
+    let text = format!("Some text before {paired} and after.");
     let result = html_md_word_split(&text);
     let full_result = result.join(" ");
     assert!(full_result.contains("{% field kind='string' id='email' %}"));
@@ -749,14 +728,14 @@ fn test_paired_tags_not_broken() {
 
     // HTML comment paired tags
     let paired_html = "<!-- f:field kind='string' --><!-- /f:field -->";
-    let text2 = format!("Before {} after.", paired_html);
+    let text2 = format!("Before {paired_html} after.");
     let result2 = html_md_word_split(&text2);
     let full_result2 = result2.join(" ");
     assert!(full_result2.contains("<!-- f:field kind='string' -->"));
     assert!(full_result2.contains("<!-- /f:field -->"));
 
     // Wrapping should not break tags
-    let long_text = format!("This is a longer piece of text with {} embedded in the middle.", paired);
+    let long_text = format!("This is a longer piece of text with {paired} embedded in the middle.");
     let wrapped = wrap_paragraph_lines(&long_text, 40, 0, 0, true, true, None, true);
     let full_result3 = wrapped.join(" ");
     assert!(full_result3.contains("{% field kind='string' id='email' %}"));
@@ -791,17 +770,22 @@ fn test_paragraph_text_no_extra_blank_lines() {
 
     let wrapper = line_wrap_to_width(80, true);
 
-    let text = "{% description %}\nThis is a simple note.\nJust paragraph text.\n{% /description %}";
+    let text =
+        "{% description %}\nThis is a simple note.\nJust paragraph text.\n{% /description %}";
     let result = wrapper(text, "", "");
 
-    assert!(!result.contains("\n\n{% /description %}"),
-        "Unexpected blank line before closing tag: {}", result);
+    assert!(
+        !result.contains("\n\n{% /description %}"),
+        "Unexpected blank line before closing tag: {result}"
+    );
     assert!(result.contains("\n{% /description %}"));
 
     let text2 = "<!-- f:note -->\nThis is text content.\n<!-- /f:note -->";
     let result2 = wrapper(text2, "", "");
-    assert!(!result2.contains("\n\n<!-- /f:note -->"),
-        "Unexpected blank line before closing tag: {}", result2);
+    assert!(
+        !result2.contains("\n\n<!-- /f:note -->"),
+        "Unexpected blank line before closing tag: {result2}"
+    );
     assert!(result2.contains("\n<!-- /f:note -->"));
 }
 
@@ -904,8 +888,11 @@ fn test_table_content_gets_blank_lines() {
     let text = "{% field %}\n| A | B |\n|---|---|\n| 1 | 2 |\n{% /field %}";
     let result = wrapper(text, "", "");
 
-    assert!(result.contains("{% field %}\n\n"), "Expected blank line after opening tag: {}", result);
-    assert!(result.contains("\n\n{% /field %}"), "Expected blank line before closing tag: {}", result);
+    assert!(result.contains("{% field %}\n\n"), "Expected blank line after opening tag: {result}");
+    assert!(
+        result.contains("\n\n{% /field %}"),
+        "Expected blank line before closing tag: {result}"
+    );
 }
 
 #[test]

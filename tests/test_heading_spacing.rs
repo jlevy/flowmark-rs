@@ -1,5 +1,5 @@
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 fn fmt(input: &str) -> String {
     fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)

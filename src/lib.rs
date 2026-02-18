@@ -12,13 +12,15 @@ pub mod wrapping;
 
 use std::path::Path;
 
-pub use config::{ListSpacing, DEFAULT_WRAP_WIDTH};
+pub use config::{DEFAULT_WRAP_WIDTH, ListSpacing};
 pub use error::{Error, Result};
 pub use formatter::filling::fill_markdown;
 pub use wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
 pub use wrapping::sentence::{first_sentence, first_sentences, split_sentences_regex};
-pub use wrapping::text_filling::{fill_text, Wrap};
-pub use wrapping::text_wrapping::{html_md_word_split, simple_word_split, wrap_paragraph, wrap_paragraph_lines};
+pub use wrapping::text_filling::{Wrap, fill_text};
+pub use wrapping::text_wrapping::{
+    html_md_word_split, simple_word_split, wrap_paragraph, wrap_paragraph_lines,
+};
 
 /// Reformat a Markdown or plain text string.
 #[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
@@ -33,15 +35,7 @@ pub fn reformat_text(
     list_spacing: ListSpacing,
 ) -> String {
     if plaintext {
-        fill_text(
-            text,
-            if width > 0 { Wrap::WrapFull } else { Wrap::None },
-            width,
-            "",
-            "",
-            0,
-            None,
-        )
+        fill_text(text, if width > 0 { Wrap::WrapFull } else { Wrap::None }, width, "", "", 0, None)
     } else {
         fill_markdown(
             text,

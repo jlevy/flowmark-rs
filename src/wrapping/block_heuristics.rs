@@ -32,7 +32,11 @@ pub(crate) fn line_is_list_item(line: &str) -> bool {
             i += 1;
         }
         // Must have . or ) followed by space/tab
-        if i < bytes.len() && matches!(bytes[i], b'.' | b')') && i + 1 < bytes.len() && matches!(bytes[i + 1], b' ' | b'\t') {
+        if i < bytes.len()
+            && matches!(bytes[i], b'.' | b')')
+            && i + 1 < bytes.len()
+            && matches!(bytes[i + 1], b' ' | b'\t')
+        {
             return true;
         }
     }

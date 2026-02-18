@@ -7,10 +7,7 @@ const FIRST_SENTENCE: &str = "End of sentence must be two letters or more, with 
 #[test]
 fn test_split_sentences() {
     assert_eq!(split_sentences_regex("test!", 0), vec!["test!"]);
-    assert_eq!(
-        split_sentences_regex("test! random words", 0),
-        vec!["test!", "random words"]
-    );
+    assert_eq!(split_sentences_regex("test! random words", 0), vec!["test!", "random words"]);
 
     let split_sentences = split_sentences_regex(LONG_TEXT, 15);
     assert_eq!(split_sentences.len(), 3);

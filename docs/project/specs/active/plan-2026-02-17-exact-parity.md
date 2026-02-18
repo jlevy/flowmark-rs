@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Complete
+**Status:** Complete — CI enforced
 
 **Epic bead:** fmr-kd36
 
@@ -93,8 +93,8 @@ pass.**
 | **Missing** | 0 | All ported |
 | **Partial** | 0 | All completed |
 
-**27 extra Rust tests** (unit tests in `src/` not mapped to Python) — these are
-Rust-native tests, not gaps.
+**34 extra Rust tests** (unit tests in `src/` and Rust-specific edge case tests not
+mapped to Python) — these are Rust-native tests, not gaps.
 
 ### Excluded Files (infrastructure)
 
@@ -124,6 +124,8 @@ The work is organized into phases:
    Phase C (integrating changes into playbook) pending human review.
 8. **Final verification** — DONE. 250 tests, 0 ignored, 0 partial, zero warnings,
    check-mapping PASS, golden test PASS.
+9. **CI hardening** — DONE. All mapping checks promoted from informational to hard
+   gates. `rust-tests.yaml` refreshed to 250 entries. All 13 smoke tests enforced.
 
 ## Implementation Plan
 
@@ -230,6 +232,67 @@ All 27 playbook documents reviewed. 32 actionable items identified and addressed
 - [x] All porting playbook best practices verified (32 items, P1 all applied)
 - [x] Zero clippy warnings
 - [x] No-default-features build succeeds
+
+### Phase 9: CI Hardening — DONE
+
+- [x] Refresh `rust-tests.yaml` (243 → 250 entries) via `flowmark-dev discover-rust`
+- [x] Verify `flowmark-dev check-mapping` passes with exit code 0 (all 13 smoke tests)
+- [x] Promote check-mapping from informational (`|| true`) to hard CI gate
+- [x] Run all `TestMappingCompleteness` tests in CI (removed `-k "not MappingCompleteness"`)
+- [x] Update Rust test count assertion from `>= 178` to exact `== 250`
+
+### Remaining Steps and Current Status
+
+This section provides a comprehensive accounting of everything that is done, everything
+enforced in CI, and everything remaining.
+
+#### Fully Complete and CI-Enforced
+
+| Item | CI Job | Status |
+|---|---|---|
+| All 250 Rust tests pass | `test` (ubuntu + macOS) | Hard gate |
+| Library builds without CLI feature | `test-lib-only` | Hard gate |
+| Zero clippy warnings | `clippy` | Hard gate (`-D warnings`) |
+| Code formatting | `fmt` | Hard gate |
+| MSRV 1.85 compiles | `msrv` | Hard gate |
+| Dependency audit (licenses, sources) | `deny` | Hard gate |
+| Documentation builds clean | `docs` | Hard gate (`-D warnings`) |
+| YAML round-trip serialization | `check-mapping` | Hard gate |
+| YAML deterministic output | `check-mapping` | Hard gate |
+| Checked-in YAML matches canonical form | `check-mapping` | Hard gate |
+| Python test count == 281 | `check-mapping` | Hard gate |
+| Rust test count == 250 | `check-mapping` | Hard gate |
+| Mapping count == 281 | `check-mapping` | Hard gate |
+| Zero `missing` mapping entries | `check-mapping` | Hard gate |
+| All mapped Rust refs exist | `check-mapping` | Hard gate |
+| `check-mapping` end-to-end exit code 0 | `check-mapping` | Hard gate |
+
+**Total: 8 CI jobs, all hard gates. Zero informational-only steps.**
+
+#### Fully Complete — Not CI-Enforced (verified manually)
+
+| Item | Verified How | Status |
+|---|---|---|
+| Zero `#[ignore]` tests | `cargo test` output shows 0 ignored | Done |
+| Zero `unwrap()` in library code | `grep -r '\.unwrap()' src/` → 0 matches | Done |
+| Zero `partial` mapping entries | `check-mapping` report | Done |
+| `pub(crate)` visibility for internal APIs | Manual review, ~50 items changed | Done |
+| 202 mapped + 79 excluded = 281 total | `check-mapping` report | Done |
+| Golden test produces identical output | `test_ref_docs` in 4 modes | Done (CI-tested) |
+
+#### Future Work (tracked as separate beads or deferred)
+
+| Item | Priority | Notes |
+|---|---|---|
+| **Phase 7C**: Integrate meta-playbook observations into playbook docs | P3 | Requires human review of 13 observations |
+| **CI drift detection**: Re-run discovery in CI and diff against committed YAML | P4 | Optional — current canonical-form test catches most drift |
+| **Property-based testing** (proptest) | P3 | Idempotency, width invariants, round-trip properties |
+| **justfile** for common dev workflows | P3 | `just test`, `just lint`, `just check-mapping` |
+| **Release workflow** (GitHub Actions) | P3 | Automated binary builds + crates.io publish |
+| **README and CHANGELOG** | P3 | Public-facing documentation |
+| **`assert_cmd` CLI integration tests** | P3 | Test CLI binary end-to-end |
+| **`clap_complete` shell completions** | P4 | Generate bash/zsh/fish completions |
+| **Color flag** (`--color auto/always/never`) | P4 | Standard CLI convention |
 
 ## Open Questions
 

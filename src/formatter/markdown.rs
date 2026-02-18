@@ -54,4 +54,3 @@ pub(crate) fn flowmark_comrak_options<'c>() -> Options<'c> {
 
     options
 }
-

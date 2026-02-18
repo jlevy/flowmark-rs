@@ -7,7 +7,7 @@ mod cli {
     use std::io::{BufWriter, Read, Write};
     use std::path::PathBuf;
 
-    use flowmark::{ListSpacing, DEFAULT_WRAP_WIDTH};
+    use flowmark::{DEFAULT_WRAP_WIDTH, ListSpacing};
 
     #[derive(Parser, Debug)]
     #[command(name = "flowmark", version, about = "Markdown auto-formatter for clean diffs")]
@@ -82,9 +82,7 @@ mod cli {
         for file in &args.files {
             if file == "-" {
                 let mut input = String::new();
-                std::io::stdin()
-                    .read_to_string(&mut input)
-                    .context("failed to read stdin")?;
+                std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
 
                 let output = flowmark::reformat_text(
                     &input,
@@ -101,11 +99,8 @@ mod cli {
                 writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
             } else {
                 let path = PathBuf::from(file);
-                let output_path = if args.output == "-" {
-                    None
-                } else {
-                    Some(PathBuf::from(&args.output))
-                };
+                let output_path =
+                    if args.output == "-" { None } else { Some(PathBuf::from(&args.output)) };
 
                 if args.verbose {
                     eprintln!("formatting {}", path.display());

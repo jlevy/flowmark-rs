@@ -126,8 +126,7 @@ class TestDiscoveryCounts:
 
     def test_rust_test_count(self) -> None:
         records = load_rust_tests_yaml(RUST_YAML)
-        # At least 178 tests (may grow as we port more)
-        assert len(records) >= 178, f"Expected >=178 Rust tests, got {len(records)}"
+        assert len(records) == 250, f"Expected 250 Rust tests, got {len(records)}"
 
     def test_mapping_count(self) -> None:
         records = load_mapping_yaml(MAPPING_YAML)
@@ -180,10 +179,6 @@ class TestMappingCompleteness:
         )
 
     def test_check_mapping_passes(self) -> None:
-        """The check-mapping command exits 0 when mapping is complete.
-
-        This is the end-to-end TDD target. Currently expected to fail (xfail)
-        until all 64 missing tests are ported.
-        """
+        """The check-mapping command exits 0 when mapping is complete."""
         exit_code = run_check(PYTHON_YAML, RUST_YAML, MAPPING_YAML)
         assert exit_code == 0, "check-mapping reports incomplete mapping"

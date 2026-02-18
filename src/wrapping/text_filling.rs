@@ -15,10 +15,7 @@ static PARA_SPLIT_RE: LazyLock<Regex> =
 
 /// Split text into paragraphs separated by blank lines.
 pub(crate) fn split_paragraphs(text: &str) -> Vec<String> {
-    PARA_SPLIT_RE
-        .split(text)
-        .map(|p| p.trim().to_string())
-        .collect()
+    PARA_SPLIT_RE.split(text).map(|p| p.trim().to_string()).collect()
 }
 
 /// Text wrapping styles.
@@ -52,7 +49,11 @@ impl Wrap {
     pub fn should_wrap(self) -> bool {
         matches!(
             self,
-            Self::Wrap | Self::WrapFull | Self::WrapIndent | Self::HangingIndent | Self::MarkdownItem
+            Self::Wrap
+                | Self::WrapFull
+                | Self::WrapIndent
+                | Self::HangingIndent
+                | Self::MarkdownItem
         )
     }
 

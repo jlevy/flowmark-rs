@@ -1,5 +1,5 @@
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 fn fmt(input: &str) -> String {
     fill_markdown(input, true, 88, true, true, false, false, None, ListSpacing::Loose)
@@ -38,7 +38,10 @@ Final text.
     assert!(!result.contains("# **Bold Heading 1**"), "Should not have bold H1");
 
     // Bold removed from bold-italic, italic preserved
-    eprintln!("Result around bold-italic: {:?}", result.lines().find(|l| l.contains("Bold Italic")));
+    eprintln!(
+        "Result around bold-italic: {:?}",
+        result.lines().find(|l| l.contains("Bold Italic"))
+    );
     assert!(result.contains("## *Bold Italic*"), "Bold should be removed, italic preserved");
     assert!(!result.contains("## ***Bold Italic***"), "Should not have bold-italic");
 
@@ -53,7 +56,10 @@ Final text.
     assert!(result.contains("#### **Partial** Bold"), "Partially bold heading should be unchanged");
 
     // Mixed formatting stays unchanged
-    assert!(result.contains("#### Other *partial* **bold** `code`"), "Mixed formatting heading should be unchanged");
+    assert!(
+        result.contains("#### Other *partial* **bold** `code`"),
+        "Mixed formatting heading should be unchanged"
+    );
 
     // Bold in list items not affected
     assert!(result.contains("**List Item Bold**"), "Bold in list items should be unchanged");
@@ -62,5 +68,8 @@ Final text.
     assert!(result.contains("**bold** text"), "Bold in paragraphs should be unchanged");
 
     // Nested code in bold heading - bold removed, code preserved
-    assert!(result.contains("## Nested `code`"), "Bold should be removed, code preserved in heading");
+    assert!(
+        result.contains("## Nested `code`"),
+        "Bold should be removed, code preserved in heading"
+    );
 }

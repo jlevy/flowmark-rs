@@ -70,9 +70,7 @@ fn apply_smart_quotes_to_text(text: &str) -> String {
         let (word, rest) = if let Some(pos) = ws_pos {
             // Find end of whitespace
             let after_word = &remaining[pos..];
-            let ws_end = after_word
-                .find(|c: char| !c.is_whitespace())
-                .unwrap_or(after_word.len());
+            let ws_end = after_word.find(|c: char| !c.is_whitespace()).unwrap_or(after_word.len());
             let word_and_ws = &remaining[..pos + ws_end];
             let rest = &remaining[pos + ws_end..];
             (word_and_ws, rest)
@@ -159,10 +157,7 @@ mod tests {
 
     #[test]
     fn test_double_quotes() {
-        assert_eq!(
-            smart_quotes(r#"He said "hello" there"#),
-            "He said \u{201c}hello\u{201d} there"
-        );
+        assert_eq!(smart_quotes(r#"He said "hello" there"#), "He said \u{201c}hello\u{201d} there");
     }
 
     #[test]

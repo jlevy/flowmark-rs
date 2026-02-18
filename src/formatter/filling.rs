@@ -14,15 +14,15 @@ use std::sync::LazyLock;
 use comrak::nodes::{AstNode, ListType, NodeValue, TableAlignment};
 use comrak::{Arena, Options};
 
-use crate::config::{ListSpacing, DEFAULT_MIN_LINE_LEN};
+use crate::config::{DEFAULT_MIN_LINE_LEN, ListSpacing};
 use crate::formatter::markdown::flowmark_comrak_options;
 use crate::parser::frontmatter::split_frontmatter;
 use crate::transform::cleanups::doc_cleanups;
 use crate::typography::ellipses::ellipses as apply_ellipses;
 use crate::typography::quotes::smart_quotes;
+use crate::wrapping::LineWrapper;
 use crate::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
 use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
-use crate::wrapping::LineWrapper;
 
 // ===== Regex patterns for normalization =====
 
@@ -31,8 +31,9 @@ static BLANK_LINE_WS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?m)^[ \t]+$").expect("valid BLANK_LINE_WS regex"));
 
 /// Pattern for code fence with space before language (horizontal whitespace only).
-static CODE_FENCE_SPACE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?m)^([ \t]*```)[^\S\n]+(\w)").expect("valid CODE_FENCE_SPACE regex"));
+static CODE_FENCE_SPACE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?m)^([ \t]*```)[^\S\n]+(\w)").expect("valid CODE_FENCE_SPACE regex")
+});
 
 /// Pattern for numbered list items with two spaces after period.
 static NUMBERED_ITEM_TWO_SPACES: LazyLock<Regex> =
@@ -45,9 +46,7 @@ fn normalize_blank_lines(text: &str) -> String {
 
 /// Remove space between code fence and language identifier.
 fn normalize_code_fences(text: &str) -> String {
-    CODE_FENCE_SPACE
-        .replace_all(text, "$1$2")
-        .into_owned()
+    CODE_FENCE_SPACE.replace_all(text, "$1$2").into_owned()
 }
 
 /// Fix numbered list items: convert two spaces to one space after period.
@@ -97,7 +96,10 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
             let trimmed = line.trim();
             if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
                 let rest = &trimmed[fence_str.len()..];
-                if rest.chars().all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace()) {
+                if rest
+                    .chars()
+                    .all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace())
+                {
                     in_code = false;
                     consecutive_empty = 0;
                 }
@@ -149,9 +151,10 @@ fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -
             let trimmed = line.trim();
             if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
                 let rest = &trimmed[fence_str.len()..];
-                if rest.chars().all(|c| {
-                    c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace()
-                }) {
+                if rest
+                    .chars()
+                    .all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace())
+                {
                     in_code = false;
                 }
             }
@@ -202,9 +205,10 @@ fn postprocess_period_escapes(text: &str) -> String {
             let trimmed = line.trim();
             if !fence_str.is_empty() && trimmed.starts_with(fence_str.as_str()) {
                 let rest = &trimmed[fence_str.len()..];
-                if rest.chars().all(|c| {
-                    c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace()
-                }) {
+                if rest
+                    .chars()
+                    .all(|c| c == fence_str.chars().next().unwrap_or('`') || c.is_whitespace())
+                {
                     in_fenced_code = false;
                 }
             }
@@ -231,8 +235,8 @@ fn postprocess_period_escapes(text: &str) -> String {
             result.push(remove_period_escapes_preserving_code(line));
         } else {
             // Strip blockquote markers for content analysis
-            let after_quotes = trimmed_start
-                .trim_start_matches(|c: char| c == '>' || c.is_whitespace());
+            let after_quotes =
+                trimmed_start.trim_start_matches(|c: char| c == '>' || c.is_whitespace());
 
             // Strip unordered list markers (- , * , + ) and optional task list markers
             let after_list_marker = after_quotes
@@ -381,13 +385,18 @@ fn render_block_children<'a>(
         let child_is_block = is_block_element(child);
 
         // Check if current child is a hard-break heading
-        let child_is_hard_break_heading = matches!(child.data.borrow().value, NodeValue::Heading(_))
-            && inline_ends_with_hard_break(child);
+        let child_is_hard_break_heading =
+            matches!(child.data.borrow().value, NodeValue::Heading(_))
+                && inline_ends_with_hard_break(child);
 
         // Add blank line between consecutive block elements,
         // unless adjacent to a heading ending with a hard break
-        if child_is_block && prev_was_block && !prev_ended_with_double_newline
-            && !prev_was_hard_break_heading && !child_is_hard_break_heading {
+        if child_is_block
+            && prev_was_block
+            && !prev_ended_with_double_newline
+            && !prev_was_hard_break_heading
+            && !child_is_hard_break_heading
+        {
             output.push('\n');
         }
 
@@ -505,8 +514,8 @@ fn render_block<'a>(
             *in_heading = false;
 
             // Check if heading ends with a hard break (either LineBreak node or trailing backslash)
-            let ends_with_hard_break = inline_ends_with_hard_break(node)
-                || inline_text.ends_with('\\');
+            let ends_with_hard_break =
+                inline_ends_with_hard_break(node) || inline_text.ends_with('\\');
 
             let _ = writeln!(output, "{prefix}{hashes} {inline_text}");
             if !ends_with_hard_break {
@@ -534,10 +543,7 @@ fn render_block<'a>(
                     (format!("{prefix}{p}"), format!("{subsequent_prefix}{s}"))
                 } else {
                     let marker = bullet as char;
-                    (
-                        format!("{prefix}{marker} "),
-                        format!("{subsequent_prefix}  "),
-                    )
+                    (format!("{prefix}{marker} "), format!("{subsequent_prefix}  "))
                 };
 
                 // For loose lists, add blank line between items (except before first)
@@ -598,15 +604,14 @@ fn render_block<'a>(
             };
 
             // Calculate minimum fence length needed
-            let fence_len = min_fence_length(code_content, fence_char)
-                .max(if code_block.fenced { code_block.fence_length } else { 3 });
+            let fence_len = min_fence_length(code_content, fence_char).max(if code_block.fenced {
+                code_block.fence_length
+            } else {
+                3
+            });
             let fence: String = std::iter::repeat_n(fence_char, fence_len).collect();
 
-            let lang_text = if info.is_empty() {
-                String::new()
-            } else {
-                info.clone()
-            };
+            let lang_text = if info.is_empty() { String::new() } else { info.clone() };
 
             let _ = writeln!(output, "{prefix}{fence}{lang_text}");
             let empty_prefix = subsequent_prefix.trim_end();
@@ -637,13 +642,8 @@ fn render_block<'a>(
             if has_text_content && trimmed.len() > 40 {
                 // Collapse internal whitespace and wrap as text
                 // Join all lines into a single line first
-                let single_line: String = literal
-                    .lines()
-                    .map(str::trim)
-                    .collect::<Vec<_>>()
-                    .join(" ")
-                    .trim()
-                    .to_string();
+                let single_line: String =
+                    literal.lines().map(str::trim).collect::<Vec<_>>().join(" ").trim().to_string();
                 let wrapped = line_wrapper(&single_line, prefix, subsequent_prefix);
                 output.push_str(&wrapped);
                 output.push('\n');
@@ -703,15 +703,8 @@ fn render_block<'a>(
                 } else {
                     (fn_subsequent.clone(), fn_subsequent.clone())
                 };
-                let child_output = render_block(
-                    child,
-                    line_wrapper,
-                    list_spacing,
-                    &p,
-                    &sp,
-                    in_heading,
-                    options,
-                );
+                let child_output =
+                    render_block(child, line_wrapper, list_spacing, &p, &sp, in_heading, options);
                 output.push_str(&child_output);
                 first_child = false;
             }
@@ -782,9 +775,8 @@ fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, parent_is_tight: bool) ->
     }
     // For tight lists, only add spacing if there are multiple paragraphs
     // (not counting para + nested list as needing spacing)
-    let para_count = children.iter().filter(|c| {
-        matches!(c.data.borrow().value, NodeValue::Paragraph)
-    }).count();
+    let para_count =
+        children.iter().filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph)).count();
     para_count > 1
 }
 
@@ -830,7 +822,7 @@ fn render_list_item<'a>(
         if !first_child && needs_spacing {
             // Check if previous child was heading that ends with double newline
             let prev_ended_double = if i > 0 {
-                matches!(children[i-1].data.borrow().value, NodeValue::Heading(_))
+                matches!(children[i - 1].data.borrow().value, NodeValue::Heading(_))
             } else {
                 false
             };
@@ -843,41 +835,36 @@ fn render_list_item<'a>(
 
             // Don't add blank line before a short tag-only HTML block
             // (e.g., <!-- comment --> on a continuation line in a list item)
-            let current_is_tag_block = if let NodeValue::HtmlBlock(html) =
-                &child.data.borrow().value
-            {
-                let trimmed = html.literal.trim();
-                !trimmed.contains('\n')
-                    && ((trimmed.starts_with("<!--") && trimmed.ends_with("-->"))
-                        || (trimmed.starts_with("{%") && trimmed.ends_with("%}"))
-                        || (trimmed.starts_with("{#") && trimmed.ends_with("#}"))
-                        || (trimmed.starts_with("{{") && trimmed.ends_with("}}")))
-            } else {
-                false
-            };
+            let current_is_tag_block =
+                if let NodeValue::HtmlBlock(html) = &child.data.borrow().value {
+                    let trimmed = html.literal.trim();
+                    !trimmed.contains('\n')
+                        && ((trimmed.starts_with("<!--") && trimmed.ends_with("-->"))
+                            || (trimmed.starts_with("{%") && trimmed.ends_with("%}"))
+                            || (trimmed.starts_with("{#") && trimmed.ends_with("#}"))
+                            || (trimmed.starts_with("{{") && trimmed.ends_with("}}")))
+                } else {
+                    false
+                };
 
-            if !prev_ended_double && !current_is_hard_break_heading && !current_is_tag_block
-            {
+            if !prev_ended_double && !current_is_hard_break_heading && !current_is_tag_block {
                 output.push('\n');
             }
         }
 
-        let child_output = render_block(
-            child,
-            line_wrapper,
-            list_spacing,
-            &p,
-            &sp,
-            in_heading,
-            options,
-        );
+        let child_output =
+            render_block(child, line_wrapper, list_spacing, &p, &sp, in_heading, options);
         output.push_str(&child_output);
         first_child = false;
     }
 }
 
 /// Render inline children of a node to a flat string.
-fn render_inline_children<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool) -> String {
+fn render_inline_children<'a>(
+    node: &'a AstNode<'a>,
+    options: &Options,
+    in_heading: bool,
+) -> String {
     let mut output = String::new();
     for child in node.children() {
         output.push_str(&render_inline(child, options, in_heading));
@@ -1057,7 +1044,8 @@ pub fn fill_markdown(
     // IMPORTANT: \\ must be first so \\X doesn't get partially matched as \X.
     // Period (.) IS included: comrak converts `1\.` to list items, losing the escape.
     const ESCAPE_CHARS: &[char] = &[
-        '\\', '~', '*', '#', '-', '+', '>', '.', '!', '[', ']', '(', ')', '{', '}', '$', '_', '|', '`',
+        '\\', '~', '*', '#', '-', '+', '>', '.', '!', '[', ']', '(', ')', '{', '}', '$', '_', '|',
+        '`',
     ];
 
     let line_wrapper = line_wrapper.unwrap_or_else(|| {
@@ -1071,11 +1059,7 @@ pub fn fill_markdown(
     // Extract frontmatter before any processing
     let (frontmatter, content) = split_frontmatter(markdown_text);
 
-    let mut text = if frontmatter.is_empty() {
-        markdown_text.to_string()
-    } else {
-        content
-    };
+    let mut text = if frontmatter.is_empty() { markdown_text.to_string() } else { content };
 
     if dedent_input {
         text = dedent(&text);
@@ -1091,7 +1075,8 @@ pub fn fill_markdown(
         let escaped = format!("\\{ch}");
         // Use a single PUA character per escape char for consistent width measurement.
         // Map to U+E000 + ASCII code point of the escaped character.
-        let placeholder = char::from_u32(0xE000 + ch as u32).expect("valid PUA code point").to_string();
+        let placeholder =
+            char::from_u32(0xE000 + ch as u32).expect("valid PUA code point").to_string();
         escape_placeholders.push((escaped, placeholder));
     }
     // Apply replacements, but skip inside fenced code blocks
@@ -1118,15 +1103,7 @@ pub fn fill_markdown(
     // Render the AST to normalized markdown
     let mut in_heading = false;
 
-    let result = render_block(
-        root,
-        &line_wrapper,
-        list_spacing,
-        "",
-        "",
-        &mut in_heading,
-        &options,
-    );
+    let result = render_block(root, &line_wrapper, list_spacing, "", "", &mut in_heading, &options);
 
     // Restore all escaped characters from placeholders
     let mut result = result;
@@ -1141,11 +1118,7 @@ pub fn fill_markdown(
     let result = normalize_comrak_output(&result);
 
     // Reattach frontmatter if present
-    if frontmatter.is_empty() {
-        result
-    } else {
-        format!("{frontmatter}{result}")
-    }
+    if frontmatter.is_empty() { result } else { format!("{frontmatter}{result}") }
 }
 
 /// Apply smart quotes to all text nodes in the AST.
@@ -1258,13 +1231,7 @@ fn dedent(text: &str) -> String {
 
     lines
         .iter()
-        .map(|l| {
-            if l.len() >= min_indent {
-                &l[min_indent..]
-            } else {
-                l
-            }
-        })
+        .map(|l| if l.len() >= min_indent { &l[min_indent..] } else { l })
         .collect::<Vec<_>>()
         .join("\n")
 }

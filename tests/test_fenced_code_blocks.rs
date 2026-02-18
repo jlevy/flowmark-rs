@@ -1,5 +1,5 @@
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 fn fmt(input: &str) -> String {
     fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)
@@ -94,7 +94,15 @@ fn test_empty_lines_in_nested_code_block_no_trailing_whitespace() {
     assert_eq!(result, expected);
     // Verify the empty line between functions has no trailing whitespace
     let lines: Vec<&str> = result.split('\n').collect();
-    let empty_idx = lines.iter().position(|&l| l.is_empty() && lines.get(lines.iter().position(|&x| x == l).unwrap().wrapping_sub(1)).map_or(false, |x| x.ends_with("pass"))).unwrap_or(0);
+    let empty_idx = lines
+        .iter()
+        .position(|&l| {
+            l.is_empty()
+                && lines
+                    .get(lines.iter().position(|&x| x == l).unwrap().wrapping_sub(1))
+                    .is_some_and(|x| x.ends_with("pass"))
+        })
+        .unwrap_or(0);
     if empty_idx > 0 {
         assert_eq!(lines[empty_idx], "");
     }

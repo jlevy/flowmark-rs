@@ -1,7 +1,9 @@
+use flowmark::config::ListSpacing;
 use flowmark::fill_markdown;
 use flowmark::typography::quotes::smart_quotes;
-use flowmark::config::ListSpacing;
-use flowmark::wrapping::tag_handling::{normalize_adjacent_tags, denormalize_adjacent_tags, preprocess_tag_block_spacing};
+use flowmark::wrapping::tag_handling::{
+    denormalize_adjacent_tags, normalize_adjacent_tags, preprocess_tag_block_spacing,
+};
 
 fn fmt_smart(input: &str) -> String {
     fill_markdown(input, true, 88, true, false, true, false, None, ListSpacing::Preserve)
@@ -84,7 +86,10 @@ fn test_html_comment_tags_with_quotes() {
     let input = r#"<!-- f:field kind="string" --> Some "quoted" text <!-- /f:field -->"#;
     let result = smart_quotes(input);
     assert!(result.contains("\u{201c}quoted\u{201d}"), "Prose quotes should be converted");
-    assert!(result.contains(r#"kind="string""#), "HTML comment attribute quotes should be preserved");
+    assert!(
+        result.contains(r#"kind="string""#),
+        "HTML comment attribute quotes should be preserved"
+    );
 }
 
 // ===== Adjacent tag tests =====
@@ -101,18 +106,15 @@ fn test_adjacent_closing_tags_roundtrip() {
 
 #[test]
 fn test_pipeline_preserves_tag_quotes() {
-    let tags = [
-        r#"{% field kind="string" id="name" %}"#,
-        r#"{% callout type="warning" title="Note" %}"#,
-    ];
+    let tags =
+        [r#"{% field kind="string" id="name" %}"#, r#"{% callout type="warning" title="Note" %}"#];
     for tag in &tags {
         let result = fmt_smart(tag);
         let original_quote_count = tag.matches('"').count();
         let result_quote_count = result.matches('"').count();
         assert_eq!(
             original_quote_count, result_quote_count,
-            "Pipeline should preserve straight quotes in tag: {}",
-            tag
+            "Pipeline should preserve straight quotes in tag: {tag}"
         );
     }
 }
@@ -166,7 +168,7 @@ fn test_html_comment_multiline_closing() {
 
     let text = "<!-- f:field kind='string'\nlabel='Name' --><!-- /f:field -->";
     let result = fix_multiline_opening_tag_with_closing(text);
-    assert!(result.contains("-->\n<!-- /f:field -->"), "HTML closing tag not split: {}", result);
+    assert!(result.contains("-->\n<!-- /f:field -->"), "HTML closing tag not split: {result}");
 }
 
 #[test]
@@ -184,11 +186,13 @@ fn test_line_wrapper_preserves_multiline_tags() {
 #[test]
 fn test_list_item_with_tag_on_continuation_line() {
     let text = "**Phase 0 - Repository Setup:**\n\n- [ ] 0.1-0.2: Verify reference repos and initialize Bun monorepo with workspaces <!-- #kg-11h2 -->\n\n- [ ] 0.3: Configure TypeScript with strict settings (tsconfig.base.json)\n  <!-- #kg-32zz -->\n\n- [ ] 0.4: Configure Biome for formatting and linting <!-- #kg-ibof -->";
-    let result = fmt(&text);
+    let result = fmt(text);
 
     // The tag should NOT have an extra blank line before it
-    assert!(!result.contains("\n\n  <!-- #kg-32zz -->"),
-        "Extra blank line incorrectly added before tag on continuation line.\nResult:\n{}", result);
+    assert!(
+        !result.contains("\n\n  <!-- #kg-32zz -->"),
+        "Extra blank line incorrectly added before tag on continuation line.\nResult:\n{result}"
+    );
 }
 
 #[test]
@@ -197,7 +201,7 @@ fn test_multiline_opening_tag_closing_on_own_line() {
 
     let problematic = "{% field kind='string'\nrequired=true %}{% /field %}";
     let result = fix_multiline_opening_tag_with_closing(problematic);
-    assert!(result.contains("%}\n{% /field %}"), "Closing tag not on own line: {}", result);
+    assert!(result.contains("%}\n{% /field %}"), "Closing tag not on own line: {result}");
 }
 
 #[test]
@@ -209,10 +213,10 @@ fn test_multiline_tag_through_pipeline() {
     );
 
     let result = fmt(long_tag);
-    let lines: Vec<&str> = result.trim().split('\n').collect();
+    let lines: Vec<&str> = result.lines().collect();
 
     // Entire tag+closing is ONE token — stays on single line
-    assert_eq!(lines.len(), 1, "Tag should be one line, got: {:?}", lines);
+    assert_eq!(lines.len(), 1, "Tag should be one line, got: {lines:?}");
     assert!(lines[0].contains("{% field") && lines[0].contains("{% /field %}"));
     assert!(result.contains("minLength=2"), "minLength=2 should stay together");
     assert!(result.contains("maxLength=100"), "maxLength=100 should stay together");
@@ -236,8 +240,10 @@ fn test_preprocess_tag_block_spacing_inline_tags() {
     let text = "{% field %}\n\n- Item 1 {% #item1 %}\n- Item 2 {% #item2 %}\n\n{% /field %}";
     let result = preprocess_tag_block_spacing(text);
 
-    assert!(result.contains("{% #item1 %}\n- Item 2"),
-        "Incorrectly added blank between items: {}", result);
+    assert!(
+        result.contains("{% #item1 %}\n- Item 2"),
+        "Incorrectly added blank between items: {result}"
+    );
 }
 
 #[test]
@@ -256,7 +262,7 @@ fn test_single_line_paired_tags_not_split() {
 
     let single_line = "{% field kind='string' %}{% /field %}";
     let result = fix_multiline_opening_tag_with_closing(single_line);
-    assert_eq!(result, single_line, "Single-line tag was incorrectly split: {}", result);
+    assert_eq!(result, single_line, "Single-line tag was incorrectly split: {result}");
 }
 
 #[test]
@@ -283,7 +289,7 @@ fn test_tag_newlines_preserved_in_pipeline() {
 fn test_tag_with_array_spanning_lines() {
     let tag = "{% field examples=[\"one\",\n\"two\", \"three\"] %}";
     let result = smart_quotes(tag);
-    assert_eq!(result, tag, "Array spanning lines was modified: {}", result);
+    assert_eq!(result, tag, "Array spanning lines was modified: {result}");
 }
 
 #[test]
@@ -300,7 +306,7 @@ fn test_tag_with_embedded_percent_brace() {
 fn test_tag_with_object_spanning_lines() {
     let tag = "{% field config={key: \"value\",\nother: \"data\"} %}";
     let result = smart_quotes(tag);
-    assert_eq!(result, tag, "Object spanning lines was modified: {}", result);
+    assert_eq!(result, tag, "Object spanning lines was modified: {result}");
 }
 
 #[test]
@@ -310,10 +316,10 @@ fn test_word_splitter_handles_multiline_tags() {
     // Single line tag — should be kept together
     let single = "{% field kind=\"string\" id=\"name\" %}";
     let tokens = html_md_word_split(single);
-    assert!(tokens.contains(&single.to_string()), "Single line tag should be atomic: {:?}", tokens);
+    assert!(tokens.contains(&single.to_string()), "Single line tag should be atomic: {tokens:?}");
 
     // Multi-word tag — should be coalesced
     let multi = "{% callout type=\"warning\" title=\"Note\" %}";
     let tokens = html_md_word_split(multi);
-    assert!(tokens.contains(&multi.to_string()), "Multi-word tag should be coalesced: {:?}", tokens);
+    assert!(tokens.contains(&multi.to_string()), "Multi-word tag should be coalesced: {tokens:?}");
 }

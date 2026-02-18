@@ -65,10 +65,7 @@ pub fn html_md_word_split(text: &str) -> Vec<String> {
     let (construct_map, text_with_placeholders) = extract_atomic_constructs(&text);
 
     // Split on whitespace (placeholders are single tokens)
-    let tokens: Vec<String> = text_with_placeholders
-        .split_whitespace()
-        .map(String::from)
-        .collect();
+    let tokens: Vec<String> = text_with_placeholders.split_whitespace().map(String::from).collect();
 
     // Restore original constructs
     restore_atomic_constructs(&tokens, &construct_map)
@@ -160,11 +157,8 @@ pub fn wrap_paragraph_lines(
             }
 
             // Check if word needs escaping at the start of this wrapped line
-            let escaped_word = if is_markdown && !first_line {
-                markdown_escape_word(word)
-            } else {
-                word.clone()
-            };
+            let escaped_word =
+                if is_markdown && !first_line { markdown_escape_word(word) } else { word.clone() };
 
             let escaped_word_width = escaped_word.chars().count();
             current_line = vec![escaped_word];
@@ -262,16 +256,8 @@ mod tests {
 
     #[test]
     fn test_no_wrap() {
-        let lines = wrap_paragraph_lines(
-            "Hello world this is a test",
-            0,
-            0,
-            0,
-            true,
-            true,
-            None,
-            false,
-        );
+        let lines =
+            wrap_paragraph_lines("Hello world this is a test", 0, 0, 0, true, true, None, false);
         assert_eq!(lines.len(), 1);
         assert_eq!(lines[0], "Hello world this is a test");
     }

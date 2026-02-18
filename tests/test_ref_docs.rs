@@ -1,24 +1,26 @@
-use std::path::Path;
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
+use std::path::Path;
+
+#[allow(clippy::struct_excessive_bools)]
+struct TestCase {
+    name: &'static str,
+    filename: &'static str,
+    semantic: bool,
+    cleanups: bool,
+    smartquotes: bool,
+    ellipses: bool,
+}
 
 #[test]
 fn test_reference_doc_formats() {
     let testdoc_dir = Path::new("tests/testdocs");
     let orig_path = testdoc_dir.join("testdoc.orig.md");
 
-    assert!(orig_path.exists(), "Original test document not found at {:?}", orig_path);
+    assert!(orig_path.exists(), "Original test document not found at {orig_path:?}");
 
-    let orig_content = std::fs::read_to_string(&orig_path).expect("Failed to read original document");
-
-    struct TestCase {
-        name: &'static str,
-        filename: &'static str,
-        semantic: bool,
-        cleanups: bool,
-        smartquotes: bool,
-        ellipses: bool,
-    }
+    let orig_content =
+        std::fs::read_to_string(&orig_path).expect("Failed to read original document");
 
     let test_cases = [
         TestCase {
@@ -78,7 +80,7 @@ fn test_reference_doc_formats() {
             std::fs::write(&actual_path, &actual)
                 .unwrap_or_else(|_| panic!("Failed to write actual output for {}", case.name));
             eprintln!("actual was different from expected for {}!", case.name);
-            eprintln!("Saving actual to: {:?}", actual_path);
+            eprintln!("Saving actual to: {actual_path:?}");
 
             // Show first difference
             let expected_lines: Vec<&str> = expected.lines().collect();
@@ -86,8 +88,8 @@ fn test_reference_doc_formats() {
             for (i, (exp, act)) in expected_lines.iter().zip(actual_lines.iter()).enumerate() {
                 if exp != act {
                     eprintln!("First difference at line {} for {}:", i + 1, case.name);
-                    eprintln!("  Expected: {:?}", exp);
-                    eprintln!("  Actual:   {:?}", act);
+                    eprintln!("  Expected: {exp:?}");
+                    eprintln!("  Actual:   {act:?}");
                     break;
                 }
             }

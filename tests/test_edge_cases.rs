@@ -4,8 +4,8 @@
 //! post-processing fixup functions. The current custom AST renderer should handle
 //! all of these correctly without post-processing.
 
-use flowmark::fill_markdown;
 use flowmark::config::ListSpacing;
+use flowmark::fill_markdown;
 
 fn fmt(input: &str) -> String {
     fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)
@@ -18,7 +18,7 @@ fn fmt(input: &str) -> String {
 
 #[test]
 fn test_code_fence_with_indented_list_content() {
-    let input = r#"```yaml
+    let input = r"```yaml
 config:
     - item1
     - item2
@@ -26,25 +26,22 @@ config:
     - item3
     - item4
 ```
-"#;
+";
     let result = fmt(input);
     // The code block content should be preserved exactly
     assert!(
         result.contains("    - item1"),
-        "Indented list items in code block should be preserved: got {:?}",
-        result
+        "Indented list items in code block should be preserved: got {result:?}"
     );
     assert!(
         result.contains("    - item3"),
-        "Items after blank line in code block should be preserved: got {:?}",
-        result
+        "Items after blank line in code block should be preserved: got {result:?}"
     );
     // The code block should remain intact (not split into two)
     let fence_count = result.matches("```").count();
     assert_eq!(
         fence_count, 2,
-        "Code block should have exactly one opening and one closing fence, got {fence_count} fences: {:?}",
-        result
+        "Code block should have exactly one opening and one closing fence, got {fence_count} fences: {result:?}"
     );
 }
 
@@ -58,8 +55,7 @@ fn test_inline_math_latex_backslashes() {
     let result = fmt(input);
     assert!(
         result.contains("$\\frac{1}{2}$"),
-        "LaTeX backslashes in inline math should be preserved: got {:?}",
-        result
+        "LaTeX backslashes in inline math should be preserved: got {result:?}"
     );
 }
 
@@ -69,8 +65,7 @@ fn test_display_math_latex() {
     let result = fmt(input);
     assert!(
         result.contains("\\sum_{i=1}^{n}"),
-        "LaTeX in display math should be preserved: got {:?}",
-        result
+        "LaTeX in display math should be preserved: got {result:?}"
     );
 }
 
@@ -84,16 +79,8 @@ fn test_bare_dollar_in_text() {
     let input = "The cost is $420K and profits are $100M.\n";
     let result = fmt(input);
     // Bare $ should not be escaped
-    assert!(
-        result.contains("$420K"),
-        "Bare dollar signs should not be escaped: got {:?}",
-        result
-    );
-    assert!(
-        result.contains("$100M"),
-        "Bare dollar signs should not be escaped: got {:?}",
-        result
-    );
+    assert!(result.contains("$420K"), "Bare dollar signs should not be escaped: got {result:?}");
+    assert!(result.contains("$100M"), "Bare dollar signs should not be escaped: got {result:?}");
 }
 
 // === Edge case 4: Trailing blank lines inside code blocks ===
@@ -106,8 +93,7 @@ fn test_code_block_trailing_content() {
     let result = fmt(input);
     assert!(
         result.contains("```python\ndef foo():\n    return 42\n```"),
-        "Code block content should be preserved exactly: got {:?}",
-        result
+        "Code block content should be preserved exactly: got {result:?}"
     );
 }
 
@@ -119,30 +105,21 @@ fn test_code_block_trailing_content() {
 fn test_footnote_with_reference() {
     let input = "Text with a footnote[^1] reference.\n\n[^1]: This is the footnote content.\n";
     let result = fmt(input);
-    assert!(
-        result.contains("[^1]"),
-        "Footnote reference should be preserved: got {:?}",
-        result
-    );
-    assert!(
-        result.contains("[^1]:"),
-        "Footnote definition should be preserved: got {:?}",
-        result
-    );
+    assert!(result.contains("[^1]"), "Footnote reference should be preserved: got {result:?}");
+    assert!(result.contains("[^1]:"), "Footnote definition should be preserved: got {result:?}");
 }
 
 #[test]
 fn test_multiple_footnotes() {
-    let input = "First[^a] and second[^b] notes.\n\n[^a]: Note A content.\n\n[^b]: Note B content.\n";
+    let input =
+        "First[^a] and second[^b] notes.\n\n[^a]: Note A content.\n\n[^b]: Note B content.\n";
     let result = fmt(input);
     assert!(
         result.contains("[^a]") && result.contains("[^b]"),
-        "Multiple footnote references should be preserved: got {:?}",
-        result
+        "Multiple footnote references should be preserved: got {result:?}"
     );
     assert!(
         result.contains("[^a]:") && result.contains("[^b]:"),
-        "Multiple footnote definitions should be preserved: got {:?}",
-        result
+        "Multiple footnote definitions should be preserved: got {result:?}"
     );
 }

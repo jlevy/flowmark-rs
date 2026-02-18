@@ -5,7 +5,6 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-
 /// Regex for detecting end of sentence.
 ///
 /// Matches a word ending in a lowercase letter followed by sentence-ending
@@ -16,8 +15,10 @@ use std::sync::LazyLock;
 static SENTENCE_END_RE: LazyLock<Regex> = LazyLock::new(|| {
     // Allow optional closing brackets/parens/angle brackets between word and punctuation
     // to handle cases like [link](url). and <tag>word</tag>.
-    Regex::new(r"(\b\p{L}+[\p{Ll}])[)\]>]*([.?!]['\x22\u{2019}\u{201d}]?|['\x22\u{2019}\u{201d}][.?!]) *$")
-        .expect("valid SENTENCE_END_RE regex")
+    Regex::new(
+        r"(\b\p{L}+[\p{Ll}])[)\]>]*([.?!]['\x22\u{2019}\u{201d}]?|['\x22\u{2019}\u{201d}][.?!]) *$",
+    )
+    .expect("valid SENTENCE_END_RE regex")
 });
 
 /// Check if a word looks like the end of a sentence.
@@ -66,10 +67,7 @@ pub fn first_sentences(text: &str, n: usize, min_length: usize) -> Vec<String> {
 /// sentences are found.
 pub fn first_sentence(text: &str, min_length: usize) -> String {
     let sentences = split_sentences_regex(text, min_length);
-    sentences
-        .into_iter()
-        .next()
-        .unwrap_or_else(|| text.to_string())
+    sentences.into_iter().next().unwrap_or_else(|| text.to_string())
 }
 
 #[cfg(test)]
