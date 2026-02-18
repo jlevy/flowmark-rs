@@ -24,6 +24,26 @@ pub use wrapping::text_wrapping::{
 
 impl FormatOptions {
     /// Reformat a Markdown or plain text string.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use flowmark::{FormatOptions, ListSpacing};
+    ///
+    /// // With default options (width 88, no semantic breaks)
+    /// let opts = FormatOptions::default();
+    /// let result = opts.reformat_text("# Hello\n\nSome text.");
+    /// assert_eq!(result, "# Hello\n\nSome text.\n");
+    ///
+    /// // With semantic line breaks and typography
+    /// let opts = FormatOptions {
+    ///     semantic: true,
+    ///     smartquotes: true,
+    ///     ..FormatOptions::default()
+    /// };
+    /// let result = opts.reformat_text("He said \"hello.\" She said \"goodbye.\"");
+    /// assert!(result.contains('\u{201c}')); // curly quotes applied
+    /// ```
     pub fn reformat_text(&self, text: &str) -> String {
         if self.plaintext {
             let wrap = if self.width > 0 { Wrap::WrapFull } else { Wrap::None };
