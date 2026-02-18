@@ -18,7 +18,17 @@ mod cli {
     const GLOB_CHARS: &[char] = &['*', '?', '['];
 
     #[derive(Parser, Debug)]
-    #[command(name = "flowmark", version, about = "Markdown auto-formatter for clean diffs")]
+    #[command(
+        name = "flowmark",
+        version,
+        long_version = concat!(
+            env!("CARGO_PKG_VERSION"),
+            " (parity: flowmark-py ",
+            env!("PARITY_VERSION"),
+            ")"
+        ),
+        about = "Markdown auto-formatter for clean diffs"
+    )]
     #[allow(clippy::struct_excessive_bools)]
     pub struct Args {
         /// Input files or directories; use `-` for stdin, `.` for current directory

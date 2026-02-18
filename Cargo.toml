@@ -1,13 +1,16 @@
 [package]
 name = "flowmark"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 description = "A Markdown auto-formatter for clean diffs and semantic line breaks"
+readme = "README.md"
 repository = "https://github.com/jlevy/flowmark-rs"
+documentation = "https://docs.rs/flowmark"
 keywords = ["markdown", "formatter", "cli", "semantic-linebreaks"]
 categories = ["command-line-utilities", "text-processing"]
+exclude = [".claude/", ".tbd/", ".github/", "docs/", "python/", "tests/tryscript/"]
 
 [lib]
 name = "flowmark"
@@ -40,6 +43,9 @@ anyhow = { version = "1.0", optional = true }
 [target.'cfg(unix)'.dependencies]
 libc = "0.2"
 
+[build-dependencies]
+toml = "0.8"
+
 [lints.clippy]
 pedantic = { level = "deny", priority = -1 }
 missing_errors_doc = "allow"
@@ -53,7 +59,7 @@ unwrap_used = "deny"
 unsafe_code = "deny"
 warnings = "deny"
 
-[package.metadata.python_source]
+[package.metadata.parity]
 version = "0.6.4"
 
 [profile.release]
