@@ -133,3 +133,75 @@ fn test_footnote_autolink_blank_lines() {
         "Blank line between footnote defs with autolinks should be preserved: got {result:?}"
     );
 }
+
+// === GAP3: Angle-bracket autolinks preserved ===
+
+#[test]
+fn test_angle_bracket_autolink_preserved() {
+    let input = "Visit <https://example.com> for details.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<https://example.com>"),
+        "Angle-bracket autolink should be preserved: got {result:?}"
+    );
+    assert!(
+        !result.contains("[https://example.com](https://example.com)"),
+        "Should NOT be converted to inline link: got {result:?}"
+    );
+}
+
+#[test]
+fn test_angle_bracket_autolink_in_footnote() {
+    let input = "[^1]: <https://example.com/article>\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<https://example.com/article>"),
+        "Angle-bracket autolink in footnote should be preserved: got {result:?}"
+    );
+}
+
+// === GAP4: Bare URLs not converted to markdown links ===
+
+#[test]
+fn test_bare_url_not_linkified() {
+    let input = "See https://www.google.com/ for more info.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("https://www.google.com/"),
+        "Bare URL should be present: got {result:?}"
+    );
+    assert!(
+        !result.contains("[https://www.google.com/](https://www.google.com/)"),
+        "Bare URL should NOT be converted to markdown link: got {result:?}"
+    );
+}
+
+// === GAP5: Email addresses not linkified ===
+
+#[test]
+fn test_email_not_linkified() {
+    let input = "Contact user@example.com for details.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("user@example.com"),
+        "Email should be present: got {result:?}"
+    );
+    assert!(
+        !result.contains("[user@example.com](mailto:user@example.com)"),
+        "Email should NOT be converted to mailto link: got {result:?}"
+    );
+}
+
+#[test]
+fn test_angle_bracket_email_preserved() {
+    let input = "Email us at <user@example.com> for help.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<user@example.com>"),
+        "Angle-bracket email should be preserved: got {result:?}"
+    );
+    assert!(
+        !result.contains("[user@example.com](mailto:user@example.com)"),
+        "Should NOT be converted to mailto link: got {result:?}"
+    );
+}

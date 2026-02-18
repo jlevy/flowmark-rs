@@ -1747,6 +1747,27 @@ mod tests {
         assert!(labels.contains("b"));
     }
 
+    #[test]
+    fn extract_ref_defs_skips_footnote_definitions() {
+        // Footnote defs like [^label]: url look like ref defs to the regex.
+        // They must NOT be treated as ref defs (REFDEF markers), since they are
+        // handled separately by extract_footnote_defs.
+        let input = "[normal]: https://example.com\n[^note]: https://another.com\n";
+        let (labels, output) = extract_link_ref_defs(input);
+        assert!(labels.contains("normal"), "Normal ref def should be extracted");
+        assert!(
+            !labels.contains("^note") && !labels.contains("note"),
+            "Footnote label should NOT be in ref def labels"
+        );
+        // Normal ref def is wrapped in REFDEF marker
+        assert!(output.contains(REFDEF_MARKER_PREFIX));
+        // Footnote def is left unchanged (not wrapped)
+        assert!(
+            output.contains("[^note]: https://another.com"),
+            "Footnote def should pass through unchanged, got:\n{output}"
+        );
+    }
+
     // ---- extract_footnote_defs ----
 
     #[test]
