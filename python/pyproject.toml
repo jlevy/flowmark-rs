@@ -1,0 +1,116 @@
+# ---- Project Info and Dependencies ----
+
+[project.urls]
+Repository = "https://github.com/jlevy/flowmark-rs"
+
+[project]
+name = "flowmark-dev-tools"
+description = "Dev tools for flowmark-rs porting: test discovery, mapping, and coverage checking"
+authors = [
+    { name = "Joshua Levy", email = "joshua@cal.berkeley.edu" },
+]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11,<4.0"
+dynamic = ["version"]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Typed",
+    "Private :: Do Not Upload",
+]
+
+dependencies = [
+    "pyyaml>=6.0",
+    "strif>=3.0.1",
+]
+
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "ruff>=0.11.9",
+    "basedpyright>=1.29.5",
+]
+
+
+[project.scripts]
+flowmark-dev = "flowmark_dev_tools.cli:main"
+
+
+# ---- Build system ----
+
+[build-system]
+requires = ["hatchling", "uv-dynamic-versioning"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
+
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/flowmark_dev_tools"]
+
+
+# ---- Settings ----
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "UP",
+    "B",
+    "I",
+]
+ignore = [
+    "E501",
+    "E402",
+    "E731",
+    "W191",
+    "E111",
+    "E114",
+    "E117",
+    "D206",
+    "D300",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "COM812",
+    "COM819",
+    "ISC002",
+]
+
+[tool.basedpyright]
+include = ["src", "tests"]
+reportIgnoreCommentWithoutRule = false
+reportUnnecessaryTypeIgnoreComment = false
+reportMissingTypeStubs = false
+reportUnusedCallResult = false
+reportAny = false
+reportExplicitAny = false
+reportImplicitStringConcatenation = false
+
+[tool.pytest.ini_options]
+python_files = ["*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+testpaths = [
+    "src",
+    "tests",
+]

@@ -1,0 +1,28 @@
+[advisories]
+version = 2
+# All three are transitive deps of comrak via syntect. No action available
+# until comrak updates syntect.
+ignore = [
+    "RUSTSEC-2024-0320", # yaml-rust 0.4.5 unmaintained
+    "RUSTSEC-2025-0141", # bincode 1.3.3 unmaintained (syntect dep)
+    "RUSTSEC-2026-0009", # time 0.3.x DoS via stack exhaustion (syntect dep)
+]
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-3.0",
+    "Unicode-DFS-2016",
+]
+
+[bans]
+multiple-versions = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"

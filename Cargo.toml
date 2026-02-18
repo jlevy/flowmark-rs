@@ -1,0 +1,60 @@
+[package]
+name = "flowmark"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+description = "A Markdown auto-formatter for clean diffs and semantic line breaks"
+repository = "https://github.com/jlevy/flowmark-rs"
+keywords = ["markdown", "formatter", "cli", "semantic-linebreaks"]
+categories = ["command-line-utilities", "text-processing"]
+
+[lib]
+name = "flowmark"
+path = "src/lib.rs"
+
+[[bin]]
+name = "flowmark"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[features]
+default = ["cli"]
+cli = ["clap", "anyhow", "tempfile"]
+
+[dependencies]
+comrak = "0.36"
+regex = "1.11"
+unicode-segmentation = "1.11"
+thiserror = "2.0"
+toml = "0.8"
+serde = { version = "1.0", features = ["derive"] }
+
+# CLI-only dependencies
+clap = { version = "4.5", features = ["derive", "cargo"], optional = true }
+anyhow = { version = "1.0", optional = true }
+tempfile = { version = "3.10", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+too_many_lines = "allow"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[package.metadata.python_source]
+version = "latest"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
