@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Phases 1-9 complete (CI enforced) — Phase 10 (CLI & Feature Parity) pending
+**Status:** Phases 1-9b complete (CI enforced) — Phase 10 (CLI & Feature Parity) pending
 
 **Epic bead:** fmr-kd36
 
@@ -83,8 +83,8 @@ No test may be left unmapped.
 ### Current State
 
 **Python flowmark v0.6.4**: 281 test functions across 20 files.
-**Rust flowmark-rs**: 250 test functions (223 integration + 27 unit).
-250 passing, 0 `#[ignore]`d, 0 failures, 0 `partial` mappings.
+**Rust flowmark-rs**: 251 test functions (223 integration + 27 unit + 1 doc-test).
+251 passing, 0 `#[ignore]`d, 0 failures, 0 `partial` mappings.
 202 mapped + 79 excluded in test mapping.
 
 ### Bugs Blocking Parity
@@ -305,6 +305,44 @@ All 27 playbook documents reviewed.
 - [x] Run all `TestMappingCompleteness` tests in CI (removed
   `-k "not MappingCompleteness"`)
 - [x] Update Rust test count assertion from `>= 178` to exact `== 250`
+
+### Phase 9b: Code Review — DONE
+
+**Epic bead:** fmr-ow2t
+**PR:** [#2](https://github.com/jlevy/flowmark-rs/pull/2) (branch: `code-review-fixes`)
+
+Comprehensive code review of the Rust codebase after Phase 9 completion.
+16 findings addressed across P0-P3, all implemented and CI-passing (251 tests).
+
+**P0 fixes (blocking CI):**
+- [x] Fix 9 clippy `inefficient_to_string` errors in `filling.rs` and `tag_handling.rs`
+  (fmr-n1w9)
+- [x] Verify formatting clean (fmr-5gkb)
+- [x] Tighten lints: `warnings=deny`, clippy `pedantic=deny`, `unwrap_used=deny` in
+  Cargo.toml (fmr-5255)
+
+**P1 fixes (correctness/hygiene):**
+- [x] Remove dead dependencies: `toml`, `serde`, `unicode-segmentation` from Cargo.toml
+  (fmr-y3zv)
+- [x] Remove dead error variants `Error::Config` and `Error::Other` from `error.rs`
+  (fmr-oodm)
+- [x] Add `RUSTFLAGS=-D warnings` to CI test jobs (fmr-wcjh)
+
+**P2 fixes (quality/performance):**
+- [x] Extract fence-tracking helper to eliminate 3x code duplication in `filling.rs`
+  (fmr-q9og)
+- [x] Replace `nc.to_string()` regex check with `is_word_char()` in `ellipses.rs`
+  (fmr-0a97)
+- [x] Introduce `FormatOptions` struct to replace boolean parameter lists in public API
+  (fmr-yhmk)
+- [x] Remove unused `_name` field from `AtomicPattern` struct (fmr-avjf)
+- [x] Remove unnecessary `info.clone()` in filling.rs
+- [x] Extract repeated `.expect()` calls to locals
+
+**P3 fixes (polish):**
+- [x] Fix `DEFAULT_WRAP_WIDTH` comment
+- [x] Add doc-test for `FormatOptions::reformat_text` (fmr-nbp4) — test count 250 → 251
+- [x] Remove `|| true` from mapping check in CI to enforce completeness (fmr-nswa)
 
 ### Phase 10: CLI & Feature Parity
 
@@ -657,7 +695,7 @@ This is valuable because:
 - [ ] `check-mapping` passes: **281 mapped, 0 excluded, 0 missing, 0 partial**
 - [ ] Every mapping entry manually reviewed for accuracy
 - [ ] Tryscript tests contributed upstream to the Python repo
-- [ ] All existing 250+ tests continue to pass (no regressions)
+- [ ] All existing 251+ tests continue to pass (no regressions)
 
 ### Remaining Steps and Current Status
 
@@ -668,9 +706,11 @@ enforced in CI, and everything remaining.
 
 | Item | CI Job | Status |
 | --- | --- | --- |
-| All 250 Rust tests pass | `test` (ubuntu + macOS) | Hard gate |
+| All 251 Rust tests pass | `test` (ubuntu + macOS) | Hard gate |
 | Library builds without CLI feature | `test-lib-only` | Hard gate |
-| Zero clippy warnings | `clippy` | Hard gate (`-D warnings`) |
+| Zero clippy warnings (pedantic) | `clippy` | Hard gate (`-D warnings`) |
+| `unwrap_used` denied in library code | `clippy` | Hard gate (Cargo.toml lint) |
+| `RUSTFLAGS=-D warnings` on test jobs | `test` | Hard gate |
 | Code formatting | `fmt` | Hard gate |
 | MSRV 1.85 compiles | `msrv` | Hard gate |
 | Dependency audit (licenses, sources) | `deny` | Hard gate |
@@ -679,13 +719,13 @@ enforced in CI, and everything remaining.
 | YAML deterministic output | `check-mapping` | Hard gate |
 | Checked-in YAML matches canonical form | `check-mapping` | Hard gate |
 | Python test count == 281 | `check-mapping` | Hard gate |
-| Rust test count == 250 | `check-mapping` | Hard gate |
+| Rust test count == 251 | `check-mapping` | Hard gate |
 | Mapping count == 281 | `check-mapping` | Hard gate |
 | Zero `missing` mapping entries | `check-mapping` | Hard gate |
 | All mapped Rust refs exist | `check-mapping` | Hard gate |
 | `check-mapping` end-to-end exit code 0 | `check-mapping` | Hard gate |
 
-**Total: 8 CI jobs, all hard gates.
+**Total: 9 CI jobs, all hard gates.
 Zero informational-only steps.**
 
 #### Fully Complete — Not CI-Enforced (verified manually)
@@ -775,6 +815,8 @@ After Phase 10, the mapping should be: **281 mapped, 0 excluded, 0 missing, 0 pa
 
 ## References
 
+- **Code review PR:** [#2](https://github.com/jlevy/flowmark-rs/pull/2) (Phase 9b — all
+  code review findings, branch `code-review-fixes`)
 - Test mapping infrastructure spec:
   `docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md`
 - YAML artifacts: `port-coverage-mapping/`
@@ -1043,7 +1085,8 @@ stdout, `--verbose` flag, all 33 `unwrap()` in library code replaced with descri
 | `5b64d8c` Fix 3 bugs | 247 | 0 | All bugs fixed |
 | `e544c7e` Clippy cleanup | 250 | 0 | +3 during cleanup |
 | `c4905d2` Edge case tests | 250 | 0 | +7 (replaced 7 unused) |
-| `100b2cd` Final polish | **250** | **0** | **Final state** |
+| `100b2cd` Final polish | 250 | 0 | — |
+| PR #2 Code review fixes | **251** | **0** | +1 doc-test (`FormatOptions`) |
 
 ### Mapping Status Evolution
 
@@ -1152,10 +1195,10 @@ output files:
 | **Excluded** | 79 | Infrastructure-only (CLI, config, file resolver, skill system) |
 | **Missing** | 0 | All gaps closed |
 | **Partial** | 0 | All partial coverage completed |
-| **Extra Rust** | 27 | Unit tests in `src/` not mapped to Python (Rust-native) |
+| **Extra Rust** | 28 | Unit tests in `src/` + doc-tests, not mapped to Python (Rust-native) |
 
-**Total: 250 Rust tests covering 202 Python test behaviors, 27 Rust-specific unit tests,
-and 7 edge case tests from previous implementation review.
+**Total: 251 Rust tests covering 202 Python test behaviors, 27 Rust-specific unit tests,
+1 doc-test, and 7 edge case tests from previous implementation review.
 All passing, zero ignored.**
 
 **Note:** All 79 excluded tests are now in scope for Phase 10.

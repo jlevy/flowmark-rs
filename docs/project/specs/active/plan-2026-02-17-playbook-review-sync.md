@@ -149,7 +149,7 @@ The current port has a different set of workarounds than the old port.
 
 #### D3: `porting-checklist.md` is a Stale Duplicate
 
-`docs/porting-checklist.md` in this repo is a copy of the playbook’s
+`docs/project/specs/active/porting-checklist.md` in this repo is a copy of the playbook's
 `reference/python-to-rust-playbook.md`. It may be out of sync and creates maintenance
 burden.
 
@@ -502,7 +502,7 @@ Validation:
 
 ## Decisions Made
 
-1. **`docs/porting-checklist.md`: Remove.** It’s a stale duplicate of the playbook’s
+1. **`porting-checklist.md`: Remove.** It's a stale duplicate of the playbook's
    `python-to-rust-playbook.md`. No backward compatibility needed for docs.
 
 2. **Case study versioning: Add “v2 port” sections.** Keep old port data and add v2
@@ -627,9 +627,9 @@ maintainable than accumulating workarounds.
 - Exact parity spec: `docs/project/specs/active/plan-2026-02-17-exact-parity.md`
 - Test mapping spec:
   `docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md`
-- Code review: `docs/code-review-2026-02-17.md`
+- Code review: `docs/project/specs/active/code-review-2026-02-17.md`
 - Porting plan: `docs/project/specs/done/porting-plan.md`
-- Porting checklist: `docs/porting-checklist.md`
+- Porting checklist: `docs/project/specs/active/porting-checklist.md`
 - Playbook repo: `attic/rust-porting-playbook/`
 - Playbook README: `attic/rust-porting-playbook/README.md`
 - Meta-playbook: `attic/rust-porting-playbook/reference/meta-improving-this-playbook.md`

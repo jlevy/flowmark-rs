@@ -4,7 +4,7 @@
 
 All porting work is finished.
 251 tests passing, 0 ignored, 100% of ported Python tests passing.
-See the [exact parity spec](project/specs/active/plan-2026-02-17-exact-parity.md) for
+See the [exact parity spec](../active/plan-2026-02-17-exact-parity.md) for
 full details.
 
 ## Goal
