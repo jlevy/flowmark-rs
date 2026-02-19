@@ -128,23 +128,36 @@ fn test_d3_sup_tag_wrapping_at_width_56() {
 }
 
 // =============================================================================
-// D4: Tight list spacing inserts extra blank lines in nested sublists (fmr-r9k6)
-// Rust adds blank lines between nested list items in tight mode.
+// D4: Tight list spacing with nested sublists (fmr-r9k6)
+// Python's tight mode adds blank lines between items when any item has sublists,
+// but keeps sublists themselves tight. Within-item spacing is loose only when
+// the item's sublist has deeper nesting.
 // =============================================================================
 
 #[test]
-fn test_d4_tight_nested_lists_no_extra_blanks() {
+fn test_d4_tight_nested_lists_match_python() {
     let input = "- Level 1a\n  - Level 2a\n    - Level 3a\n- Level 1b\n  - Level 2b\n";
     let result = fmt_tight(input);
-    // Python keeps nested items tight (no blank between "Level 2a" and "Level 3a")
-    assert!(
-        result.contains("  - Level 2a\n    - Level 3a"),
-        "D4: Tight mode should not insert blank lines between nested sublists, got:\n{result}"
+    // Python: blank after "Level 1a" (item has complex sublist with deeper nesting),
+    // tight between "Level 2a" and "Level 3a", blank before "Level 1b",
+    // tight between "Level 1b" and "Level 2b" (item has flat sublist).
+    let python_output = "- Level 1a\n\n  - Level 2a\n    - Level 3a\n\n- Level 1b\n  - Level 2b\n";
+    assert_eq!(
+        result, python_output,
+        "D4: Tight nested lists should match Python behavior.\nGot:\n{result}"
     );
-    // Also check no blank between "Level 1b" and "Level 2b"
-    assert!(
-        result.contains("- Level 1b\n  - Level 2b"),
-        "D4: Tight mode should not insert blank lines between parent and child list, got:\n{result}"
+}
+
+#[test]
+fn test_d4_tight_simple_sublists() {
+    // Simple sublists (no deeper nesting) — Python adds blanks between items
+    // but keeps within-item spacing tight.
+    let input = "- A\n  - B\n- C\n  - D\n";
+    let result = fmt_tight(input);
+    let python_output = "- A\n  - B\n\n- C\n  - D\n";
+    assert_eq!(
+        result, python_output,
+        "D4: Tight simple sublists should match Python.\nGot:\n{result}"
     );
 }
 
@@ -152,9 +165,11 @@ fn test_d4_tight_nested_lists_no_extra_blanks() {
 fn test_d4_tight_ordered_sublists() {
     let input = "1. Ordered 1\n   1. Sub 1\n   2. Sub 2\n2. Ordered 2\n";
     let result = fmt_tight(input);
-    assert!(
-        result.contains("1. Ordered 1\n   1. Sub 1"),
-        "D4: Tight ordered sublists should not have blank lines, got:\n{result}"
+    // Python: tight within item (Ordered 1 → Sub 1), blank between items
+    let python_output = "1. Ordered 1\n   1. Sub 1\n   2. Sub 2\n\n2. Ordered 2\n";
+    assert_eq!(
+        result, python_output,
+        "D4: Tight ordered sublists should match Python.\nGot:\n{result}"
     );
 }
 
@@ -194,6 +209,19 @@ fn test_d6_two_level_blockquote() {
     assert!(
         !result.contains(">\n>"),
         "D6: Should not have blank '> ' line between blockquote levels, got:\n{result}"
+    );
+}
+
+#[test]
+fn test_d6_nested_blockquote_preserves_blank_separator() {
+    // When source has a blank `>` line between outer and inner blockquote,
+    // Python preserves it. Rust must do the same.
+    let input = "> Outer quote.\n>\n> > Inner quote.\n";
+    let python_output = "> Outer quote.\n> \n> > Inner quote.\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D6: Blank `>` separator between blockquote levels should be preserved.\nGot:\n{result}"
     );
 }
 
@@ -410,11 +438,11 @@ fn test_d11_nonexistent_file_error_format() {
 // =============================================================================
 
 #[test]
-#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
 fn test_d12_paragraph_before_code_fence_tight() {
     // Python keeps paragraph tight against code fence (no blank line).
     let input = "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
-    let python_output = "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
+    let python_output =
+        "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
     let result = fmt(input);
     assert_eq!(
         result, python_output,
@@ -423,7 +451,6 @@ fn test_d12_paragraph_before_code_fence_tight() {
 }
 
 #[test]
-#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
 fn test_d12_inline_code_paragraph_before_code_fence() {
     // Paragraph ending with inline code, tight against a code fence.
     let input = "Add to root `package.json`:\n```json\n{\n  \"scripts\": {}\n}\n```\n";
@@ -436,11 +463,12 @@ fn test_d12_inline_code_paragraph_before_code_fence() {
 }
 
 #[test]
-#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
 fn test_d12_multiple_tight_code_fences() {
     // Multiple tight paragraph→code fence transitions in one document.
-    let input = "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
-    let python_output = "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
+    let input =
+        "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
+    let python_output =
+        "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
     let result = fmt(input);
     assert_eq!(
         result, python_output,
@@ -456,7 +484,6 @@ fn test_d12_multiple_tight_code_fences() {
 // =============================================================================
 
 #[test]
-#[ignore] // P7: blockquote blank continuation loses `>` prefix
 fn test_d13_blockquote_blank_continuation_preserves_prefix() {
     // Blockquote with a blank continuation line between ordered list and unordered list.
     let input = "> 2. **Review the previous** for context:\n>    \n>    - Check the section\n";
@@ -470,7 +497,6 @@ fn test_d13_blockquote_blank_continuation_preserves_prefix() {
 }
 
 #[test]
-#[ignore] // P7: blockquote blank continuation loses `>` prefix
 fn test_d13_blockquote_list_with_blank_continuation() {
     // Blockquote with rules list and blank continuation line.
     let input = "> - Rules:\n>   \n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
@@ -497,7 +523,6 @@ fn test_d13_blockquote_list_with_blank_continuation() {
 // =============================================================================
 
 #[test]
-#[ignore] // P8: escaped backtick stripped in table inline code
 fn test_d14_escaped_backtick_in_table_inline_code() {
     let input = "| Col1 | Col2 |\n| --- | --- |\n| swallowing | `throw new CLIError(\\`${msg}: ${error.message}\\`)` |\n";
     let result = fmt(input);
@@ -521,7 +546,6 @@ fn fmt_auto(input: &str) -> String {
 }
 
 #[test]
-#[ignore] // P9: smart quote after inline code backtick
 fn test_d15_no_smart_quote_after_inline_code() {
     let input = "Call `foo()`'s result.\n";
     let result = fmt_auto(input);

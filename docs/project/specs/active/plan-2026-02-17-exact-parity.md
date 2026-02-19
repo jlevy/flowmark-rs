@@ -1,11 +1,12 @@
 # Feature: Exact Cross-Language Parity (flowmark Python → Rust)
 
-**Date:** 2026-02-17 (last updated 2026-02-18)
+**Date:** 2026-02-17 (last updated 2026-02-19)
 
 **Author:** Joshua Levy
 
-**Status:** INCOMPLETE — Phases 1-9b complete, Phase 10 complete, but **9 formatting
-parity gaps remain** (see Appendix E). Parity work is not done until all gaps are fixed.
+**Status:** COMPLETE — All formatting parity gaps P1-P9 and D1-D15 are resolved. Exact
+byte-for-byte parity achieved across all 4 modes (auto, tight, loose, plaintext). 481
+tests pass, 0 ignored. See Appendix E for full resolution details.
 
 **Epic bead:** fmr-kd36
 
@@ -2009,31 +2010,63 @@ Consider upstreaming tests to Python flowmark for cross-language gaps (marked be
 4. For upstream candidates (marked **Yes**): consider filing issues or PRs against
    Python flowmark to add equivalent tests.
 
-## Appendix E: Outstanding Parity Gaps (2026-02-19)
+## Appendix E: Parity Gap Resolution (2026-02-19)
 
-**This appendix tracks every known behavioral difference between the Rust and Python
-flowmark binaries.** Each gap must have a failing test that asserts the correct
-(Python-matching) behavior.
-Parity work is NOT complete until every gap listed here is resolved and its test passes.
+**ALL GAPS RESOLVED.** Every known behavioral difference between the Rust and Python
+flowmark binaries has been fixed and verified with passing tests. Exact byte-for-byte
+parity achieved across all 4 formatting modes (auto, tight, loose, plaintext).
 
 Gaps P1-P5 were discovered during comprehensive tryscript golden test development
 (2026-02-18). Gaps P6-P9 were discovered by running `flowmark-rs --auto` on a real-world
 corpus (ai-trade-arena `docs/`) already formatted by Python flowmark, producing 81 files
-changed with 456 insertions (2026-02-19).
+changed with 456 insertions (2026-02-19). All gaps were resolved on 2026-02-19.
 
 ### Gap Summary
 
-| # | Gap | Severity | Root Cause | Tryscript Test | Rust Unit Test | Fix Difficulty |
-| --- | --- | --- | --- | --- | --- | --- |
-| P1 | Reference links converted to inline | **Critical** | Comrak resolves reference links during parsing; AST loses link reference definitions | F10, `formatting.tryscript.md` | `test_reference_links_preserved` | Hard — requires pre-parse extraction |
-| P2 | Footnotes moved to end of document | **Critical** | Comrak moves `FootnoteDefinition` nodes to end of AST during parsing | F10, `formatting.tryscript.md` | `test_footnote_position_preserved` | Hard — requires position tracking |
-| P3 | `\"` escape stripped (backslash before double quote) | **High** | `ESCAPE_CHARS` in `filling.rs` missing `"` and 12 other CommonMark-escapable chars | T6, `typography-tests.tryscript.md` | `test_escaped_double_quote_preserved` | Easy — add `"` to `ESCAPE_CHARS` |
-| P4 | Nested list extra blank line | **Medium** | Rust inserts blank line after parent list item before nested sublist | F10, `formatting.tryscript.md` | `test_nested_list_no_extra_blank_line` | Medium — list renderer spacing logic |
-| P5 | `--verbose` flag (Rust-only addition) | **Low** | Rust added `--verbose` / `-v` flag not present in Python | N/A (excluded from binary-agnostic tests) | N/A | N/A — acceptable addition |
-| P6 | Extra blank line before code fence | **High** | `suppress_for_tight` in `render_block_children()` missing paragraph→CodeBlock rule | N/A | `test_d12_*` (3 tests) | Easy — add tight transition rule |
-| P7 | Blockquote blank continuation loses `>` prefix | **Medium** | Blockquote blank continuation lines output bare empty line instead of `>` prefix | N/A | `test_d13_*` (2 tests) | Medium — blockquote blank line rendering |
-| P8 | Escaped backtick stripped in table inline code | **Medium** | Trailing ``` in inline code within table cell loses backslash | N/A | `test_d14_*` (1 test) | Medium — escape handling in inline code |
-| P9 | Smart quote after inline code backtick | **Low** | Rust converts `'` after `` ` `` to smart quote; Python does not | N/A | `test_d15_*` (1 test) | Easy — adjust smart quote context rules |
+| # | Gap | Status | Bead | Tests |
+| --- | --- | --- | --- | --- |
+| P1 | Reference links converted to inline | **RESOLVED** | (pre-parse extraction) | `test_reference_links_preserved` |
+| P2 | Footnotes moved to end of document | **RESOLVED** | (position tracking) | `test_footnote_position_preserved` |
+| P3 | `\"` escape stripped | **RESOLVED** | (ESCAPE_CHARS) | `test_escaped_double_quote_preserved` |
+| P4 | Nested list extra blank line | **RESOLVED** | fmr-r9k6 | `test_d4_*` (3 tests) |
+| P5 | `--verbose` flag (Rust-only) | **Accepted** | N/A | N/A |
+| P6 | Extra blank line before code fence | **RESOLVED** | fmr-0u55 | `test_d12_*` (3 tests) |
+| P7 | Blockquote blank continuation loses `>` prefix | **RESOLVED** | fmr-e38z | `test_d13_*` (2 tests) |
+| P8 | Escaped backtick stripped in table inline code | **RESOLVED** | fmr-9kth | `test_d14_*` (1 test) |
+| P9 | Smart quote after inline code backtick | **RESOLVED** | fmr-el2i | `test_d15_*` (1 test) |
+
+### Additional Gaps Discovered and Resolved (D-series)
+
+| # | Gap | Status | Bead | Tests |
+| --- | --- | --- | --- | --- |
+| D1 | Plaintext mode collapses code blocks | **RESOLVED** | fmr-n69j | `test_d1_*` (2 tests) |
+| D2 | Plaintext "St." sentence detection | **RESOLVED** | fmr-fzth | `test_d2_*` (1 test) |
+| D3 | Narrow width `<sup>` tag wrapping | **RESOLVED** | fmr-bzra | `test_d3_*` (1 test) |
+| D4 | Tight list spacing nested sublists | **RESOLVED** | fmr-r9k6 | `test_d4_*` (3 tests) |
+| D5 | Loose footnote embedded list items | **RESOLVED** | fmr-vpg4 | `test_d5_*` (1 test) |
+| D6 | Nested blockquote extra blank lines | **RESOLVED** | fmr-3i50 | `test_d6_*` (3 tests) |
+| D7 | Footnote list items collapsed | **RESOLVED** | fmr-81j7 | `test_d7_*` (2 tests) |
+| D8 | Footnote blockquote collapsed | **RESOLVED** | fmr-xcr9 | `test_d8_*` (1 test) |
+| D9 | Empty input trailing newline | **RESOLVED** | (trailing newline) | `test_d9_*` (3 tests) |
+| D10 | HTML entities decoded | **RESOLVED** | fmr-gocw | `test_d10_*` (2 tests) |
+| D11 | CLI error handling | **RESOLVED** | fmr-8ixa | `test_d11_*` (5 tests) |
+| D12 | Paragraph→code fence blank line | **RESOLVED** | fmr-0u55 | `test_d12_*` (3 tests) |
+| D13 | Blockquote blank continuation `>` | **RESOLVED** | fmr-e38z | `test_d13_*` (2 tests) |
+| D14 | Escaped backtick in table | **RESOLVED** | fmr-9kth | `test_d14_*` (1 test) |
+| D15 | Smart quote after inline code | **RESOLVED** | fmr-el2i | `test_d15_*` (1 test) |
+
+### Session 2026-02-19 Fixes (This PR)
+
+Additional issues discovered and fixed during final parity push:
+
+| Issue | Bead | Root Cause | Fix |
+| --- | --- | --- | --- |
+| Tight mode: 8 spacing gaps | fmr-afof | `any_item_is_complex` not checking sublists/code/multi-para; `item_needs_child_spacing` not mode-aware; `parent_is_tight` inconsistent | Complete rewrite of tight mode logic: `any_item_is_complex`, `item_needs_child_spacing` with per-mode paths, `parent_is_tight` mirroring |
+| Loose mode: Rules 3/4 suppression | fmr-desq | `render_block_children` Rules 3 (para→list) and 4 (para→code) suppressed blank lines even in loose mode | Added `list_spacing != ListSpacing::Loose` guard |
+| Loose mode: FNDEF separator | fmr-8pya | COMRAK-WORKAROUND9b FNDEF rendering didn't check `list_spacing` for preamble→list separator | Added `if list_spacing == ListSpacing::Loose` double-newline |
+| Plaintext: paired tag regex | fmr-dpjh | Paired Jinja/HTML regex matched two closing tags as atomic pair | Opening tag requires `[a-zA-Z]` start (not `/`) |
+| Blockquote: blank separator | fmr-xkh3 | `render_block_children_quoted` always inserted blank before nested blockquotes | Added source position tracking (`originally_tight`) |
+| Golden test regression | fmr-gydk | `has_complex_sublist` applied in Preserve mode, breaking golden test | Gated check to `ListSpacing::Tight` only |
 
 ### P1: Reference Links Converted to Inline (Critical)
 

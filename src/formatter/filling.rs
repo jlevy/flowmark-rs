@@ -729,81 +729,29 @@ fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipse
     result
 }
 
-/// Pattern matching inline code spans (single or double backtick).
-/// Regex for inline code spans (backtick-delimited).
-static INLINE_CODE_SPAN_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"``[^`]+``|`[^`]+`").expect("valid INLINE_CODE_SPAN_RE regex"));
-
-/// COMRAK-WORKAROUND4: Replace `\x` escapes with PUA placeholders, but only outside
-/// fenced code blocks AND inline code spans. Prevents comrak from stripping backslash
-/// escapes during parsing, while preserving literal backslashes inside code (where they
-/// are not `CommonMark` escape sequences).
+/// COMRAK-WORKAROUND4: Replace `\x` escapes with PUA placeholders outside fenced code
+/// blocks. Prevents comrak from stripping backslash escapes during parsing. Within each
+/// non-fenced line, replacements are applied uniformly (including inside inline code
+/// spans) because Comrak can strip escapes even in code-span-like contexts such as GFM
+/// table cells (P8).
 fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
     transform_outside_code_fences(text, |line| {
-        let processed = replace_outside_code_spans(line, placeholders);
+        let processed = replace_escapes_in_line(line, placeholders);
         vec![processed]
     })
 }
 
-/// COMRAK-WORKAROUND4: Apply escape replacements only to text OUTSIDE inline code spans.
-fn replace_outside_code_spans(line: &str, placeholders: &[(String, String)]) -> String {
-    // Temporarily hide escaped backticks so the code span regex doesn't treat
-    // them as code span delimiters (e.g., `\`text\`` is not a code span).
-    // We detect code spans on the modified string but apply replacements on the
-    // original string using the same byte offsets (since \` and the placeholder
-    // are both 2 bytes, offsets are preserved when using a 2-byte placeholder).
-    let escaped_backtick_positions: Vec<usize> =
-        line.match_indices("\\`").map(|(i, _)| i).collect();
-
-    if escaped_backtick_positions.is_empty() {
-        // No escaped backticks — use the fast regex path
-        let mut result = String::new();
-        let mut last_end = 0;
-        for m in INLINE_CODE_SPAN_RE.find_iter(line) {
-            let before = &line[last_end..m.start()];
-            let mut processed = before.to_string();
-            for (escaped, placeholder) in placeholders {
-                processed = processed.replace(escaped.as_str(), placeholder.as_str());
-            }
-            result.push_str(&processed);
-            result.push_str(m.as_str());
-            last_end = m.end();
-        }
-        let rest = &line[last_end..];
-        let mut processed = rest.to_string();
-        for (escaped, placeholder) in placeholders {
-            processed = processed.replace(escaped.as_str(), placeholder.as_str());
-        }
-        result.push_str(&processed);
-        return result;
-    }
-
-    // Has escaped backticks — replace them with a same-length placeholder,
-    // find code spans on the modified string, then apply replacements to
-    // the original string using the same byte offsets.
-    // Use two ASCII chars that won't appear in markdown for the 2-byte \`
-    let modified = line.replace("\\`", "\x01\x01");
-
-    let mut result = String::new();
-    let mut last_end = 0;
-    for m in INLINE_CODE_SPAN_RE.find_iter(&modified) {
-        // Apply replacements to original text outside code spans
-        let before = &line[last_end..m.start()];
-        let mut processed = before.to_string();
-        for (escaped, placeholder) in placeholders {
-            processed = processed.replace(escaped.as_str(), placeholder.as_str());
-        }
-        result.push_str(&processed);
-        // Keep code span from original unchanged
-        result.push_str(&line[m.start()..m.end()]);
-        last_end = m.end();
-    }
-    let rest = &line[last_end..];
-    let mut processed = rest.to_string();
+/// COMRAK-WORKAROUND4: Apply escape replacements to all text in a line, including
+/// inside inline code spans. Previously this only replaced outside code spans, but
+/// Comrak can strip backslash escapes even inside inline code in certain contexts
+/// (e.g., GFM table cells). PUA-protecting everywhere is safe because the round-trip
+/// is idempotent: the PUA placeholder survives Comrak parsing as literal content and
+/// is restored to the original `\x` escape in post-processing (P8).
+fn replace_escapes_in_line(line: &str, placeholders: &[(String, String)]) -> String {
+    let mut result = line.to_string();
     for (escaped, placeholder) in placeholders {
-        processed = processed.replace(escaped.as_str(), placeholder.as_str());
+        result = result.replace(escaped.as_str(), placeholder.as_str());
     }
-    result.push_str(&processed);
     result
 }
 
@@ -1011,6 +959,7 @@ fn render_block_children<'a>(
         let child_is_refdef_only = is_refdef_marker(child);
         let child_is_html_comment = is_html_comment_only(child);
         let child_is_list = matches!(child.data.borrow().value, NodeValue::List(_));
+        let child_is_code_block = matches!(child.data.borrow().value, NodeValue::CodeBlock(_));
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -1034,6 +983,7 @@ fn render_block_children<'a>(
         //         list/table (lists/tables always get a blank line before a
         //         following HTML comment)
         // Rule 3: Paragraph → list (tight): suppress separator
+        // Rule 4: Paragraph → code block (tight): suppress separator
         //
         // All other block pairs get the standard blank line separator.
         let suppress_for_tight = if originally_tight {
@@ -1044,9 +994,18 @@ fn render_block_children<'a>(
                 // Rule 2: Any block → HTML comment (tight): suppress,
                 // UNLESS prev is list or table (GAP13)
                 !prev_was_list_or_table
-            } else if child_is_list && prev_was_paragraph {
+            } else if child_is_list && prev_was_paragraph && list_spacing != ListSpacing::Loose {
                 // Rule 3: Paragraph → list (tight): suppress (GAP11)
                 // This handles cases like "**Header**:\n- item1\n- item2"
+                // In loose mode, Python adds the blank separator here.
+                true
+            } else if child_is_code_block
+                && prev_was_paragraph
+                && list_spacing != ListSpacing::Loose
+            {
+                // Rule 4: Paragraph → code block (tight): suppress (P6)
+                // This handles cases like "**Config**:\n```json\n{}\n```"
+                // In loose mode, Python adds the blank separator here.
                 true
             } else {
                 false
@@ -1113,19 +1072,25 @@ fn render_block_children_quoted<'a>(
     let mut output = String::new();
     let mut prev_was_block = false;
     let mut prev_ended_with_double_newline = false;
+    let mut prev_source_end_line: usize = 0;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
         let child_is_blockquote = matches!(child.data.borrow().value, NodeValue::BlockQuote);
 
+        // Use source positions to detect whether blocks were originally tight.
+        let child_source_start = child.data.borrow().sourcepos.start.line;
+        let child_source_end = last_content_line(child);
+        let originally_tight =
+            prev_source_end_line > 0 && child_source_start <= prev_source_end_line + 1;
+
         // Add blank line between consecutive block elements.
         // Use the blank_prefix (e.g., "> ") to maintain the quote context.
-        // Don't add separator before nested blockquotes — Python doesn't.
-        if child_is_block
-            && prev_was_block
-            && !prev_ended_with_double_newline
-            && !child_is_blockquote
-        {
+        // Suppress separator before nested blockquotes only when the original
+        // source was tight (no blank line). When the source had a blank `>`
+        // line between blocks, preserve it to match Python behavior.
+        let suppress = child_is_blockquote && originally_tight;
+        if child_is_block && prev_was_block && !prev_ended_with_double_newline && !suppress {
             output.push_str(blank_prefix);
             output.push_str(" \n");
         }
@@ -1142,6 +1107,7 @@ fn render_block_children_quoted<'a>(
         prev_ended_with_double_newline = block_output.ends_with("\n\n");
         output.push_str(&block_output);
         prev_was_block = child_is_block;
+        prev_source_end_line = child_source_end;
     }
 
     output
@@ -1209,11 +1175,26 @@ fn render_block<'a>(
 
         NodeValue::List(list) => {
             // Determine effective tightness.
-            // Python forces tight unconditionally when --list-spacing tight is used,
-            // even for items with nested lists (which have para + list children).
+            // Python's --list-spacing tight forces tight only when all items are
+            // simple (single paragraph, no sublists/code blocks). When any item
+            // is "complex" (has sublists, code blocks, or multiple paragraphs),
+            // Python treats the entire list as loose even in tight mode.
+            let any_item_is_complex = node.children().any(|item| {
+                let children: Vec<_> = item.children().collect();
+                let has_sublist =
+                    children.iter().any(|c| matches!(c.data.borrow().value, NodeValue::List(_)));
+                let has_code = children
+                    .iter()
+                    .any(|c| matches!(c.data.borrow().value, NodeValue::CodeBlock(_)));
+                let para_count = children
+                    .iter()
+                    .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
+                    .count();
+                has_sublist || has_code || para_count > 1
+            });
             let is_tight = match list_spacing {
                 ListSpacing::Preserve => list.tight,
-                ListSpacing::Tight => true,
+                ListSpacing::Tight => !any_item_is_complex,
                 ListSpacing::Loose => false,
             };
 
@@ -1466,7 +1447,13 @@ fn render_block<'a>(
                                     let wrapped =
                                         line_wrapper(preamble.trim(), &fn_prefix, &fn_subsequent);
                                     output.push_str(&wrapped);
-                                    output.push('\n');
+                                    // In loose mode, add blank separator between
+                                    // footnote preamble and embedded list.
+                                    if list_spacing == ListSpacing::Loose {
+                                        output.push_str("\n\n");
+                                    } else {
+                                        output.push('\n');
+                                    }
                                     // Render each list item separately.
                                     // Python/marko treats each `- ` line as a separate item.
                                     let mut current_marker = "";
@@ -1595,6 +1582,11 @@ fn render_block<'a>(
 
             let mut first_child = true;
             for child in node.children() {
+                // In loose mode, add blank separator between footnote children
+                // (matching Python behavior where footnote para + list get spacing).
+                if !first_child && list_spacing == ListSpacing::Loose {
+                    output.push('\n');
+                }
                 let (p, sp) = if first_child {
                     (fn_prefix.clone(), fn_subsequent.clone())
                 } else {
@@ -1658,23 +1650,93 @@ fn render_block<'a>(
 }
 
 /// Check if a list item needs blank lines between its children.
-/// This is true when:
-/// - The item's parent list is loose (not tight)
-/// - OR the item has multiple block children that aren't just para+nested-list
-fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, parent_is_tight: bool) -> bool {
-    if !parent_is_tight {
-        // For loose lists, always add blank lines between children
-        return true;
-    }
+///
+/// In Loose mode or when the list is natively loose (Preserve + `!tight`):
+/// always add blank lines between children.
+///
+/// In Tight mode: Python makes the list loose between ITEMS (handled by
+/// `is_tight`), but within each item only adds spacing when the item has
+/// code blocks, multiple paragraphs, or complex sublists (sublists with
+/// deeper nesting). Simple para+sublist items stay tight within.
+///
+/// In Preserve mode with tight list: only add spacing for multiple paragraphs.
+fn item_needs_child_spacing<'a>(
+    node: &'a AstNode<'a>,
+    parent_is_tight: bool,
+    list_spacing: ListSpacing,
+) -> bool {
     let children: Vec<_> = node.children().collect();
     if children.len() <= 1 {
         return false;
     }
-    // For tight lists, only add spacing if there are multiple paragraphs
-    // (not counting para + nested list as needing spacing)
-    let para_count =
-        children.iter().filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph)).count();
-    para_count > 1
+
+    match list_spacing {
+        ListSpacing::Loose => true,
+        ListSpacing::Preserve => {
+            if !parent_is_tight {
+                return true;
+            }
+            // For tight preserved lists, only add spacing if there are multiple paragraphs
+            let para_count = children
+                .iter()
+                .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
+                .count();
+            para_count > 1
+        }
+        ListSpacing::Tight => {
+            // Python's tight mode adds within-item spacing for items with:
+            // 1. Code blocks
+            // 2. Complex sublists (sublists with deeper nesting)
+            // 3. Multiple paragraphs
+            // 4. Children that were originally separated by blank lines
+            let has_code =
+                children.iter().any(|c| matches!(c.data.borrow().value, NodeValue::CodeBlock(_)));
+            if has_code {
+                return true;
+            }
+            // Check if any child sublist is effectively loose. A sublist is
+            // effectively loose when it has complex items (sublists, code blocks,
+            // or multi-paragraph) or when Comrak marked it as not tight.
+            let has_effectively_loose_sublist = children.iter().any(|c| {
+                if let NodeValue::List(sub_list) = &c.data.borrow().value {
+                    if !sub_list.tight {
+                        return true;
+                    }
+                    // Check for complex items: sublists, code blocks, multi-para
+                    c.children().any(|item| {
+                        let ch: Vec<_> = item.children().collect();
+                        let has_sub = ch
+                            .iter()
+                            .any(|gc| matches!(gc.data.borrow().value, NodeValue::List(_)));
+                        let has_code = ch
+                            .iter()
+                            .any(|gc| matches!(gc.data.borrow().value, NodeValue::CodeBlock(_)));
+                        let paras = ch
+                            .iter()
+                            .filter(|gc| matches!(gc.data.borrow().value, NodeValue::Paragraph))
+                            .count();
+                        has_sub || has_code || paras > 1
+                    })
+                } else {
+                    false
+                }
+            });
+            if has_effectively_loose_sublist {
+                return true;
+            }
+            // Check if any consecutive children were originally separated
+            // by a blank line (i.e. not tight). If so, preserve spacing.
+            let mut prev_end: usize = 0;
+            for c in &children {
+                let start = c.data.borrow().sourcepos.start.line;
+                if prev_end > 0 && start > prev_end + 1 {
+                    return true;
+                }
+                prev_end = last_content_line(c);
+            }
+            false
+        }
+    }
 }
 
 /// Render a list item's children.
@@ -1692,13 +1754,31 @@ fn render_list_item<'a>(
     let mut first_child = true;
     let children: Vec<_> = node.children().collect();
 
-    // Check if parent list is tight by looking at the list spacing context
-    // We determine this by checking if the parent list node is tight
+    // Check if parent list is effectively tight, using the same logic as
+    // the List rendering arm. For Tight mode, lists with complex items
+    // (sublists, code blocks, multi-paragraph) are treated as loose.
     let parent_is_tight = node.parent().is_some_and(|parent| {
-        if let NodeValue::List(list) = &parent.data.borrow().value {
+        let data = parent.data.borrow();
+        if let NodeValue::List(list) = &data.value {
             match list_spacing {
                 ListSpacing::Preserve => list.tight,
-                ListSpacing::Tight => true,
+                ListSpacing::Tight => {
+                    // Mirror the any_item_is_complex check from the List arm
+                    let any_complex = parent.children().any(|item| {
+                        let ch: Vec<_> = item.children().collect();
+                        let has_sub =
+                            ch.iter().any(|c| matches!(c.data.borrow().value, NodeValue::List(_)));
+                        let has_code = ch
+                            .iter()
+                            .any(|c| matches!(c.data.borrow().value, NodeValue::CodeBlock(_)));
+                        let paras = ch
+                            .iter()
+                            .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
+                            .count();
+                        has_sub || has_code || paras > 1
+                    });
+                    !any_complex
+                }
                 ListSpacing::Loose => false,
             }
         } else {
@@ -1706,7 +1786,7 @@ fn render_list_item<'a>(
         }
     });
 
-    let needs_spacing = item_needs_child_spacing(node, parent_is_tight);
+    let needs_spacing = item_needs_child_spacing(node, parent_is_tight, list_spacing);
 
     for (i, child) in children.iter().enumerate() {
         let (p, sp) = if first_child {
@@ -1767,7 +1847,15 @@ fn render_list_item<'a>(
                 && !current_is_tag_block
                 && !suppress_nested_blank
             {
-                output.push('\n');
+                // Use the item's subsequent prefix (trimmed) to maintain
+                // blockquote context on blank separator lines (P7).
+                let blank_prefix = item_subsequent.trim_end();
+                if blank_prefix.is_empty() {
+                    output.push('\n');
+                } else {
+                    output.push_str(blank_prefix);
+                    output.push('\n');
+                }
             }
         }
 
@@ -2159,9 +2247,13 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
                     text_nodes.push(child);
                 }
                 NodeValue::Code(_) | NodeValue::HtmlInline(_) => {
-                    // Skip code spans and raw HTML - don't apply smart quotes
-                    // But add placeholder chars to maintain context
-                    concatenated.push('X'); // placeholder for quote context
+                    // Skip code spans and raw HTML - don't apply smart quotes.
+                    // Use a non-word placeholder to act as a boundary that
+                    // prevents apostrophe conversion across code spans (P9).
+                    // A word char like 'X' would cause `foo()`'s to match
+                    // the contraction pattern (\w)'(\w) and convert to a
+                    // smart quote.
+                    concatenated.push(' ');
                 }
                 NodeValue::SoftBreak => {
                     concatenated.push(' ');

@@ -503,8 +503,7 @@ fn test_resolver_nested_gitignore_dir_pattern() {
     fs::write(dir.path().join("sub/kept/visible.md"), "# Visible\n").expect("write visible");
     fs::write(dir.path().join("sub/generated/output.md"), "# Output\n").expect("write output");
     // Nested .gitignore excludes the generated/ directory
-    fs::write(dir.path().join("sub/.gitignore"), "generated/\n")
-        .expect("write nested .gitignore");
+    fs::write(dir.path().join("sub/.gitignore"), "generated/\n").expect("write nested .gitignore");
 
     let config = FileResolverConfig::default();
     let mut resolver = FileResolver::new(config);
