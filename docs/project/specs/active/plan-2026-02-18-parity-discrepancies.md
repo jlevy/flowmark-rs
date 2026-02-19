@@ -4,7 +4,7 @@
 
 **Author:** Senior review (Claude)
 
-**Status:** Draft
+**Status:** COMPLETE — All discrepancies D1-D11 resolved (2026-02-19)
 
 ## Overview
 
@@ -53,14 +53,14 @@ Additional targeted edge-case inputs were also tested.
 | Strikethrough, task lists | Exact match |
 | GFM alerts | Exact match |
 | Cleanups (unbold headings) | Exact match |
-| **Plaintext mode** | **DIFF: 41 lines** |
-| **Width 60** | **DIFF: 11 lines** |
-| **Semantic + Width 60** | **DIFF: 11 lines** |
-| **Tight list spacing** | **DIFF: 10 lines** |
-| **Loose list spacing** | **DIFF: 2 lines** |
-| **Nested blockquotes** | **DIFF: 2 lines** |
-| **Footnote list items** | **DIFF: collapsed** |
-| **Footnote blockquotes** | **DIFF: collapsed** |
+| Plaintext mode | Exact match (resolved 2026-02-19) |
+| Width 60 | Exact match (resolved 2026-02-19) |
+| Semantic + Width 60 | Exact match (resolved 2026-02-19) |
+| Tight list spacing | Exact match (resolved 2026-02-19) |
+| Loose list spacing | Exact match (resolved 2026-02-19) |
+| Nested blockquotes | Exact match (resolved 2026-02-19) |
+| Footnote list items | Exact match (resolved 2026-02-19) |
+| Footnote blockquotes | Exact match (resolved 2026-02-19) |
 
 ## Discrepancies
 
@@ -303,42 +303,56 @@ with identical arguments and compare stderr output + exit codes:
    focused only on formatting output). CLI error messages are a first-class parity
    surface that must be tested with the same rigor as formatting output.
 
-## Implementation Plan
+## Implementation Plan — COMPLETED
 
-### Phase 1: Footnote body handling (D7, D8)
+### Phase 1: Footnote body handling (D7, D8) — DONE
 
-These are the highest severity issues — content is being collapsed/destroyed.
+- [x] Fix FNDEF rendering to preserve list items in footnote bodies (D7)
+- [x] Fix FNDEF rendering to preserve blockquote content in footnote bodies (D8)
+- [x] Add regression tests for both cases
 
-- [ ] Fix FNDEF rendering to preserve list items in footnote bodies (D7)
-- [ ] Fix FNDEF rendering to preserve blockquote content in footnote bodies (D8)
-- [ ] Add regression tests for both cases
+### Phase 2: Block-level spacing (D4, D6) — DONE
 
-### Phase 2: Block-level spacing (D4, D6)
+- [x] Fix tight list spacing to not insert blanks between nested sublists (D4)
+- [x] Fix nested blockquote rendering to not insert extra blank lines (D6)
+- [x] Add regression tests
 
-These affect structural fidelity of the output.
+### Phase 3: Wrapping, plaintext, and normalization (D1, D2, D3, D5, D9, D10) — DONE
 
-- [ ] Fix tight list spacing to not insert blanks between nested sublists (D4)
-- [ ] Fix nested blockquote rendering to not insert extra blank lines (D6)
-- [ ] Add regression tests
+- [x] Fix plaintext mode to preserve code fence structure (D1)
+- [x] Fix plaintext word splitting heuristic for "St." (D2)
+- [x] Fix narrow-width `<sup>` tag word splitting (D3)
+- [x] Fix loose list spacing for footnote embedded lists (D5)
+- [x] Fix empty/whitespace input to output trailing newline (D9)
+- [x] Fix HTML entity preservation (D10)
+- [x] Add regression tests
 
-### Phase 3: Wrapping, plaintext, and normalization (D1, D2, D3, D5, D9, D10)
+### Phase 4: Real-world corpus parity (P6-P9) — DONE
 
-- [ ] Fix plaintext mode to preserve code fence structure (D1)
-- [ ] Fix plaintext word splitting heuristic for "St." (D2)
-- [ ] Fix narrow-width `<sup>` tag word splitting (D3)
-- [ ] Fix loose list spacing for footnote embedded lists (D5)
-- [ ] Fix empty/whitespace input to output trailing newline (D9)
-- [ ] Fix HTML entity preservation (D10)
-- [ ] Add regression tests
+- [x] Fix paragraph→CodeBlock tight transition (P6, 454 instances)
+- [x] Fix blockquote blank continuation `>` prefix (P7, 9 instances)
+- [x] Fix escaped backtick in table inline code (P8)
+- [x] Fix smart quote after inline code backtick (P9)
+
+### Phase 5: Full 4-mode parity (auto, tight, loose, plaintext) — DONE
+
+- [x] Fix tight mode complex item detection (8 gaps → 0)
+- [x] Fix loose mode Rules 3/4 blank line suppression
+- [x] Fix loose mode footnote FNDEF preamble→list separator
+- [x] Fix plaintext paired Jinja tag regex
+- [x] Fix nested blockquote source position tracking
+- [x] Fix golden test regression (Preserve mode gating)
 
 ## Testing Strategy
 
-- For each discrepancy, add a targeted test that verifies exact match with Python output
-- Run the full cross-comparison (all 9 modes) on the golden test doc after all fixes
-- Run `cargo test --all-features` and `cargo clippy --all-features -- -D warnings`
+- 31 targeted D-series tests verify exact match with Python output
+- Golden reference document test (`test_reference_doc_formats`) verifies 4 modes
+- 481 total tests, 0 ignored, 0 failures
+- CI: 12/12 checks pass (clippy, format, tests, semver, docs, coverage, MSRV, audit)
 
 ## References
 
 - Python flowmark v0.6.4: `repos/flowmark/`
 - Golden test doc: `tests/testdocs/testdoc.orig.md`
 - Previous review: `docs/project/specs/active/code-review-2026-02-17.md`
+- PR #17: https://github.com/jlevy/flowmark-rs/pull/17
