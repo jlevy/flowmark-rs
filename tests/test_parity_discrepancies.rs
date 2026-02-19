@@ -1,8 +1,11 @@
 //! Parity discrepancy tests: Python flowmark v0.6.4 vs Rust flowmark.
 //!
 //! Each test documents a specific discrepancy found during senior review (2026-02-18).
-//! Expected values are the Python v0.6.4 output. Tests are marked `#[ignore]` when
-//! the fix has not yet been implemented — remove `#[ignore]` as each fix lands.
+//! Expected values are the Python v0.6.4 output. All 15 discrepancies (D1-D15) are
+//! resolved — every test passes.
+//!
+//! D11 tests invoke both the Python and Rust binaries and compare error output.
+//! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.6.4`).
 //!
 //! See: docs/project/specs/active/plan-2026-02-18-parity-discrepancies.md
 #![allow(clippy::unwrap_used)]

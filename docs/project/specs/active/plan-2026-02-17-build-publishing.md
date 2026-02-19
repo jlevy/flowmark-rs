@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** In Progress
+**Status:** Phases 1-4, 6 Complete — Phase 5 (binary releases) deferred
 
 **Epic bead:** fmr-8yos
 
