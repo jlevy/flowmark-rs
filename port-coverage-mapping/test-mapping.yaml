@@ -1505,3 +1505,69 @@
   status: mapped
   rust_file: tests/test_wrapping.rs
   rust_function: test_wrap_width
+- python_file: tests/tryscript/auto-mode.tryscript.md
+  python_function: auto-mode
+  status: mapped
+  rust_file: tests/tryscript/auto-mode.tryscript.md
+  rust_function: auto-mode
+  notes: Binary-agnostic tryscript golden test (6 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/cli-golden.tryscript.md
+  python_function: cli-golden
+  status: mapped
+  rust_file: tests/tryscript/cli-golden.tryscript.md
+  rust_function: cli-golden
+  notes: Binary-agnostic tryscript golden test (31 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/config-interaction.tryscript.md
+  python_function: config-interaction
+  status: mapped
+  rust_file: tests/tryscript/config-interaction.tryscript.md
+  rust_function: config-interaction
+  notes: Binary-agnostic tryscript golden test (9 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/errors-version.tryscript.md
+  python_function: errors-version
+  status: mapped
+  rust_file: tests/tryscript/errors-version.tryscript.md
+  rust_function: errors-version
+  notes: Binary-agnostic tryscript golden test (8 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/file-discovery.tryscript.md
+  python_function: file-discovery
+  status: mapped
+  rust_file: tests/tryscript/file-discovery.tryscript.md
+  rust_function: file-discovery
+  notes: Binary-agnostic tryscript golden test (13 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/file-ops.tryscript.md
+  python_function: file-ops
+  status: mapped
+  rust_file: tests/tryscript/file-ops.tryscript.md
+  rust_function: file-ops
+  notes: Binary-agnostic tryscript golden test (8 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/formatting.tryscript.md
+  python_function: formatting
+  status: mapped
+  rust_file: tests/tryscript/formatting.tryscript.md
+  rust_function: formatting
+  notes: Binary-agnostic tryscript golden test (12 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/list-spacing.tryscript.md
+  python_function: list-spacing
+  status: mapped
+  rust_file: tests/tryscript/list-spacing.tryscript.md
+  rust_function: list-spacing
+  notes: Binary-agnostic tryscript golden test (6 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/stdin.tryscript.md
+  python_function: stdin
+  status: mapped
+  rust_file: tests/tryscript/stdin.tryscript.md
+  rust_function: stdin
+  notes: Binary-agnostic tryscript golden test (4 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/typography-tests.tryscript.md
+  python_function: typography-tests
+  status: mapped
+  rust_file: tests/tryscript/typography-tests.tryscript.md
+  rust_function: typography-tests
+  notes: Binary-agnostic tryscript golden test (8 scenarios). Identical file in both repos.
+- python_file: tests/tryscript/verbose-docs.tryscript.md
+  python_function: verbose-docs
+  status: mapped
+  rust_file: tests/tryscript/verbose-docs.tryscript.md
+  rust_function: verbose-docs
+  notes: Binary-agnostic tryscript golden test (5 scenarios). Identical file in both repos.

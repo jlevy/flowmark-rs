@@ -1,10 +1,11 @@
 # Feature: Exact Cross-Language Parity (flowmark Python → Rust)
 
-**Date:** 2026-02-17 (last updated 2026-02-17)
+**Date:** 2026-02-17 (last updated 2026-02-18)
 
 **Author:** Joshua Levy
 
-**Status:** Phases 1-9b complete (CI enforced) — Phase 10 (CLI & Feature Parity) pending
+**Status:** INCOMPLETE — Phases 1-9b complete, Phase 10 complete, but **5 formatting
+parity gaps remain** (see Appendix E). Parity work is not done until all gaps are fixed.
 
 **Epic bead:** fmr-kd36
 
@@ -26,6 +27,26 @@ No exclusions.
 Every discrepancy is either a Rust bug to fix or an upstream Python bug to
 fix (and then match in Rust).**
 
+## Key Principle: Every Parity Gap Must Have a Failing Test
+
+**A hidden gap is worse than a known failure.** Every known behavioral difference
+between the Rust and Python binaries MUST be surfaced as a failing test. Tests that use
+`head`, `tail`, `[..]`, `basename | sort`, `grep -c`, or other output-masking patterns
+to hide real differences are not acceptable.
+
+If a parity gap exists and cannot be immediately fixed, the correct approach is:
+
+1. **Write a test that fails** — the test should assert the correct (Python-matching)
+   behavior.
+2. **Mark the test as `#[ignore]`** with a comment linking to the tracking bead — but
+   only if the fix is blocked. Prefer fixing immediately.
+3. **Track the gap in Appendix E** of this spec with a bead, root cause analysis, and
+   fix plan.
+
+**Never mask a difference to make a test pass.** A green test suite with hidden gaps is
+worse than a red test suite with documented failures, because hidden gaps erode trust
+and make the "drop-in replacement" claim false.
+
 ## Goals
 
 - **Drop-in replacement**: `flowmark` (Rust) is fully interchangeable with `flowmark`
@@ -42,6 +63,8 @@ fix (and then match in Rust).**
 - Golden/reference document tests produce identical output to Python.
 - Tryscript CLI golden tests pass for both Python and Rust binaries.
 - **Any deviation in drop-in behavior is a bug** and must be surfaced as a CI failure.
+- **Every known parity gap has a failing test** — no masking, no `head | tail` tricks,
+  no approximate assertions that hide real differences.
 
 ## Non-Goals
 
@@ -1913,3 +1936,251 @@ Consider upstreaming tests to Python flowmark for cross-language gaps (marked be
 3. New tests appear in `extra_rust` section of `flowmark-dev check-mapping`.
 4. For upstream candidates (marked **Yes**): consider filing issues or PRs against Python
    flowmark to add equivalent tests.
+
+## Appendix E: Outstanding Parity Gaps (2026-02-18)
+
+**This appendix tracks every known behavioral difference between the Rust and Python
+flowmark binaries.** Each gap must have a failing test that asserts the correct
+(Python-matching) behavior. Parity work is NOT complete until every gap listed here is
+resolved and its test passes.
+
+These gaps were discovered during comprehensive tryscript golden test development. The
+tryscript tests were previously masking these differences using `head`, `tail`,
+`basename | sort`, `grep -c`, and other output-truncation patterns. Those masking
+patterns have been removed — the tests now assert the full, correct (Python-matching)
+output and will fail until the Rust implementation is fixed.
+
+### Gap Summary
+
+| # | Gap | Severity | Root Cause | Tryscript Test | Rust Unit Test | Fix Difficulty |
+| --- | --- | --- | --- | --- | --- | --- |
+| P1 | Reference links converted to inline | **Critical** | Comrak resolves reference links during parsing; AST loses link reference definitions | F10, `formatting.tryscript.md` | `test_reference_links_preserved` | Hard — requires pre-parse extraction |
+| P2 | Footnotes moved to end of document | **Critical** | Comrak moves `FootnoteDefinition` nodes to end of AST during parsing | F10, `formatting.tryscript.md` | `test_footnote_position_preserved` | Hard — requires position tracking |
+| P3 | `\"` escape stripped (backslash before double quote) | **High** | `ESCAPE_CHARS` in `filling.rs` missing `"` and 12 other CommonMark-escapable chars | T6, `typography-tests.tryscript.md` | `test_escaped_double_quote_preserved` | Easy — add `"` to `ESCAPE_CHARS` |
+| P4 | Nested list extra blank line | **Medium** | Rust inserts blank line after parent list item before nested sublist | F10, `formatting.tryscript.md` | `test_nested_list_no_extra_blank_line` | Medium — list renderer spacing logic |
+| P5 | `--verbose` flag (Rust-only addition) | **Low** | Rust added `--verbose` / `-v` flag not present in Python | N/A (excluded from binary-agnostic tests) | N/A | N/A — acceptable addition |
+
+### P1: Reference Links Converted to Inline (Critical)
+
+**Behavior difference:**
+- **Input:** `[reference link][ref1]` with `[ref1]: https://example.com "Title"`
+- **Python output:** Preserves reference syntax: `[reference link][ref1]` and keeps
+  `[ref1]: https://example.com "Title"` as a separate block
+- **Rust output:** Converts to inline: `[reference link](https://example.com "Title")`
+  and drops the link reference definition entirely
+
+**Root cause:** Comrak (the Rust Markdown parser) resolves reference links during AST
+construction. By the time the AST is available, a `[text][ref]` has become a
+`NodeValue::Link` node with the URL filled in. The link reference definition is consumed
+and does not appear in the AST. The Rust renderer (`filling.rs:854-862`) always outputs
+`[text](url "title")` because it has no information about the original link syntax.
+
+Python's Marko parser keeps `LinkRefDef` as a block-level AST node and checks
+`root_node.link_ref_defs` in its link renderer to reconstruct reference syntax.
+
+**Impact:** This is a **lossy transformation**. Documents using reference-style links
+for readability lose that structure. The same URL referenced multiple times gets
+duplicated inline. This violates the "identical output" requirement.
+
+**Files affected:**
+- `tests/tryscript/fixtures/content/comprehensive.md` (line 68-70)
+- `tests/tryscript/fixtures/content/links-emphasis.md` (line 5-7)
+- Any user document using reference-style links
+
+**Demonstrated diff (comprehensive.md):**
+```diff
+- An [inline link](https://example.com) and a
+- [reference link](https://example.com "Example Reference").
++ An [inline link](https://example.com) and a [reference link][ref1].
++
++ [ref1]: https://example.com "Example Reference"
+```
+
+**Fix approach:**
+1. **Pre-parse extraction**: Before passing to comrak, scan the input for link reference
+   definitions (`[label]: url "title"`) and record them with their positions. After
+   comrak renders the AST, post-process the output to reconstruct reference syntax where
+   a link's URL+title matches a known reference definition. This mirrors the approach
+   already used for escape character preservation (PUA placeholder system).
+2. **Alternative**: Investigate whether comrak can be configured to preserve link
+   reference information in the AST (check comrak options and extensions).
+3. **Alternative**: Use comrak's sourcepos to detect which links were originally
+   reference-style.
+
+**Failing tests:**
+- Tryscript: `formatting.tryscript.md` scenario F10 — asserts full Python-matching
+  output (no `head -20` truncation)
+- Rust unit test: `test_reference_links_preserved` (to be written in
+  `test_escape_handling.rs` or `test_link_handling.rs`)
+
+### P2: Footnotes Moved to End of Document (Critical)
+
+**Behavior difference:**
+- **Input:** Footnote `[^1]: definition` placed after the paragraph that references it
+- **Python output:** Footnote definition stays in its original position
+- **Rust output:** Footnote definition moved to the very end of the document
+
+**Root cause:** Comrak moves all `FootnoteDefinition` nodes to the end of the document
+AST during parsing. The Rust renderer walks the AST in order, so footnote definitions
+always appear at the bottom regardless of their original position.
+
+**Demonstrated diff:**
+```diff
+ This has a footnote[^1] reference.
+
+-Inline math $x^2 + y^2 = z^2$ and display math:
++[^1]: Footnote definition here.
+
+-$$ \sum_{i=1}^{n} i = \frac{n(n+1)}{2} $$
++Inline math $x^2 + y^2 = z^2$ and display math:
+
+-Final paragraph of the comprehensive document.
++$$ \sum_{i=1}^{n} i = \frac{n(n+1)}{2} $$
+
+-[^1]: Footnote definition here.
++Final paragraph of the comprehensive document.
+```
+
+**Fix approach:**
+1. **Pre-parse position tracking**: Before passing to comrak, record the position of
+   each footnote definition in the source. After rendering, reorder footnote definitions
+   back to their original positions relative to surrounding content.
+2. **Alternative**: Accept end-of-document placement as the normalized form. However,
+   this violates the "identical output" requirement and would need to be a documented
+   exception with explicit approval.
+
+**Failing tests:**
+- Tryscript: `formatting.tryscript.md` scenario F10 — asserts full Python-matching
+  output
+- Rust unit test: `test_footnote_position_preserved` (to be written)
+
+### P3: Backslash-Escaped Double Quote Stripped (High)
+
+**Behavior difference:**
+- **Input:** `\"literal quotes\"`
+- **Python output:** `\"literal quotes\"` (backslash preserved)
+- **Rust output:** `"literal quotes"` (backslash stripped)
+
+**Root cause:** The `ESCAPE_CHARS` list in `filling.rs:1004-1007` contains 19 characters
+but is missing `"` (double quote) and 12 other CommonMark-spec-escapable ASCII
+punctuation characters. The full CommonMark spec allows backslash-escaping of all 31
+ASCII punctuation characters: `` !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ``
+
+Missing from `ESCAPE_CHARS`:
+```
+"  %  &  '  ,  /  :  ;  <  =  ?  @  ^
+```
+
+The PUA placeholder system only protects characters in the `ESCAPE_CHARS` list. When
+comrak encounters `\"`, the backslash is stripped during parsing because `"` is not
+protected by a PUA placeholder.
+
+**Fix approach:** Add all 13 missing characters to `ESCAPE_CHARS`. At minimum, add `"`
+immediately since it's the most common and is explicitly tested in `escapes.md`.
+
+```rust
+const ESCAPE_CHARS: &[char] = &[
+    '\\', '~', '*', '#', '-', '+', '>', '.', '!', '[', ']', '(', ')', '{', '}', '$',
+    '_', '|', '`',
+    // Previously missing CommonMark-escapable characters:
+    '"', '%', '&', '\'', ',', '/', ':', ';', '<', '=', '?', '@', '^',
+];
+```
+
+**Failing tests:**
+- Tryscript: `typography-tests.tryscript.md` scenario T6 — asserts Python-matching
+  output `\"literal quotes\"`
+- Rust unit test: `test_escaped_double_quote_preserved` (to be written in
+  `test_escape_handling.rs`)
+
+### P4: Nested List Extra Blank Line (Medium)
+
+**Behavior difference:**
+- **Python:** Tight nested list has no blank line between parent item and child sublist
+- **Rust:** Inserts extra blank line after the parent item text before the nested
+  sublist begins
+
+**Demonstrated diff (from comprehensive.md):**
+```diff
+ - First level
+-  - Second level
++
++  - Second level
+     - Third level deep
+   - Back to second level
+```
+
+**Root cause:** The Rust list renderer's spacing logic inserts a blank line separator
+between the parent item content and its child sublist. Python's renderer keeps them
+tight when the original was tight.
+
+**Fix approach:** Adjust the blank-line-before-sublist logic in the Rust list renderer
+(`filling.rs` list item rendering) to not insert a blank line when the parent list is
+tight.
+
+**Failing tests:**
+- Tryscript: `formatting.tryscript.md` scenario F10 — asserts full Python-matching
+  output
+- Rust unit test: `test_nested_list_no_extra_blank_line` (to be written in
+  `test_wrapping.rs` or `test_lists.rs`)
+
+### P5: `--verbose` Flag (Rust-Only Addition — Acceptable)
+
+**Behavior difference:** Rust has `--verbose` / `-v` flag that prints
+`formatting <path>` to stderr for each file processed. Python has no equivalent.
+
+**Assessment:** This is an **intentional feature addition**, not a gap. It prints to
+stderr only (never affects stdout), has no effect on formatting output, and does not
+break drop-in compatibility. A Python user switching to Rust will never notice `--verbose`
+unless they explicitly pass the flag.
+
+**Status:** Accepted. No fix needed. Excluded from binary-agnostic tryscript tests.
+
+### Test Masking Patterns Removed
+
+The following tryscript test patterns were identified as hiding real parity differences.
+They have been updated to assert the full correct output:
+
+| Test | Old Pattern | What It Hid | New Behavior |
+| --- | --- | --- | --- |
+| F10 (`formatting.tryscript.md`) | `head -20` | Reference link inlining, footnote relocation, nested list spacing | Asserts full output (all lines) |
+| T6 (`typography-tests.tryscript.md`) | Golden output matched Rust (wrong) | `\"` stripped to `"` | Golden output matches Python (`\"` preserved) |
+| T4 (`typography-tests.tryscript.md`) | `tail -1` | All output except last line | Asserts full output |
+| T5 (`typography-tests.tryscript.md`) | `tail -1` | All output except last line | Asserts full output |
+
+### How Tests Were Passing Despite Real Gaps
+
+The tryscript tests passed because they were designed with output-masking patterns that
+hid the behavioral differences:
+
+1. **F10 (comprehensive formatting)**: Used `flowmark comprehensive.md | head -20` to
+   only check the first 20 lines. The reference link inlining (line 75), footnote
+   relocation (lines 97-105), and nested list spacing (line 41) were all beyond line 20.
+2. **T6 (escapes with smart quotes)**: The golden output was written against the Rust
+   binary, encoding `"literal quotes"` (with backslash stripped) as the expected output.
+   The correct Python output is `\"literal quotes\"`.
+3. **T4/T5 (typography in code blocks)**: Used `tail -1` to only check the last line,
+   hiding any differences in how code block content is formatted.
+
+These masking patterns violated the principle stated in the Goals section: "Any deviation
+in drop-in behavior is a bug and must be surfaced as a CI failure." The tests have been
+corrected to assert the full, Python-matching output. They will fail in CI until the
+corresponding Rust bugs are fixed.
+
+### Resolution Plan
+
+**Priority order (by impact and fix difficulty):**
+
+1. **P3 (escape chars)** — Easy fix, high impact. Add missing chars to `ESCAPE_CHARS`.
+   Estimated: 1 hour.
+2. **P4 (nested list spacing)** — Medium fix, medium impact. Adjust list renderer
+   spacing logic. Estimated: 2-4 hours.
+3. **P1 (reference links)** — Hard fix, critical impact. Requires pre-parse extraction
+   system (similar to existing PUA escape system). Estimated: 1-2 days.
+4. **P2 (footnote position)** — Hard fix, critical impact. Requires position tracking
+   through comrak's AST reordering. Estimated: 1-2 days.
+5. **P5 (verbose)** — No fix needed. Accepted addition.
+
+**Completion criteria:** All tryscript tests pass against both binaries with no masking
+patterns. `diff` between Rust and Python output on all fixture files produces zero
+differences.

@@ -123,3 +123,247 @@ fn test_multiple_footnotes() {
         "Multiple footnote definitions should be preserved: got {result:?}"
     );
 }
+
+#[test]
+fn test_footnote_autolink_blank_lines() {
+    let input = "[^2]: <https://example.com/path>\n\n[^3]: <https://example.com/other>\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("\n\n[^3]:"),
+        "Blank line between footnote defs with autolinks should be preserved: got {result:?}"
+    );
+}
+
+// === GAP3: Angle-bracket autolinks preserved ===
+
+#[test]
+fn test_angle_bracket_autolink_preserved() {
+    let input = "Visit <https://example.com> for details.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<https://example.com>"),
+        "Angle-bracket autolink should be preserved: got {result:?}"
+    );
+    assert!(
+        !result.contains("[https://example.com](https://example.com)"),
+        "Should NOT be converted to inline link: got {result:?}"
+    );
+}
+
+#[test]
+fn test_angle_bracket_autolink_in_footnote() {
+    let input = "[^1]: <https://example.com/article>\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<https://example.com/article>"),
+        "Angle-bracket autolink in footnote should be preserved: got {result:?}"
+    );
+}
+
+// === GAP4: Bare URLs not converted to markdown links ===
+
+#[test]
+fn test_bare_url_not_linkified() {
+    let input = "See https://www.google.com/ for more info.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("https://www.google.com/"),
+        "Bare URL should be present: got {result:?}"
+    );
+    assert!(
+        !result.contains("[https://www.google.com/](https://www.google.com/)"),
+        "Bare URL should NOT be converted to markdown link: got {result:?}"
+    );
+}
+
+// === GAP5: Email addresses not linkified ===
+
+#[test]
+fn test_email_not_linkified() {
+    let input = "Contact user@example.com for details.\n";
+    let result = fmt(input);
+    assert!(result.contains("user@example.com"), "Email should be present: got {result:?}");
+    assert!(
+        !result.contains("[user@example.com](mailto:user@example.com)"),
+        "Email should NOT be converted to mailto link: got {result:?}"
+    );
+}
+
+#[test]
+fn test_angle_bracket_email_preserved() {
+    let input = "Email us at <user@example.com> for help.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<user@example.com>"),
+        "Angle-bracket email should be preserved: got {result:?}"
+    );
+    assert!(
+        !result.contains("[user@example.com](mailto:user@example.com)"),
+        "Should NOT be converted to mailto link: got {result:?}"
+    );
+}
+
+// === GAP9: Extra blank lines between HTML comment blocks and adjacent text ===
+
+#[test]
+fn test_html_comment_no_extra_blank_line_tight() {
+    // When original has no blank line between HTML comment and text,
+    // output should also have no blank line.
+    let input = "<!-- comment -->\nText after comment.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- comment -->\nText after comment."),
+        "No blank line should be inserted after tight HTML comment: got {result:?}"
+    );
+}
+
+#[test]
+fn test_html_comment_preserves_blank_line_when_present() {
+    // When original HAS a blank line between HTML comment and text,
+    // output should preserve it.
+    let input = "<!-- comment -->\n\nText after comment.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- comment -->\n\nText after comment."),
+        "Blank line after HTML comment should be preserved when present: got {result:?}"
+    );
+}
+
+#[test]
+fn test_html_comment_pair_tight_with_text() {
+    // HTML comment pair surrounding text with no blank lines
+    let input = "<!-- start -->\nInner text here.\n<!-- end -->\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- start -->\nInner text here.\n<!-- end -->"),
+        "HTML comment pair should stay tight with enclosed text: got {result:?}"
+    );
+}
+
+// === GAP11: Paragraph before list (tight) ===
+
+#[test]
+fn test_paragraph_then_tight_list() {
+    // Paragraph followed by list with no blank line should stay tight (Python behavior)
+    let input = "**Related Architecture**:\n- [Item one](link) - description\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("**Related Architecture**:\n-"),
+        "Paragraph-list tight transition should have no blank line: got {result:?}"
+    );
+}
+
+// === GAP12: HTML comment after blank line, tight text after ===
+
+#[test]
+fn test_html_comment_after_blank_line_tight_text() {
+    // When there's a blank line BEFORE the comment but NO blank line after,
+    // the text after should remain tight with the comment.
+    let input = "Text before.\n\n<!-- comment -->\nText after.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- comment -->\nText after."),
+        "Text should be tight after HTML comment even when blank line precedes comment: got {result:?}"
+    );
+}
+
+// === GAP13: Blank line before closing HTML comment after list/table ===
+
+#[test]
+fn test_list_then_html_comment_gets_blank_line() {
+    // Python adds a blank line between a list and a following HTML comment
+    // even when original is tight (list output already ends with \n).
+    let input = "<!-- f:field -->\n- Option 1\n- Option 2\n- Option 3\n<!-- /f:field -->\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("- Option 3\n\n<!-- /f:field -->"),
+        "Should have blank line between list and closing HTML comment: got {result:?}"
+    );
+}
+
+#[test]
+fn test_table_then_html_comment_gets_blank_line() {
+    // Python adds a blank line between a table and a following HTML comment
+    let input = "| A | B |\n|---|---|\n| 1 | 2 |\n<!-- end -->\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("| 1 | 2 |\n\n<!-- end -->"),
+        "Should have blank line between table and closing HTML comment: got {result:?}"
+    );
+}
+
+// === GAP8: Sentence breaks after closing paren/quote ===
+
+fn fmt_semantic(input: &str) -> String {
+    fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_sentence_break_after_period_paren() {
+    // `word.)` should be recognized as end of sentence
+    let input = "This is a long sentence that ends with a paren (like you.) Next sentence starts here and keeps going for a while.\n";
+    let result = fmt_semantic(input);
+    assert!(result.contains("you.)\n"), "Should break sentence after .): got {result:?}");
+}
+
+#[test]
+fn test_no_sentence_break_inside_link_paren() {
+    // `[Google](url)."` should NOT be treated as sentence end (false positive from URL)
+    let input = "He worked at [Google](https://en.wikipedia.org/wiki/Google).\" \"The next sentence starts here and keeps going.\n";
+    let result = fmt_semantic(input);
+    assert!(
+        !result.contains("Google).\"\n\"The"),
+        "Should NOT break sentence inside link construct: got {result:?}"
+    );
+}
+
+// === GAP6: Escaped char backslash in code span counted in line width ===
+
+fn fmt_plain(input: &str) -> String {
+    fill_markdown(input, true, 88, false, false, false, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_escaped_char_in_code_span_width() {
+    // The backslash in `\.` inside a code span should count correctly for width.
+    // Escape placeholder substitution should NOT happen inside code spans.
+    // Plain mode (non-semantic) wrapping to demonstrate the width issue.
+    let input = "Backslashes that are NOT CommonMark escape sequences are preserved. Note: `\\.` is a valid CommonMark escape (escaped period).\n";
+    let result = fmt_plain(input);
+    // Python wraps before "valid" (83 chars on first line), Rust should too.
+    let first_line = result.lines().next().expect("non-empty result");
+    assert!(
+        first_line.chars().count() <= 88,
+        "First line should not exceed 88 chars (got {}): {first_line:?}",
+        first_line.chars().count()
+    );
+}
+
+// === GAP10: Typography transforms in footnote bodies ===
+
+fn fmt_auto(input: &str) -> String {
+    fill_markdown(input, true, 88, true, true, true, true, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_smart_quotes_in_footnote_body() {
+    let input = "Text with footnote[^1].\n\n[^1]: He said \"hello\" and she said \"goodbye\".\n";
+    let result = fmt_auto(input);
+    // Smart quotes should be applied inside footnote body
+    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).expect("footnote line");
+    assert!(
+        fn_line.contains('\u{201c}') || fn_line.contains('\u{201d}'),
+        "Smart quotes should be applied in footnote body: got {fn_line:?}"
+    );
+}
+
+#[test]
+fn test_ellipsis_in_footnote_body() {
+    let input = "Text with footnote[^1].\n\n[^1]: This is a long footnote...\n";
+    let result = fmt_auto(input);
+    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).expect("footnote line");
+    assert!(
+        fn_line.contains('\u{2026}'),
+        "Ellipsis should be applied in footnote body: got {fn_line:?}"
+    );
+}

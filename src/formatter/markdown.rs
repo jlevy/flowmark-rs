@@ -1,7 +1,8 @@
-//! Comrak-based Markdown parsing and rendering.
+//! Comrak configuration for Markdown parsing.
 //!
-//! This module handles the core Markdown normalization by parsing with comrak
-//! and rendering back to normalized `CommonMark` format.
+//! Configures comrak options for GFM parsing with Flowmark conventions.
+//! See `filling.rs` module docs for the full list of comrak workarounds
+//! (COMRAK-WORKAROUND1–12) needed to achieve Python/marko parity.
 
 use comrak::Options;
 

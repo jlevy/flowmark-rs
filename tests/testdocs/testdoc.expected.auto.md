@@ -57,6 +57,9 @@ high-stakes decisions for those who give and *receive it*. Blah blah blah and bl
 
 - Additional parameters become options (e.g., `model=gpt-4o`, `language=en`)
 
+[^uptimenote]: In engineering, “counting nines” traditionally refers to *service
+    availability* (uptime)—99.99% uptime means ≤ 52 minutes of downtime per year.
+
 ## Some apostrophes and quotes--and dashes, too
 
 “Hello,” he said! “What’s … your specialty?”
@@ -83,8 +86,8 @@ The stated reason—“I’m working on myself”—may be sincere on one level.
 Cas’ surprise at John’s question hung over them both for a brief moment, like a thinly
 disguised sack of potatoes.
 “From 2002-2004 I specialized in the Sarbanes-Oxley Act (Pub.L. 107–204, 116 Stat.
-745, enacted July 30, 2002), which was known (in the House) as the 'Corporate and
-Auditing Accountability, Responsibility, and Transparency Act' and--” But here he cut
+745, enacted July 30, 2002), which was known (in the House) as the ‘Corporate and
+Auditing Accountability, Responsibility, and Transparency Act’ and--” But here he cut
 her off! And who could blame him?
 He had spoken with the FBI. There was no time to lose.
 
@@ -148,9 +151,9 @@ And $\$420K \div 0.44093$ is $952{,}532$ shares.
 | --- | --- | --- | --- | --- | --- |
 | **Primary scope** | Full REST contract: paths, verbs, auth, servers **plus** data shapes | *Input-only* definition of a function’s parameters for `/chat/completions` `tools=[…]` | Same for `/v1/messages` `tools=[…]`; also used in Claude server-tools | Tool discovery & invocation over JSON-RPC / SSE; adds output contract & rich result types | In-process data validation; can emit JSON-Schema or OpenAPI components |
 | **Where it lives / transport** | `.yaml`/`.json` served over HTTPS or bundled with code | Embedded inside a chat request | Embedded inside a chat request | Separate MCP server; clients list and call tools via `tools/*` RPC methods | Python code emits schema at runtime (`model_json_schema()` or `.schema_json()`) |
-| **JSON-Schema dialect** | Official OAS dialect, built on **draft 2020-12**([spec.openapis.org](https://spec.openapis.org/oas/3.1/dialect/2024-11-10.html "JSON Schema dialect for OpenAPI \| OpenAPI Initiative Publications")) | Fixed **draft 07 subset** (no `$ref` across docs, no `oneOf` of heterogeneous types)([community.openai.com](https://community.openai.com/t/the-assistant-will-never-recognize-a-required-parameter-that-is-of-object-type-in-function-tools/614154?utm_source=chatgpt.com "The Assistant will never recognize a required parameter that is of ..."), [community.openai.com](https://community.openai.com/t/extended-or-minimal-schemas-for-tool-parameters/578636?utm_source=chatgpt.com "Extended or minimal Schemas for tool parameters? - API")) | **draft 2020-12** (full vocabulary)([docs.anthropic.com](https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview "Tool use with Claude - Anthropic")) | **draft 2020-12** for both `inputSchema` & `outputSchema`([modelcontextprotocol.io](https://modelcontextprotocol.io/specification/2025-06-18/server/tools "Tools - Model Context Protocol")) | **draft 2020-12** (and emits OpenAPI 3.1 when asked)([docs.pydantic.dev](https://docs.pydantic.dev/latest/concepts/json_schema/ "JSON Schema - Pydantic")) |
-| **Advanced keywords allowed** (`$ref`, `oneOf`, `allOf`, `format`, …) | All JSON-Schema 2020-12, plus OAS extensions | **Limited** – many validators ignored, `$ref` must stay within the same object | **Allowed** – `$ref`, `enum`, `oneOf`, formats, examples | Fully allowed; additionally supports `annotations` object for T&S metadata | Whatever the target dialect allows; user may disable/enable `$ref` flattening |
-| **Output schema support** | Yes (`components.schemas`, responses) | **No** – output is free-form chat or follow-up `tool` message | **No** (planned) | **Yes** – `outputSchema` field; clients are encouraged to validate results([modelcontextprotocol.io](https://modelcontextprotocol.io/specification/2025-06-18/server/tools "Tools - Model Context Protocol")) | Yes – any Pydantic model’s JSON-Schema can describe outputs |
+| **JSON-Schema dialect** | Official OAS dialect, built on **draft 2020-12**([spec.openapis.org][1]) | Fixed **draft 07 subset** (no `$ref` across docs, no `oneOf` of heterogeneous types)([community.openai.com][2], [community.openai.com][3]) | **draft 2020-12** (full vocabulary)([docs.anthropic.com][4]) | **draft 2020-12** for both `inputSchema` & `outputSchema`([modelcontextprotocol.io][5]) | **draft 2020-12** (and emits OpenAPI 3.1 when asked)([docs.pydantic.dev][6]) |
+| **Advanced keywords allowed** (`$ref`, `oneOf`, `allOf`, `format`, …) | All JSON-Schema 2020-12, plus OAS extensions | **Limited** – many validators ignored, `$ref` must stay within the same object | **Allowed** – `$ref`, `enum`, `oneOf`, formats, examples | Fully allowed; additionally supports `annotations` object for T\&S metadata | Whatever the target dialect allows; user may disable/enable `$ref` flattening |
+| **Output schema support** | Yes (`components.schemas`, responses) | **No** – output is free-form chat or follow-up `tool` message | **No** (planned) | **Yes** – `outputSchema` field; clients are encouraged to validate results([modelcontextprotocol.io][5]) | Yes – any Pydantic model’s JSON-Schema can describe outputs |
 | **Streaming / partial results** | Via HTTP chunked or SSE, not part of schema | Supported in chat streaming but schema is unaffected | `stream:"auto"` yields incremental `tool_use` blocks | Built-in: server can stream intermediate `notifications/tools/*` & progress events | Not applicable (library) |
 | **Runtime validation guarantee** | External validators or server framework (e.g., FastAPI) | **Caller must validate**; model may hallucinate | **Caller must validate** | MCP server **must** validate both inputs & outputs | Core-runtime C/Rust validation; raises `ValidationError` on failure |
 | **Versioning cadence** | IETF-style spec; v3.1 is current | Implicit in OpenAI API releases | Versioned via `anthropic-version` header; schema fields stable | dated revisions (e.g., 2025-06-18) with change log | Semantic-versioned PyPI releases |
@@ -168,6 +171,13 @@ And $\$420K \div 0.44093$ is $952{,}532$ shares.
 * **Pydantic v2** remains the Python “source-of-truth” generator: you can compile the
   **same** model into OpenAPI, plain JSON-Schema, OpenAI-tools, Anthropic-tools, or MCP
   definitions with one line of code.
+
+[1]: https://spec.openapis.org/oas/3.1/dialect/2024-11-10.html "JSON Schema dialect for OpenAPI | OpenAPI Initiative Publications"
+[2]: https://community.openai.com/t/the-assistant-will-never-recognize-a-required-parameter-that-is-of-object-type-in-function-tools/614154?utm_source=chatgpt.com "The Assistant will never recognize a required parameter that is of ..."
+[3]: https://community.openai.com/t/extended-or-minimal-schemas-for-tool-parameters/578636?utm_source=chatgpt.com "Extended or minimal Schemas for tool parameters? - API"
+[4]: https://docs.anthropic.com/en/docs/agents-and-tools/tool-use/overview "Tool use with Claude - Anthropic"
+[5]: https://modelcontextprotocol.io/specification/2025-06-18/server/tools "Tools - Model Context Protocol"
+[6]: https://docs.pydantic.dev/latest/concepts/json_schema/ "JSON Schema - Pydantic"
 
 ## Wrapping tests
 
@@ -337,15 +347,16 @@ eye on.
   vested shares. It’s simple enough to ask, "Does the company have any repurchase right
   to *vested* shares?”
   (Note repurchasing *unvested* shares that were purchased via early exercise is
-  different, and helps you.) If you don’t want to ask, the fair market value repurchase
-  right should be included in the documents you are being asked to sign or acknowledge
-  that you have read and understood.
-  (Skype had a
+  different, and helps you.)
+  If you don’t want to ask, the fair market value repurchase right should be included in
+  the documents you are being asked to sign or acknowledge that you have read and
+  understood. (Skype had a
   [complex](https://www.quora.com/Which-valley-startups-have-a-Skype-like-repurchase-right)
   [controversy](http://www.wac6.com/wac6/2011/07/skypes-employee-stock-option-plan-worthless-only-if-you-quit-before-2014.html)
-  related to repurchasing.) You might find a repurchase right for vested shares in the
-  Stock Plan itself, the Stock Option Agreement, the Exercise Agreement, the bylaws, the
-  certificate of incorporation, or any other stockholder agreement.
+  related to repurchasing.)
+  You might find a repurchase right for vested shares in the Stock Plan itself, the
+  Stock Option Agreement, the Exercise Agreement, the bylaws, the certificate of
+  incorporation, or any other stockholder agreement.
 
 Venture capital firms fund companies-commonly referred to as startups-that have
 ambitious goals of being dominant high-value businesses in their target market
@@ -358,7 +369,6 @@ realize abnormally large returns (200%+).
   [**liquidation preference**](http://www.investopedia.com/terms/l/liquidation-preference.asp),
   meaning the preferred stock owner will be paid before the common stock owners upon
   liquidation.
-
   - [**Liquidation overhang**](https://equityzen.com/blog/startup-valuations-and-liquidation-preference-overhang/)
     can occur when the value of a company just doesn’t reach the number of dollars
     investors put into it.
@@ -385,13 +395,11 @@ realize abnormally large returns (200%+).
   [has evolved](http://www.industryventures.com/2014/12/02/employee-liquidity-good-for-private-companies/)
   [in recent years](https://techcrunch.com/2015/10/14/selling-private-company-shares-2-0/).
   Some companies do see value in offering (mostly limited) opportunities for sale.
-
   - [SharesPost](http://sharespost.com/), [Equidate](https://www.equidateinc.com/), and
     [EquityZen](https://equityzen.com/) have sought to establish a market around
     secondary sales, particularly for well-known pre-IPO companies.
 
 - **NSOs**: You pay full taxes at exercise, and the sale is like any investment gain:
-
   - At grant and vesting:
     - No tax if granted at FMV
   - At exercise:
@@ -402,7 +410,6 @@ realize abnormally large returns (200%+).
     - Ordinary tax otherwise (including immediate sale)
 
 - **ISOs**: You might pay less tax at exercise, but it’s complicated:
-
   - At grant and vesting:
     - No tax if granted at FMV
   - At exercise:
@@ -534,7 +541,6 @@ for managing temporary files and directories.
 Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
 
 * **APIs:**
-
   + mkstemp(3\): Generates a unique filename based on a template (prefixXXXXXX), creates
     the file with 0600 permissions, opens it, and returns a file descriptor.
     It uses O\_EXCL for atomic creation, preventing race conditions.<sup>19</sup> The
@@ -549,7 +555,6 @@ Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
     file descriptors.<sup>59</sup>
 
 * **Recommended Python Approach for Atomic Writes:**
-
   1. **Use a Library:** Employing a dedicated library like atomicwriter or atomicfile is
      generally the most robust approach, as they handle temporary file creation in the
      correct location, atomic renaming (os.replace), and error cleanup across platforms.
@@ -836,12 +841,12 @@ The same is true for links.
 “The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google).”
-"The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
+[Google](https://en.wikipedia.org/wiki/Google).” “The
+[Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google)."
-(The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
+[Google](https://en.wikipedia.org/wiki/Google).” (The
+[Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
 [Google](https://en.wikipedia.org/wiki/Google).) The
@@ -942,16 +947,57 @@ not complaining)[^urbanthowt.wy49lp].
 ❗️️️ Having multiple automatic conversion thresholds can give the investor with a higher
 threshold leverage to block an IPO.[^210]
 
-1. **Initial Scan with -X importtime:** Run the application with python -X importtime...
+1. **Initial Scan with -X importtime:** Run the application with python -X importtime …
    \> import.log. Visualize the output using tuna import.log.<sup>42</sup> Look for
    modules with large *cumulative* times at the top level or deep in the call stack.
    These are the primary candidates for further investigation.<sup>1</sup>
 
+[^2]: Aulet, Bill. *Disciplined Entrepreneurship*: 24 Steps to a Successful Startup (Kindle
+    Location 1220). Wiley, 2013. Kindle Edition.
+
+[^191]: http://paulgraham.com/fr.html
+
+[^177]: Carnegie, Dale. *How To Win Friends and Influence People* (p. 35). Simon & Schuster.
+    Kindle Edition.
+
+[^207]: [https://bostonvcblog.typepad.com/vc/2009/07/in-vc-deals-price-doesnt-matter-but-the-promote-does.html](https://bostonvcblog.typepad.com/vc/2009/07/in-vc-deals-price-doesnt-matter-but-the-promote-does.html)
+
+[^210]: FM16, p. 80
+
 Links like these underline ones come up from some exports.
 And let’s try some links with angle brackets.
 
-And by contrast here a bare link is like this
-[https://www.google.com/](https://www.google.com/)
+[^52]: [[https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com]{.underline}](https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com)
+
+[^53]: <https://www.fastcompany.com/90216464/the-29-billion-battle-to-own-how-america-sleeps>
+
+[^axioscomth.1lioru]: <https://www.axios.com/the-rise-of-pre-seed-venture-capital-1513305959-13da61c8-15f8-441e-b016-d29902bff8bf.html>
+
+[^carnegieda.327r3k]: Carnegie, Dale. *How To Win Friends and Influence People* (p. 35). Simon & Schuster.
+    Kindle Edition.
+
+[^53]: <https://www.fastcompany.com/90216464/the-29-billion-battle-to-own-how-america-sleeps>
+
+[^217]: Testing - : Is Ketamine Contraindicated in Patients with Psychiatric Disorders?
+    - REBEL EM - more words - accessed April 24, 2025,
+      <https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/>
+
+[^multiline]: The distinction between “hiring” and “recruiting” isn’t universally agreed
+    upon. Some people think of hiring as a superset of recruiting, some consider it to be
+    the other way around.
+    However you think of it, both recruiting and hiring involve selling candidates on
+    the value proposition of a company and ensuring the alignment of interests between
+    the two parties.
+
+[^multiparagraph]: This is an even longer footnote …
+
+    Paragraph 1.
+
+    > And even a block quote.
+
+    Paragraph 3.
+
+And by contrast here a bare link is like this https://www.google.com/
 
 ## Some other stuff
 
@@ -982,7 +1028,6 @@ valuation, shares, fundraising, and dilution
   [Pricing](https://aws.amazon.com/cloudwatch/pricing/) - 🔹Blahxxx - ❗Blahxxx
 
 **Related Architecture**:
-
 - [arch-execution.md](../architecture/arch-execution.md) - Execution model context
 
 ## Corner Cases
@@ -1381,10 +1426,8 @@ It should remain on separate lines after the tag.
 {% /description %}
 
 <!-- f:description ref="example" -->
-
 HTML comment opening tag should also preserve newlines.
 Content should start on a new line.
-
 <!-- /f:description -->
 
 ### Issue 2: Closing Tags After Lists
@@ -1411,7 +1454,7 @@ Closing tags should NOT be merged onto list item lines:
 
 Empty fields with paired tags on the same line should stay together:
 
-{% field kind="string" id="email" label="Email" required=true placeholder="[email@example.com](mailto:email@example.com)" %}{% /field %}
+{% field kind="string" id="email" label="Email" required=true placeholder="email@example.com" %}{% /field %}
 
 <!-- f:field kind="string" id="name" --><!-- /f:field -->
 
@@ -1520,10 +1563,8 @@ Just plain paragraph text that wraps normally.
 {% /note %}
 
 <!-- f:warning -->
-
 This warning contains only paragraph text.
 No block elements here, so no extra blank lines needed.
-
 <!-- /f:warning -->
 
 {% tip title="Helpful Tip" %}
@@ -1691,11 +1732,3 @@ She read “the [documentation](https://example.com) first.”
 ## Summary
 
 All these corner cases should format consistently and predictably.
-
-[^191]: [http://paulgraham.com/fr.html](http://paulgraham.com/fr.html)
-
-[^177]: Carnegie, Dale. *How To Win Friends and Influence People* (p. 35). Simon & Schuster.
-    Kindle Edition.
-
-[^210]: FM16, p. 80
-
