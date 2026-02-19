@@ -133,7 +133,8 @@ fn is_tag_only_line(line: &str) -> bool {
     starts_tag && ends_tag
 }
 
-/// Preprocess text to ensure proper blank lines around block content within tags.
+/// COMRAK-WORKAROUND6: Preprocess text to ensure proper blank lines around block
+/// content within Jinja/Markdoc/HTML tags. See `filling.rs` module docs.
 pub fn preprocess_tag_block_spacing(text: &str) -> String {
     let lines: Vec<&str> = text.split('\n').collect();
 

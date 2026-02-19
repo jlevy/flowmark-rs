@@ -6,6 +6,191 @@
 //!
 //! Ported from Python: `flowmark/linewrapping/markdown_filling.py` and
 //! parts of `flowmark/formats/flowmark_markdown.py`
+//!
+//! # Comrak workarounds
+//!
+//! Comrak is a CommonMark/GFM parser written in Rust. It differs from
+//! Python's marko parser in several ways that required workarounds to
+//! achieve output parity. This section documents every workaround,
+//! organized by pipeline stage.
+//!
+//! If a comrak fork or upstream fix addresses any of these, the
+//! corresponding workaround can be simplified or removed. Each
+//! workaround is tagged with a `COMRAK-WORKAROUNDn` label that appears
+//! in the code near the relevant implementation.
+//!
+//! ## PUA character encoding scheme
+//!
+//! Several workarounds use Unicode Private Use Area (PUA) characters as
+//! sentinel markers that survive comrak's AST construction and rendering
+//! without colliding with user content.
+//!
+//! | Char       | Const               | Purpose                                  |
+//! |------------|---------------------|------------------------------------------|
+//! | `U+F000`   | `REF_LABEL_START`   | Start of ref-link label in encoded URL   |
+//! | `U+F001`   | `REF_LABEL_SEP`     | End of ref-link label in encoded URL     |
+//! | `U+F002`   | (in markers)        | FNDEF/REFDEF HTML comment sentinel       |
+//! | `U+F003`   | `AUTOLINK_OPEN`     | Autolink `<` replacement                 |
+//! | `U+F004`   | `AUTOLINK_CLOSE`    | Autolink `>` replacement                 |
+//! | `U+E0xx`   | (computed)          | Escape placeholder for `\x` (xx = ASCII) |
+//!
+//! ## Pre-parse workarounds (input → comrak)
+//!
+//! ### COMRAK-WORKAROUND1: Reference link preservation
+//!
+//! **Problem:** Comrak resolves `[text][label]` reference links during
+//! AST construction, replacing them with inline `[text](url)` links.
+//! The original label is lost, making round-tripping impossible.
+//!
+//! **Fix:** Before parsing, extract `[label]: url` definitions and
+//! replace `[text][label]` with `[text](\u{F000}label\u{F001})`.
+//! During rendering, detect the PUA prefix and emit `[text][label]`.
+//! Definitions are stashed as REFDEF HTML comment markers (see W3).
+//!
+//! **Functions:** `extract_link_ref_defs`, `encode_ref_links`
+//!
+//! ### COMRAK-WORKAROUND2: Footnote definition preservation
+//!
+//! **Problem:** Comrak moves all `FootnoteDefinition` nodes to the end
+//! of the AST regardless of their source position, and silently drops
+//! any definitions that are not referenced in the document body.
+//!
+//! **Fix:** Extract footnote definitions before parsing and wrap them
+//! in HTML comment markers (`<!-- \u{F002}FNDEF\n...\n-->`). Comrak
+//! preserves these as `HtmlBlock` nodes at their original positions.
+//! During rendering, detect FNDEF markers and re-emit the footnote
+//! definitions with proper formatting and line wrapping.
+//!
+//! **Functions:** `extract_footnote_defs`
+//!
+//! ### COMRAK-WORKAROUND3: Autolink angle bracket preservation
+//!
+//! **Problem:** Comrak's autolink extension converts both `<url>` and
+//! bare `url` to identical `Link` nodes, losing the angle brackets.
+//! After rendering, there is no way to distinguish `<url>` from `url`.
+//!
+//! **Fix:** Replace `<url>` with `\u{F003}url\u{F004}` before parsing.
+//! During rendering, autolinks are detected (text == url) and rendered
+//! as bare text. After rendering, PUA markers are restored to `<url>`.
+//!
+//! **Functions:** `protect_autolinks`, `restore_autolinks`
+//!
+//! ### COMRAK-WORKAROUND4: Backslash escape preservation
+//!
+//! **Problem:** Comrak strips backslash escapes in the AST (e.g.,
+//! `\~` becomes `~`, `\*` becomes `*`). This loses intentional escapes
+//! the author placed in the source.
+//!
+//! **Fix:** Replace each `\x` with a PUA placeholder (`U+E000` +
+//! ASCII code of `x`) before parsing. After rendering, restore the
+//! original `\x` sequences. Replacements skip code fences and inline
+//! code spans where backslashes are literal.
+//!
+//! **Functions:** `protect_escapes_outside_code`, `replace_outside_code_spans`
+//!
+//! ### COMRAK-WORKAROUND5: Typography in footnote bodies
+//!
+//! **Problem:** FNDEF markers (from W2) become `HtmlBlock` nodes in
+//! the AST. The AST-level typography transforms (smart quotes,
+//! ellipses) only process `Paragraph`/`Text` nodes, so footnote
+//! body text is skipped.
+//!
+//! **Fix:** Apply typography transforms to the raw text inside FNDEF
+//! markers before comrak parsing.
+//!
+//! **Functions:** `apply_typography_to_fndef_bodies`
+//!
+//! ### COMRAK-WORKAROUND6: Tag block spacing
+//!
+//! **Problem:** Jinja/Markdoc/HTML tag-only lines adjacent to block
+//! content may not be recognized as block-level elements by comrak
+//! without intervening blank lines.
+//!
+//! **Fix:** Insert blank lines between tag-only lines and adjacent
+//! block content before parsing.
+//!
+//! **Functions:** `preprocess_tag_block_spacing` (in `wrapping::tag_handling`)
+//!
+//! ## Post-parse workarounds (comrak AST → output)
+//!
+//! ### COMRAK-WORKAROUND7: Block spacing and sourcepos inaccuracies
+//!
+//! **Problem:** Comrak's sourcepos for `List`/`Item` nodes includes
+//! trailing blank lines, and `HtmlBlock` type 2 can report
+//! `end.line < start.line`. This makes it impossible to reliably
+//! detect whether blocks were originally separated by blank lines.
+//!
+//! **Fix:** `last_content_line()` recursively descends into `List` and
+//! `Item` nodes to find the true content end line.
+//!
+//! **Functions:** `last_content_line`
+//!
+//! ### COMRAK-WORKAROUND8: HTML comment spacing rules
+//!
+//! **Problem:** Comrak's default block separation inserts blank lines
+//! around all block elements, but Python/marko preserves tight spacing
+//! around HTML comments and between paragraph→list transitions.
+//!
+//! **Fix:** In `render_block_children`, three spacing rules suppress
+//! blank lines for specific tight transitions:
+//! - Rule 1: HTML comment → any block (tight): suppress
+//! - Rule 2: Any block → HTML comment (tight): suppress, unless
+//!   previous was list/table
+//! - Rule 3: Paragraph → list (tight): suppress
+//!
+//! **Functions:** `render_block_children` (spacing logic)
+//!
+//! ### COMRAK-WORKAROUND9: Footnote list item rendering
+//!
+//! **Problem:** Comrak treats `- item` at footnote continuation indent
+//! as paragraph continuation text (per CommonMark's rule that bullet
+//! lists cannot interrupt paragraphs). Python/marko treats it as a
+//! list item within the footnote, rendering continuation lines with
+//! 6-space indent (4 footnote + 2 list) instead of 4.
+//!
+//! **Fix:** In FNDEF rendering, detect body lines starting with list
+//! markers (`- `, `* `, `+ `) and render them with proper list item
+//! indentation (6-space subsequent indent).
+//!
+//! **Functions:** FNDEF rendering in `render_block` (`HtmlBlock` handler)
+//!
+//! ### COMRAK-WORKAROUND10: List looseness over-application
+//!
+//! **Problem:** Comrak marks an entire list as "loose" when *any*
+//! sibling pair has a blank line between them. Python/marko only
+//! inserts blank lines where the author explicitly wrote them.
+//!
+//! **Fix:** In list item rendering, use source positions to check
+//! whether blank lines were actually present in the original between
+//! specific children, rather than relying on the list's `loose` flag.
+//!
+//! **Functions:** list rendering in `render_block` (`Item` handler)
+//!
+//! ## Post-render normalizations
+//!
+//! ### COMRAK-WORKAROUND11: Period escape cleanup
+//!
+//! **Problem:** After restoring escape placeholders, `\.` escapes
+//! appear throughout the text. Most are unnecessary — they are only
+//! needed at line starts where `DIGITS\.` would trigger ordered list
+//! interpretation.
+//!
+//! **Fix:** Remove `\.` escapes except at list-triggering positions.
+//!
+//! **Functions:** `postprocess_period_escapes`
+//!
+//! ### COMRAK-WORKAROUND12: Output normalization
+//!
+//! **Problem:** Comrak's rendering produces minor formatting
+//! differences from Python/marko: trailing whitespace on blank lines,
+//! space between code fence and language identifier, two spaces after
+//! numbered list periods, multiple consecutive blank lines.
+//!
+//! **Fix:** Four normalization passes clean up these differences.
+//!
+//! **Functions:** `normalize_comrak_output` (`normalize_blank_lines`,
+//! `normalize_code_fences`, `normalize_numbered_lists`,
+//! `collapse_blank_lines_outside_code`)
 
 use regex::Regex;
 use std::collections::HashSet;
@@ -25,18 +210,14 @@ use crate::wrapping::LineWrapper;
 use crate::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
 use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
 
-// ===== PUA markers for reference link preservation =====
+// ===== PUA (Private Use Area) markers =====
 //
-// Comrak resolves reference-style links during AST construction, losing the
-// reference label.  We preserve them through the pipeline by:
-// 1. Pre-parse: extract definitions, replace `[text][label]` with inline links
-//    whose URL is PUA-encoded as `\u{F000}label\u{F001}` (label only, no real URL)
-// 2. Render: detect PUA prefix in link URLs and emit `[text][label]`
-// 3. Post-process: re-insert definitions at their original positions
+// See module-level docs for the full PUA encoding scheme and the
+// COMRAK-WORKAROUND entries that use each marker.
 
-/// PUA marker: start of reference label in URL.
+/// COMRAK-WORKAROUND1: start of reference label in PUA-encoded URL.
 const REF_LABEL_START: char = '\u{F000}';
-/// PUA marker: separator between reference label and real URL.
+/// COMRAK-WORKAROUND1: end/separator of reference label in PUA-encoded URL.
 const REF_LABEL_SEP: char = '\u{F001}';
 
 /// Regex for link reference definitions: `[label]: url` or `[label]: url "title"`
@@ -56,7 +237,7 @@ static FULL_REF_LINK: LazyLock<Regex> =
 static COLLAPSED_REF_LINK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\[\]").expect("valid COLLAPSED_REF_LINK regex"));
 
-// ===== Regex patterns for normalization =====
+// ===== COMRAK-WORKAROUND12: Output normalization =====
 
 /// Pattern for blank lines with trailing whitespace.
 static BLANK_LINE_WS: LazyLock<Regex> =
@@ -101,7 +282,7 @@ fn normalize_numbered_lists(text: &str) -> String {
     result
 }
 
-/// Apply all text-level normalizations to comrak output.
+/// COMRAK-WORKAROUND12: Apply all text-level normalizations to comrak output.
 fn normalize_comrak_output(text: &str) -> String {
     let text = normalize_blank_lines(text);
     let text = normalize_code_fences(&text);
@@ -210,22 +391,19 @@ fn collapse_blank_lines_outside_code(text: &str) -> String {
     output
 }
 
-/// PUA characters for autolink placeholder boundaries.
-/// We wrap `<url>` as `\u{F003}url\u{F004}` to prevent comrak from parsing it
-/// as an autolink. After rendering, we restore angle brackets.
+/// COMRAK-WORKAROUND3: PUA replacement for `<` in autolinks.
 const AUTOLINK_OPEN: char = '\u{F003}';
+/// COMRAK-WORKAROUND3: PUA replacement for `>` in autolinks.
 const AUTOLINK_CLOSE: char = '\u{F004}';
 
-/// Regex for angle-bracket autolinks: `<scheme://...>` or `<email@host>`.
-/// Matches URLs with scheme or email addresses wrapped in angle brackets.
+/// COMRAK-WORKAROUND3: Regex for angle-bracket autolinks: `<scheme://...>` or `<email@host>`.
 static ANGLE_AUTOLINK_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"<((?:https?|ftp|mailto):[^\s>]+|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})>")
         .expect("valid ANGLE_AUTOLINK_RE regex")
 });
 
-/// Extract angle-bracket autolinks and replace with PUA-wrapped text.
-/// This prevents comrak from parsing them, so they survive round-tripping.
-/// Skips content inside code fences and FNDEF/REFDEF HTML comment markers.
+/// COMRAK-WORKAROUND3: Replace `<url>` with PUA-wrapped text so comrak cannot
+/// merge them with bare-URL autolinks. Skips code fences and FNDEF/REFDEF markers.
 fn protect_autolinks(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
     let had_trailing_newline = text.ends_with('\n');
@@ -277,7 +455,7 @@ fn protect_autolinks(text: &str) -> String {
     output
 }
 
-/// Restore PUA-wrapped autolinks back to angle-bracket form.
+/// COMRAK-WORKAROUND3: Restore PUA-wrapped autolinks back to angle-bracket form.
 fn restore_autolinks(text: &str) -> String {
     let mut result = String::with_capacity(text.len());
     let mut chars = text.chars().peekable();
@@ -301,10 +479,10 @@ fn restore_autolinks(text: &str) -> String {
     result
 }
 
-/// HTML comment marker prefix for reference definition placeholders.
+/// COMRAK-WORKAROUND1: HTML comment marker for reference definition placeholders.
 /// The full definition text is encoded after the prefix so the render step
 /// can emit it without needing external context.
-/// Uses a PUA character (\u{F002}) to prevent collision with user-authored HTML comments.
+/// Uses PUA character `\u{F002}` to prevent collision with user-authored HTML comments.
 const REFDEF_MARKER_PREFIX: &str = "<!-- \u{F002}REFDEF:";
 
 /// Regex for footnote definition start: `[^label]: content`
@@ -312,10 +490,10 @@ static FOOTNOTE_DEF_START: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[ \t]{0,3}\[\^([^\]]+)\]:[ \t]+").expect("valid FOOTNOTE_DEF_START regex")
 });
 
-/// Extract link reference definitions from source text (outside code fences).
-/// Returns the set of lowercase labels and the text with definitions replaced by
-/// HTML comment markers.  These markers survive comrak parsing as `HtmlBlock` nodes,
-/// preserving the original position of each definition in the AST.
+/// COMRAK-WORKAROUND1: Extract link reference definitions from source text (outside
+/// code fences). Returns the set of lowercase labels and the text with definitions
+/// replaced by HTML comment markers. These markers survive comrak parsing as
+/// `HtmlBlock` nodes, preserving the original position of each definition in the AST.
 fn extract_link_ref_defs(text: &str) -> (HashSet<String>, String) {
     let mut labels: HashSet<String> = HashSet::new();
     let result = transform_outside_code_fences(text, |line| {
@@ -334,18 +512,16 @@ fn extract_link_ref_defs(text: &str) -> (HashSet<String>, String) {
     (labels, result)
 }
 
-/// HTML comment marker prefix for footnote definition placeholders.
+/// COMRAK-WORKAROUND2: HTML comment marker for footnote definition placeholders.
 /// Multi-line: `<!-- \u{F002}FNDEF\n[^label]: content\ncontinuation\n-->`
 /// Comrak preserves these as `HtmlBlock` nodes at their original positions.
-/// Uses a PUA character (\u{F002}) to prevent collision with user-authored HTML comments.
+/// Uses PUA character `\u{F002}` to prevent collision with user-authored HTML comments.
 const FNDEF_MARKER_START: &str = "<!-- \u{F002}FNDEF";
 
-/// Extract footnote definitions from source text (outside code fences).
-/// Replaces each definition with an HTML comment marker that comrak will
-/// preserve as an `HtmlBlock` at the original position.
-///
-/// Without this, comrak moves referenced footnotes to the end of the AST
-/// and completely drops unreferenced ones.
+/// COMRAK-WORKAROUND2: Extract footnote definitions from source text (outside code
+/// fences). Replaces each definition with an HTML comment marker that comrak will
+/// preserve as an `HtmlBlock` at the original position. Without this, comrak moves
+/// referenced footnotes to the end of the AST and drops unreferenced ones.
 fn extract_footnote_defs(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
     let had_trailing_newline = text.ends_with('\n');
@@ -428,11 +604,10 @@ where
     }
 }
 
-/// Encodes ONLY the label in the URL: `[text][label]` → `[text](\u{F000}label\u{F001})`
-/// This avoids expanding the real URL/title into the text, which would break table
-/// cells (titles containing `|`) and other contexts.  The real URL is not needed
-/// during comrak parsing — we only need the label to survive so we can emit
-/// `[text][label]` in the render step.
+/// COMRAK-WORKAROUND1: Encode reference link labels in PUA markers.
+/// `[text][label]` → `[text](\u{F000}label\u{F001})`. Only the label is encoded
+/// (not the real URL), avoiding breakage in table cells where titles contain `|`.
+/// During rendering, the PUA prefix is detected and `[text][label]` is re-emitted.
 fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
     if labels.is_empty() {
         return text.to_string();
@@ -464,9 +639,9 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
     })
 }
 
-/// Apply typography transforms (smart quotes, ellipsis) to footnote definition bodies
-/// inside FNDEF HTML comment markers. These markers become HtmlBlock nodes in the
-/// comrak AST, which the AST-level typography transforms skip.
+/// COMRAK-WORKAROUND5: Apply typography transforms (smart quotes, ellipsis) to
+/// footnote definition bodies inside FNDEF HTML comment markers. These markers become
+/// HtmlBlock nodes in the comrak AST, which the AST-level typography transforms skip.
 fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipses: bool) -> String {
     let mut result = String::new();
     let mut remaining = text.as_bytes();
@@ -528,9 +703,9 @@ fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipse
 static INLINE_CODE_SPAN_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"``[^`]+``|`[^`]+`").expect("valid INLINE_CODE_SPAN_RE regex"));
 
-/// Replace escaped characters with placeholders, but only outside fenced code blocks
-/// AND outside inline code spans. This prevents comrak from stripping backslash escapes
-/// during parsing, while preserving literal backslashes inside code spans (where they
+/// COMRAK-WORKAROUND4: Replace `\x` escapes with PUA placeholders, but only outside
+/// fenced code blocks AND inline code spans. Prevents comrak from stripping backslash
+/// escapes during parsing, while preserving literal backslashes inside code (where they
 /// are not CommonMark escape sequences).
 fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
     transform_outside_code_fences(text, |line| {
@@ -539,7 +714,7 @@ fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -
     })
 }
 
-/// Apply escape replacements only to text OUTSIDE inline code spans.
+/// COMRAK-WORKAROUND4: Apply escape replacements only to text OUTSIDE inline code spans.
 fn replace_outside_code_spans(line: &str, placeholders: &[(String, String)]) -> String {
     // Temporarily hide escaped backticks so the code span regex doesn't treat
     // them as code span delimiters (e.g., `\`text\`` is not a code span).
@@ -603,10 +778,10 @@ fn replace_outside_code_spans(line: &str, placeholders: &[(String, String)]) -> 
     result
 }
 
-/// Remove unnecessary period escapes from the formatted output.
-/// Period escapes (\.) are only needed at the start of a line where
-/// `DIGITS\.` would be interpreted as an ordered list marker.
-/// In headings and mid-paragraph, period escapes are unnecessary.
+/// COMRAK-WORKAROUND11: Remove unnecessary period escapes from the formatted output.
+/// Period escapes (`\.`) are only needed at the start of a line where `DIGITS\.`
+/// would be interpreted as an ordered list marker. In headings and mid-paragraph,
+/// period escapes are unnecessary.
 /// Preserves content inside code spans (backtick-delimited) and fenced code blocks.
 fn postprocess_period_escapes(text: &str) -> String {
     transform_outside_code_fences(text, |line| {
@@ -696,8 +871,8 @@ fn remove_period_escapes_preserving_code(line: &str) -> String {
     result
 }
 
-/// Get the last actual content line for a node, compensating for comrak's
-/// tendency to include trailing blank lines in List/Item sourcepos.
+/// COMRAK-WORKAROUND7: Get the last actual content line for a node, compensating
+/// for comrak's tendency to include trailing blank lines in List/Item sourcepos.
 /// For List nodes, recurses to the last Item's last child to find the true
 /// content end line. For other nodes, uses sourcepos directly.
 fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
@@ -754,9 +929,9 @@ fn inline_ends_with_hard_break<'a>(node: &'a AstNode<'a>) -> bool {
     false
 }
 
-/// Check if a node is a standalone HTML comment (single-line `<!-- ... -->`).
-/// These should not force blank line separators when adjacent to other blocks,
-/// matching Python's behavior of preserving tight spacing around HTML comments.
+/// COMRAK-WORKAROUND8: Check if a node is a standalone HTML comment
+/// (`<!-- ... -->`). These should not force blank line separators when adjacent
+/// to other blocks, matching Python's tight spacing around HTML comments.
 fn is_html_comment_only(node: &AstNode) -> bool {
     if let NodeValue::HtmlBlock(html) = &node.data.borrow().value {
         let trimmed = html.literal.trim();
@@ -770,10 +945,9 @@ fn is_html_comment_only(node: &AstNode) -> bool {
     }
 }
 
-/// Check if a node is an HTML block containing a REFDEF or FNDEF marker.
-/// Check if a node is a REFDEF marker (link reference definition).
-/// Consecutive refdefs are grouped tightly (no blank line between them).
-/// Footnote definition markers (FNDEF) are NOT included here because
+/// COMRAK-WORKAROUND1: Check if a node is a REFDEF marker (link reference
+/// definition). Consecutive refdefs are grouped tightly (no blank line between
+/// them). Footnote definition markers (FNDEF) are NOT included here because
 /// Python separates consecutive footnote defs with blank lines.
 fn is_refdef_marker(node: &AstNode) -> bool {
     if let NodeValue::HtmlBlock(html) = &node.data.borrow().value {
@@ -814,22 +988,23 @@ fn render_block_children<'a>(
             matches!(child.data.borrow().value, NodeValue::Heading(_))
                 && inline_ends_with_hard_break(child);
 
-        // Use source positions to detect whether blocks were originally separated
-        // by a blank line. Uses last_content_line() to get the true end of content
-        // (compensating for comrak's List/Item nodes including trailing blank lines
-        // and HtmlBlock type 2 reporting end.line < start.line).
+        // COMRAK-WORKAROUND7: Use source positions to detect whether blocks were
+        // originally separated by a blank line. Uses last_content_line() to get the
+        // true end of content (compensating for comrak's List/Item nodes including
+        // trailing blank lines and HtmlBlock type 2 reporting end.line < start.line).
         let child_source_start = child.data.borrow().sourcepos.start.line;
         let child_source_end = last_content_line(child);
         let originally_tight =
             prev_source_end_line > 0 && child_source_start <= prev_source_end_line + 1;
 
-        // Determine whether to suppress the blank line separator between blocks.
-        // Python's behavior for tight block transitions:
+        // COMRAK-WORKAROUND8: Suppress blank line separator between blocks for
+        // specific tight transitions matching Python/marko behavior:
         //
-        // 1. HTML comment → any block (tight): suppress separator
-        // 2. Any block → HTML comment (tight): suppress, UNLESS prev is list/table
-        //    (GAP13: lists/tables always get a blank line before a following HTML comment)
-        // 3. Paragraph → list (tight): suppress separator (GAP11)
+        // Rule 1: HTML comment → any block (tight): suppress separator
+        // Rule 2: Any block → HTML comment (tight): suppress, UNLESS prev is
+        //         list/table (lists/tables always get a blank line before a
+        //         following HTML comment)
+        // Rule 3: Paragraph → list (tight): suppress separator
         //
         // All other block pairs get the standard blank line separator.
         let suppress_for_tight = if originally_tight {
@@ -1108,7 +1283,7 @@ fn render_block<'a>(
             let literal = &html.literal;
             let trimmed = literal.trim();
 
-            // Check for reference definition marker: <!-- REFDEF:original_def_text -->
+            // COMRAK-WORKAROUND1: Re-emit reference definition from REFDEF marker.
             if let Some(rest) = trimmed.strip_prefix(REFDEF_MARKER_PREFIX) {
                 if let Some(def_text) = rest.strip_suffix("-->") {
                     let def_text = def_text.trim();
@@ -1117,7 +1292,8 @@ fn render_block<'a>(
                 }
             }
 
-            // Check for footnote definition marker: <!-- FNDEF\n[^label]: content\n-->
+            // COMRAK-WORKAROUND2 + COMRAK-WORKAROUND9: Re-emit footnote definition
+            // from FNDEF marker, with list item detection for proper indentation.
             if trimmed.starts_with(FNDEF_MARKER_START) {
                 // Extract content between first line and closing -->
                 if let Some(first_nl) = literal.find('\n') {
@@ -1197,8 +1373,8 @@ fn render_block<'a>(
                                 }
                             } else {
                                 // Single-paragraph footnote.
-                                // Check for embedded list items: lines starting with
-                                // `- `, `* `, or `+ ` are list items within the footnote.
+                                // COMRAK-WORKAROUND9: Detect embedded list items
+                                // (lines starting with `- `, `* `, or `+ `).
                                 // Python/marko treats these as list blocks, rendering
                                 // continuation lines with 2 extra spaces of indent.
                                 let list_start_idx = body_lines.iter().skip(1).position(|l| {
@@ -1468,11 +1644,11 @@ fn render_list_item<'a>(
                     false
                 };
 
-            // In Preserve mode, don't add a blank line before a nested list
-            // unless the original source had one.  Comrak marks the whole
-            // parent list as loose when *any* sibling pair has a blank line,
-            // which would insert blanks inside every item.  Python/Marko only
-            // inserts the blank when the author actually wrote one.
+            // COMRAK-WORKAROUND10: In Preserve mode, don't add a blank line before
+            // a nested list unless the original source had one. Comrak marks
+            // the whole parent list as loose when *any* sibling pair has a blank
+            // line, which would insert blanks inside every item. Python/marko
+            // only inserts the blank when the author actually wrote one.
             let suppress_nested_blank = if matches!(child.data.borrow().value, NodeValue::List(_))
                 && !parent_is_tight
                 && list_spacing == ListSpacing::Preserve
@@ -1566,7 +1742,7 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
 
         NodeValue::Link(link) => {
             let inner = render_inline_children(node, options, in_heading);
-            // Detect PUA-encoded reference link: URL starts with REF_LABEL_START
+            // COMRAK-WORKAROUND1: Detect PUA-encoded reference link.
             if link.url.starts_with(REF_LABEL_START) {
                 if let Some(sep_pos) = link.url.find(REF_LABEL_SEP) {
                     let label = &link.url[REF_LABEL_START.len_utf8()..sep_pos];
@@ -1582,10 +1758,9 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
                     format!("[{inner}]({url}{title})")
                 }
             } else if link.title.is_empty() && is_autolink(node, link) {
-                // Autolink: inner text matches URL — render as bare text.
-                // Angle-bracket autolinks (<url>) are protected by PUA markers
-                // during preprocessing and restored during postprocessing,
-                // so any autolinks reaching this point were bare in the source.
+                // COMRAK-WORKAROUND3: Autolink rendering — inner text matches URL,
+                // render as bare text. Angle-bracket autolinks were protected by
+                // PUA markers and are restored during postprocessing.
                 inner.to_string()
             } else {
                 let title = if link.title.is_empty() {
@@ -1731,11 +1906,9 @@ pub fn fill_markdown(
     line_wrapper: Option<LineWrapper>,
     list_spacing: ListSpacing,
 ) -> String {
-    // Escaped characters to protect from comrak stripping.
-    // comrak strips backslash escapes (e.g., \~ → ~, \* → *) in the AST for most chars.
-    // We use Unicode Private Use Area placeholders to preserve escapes through the pipeline.
+    // COMRAK-WORKAROUND4: Escaped characters to protect from comrak stripping.
+    // Comrak strips backslash escapes (e.g., \~ → ~, \* → *) in the AST.
     // IMPORTANT: \\ must be first so \\X doesn't get partially matched as \X.
-    // Period (.) IS included: comrak converts `1\.` to list items, losing the escape.
     // All 32 CommonMark-escapable ASCII punctuation characters.
     // See https://spec.commonmark.org/0.31.2/#backslash-escapes
     const ESCAPE_CHARS: &[char] = &[
@@ -1763,57 +1936,49 @@ pub fn fill_markdown(
     text = text.trim().to_string();
     text.push('\n');
 
-    // Preprocess: ensure proper blank lines around block content within tags
+    // === Pre-parse workarounds (see module-level COMRAK-WORKAROUND docs) ===
+
+    // COMRAK-WORKAROUND6: Ensure proper blank lines around block content within tags.
     text = preprocess_tag_block_spacing(&text);
 
-    // Extract link reference definitions and encode reference links with PUA markers
-    // (must happen before escape placeholder substitution, which would mangle `\[` etc.)
+    // COMRAK-WORKAROUND1: Extract link reference definitions and encode reference
+    // links with PUA markers. Must happen before escape placeholder substitution,
+    // which would mangle `\[` etc.
     let (ref_labels, text_without_defs) = extract_link_ref_defs(&text);
     text = encode_ref_links(&text_without_defs, &ref_labels);
 
-    // Extract footnote definitions and replace with HTML comment markers.
-    // Comrak moves FootnoteDefinition nodes to the end of the AST and drops
-    // unreferenced ones entirely.  By extracting definitions before comrak
-    // and replacing them with FNDEF markers (preserved as HtmlBlock nodes),
-    // we keep definitions at their original positions.
+    // COMRAK-WORKAROUND2: Extract footnote definitions and replace with FNDEF
+    // HTML comment markers (preserved as HtmlBlock nodes at original positions).
     text = extract_footnote_defs(&text);
 
-    // Apply typography transforms to footnote definition bodies inside FNDEF markers.
-    // These markers become HtmlBlock nodes in the comrak AST, so the AST-level
-    // typography transforms (which only process Paragraph/Text nodes) skip them.
+    // COMRAK-WORKAROUND5: Apply typography transforms to footnote definition bodies
+    // inside FNDEF markers (which become HtmlBlock nodes that AST transforms skip).
     if smartquotes || ellipses {
         text = apply_typography_to_fndef_bodies(&text, smartquotes, ellipses);
     }
 
-    // Protect angle-bracket autolinks from comrak parsing.
-    // Comrak's autolink extension converts both <url> and bare url to Link nodes,
-    // making it impossible to distinguish them later. By replacing <url> with
-    // PUA-marked text, we preserve the angle brackets for round-tripping.
+    // COMRAK-WORKAROUND3: Protect angle-bracket autolinks from comrak parsing.
     text = protect_autolinks(&text);
 
+    // COMRAK-WORKAROUND4: Replace `\x` escape sequences with PUA placeholders.
     let mut escape_placeholders: Vec<(String, String)> = Vec::new();
     for &ch in ESCAPE_CHARS {
         let escaped = format!("\\{ch}");
-        // Use a single PUA character per escape char for consistent width measurement.
-        // Map to U+E000 + ASCII code point of the escaped character.
         let placeholder =
             char::from_u32(0xE000 + ch as u32).expect("valid PUA code point").to_string();
         escape_placeholders.push((escaped, placeholder));
     }
-    // Apply replacements, but skip inside fenced code blocks
     text = protect_escapes_outside_code(&text, &escape_placeholders);
 
-    // Parse with comrak
+    // === Parse with comrak ===
     let arena = Arena::new();
     let options = flowmark_comrak_options();
     let root = comrak::parse_document(&arena, &text, &options);
 
-    // Apply cleanups if enabled
+    // === AST transforms (not comrak workarounds) ===
     if cleanups {
         doc_cleanups(root);
     }
-
-    // Apply typography transforms
     if smartquotes {
         apply_smart_quotes_to_ast(root);
     }
@@ -1821,24 +1986,26 @@ pub fn fill_markdown(
         apply_ellipses_to_ast(root);
     }
 
-    // Render the AST to normalized markdown
+    // === Render AST to markdown ===
+    // COMRAK-WORKAROUND1/2/3/7/8/9/10 all apply during rendering (see render_block).
     let mut in_heading = false;
-
     let result = render_block(root, &line_wrapper, list_spacing, "", "", &mut in_heading, &options);
 
-    // Restore all escaped characters from placeholders
+    // === Post-render workarounds ===
+
+    // COMRAK-WORKAROUND4: Restore escaped characters from PUA placeholders.
     let mut result = result;
     for (escaped, placeholder) in &escape_placeholders {
         result = result.replace(placeholder.as_str(), escaped.as_str());
     }
 
-    // Remove unnecessary period escapes (keep only at line starts where they prevent list interpretation)
+    // COMRAK-WORKAROUND11: Remove unnecessary period escapes.
     let result = postprocess_period_escapes(&result);
 
-    // Restore autolink angle brackets from PUA placeholders
+    // COMRAK-WORKAROUND3: Restore autolink angle brackets from PUA placeholders.
     let result = restore_autolinks(&result);
 
-    // Apply text-level normalizations
+    // COMRAK-WORKAROUND12: Normalize comrak output formatting differences.
     let result = normalize_comrak_output(&result);
 
     // Reattach frontmatter if present
