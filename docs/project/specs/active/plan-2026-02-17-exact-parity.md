@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** INCOMPLETE — Phases 1-9b complete, Phase 10 complete, but **5 formatting
+**Status:** INCOMPLETE — Phases 1-9b complete, Phase 10 complete, but **9 formatting
 parity gaps remain** (see Appendix E). Parity work is not done until all gaps are fixed.
 
 **Epic bead:** fmr-kd36
@@ -30,22 +30,23 @@ fix (and then match in Rust).**
 ## Key Principle: Every Parity Gap Must Have a Failing Test
 
 **A hidden gap is worse than a known failure.** Every known behavioral difference
-between the Rust and Python binaries MUST be surfaced as a failing test. Tests that use
-`head`, `tail`, `[..]`, `basename | sort`, `grep -c`, or other output-masking patterns
-to hide real differences are not acceptable.
+between the Rust and Python binaries MUST be surfaced as a failing test.
+Tests that use `head`, `tail`, `[..]`, `basename | sort`, `grep -c`, or other
+output-masking patterns to hide real differences are not acceptable.
 
 If a parity gap exists and cannot be immediately fixed, the correct approach is:
 
 1. **Write a test that fails** — the test should assert the correct (Python-matching)
    behavior.
 2. **Mark the test as `#[ignore]`** with a comment linking to the tracking bead — but
-   only if the fix is blocked. Prefer fixing immediately.
+   only if the fix is blocked.
+   Prefer fixing immediately.
 3. **Track the gap in Appendix E** of this spec with a bead, root cause analysis, and
    fix plan.
 
 **Never mask a difference to make a test pass.** A green test suite with hidden gaps is
 worse than a red test suite with documented failures, because hidden gaps erode trust
-and make the "drop-in replacement" claim false.
+and make the “drop-in replacement” claim false.
 
 ## Goals
 
@@ -425,6 +426,7 @@ Properties:
 - `effective_exclude` → `(exclude ?? DEFAULT_EXCLUDES) + extend_exclude`
 
 `DEFAULT_EXCLUDES` (30 patterns — must match exactly):
+
 ```
 .git/, .hg/, .svn/, .bzr/, _darcs/,
 .venv/, venv/, __pycache__/, .tox/, .nox/, .mypy_cache/, .ruff_cache/, .pytest_cache/,
@@ -603,6 +605,7 @@ force_exclude: bool | None = None
 `_CONFIG_FILENAMES = [".flowmark.toml", "flowmark.toml", "pyproject.toml"]`
 
 Kebab-to-snake mapping table (6 entries):
+
 ```
 "list-spacing" → "list_spacing"
 "extend-include" → "extend_include"
@@ -762,16 +765,19 @@ Tracked flags (12): `width`, `semantic`, `cleanups`, `smartquotes`, `ellipses`,
 **Error messages (must match Python exactly):**
 
 1. `--auto` without files (exit 1):
+
    ```
    Error: --auto requires at least one file or directory argument (use '.' for current directory, --help for more options)
    ```
 
 2. `--list-files` without files (exit 1):
+
    ```
    Error: --list-files requires at least one file or directory argument (use '.' for current directory, --help for more options)
    ```
 
 3. No input at all (exit 1):
+
    ```
    Error: No input specified. Provide files, directories (use '.' for current directory), or '-' for stdin. Use --help for more options.
    ```
@@ -1193,27 +1199,28 @@ speedup. This is a key selling point for the Rust port.
 Initial benchmarking on a medium-sized repository (~ai-trade-arena) revealed the Rust
 binary is **~4× slower** than Python for `--list-files`:
 
-| | real | user | sys |
+|  | real | user | sys |
 | --- | --- | --- | --- |
 | Rust (`flowmark-rs`) | 0.963s | 0.335s | **0.623s** |
 | Python (`flowmark`) | 0.261s | 0.151s | **0.070s** |
 
-The 9× higher `sys` time indicates excessive syscalls in the Rust file resolver. Root
-causes identified in `src/file_resolver/resolver.rs`:
+The 9× higher `sys` time indicates excessive syscalls in the Rust file resolver.
+Root causes identified in `src/file_resolver/resolver.rs`:
 
 1. **`canonicalize()` on every discovered file** (line 364) — `realpath()` does multiple
-   stat() calls per path component to resolve symlinks. Called for every file.
+   stat() calls per path component to resolve symlinks.
+   Called for every file.
 2. **Extra stat() per directory entry** (lines 132-139) — `path.is_dir()` /
    `path.is_file()` each issue a fresh stat(). Should use `entry.file_type()` (free on
    macOS/Linux via `d_type` from readdir).
-3. **Gitignore chain rebuilt per directory** (lines 298-321) —
-   `get_gitignore_chain()` calls `canonicalize()` on both root and directory, then walks
-   from root to current for every directory visited.
+3. **Gitignore chain rebuilt per directory** (lines 298-321) — `get_gitignore_chain()`
+   calls `canonicalize()` on both root and directory, then walks from root to current
+   for every directory visited.
 4. **Glob patterns recompiled per-check** (lines 340-361) — `glob::Pattern::new()`
    called for every pattern on every file instead of pre-compiling once.
 5. **Manual walker instead of `ignore::WalkBuilder`** — The `ignore` crate (already a
-   dependency) provides the same optimized parallel walker that ripgrep uses. It handles
-   gitignore, efficient stat batching, and directory pruning natively.
+   dependency) provides the same optimized parallel walker that ripgrep uses.
+   It handles gitignore, efficient stat batching, and directory pruning natively.
 
 **Optimization plan — replace manual walker with `ignore::WalkBuilder`:**
 
@@ -1230,14 +1237,17 @@ The highest-impact fix is replacing the manual `walk_recursive` implementation w
 
 File-level changes:
 - `src/file_resolver/resolver.rs` — Replace `walk_directory`/`walk_recursive` with
-  `WalkBuilder`-based implementation. Pre-compile glob patterns in `new()`. Remove
-  `canonicalize_or_absolute()` from the hot path (keep for explicit file dedup only).
+  `WalkBuilder`-based implementation.
+  Pre-compile glob patterns in `new()`. Remove `canonicalize_or_absolute()` from the hot
+  path (keep for explicit file dedup only).
   Simplify `is_dir_excluded` (handled by WalkBuilder overrides).
 - `src/file_resolver/gitignore.rs` — `load_gitignore` and `get_gitignore_chain` become
-  unused for walking (WalkBuilder handles this). Keep `read_ignore_patterns` for any
-  non-walk use cases. `load_tool_ignore_patterns` no longer needed for walking.
-- `tests/test_file_resolver.rs` — All 28 existing tests must continue to pass (behavioral
-  parity). No new tests needed unless behavior changes.
+  unused for walking (WalkBuilder handles this).
+  Keep `read_ignore_patterns` for any non-walk use cases.
+  `load_tool_ignore_patterns` no longer needed for walking.
+- `tests/test_file_resolver.rs` — All 28 existing tests must continue to pass
+  (behavioral parity).
+  No new tests needed unless behavior changes.
 
 **Benchmarking approach:**
 - Use `hyperfine` (standard CLI benchmarking tool) to compare:
@@ -1251,8 +1261,8 @@ File-level changes:
 
 **Results for README** (in the build-publishing spec):
 - Include a simple comparison table in the Rust README showing wall-clock times
-- Example format: "flowmark (Rust) formats a 1,400-line Markdown file in Xms vs Yms for
-  Python — Z× faster"
+- Example format: “flowmark (Rust) formats a 1,400-line Markdown file in Xms vs Yms for
+  Python — Z× faster”
 
 ## Open Questions
 
@@ -1766,7 +1776,7 @@ All 339 tests pass, CI clippy clean, release build succeeds.
 | # | Issue | Location | Description |
 | --- | --- | --- | --- |
 | C1 | Regex compiled in loop | `filling.rs:961-973` | `min_fence_length` compiles a new `Regex` per code block. Only 2 possible patterns (`` ` `` or `~`), should be `LazyLock<Regex>` statics. |
-| C2 | Ellipsis+smartquotes interaction bug | `ellipses.rs:11`, `filling.rs:1046-1051` | When both `--smartquotes` and `--ellipses` are enabled (including `--auto`), `...` followed by a curly double quote `\u{201d}` is NOT converted. Root cause: `ELLIPSIS_PATTERN` group 4 doesn't include `\u{201c}`/`\u{201d}`, so boundary check fails. **Affects `--auto` mode.** |
+| C2 | Ellipsis+smartquotes interaction bug | `ellipses.rs:11`, `filling.rs:1046-1051` | When both `--smartquotes` and `--ellipses` are enabled (including `--auto`), `...` followed by a curly double quote `\u{201d}` is NOT converted. Root cause: `ELLIPSIS_PATTERN` group 4 doesn’t include `\u{201c}`/`\u{201d}`, so boundary check fails. **Affects `--auto` mode.** |
 | C3 | Inplace mode loses file permissions | `lib.rs:139-146` | `atomic_write` uses `tempfile::NamedTempFile` then `persist()`, which creates the new file with `0600` permissions regardless of original mode. Confirmed: `755` → `600`. |
 
 ### High
@@ -1774,7 +1784,7 @@ All 339 tests pass, CI clippy clean, release build succeeds.
 | # | Issue | Location | Description |
 | --- | --- | --- | --- |
 | H1 | `usize` underflow in `fill_text` | `text_filling.rs:103` | `width - subsequent_indent.chars().count()` panics if indent wider than width (e.g., `width=2` with 4-space indent). |
-| H2 | Glob expansion skips exclusion filters | `resolver.rs:230-248` | `expand_glob` doesn't apply exclude/gitignore/tool-ignore patterns. `flowmark "**/*.md"` would include `node_modules/`, `.git/`, etc. |
+| H2 | Glob expansion skips exclusion filters | `resolver.rs:230-248` | `expand_glob` doesn’t apply exclude/gitignore/tool-ignore patterns. `flowmark "**/*.md"` would include `node_modules/`, `.git/`, etc. |
 | H3 | Gitignore matching uses filename only | `resolver.rs:163` | `matched(filename, false)` passes bare filename, not relative path. Patterns like `docs/*.md` never match. |
 | H4 | Smart quotes char-boundary redistribution fragile | `filling.rs:1107-1149` | Redistribution across AST nodes assumes `smart_quotes` preserves character count. Invariant is implicit and undocumented. |
 
@@ -1782,7 +1792,7 @@ All 339 tests pass, CI clippy clean, release build succeeds.
 
 | # | Issue | Location | Description |
 | --- | --- | --- | --- |
-| M1 | Column off-by-one in sentence wrapper | `line_wrappers.rs:103-107` | `current_column` doesn't account for the joining space, can overshoot width by 1. |
+| M1 | Column off-by-one in sentence wrapper | `line_wrappers.rs:103-107` | `current_column` doesn’t account for the joining space, can overshoot width by 1. |
 | M2 | PUA placeholder collision | `filling.rs:1028-1029` | U+E000–U+E07A used as escape placeholders. Input containing these PUA chars would be corrupted. |
 | M3 | O(n*m) placeholder restoration | `text_wrapping.rs:40-52` | Every token tested against every construct via `String::replace`. Could use HashMap. |
 | M4 | CRLF line endings not preserved | `frontmatter.rs:30-32` | `text.lines()` strips `\r\n` but rejoins with `\n`. Windows CRLF files silently converted. |
@@ -1797,7 +1807,7 @@ All 339 tests pass, CI clippy clean, release build succeeds.
 | L1 | `has_frontmatter` parses entire document | `frontmatter.rs:42-45` | Allocates and splits full document just to check existence. Could check first chars. |
 | L2 | `simple_word_split` appears unused in production | `text_wrapping.rs:75-77` | `pub` but only used in tests. Should be `pub(crate)` or `#[cfg(test)]`. |
 | L3 | `first_sentence`/`first_sentences` unused | `sentence.rs:61-71` | Public functions not called from anywhere in the codebase. |
-| L4 | Misleading error message in `install_skill` | `skills/mod.rs:64` | Always says "Permission denied" but `create_dir_all` can fail for many reasons. |
+| L4 | Misleading error message in `install_skill` | `skills/mod.rs:64` | Always says “Permission denied” but `create_dir_all` can fail for many reasons. |
 | L5 | `in_heading` threaded as `&mut bool` through deep call chain | `filling.rs:328+` | Fragile mutable shared state. A rendering context struct would be cleaner. |
 | L6 | `byte_indexing` in `markdown_escape_word` | `text_wrapping.rs:84-85` | Relies on last char being ASCII. Safe today but fragile if regex broadened. |
 
@@ -1808,67 +1818,73 @@ Below is the gap analysis and required test for each.
 
 #### C1 — Regex compiled in loop
 
-- **Existing coverage:** 6 tests in `test_fenced_code_blocks.rs` test correctness of fence
-  length computation, all pass because the function returns correct values regardless of
-  compilation cost.
-- **Gap:** No performance test exists. The fix is to use `LazyLock<Regex>` statics (only 2
-  patterns), at which point existing correctness tests suffice.
-- **Required test:** None beyond the fix itself. Existing tests validate correctness.
+- **Existing coverage:** 6 tests in `test_fenced_code_blocks.rs` test correctness of
+  fence length computation, all pass because the function returns correct values
+  regardless of compilation cost.
+- **Gap:** No performance test exists.
+  The fix is to use `LazyLock<Regex>` statics (only 2 patterns), at which point existing
+  correctness tests suffice.
+- **Required test:** None beyond the fix itself.
+  Existing tests validate correctness.
 
 #### C2 — Ellipsis + smartquotes interaction (PARITY BUG)
 
-- **Existing coverage:** `test_ellipses_quotes` tests `ellipses()` with straight quotes only.
-  `test_ref_docs` "auto" mode enables both features on the reference doc, but the doc's
-  `...` + quote patterns have a space between `...` and the closing quote, so the bug isn't
-  triggered.
-- **Gap:** No test calls `fill_markdown` with both `smartquotes: true` and `ellipses: true` on
-  input where `...` is directly adjacent to a closing quote (`word..."`).
+- **Existing coverage:** `test_ellipses_quotes` tests `ellipses()` with straight quotes
+  only. `test_ref_docs` “auto” mode enables both features on the reference doc, but the
+  doc’s `...` + quote patterns have a space between `...` and the closing quote, so the
+  bug isn’t triggered.
+- **Gap:** No test calls `fill_markdown` with both `smartquotes: true` and
+  `ellipses: true` on input where `...` is directly adjacent to a closing quote
+  (`word..."`).
 - **Required test (integration, `test_ellipses.rs`):**
   - Input: `He said "well..."` with both features → expect
     `He said \u{201c}well \u{2026}\u{201d}`
-  - Input: `"Hello..." she said` → expect
-    `\u{201c}Hello \u{2026}\u{201d} she said`
+  - Input: `"Hello..." she said` → expect `\u{201c}Hello \u{2026}\u{201d} she said`
   - Input: `'Maybe...'` → single-quote variant
 
 #### C3 — Inplace mode loses file permissions
 
-- **Existing coverage:** `test_auto_with_dot_formats_cwd` and `test_auto_with_explicit_file`
-  verify file content after `--auto` but never check permissions.
+- **Existing coverage:** `test_auto_with_dot_formats_cwd` and
+  `test_auto_with_explicit_file` verify file content after `--auto` but never check
+  permissions.
 - **Gap:** Zero permission tests in the entire test suite.
 - **Required test (integration, `test_cli_file_discovery.rs`, `#[cfg(unix)]`):**
-  - Create file with `0o644` permissions, run `--auto`, assert permissions are `0o644` after.
-  - Create file with `0o755` permissions, run `--auto`, assert permissions are `0o755` after.
+  - Create file with `0o644` permissions, run `--auto`, assert permissions are `0o644`
+    after.
+  - Create file with `0o755` permissions, run `--auto`, assert permissions are `0o755`
+    after.
 
 #### H1 — `usize` underflow in `fill_text`
 
 - **Existing coverage:** `test_width_options.rs` tests widths 0, 40, 88, 200.
-  `test_wrapping.rs` tests `wrap_paragraph_lines` directly with widths 5–80.
-  No test calls `fill_text` with `width < indent_length`.
-- **Gap:** No small-width test with indented content (e.g., `width=2` with `Wrap::WrapIndent`
-  which uses 4-char indent).
+  `test_wrapping.rs` tests `wrap_paragraph_lines` directly with widths 5–80. No test
+  calls `fill_text` with `width < indent_length`.
+- **Gap:** No small-width test with indented content (e.g., `width=2` with
+  `Wrap::WrapIndent` which uses 4-char indent).
 - **Required test (unit, `test_width_options.rs`):**
-  - Call `fill_text` with `width=2` and `Wrap::WrapIndent` — must not panic, should degrade
-    gracefully.
+  - Call `fill_text` with `width=2` and `Wrap::WrapIndent` — must not panic, should
+    degrade gracefully.
   - Call `fill_markdown` with `width=3` on a nested list item — must not panic.
 
 #### H2 — `expand_glob` skips exclusion filters
 
-- **Existing coverage:** `test_resolver_glob_pattern` tests `"docs/*.md"` but only checks
-  include filtering (`.txt` excluded), not directory exclusion.
-  `test_resolver_excludes_default_dirs` tests directory exclusion via `walk_directory`, not
-  glob expansion.
+- **Existing coverage:** `test_resolver_glob_pattern` tests `"docs/*.md"` but only
+  checks include filtering (`.txt` excluded), not directory exclusion.
+  `test_resolver_excludes_default_dirs` tests directory exclusion via `walk_directory`,
+  not glob expansion.
 - **Gap:** No test resolves a glob like `"**/*.md"` and verifies excluded directories
-  (`node_modules/`, etc.) are filtered.
+  (`node_modules/`, etc.)
+  are filtered.
 - **Required test (integration, `test_file_resolver.rs`):**
-  - Create `docs/api.md`, `node_modules/pkg/README.md`. Resolve with `"**/*.md"`.
-    Assert `node_modules/` file is excluded.
-  - Create `.gitignore` with `build/`, create `build/output.md`. Resolve with `"**/*.md"`.
-    Assert `build/output.md` is excluded.
+  - Create `docs/api.md`, `node_modules/pkg/README.md`. Resolve with `"**/*.md"`. Assert
+    `node_modules/` file is excluded.
+  - Create `.gitignore` with `build/`, create `build/output.md`. Resolve with
+    `"**/*.md"`. Assert `build/output.md` is excluded.
 
 #### H3 — Gitignore matching uses filename only
 
 - **Existing coverage:** 5 gitignore tests all use bare-filename patterns (`draft.md`,
-  `temp.*`, `*.log`) or directory patterns (`build/`). All pass because they don't need
+  `temp.*`, `*.log`) or directory patterns (`build/`). All pass because they don’t need
   path-based matching.
 - **Gap:** No test uses a path-based gitignore pattern like `docs/draft.md` or
   `sub/specific.md`.
@@ -1878,34 +1894,37 @@ Below is the gap analysis and required test for each.
 
 #### H4 — Smart quotes char-boundary redistribution fragile
 
-- **Existing coverage:** 6 spanning-quote tests in `test_smartquotes.rs` verify quotes across
-  inline elements (code spans, emphasis, links). All work because `"` → curly quote is 1:1
-  char replacement.
-- **Gap:** No test with many interleaved inline elements or text nodes where boundary falls
-  exactly on a quote character.
+- **Existing coverage:** 6 spanning-quote tests in `test_smartquotes.rs` verify quotes
+  across inline elements (code spans, emphasis, links).
+  All work because `"` → curly quote is 1:1 char replacement.
+- **Gap:** No test with many interleaved inline elements or text nodes where boundary
+  falls exactly on a quote character.
 - **Required test (integration, `test_smartquotes.rs`):**
-  - Input: `He said "this *is* **really** 'quite' important" to her.`
-    Verify all quotes converted and no text lost.
-  - Input with boundary on quote: `"*bold*" and "*italic*"` — verify correct redistribution.
+  - Input: `He said "this *is* **really** 'quite' important" to her.` Verify all quotes
+    converted and no text lost.
+  - Input with boundary on quote: `"*bold*" and "*italic*"` — verify correct
+    redistribution.
 
 #### H5/M6 — `read_ignore_file` drops all patterns on bad line
 
-- **Existing coverage:** 3 tests for complete failure modes (missing, unreadable, non-UTF-8).
+- **Existing coverage:** 3 tests for complete failure modes (missing, unreadable,
+  non-UTF-8).
 - **Gap:** No test with a mix of valid and invalid patterns.
 - **Required test (unit, `test_file_resolver.rs`):**
-  - Create `.gitignore` with valid patterns and one potentially invalid line. Verify valid
-    patterns still apply.
+  - Create `.gitignore` with valid patterns and one potentially invalid line.
+    Verify valid patterns still apply.
   - Note: `GitignoreBuilder::add_line` is lenient, so may need to check what actually
     triggers an error and test that specific case.
 
 #### M1 — Column off-by-one in sentence wrapper
 
-- **Existing coverage:** `test_wrap_width` tests `wrap_paragraph_lines` at width 80 (not the
-  sentence combiner). Golden test uses width 88, unlikely to hit the exact boundary.
+- **Existing coverage:** `test_wrap_width` tests `wrap_paragraph_lines` at width 80 (not
+  the sentence combiner).
+  Golden test uses width 88, unlikely to hit the exact boundary.
 - **Gap:** No test targets boundary-width cases in `line_wrap_by_sentence`.
 - **Required test (unit, `test_wrapping.rs`):**
-  - Construct input where a short sentence + joining space + next word = exactly `width`.
-    Call `line_wrap_by_sentence` and assert no line exceeds width.
+  - Construct input where a short sentence + joining space + next word = exactly
+    `width`. Call `line_wrap_by_sentence` and assert no line exceeds width.
 
 #### M2 — PUA placeholder collision
 
@@ -1915,29 +1934,32 @@ Below is the gap analysis and required test for each.
 - **Required test (unit, `test_escape_handling.rs`):**
   - Input: `"Text with \u{E000} and \u{E05C} characters."` — assert PUA chars preserved
     unchanged.
-  - Input with PUA adjacent to backslash escape: `"\*test\u{E000}"` — assert both preserved.
+  - Input with PUA adjacent to backslash escape: `"\*test\u{E000}"` — assert both
+    preserved.
 
 #### M3 — O(n*m) placeholder restoration
 
 - **Gap:** No performance benchmarks exist at all (`benches/` directory missing).
 - **Required:** Consider adding a `benches/` directory with `criterion` benchmarks for
-  `html_md_word_split` and wrapping on large documents. Not blocking.
+  `html_md_word_split` and wrapping on large documents.
+  Not blocking.
 
 #### M4 — CRLF not preserved
 
 - **Existing coverage:** 9 frontmatter tests, all use `\n` exclusively.
 - **Gap:** Zero CRLF tests.
 - **Required test (unit, `test_frontmatter.rs`):**
-  - Input: `"---\r\ntitle: Test\r\n---\r\n\r\n# Content\r\n"` — verify frontmatter section
-    preserves `\r\n` line endings (or at minimum that the content is not corrupted).
+  - Input: `"---\r\ntitle: Test\r\n---\r\n\r\n# Content\r\n"` — verify frontmatter
+    section preserves `\r\n` line endings (or at minimum that the content is not
+    corrupted).
 
 #### M5 — `install_skill` path traversal
 
 - **Existing coverage:** 4 install tests, all use safe tempdir paths.
 - **Gap:** No test with `..` path components.
 - **Required test (unit, `test_skill.rs`):**
-  - Call `install_skill(Some("../../tmp/evil"))` and verify it either rejects the path or
-    canonicalizes it safely.
+  - Call `install_skill(Some("../../tmp/evil"))` and verify it either rejects the path
+    or canonicalizes it safely.
 
 #### M7 — `should_include_explicit` skips same-named directory
 
@@ -1951,9 +1973,8 @@ Below is the gap analysis and required test for each.
 ### Appendix D Learnings: Testing Gaps and Backfill Tracker
 
 All bugs in this review were missed because no test in either Python or Rust covers the
-specific condition.
-The test mapping system (`test-mapping.yaml`) is Python-centric — it tracks whether every
-Python test has a Rust equivalent.
+specific condition. The test mapping system (`test-mapping.yaml`) is Python-centric — it
+tracks whether every Python test has a Rust equivalent.
 New tests for these bugs will be Rust-only (`extra_rust` in `check-mapping` output).
 Consider upstreaming tests to Python flowmark for cross-language gaps (marked below).
 
@@ -1985,21 +2006,20 @@ Consider upstreaming tests to Python flowmark for cross-language gaps (marked be
 1. Write each test (test should fail before fix, pass after).
 2. Run `flowmark-dev discover-rust` to update `rust-tests.yaml`.
 3. New tests appear in `extra_rust` section of `flowmark-dev check-mapping`.
-4. For upstream candidates (marked **Yes**): consider filing issues or PRs against Python
-   flowmark to add equivalent tests.
+4. For upstream candidates (marked **Yes**): consider filing issues or PRs against
+   Python flowmark to add equivalent tests.
 
-## Appendix E: Outstanding Parity Gaps (2026-02-18)
+## Appendix E: Outstanding Parity Gaps (2026-02-19)
 
 **This appendix tracks every known behavioral difference between the Rust and Python
 flowmark binaries.** Each gap must have a failing test that asserts the correct
-(Python-matching) behavior. Parity work is NOT complete until every gap listed here is
-resolved and its test passes.
+(Python-matching) behavior.
+Parity work is NOT complete until every gap listed here is resolved and its test passes.
 
-These gaps were discovered during comprehensive tryscript golden test development. The
-tryscript tests were previously masking these differences using `head`, `tail`,
-`basename | sort`, `grep -c`, and other output-truncation patterns. Those masking
-patterns have been removed — the tests now assert the full, correct (Python-matching)
-output and will fail until the Rust implementation is fixed.
+Gaps P1-P5 were discovered during comprehensive tryscript golden test development
+(2026-02-18). Gaps P6-P9 were discovered by running `flowmark-rs --auto` on a real-world
+corpus (ai-trade-arena `docs/`) already formatted by Python flowmark, producing 81 files
+changed with 456 insertions (2026-02-19).
 
 ### Gap Summary
 
@@ -2010,6 +2030,10 @@ output and will fail until the Rust implementation is fixed.
 | P3 | `\"` escape stripped (backslash before double quote) | **High** | `ESCAPE_CHARS` in `filling.rs` missing `"` and 12 other CommonMark-escapable chars | T6, `typography-tests.tryscript.md` | `test_escaped_double_quote_preserved` | Easy — add `"` to `ESCAPE_CHARS` |
 | P4 | Nested list extra blank line | **Medium** | Rust inserts blank line after parent list item before nested sublist | F10, `formatting.tryscript.md` | `test_nested_list_no_extra_blank_line` | Medium — list renderer spacing logic |
 | P5 | `--verbose` flag (Rust-only addition) | **Low** | Rust added `--verbose` / `-v` flag not present in Python | N/A (excluded from binary-agnostic tests) | N/A | N/A — acceptable addition |
+| P6 | Extra blank line before code fence | **High** | `suppress_for_tight` in `render_block_children()` missing paragraph→CodeBlock rule | N/A | `test_d12_*` (3 tests) | Easy — add tight transition rule |
+| P7 | Blockquote blank continuation loses `>` prefix | **Medium** | Blockquote blank continuation lines output bare empty line instead of `>` prefix | N/A | `test_d13_*` (2 tests) | Medium — blockquote blank line rendering |
+| P8 | Escaped backtick stripped in table inline code | **Medium** | Trailing ``` in inline code within table cell loses backslash | N/A | `test_d14_*` (1 test) | Medium — escape handling in inline code |
+| P9 | Smart quote after inline code backtick | **Low** | Rust converts `'` after `` ` `` to smart quote; Python does not | N/A | `test_d15_*` (1 test) | Easy — adjust smart quote context rules |
 
 ### P1: Reference Links Converted to Inline (Critical)
 
@@ -2022,16 +2046,18 @@ output and will fail until the Rust implementation is fixed.
 
 **Root cause:** Comrak (the Rust Markdown parser) resolves reference links during AST
 construction. By the time the AST is available, a `[text][ref]` has become a
-`NodeValue::Link` node with the URL filled in. The link reference definition is consumed
-and does not appear in the AST. The Rust renderer (`filling.rs:854-862`) always outputs
-`[text](url "title")` because it has no information about the original link syntax.
+`NodeValue::Link` node with the URL filled in.
+The link reference definition is consumed and does not appear in the AST. The Rust
+renderer (`filling.rs:854-862`) always outputs `[text](url "title")` because it has no
+information about the original link syntax.
 
-Python's Marko parser keeps `LinkRefDef` as a block-level AST node and checks
+Python’s Marko parser keeps `LinkRefDef` as a block-level AST node and checks
 `root_node.link_ref_defs` in its link renderer to reconstruct reference syntax.
 
 **Impact:** This is a **lossy transformation**. Documents using reference-style links
-for readability lose that structure. The same URL referenced multiple times gets
-duplicated inline. This violates the "identical output" requirement.
+for readability lose that structure.
+The same URL referenced multiple times gets duplicated inline.
+This violates the “identical output” requirement.
 
 **Files affected:**
 - `tests/tryscript/fixtures/content/comprehensive.md` (line 68-70)
@@ -2039,6 +2065,7 @@ duplicated inline. This violates the "identical output" requirement.
 - Any user document using reference-style links
 
 **Demonstrated diff (comprehensive.md):**
+
 ```diff
 - An [inline link](https://example.com) and a
 - [reference link](https://example.com "Example Reference").
@@ -2049,13 +2076,14 @@ duplicated inline. This violates the "identical output" requirement.
 
 **Fix approach:**
 1. **Pre-parse extraction**: Before passing to comrak, scan the input for link reference
-   definitions (`[label]: url "title"`) and record them with their positions. After
-   comrak renders the AST, post-process the output to reconstruct reference syntax where
-   a link's URL+title matches a known reference definition. This mirrors the approach
-   already used for escape character preservation (PUA placeholder system).
+   definitions (`[label]: url "title"`) and record them with their positions.
+   After comrak renders the AST, post-process the output to reconstruct reference syntax
+   where a link’s URL+title matches a known reference definition.
+   This mirrors the approach already used for escape character preservation (PUA
+   placeholder system).
 2. **Alternative**: Investigate whether comrak can be configured to preserve link
    reference information in the AST (check comrak options and extensions).
-3. **Alternative**: Use comrak's sourcepos to detect which links were originally
+3. **Alternative**: Use comrak’s sourcepos to detect which links were originally
    reference-style.
 
 **Failing tests:**
@@ -2076,6 +2104,7 @@ AST during parsing. The Rust renderer walks the AST in order, so footnote defini
 always appear at the bottom regardless of their original position.
 
 **Demonstrated diff:**
+
 ```diff
  This has a footnote[^1] reference.
 
@@ -2094,11 +2123,12 @@ always appear at the bottom regardless of their original position.
 
 **Fix approach:**
 1. **Pre-parse position tracking**: Before passing to comrak, record the position of
-   each footnote definition in the source. After rendering, reorder footnote definitions
-   back to their original positions relative to surrounding content.
-2. **Alternative**: Accept end-of-document placement as the normalized form. However,
-   this violates the "identical output" requirement and would need to be a documented
-   exception with explicit approval.
+   each footnote definition in the source.
+   After rendering, reorder footnote definitions back to their original positions
+   relative to surrounding content.
+2. **Alternative**: Accept end-of-document placement as the normalized form.
+   However, this violates the “identical output” requirement and would need to be a
+   documented exception with explicit approval.
 
 **Failing tests:**
 - Tryscript: `formatting.tryscript.md` scenario F10 — asserts full Python-matching
@@ -2114,20 +2144,22 @@ always appear at the bottom regardless of their original position.
 
 **Root cause:** The `ESCAPE_CHARS` list in `filling.rs:1004-1007` contains 19 characters
 but is missing `"` (double quote) and 12 other CommonMark-spec-escapable ASCII
-punctuation characters. The full CommonMark spec allows backslash-escaping of all 31
-ASCII punctuation characters: `` !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ ``
+punctuation characters.
+The full CommonMark spec allows backslash-escaping of all 31 ASCII punctuation
+characters: `!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~`
 
 Missing from `ESCAPE_CHARS`:
+
 ```
 "  %  &  '  ,  /  :  ;  <  =  ?  @  ^
 ```
 
-The PUA placeholder system only protects characters in the `ESCAPE_CHARS` list. When
-comrak encounters `\"`, the backslash is stripped during parsing because `"` is not
+The PUA placeholder system only protects characters in the `ESCAPE_CHARS` list.
+When comrak encounters `\"`, the backslash is stripped during parsing because `"` is not
 protected by a PUA placeholder.
 
 **Fix approach:** Add all 13 missing characters to `ESCAPE_CHARS`. At minimum, add `"`
-immediately since it's the most common and is explicitly tested in `escapes.md`.
+immediately since it’s the most common and is explicitly tested in `escapes.md`.
 
 ```rust
 const ESCAPE_CHARS: &[char] = &[
@@ -2152,6 +2184,7 @@ const ESCAPE_CHARS: &[char] = &[
   sublist begins
 
 **Demonstrated diff (from comprehensive.md):**
+
 ```diff
  - First level
 -  - Second level
@@ -2161,9 +2194,9 @@ const ESCAPE_CHARS: &[char] = &[
    - Back to second level
 ```
 
-**Root cause:** The Rust list renderer's spacing logic inserts a blank line separator
-between the parent item content and its child sublist. Python's renderer keeps them
-tight when the original was tight.
+**Root cause:** The Rust list renderer’s spacing logic inserts a blank line separator
+between the parent item content and its child sublist.
+Python’s renderer keeps them tight when the original was tight.
 
 **Fix approach:** Adjust the blank-line-before-sublist logic in the Rust list renderer
 (`filling.rs` list item rendering) to not insert a blank line when the parent list is
@@ -2178,14 +2211,17 @@ tight.
 ### P5: `--verbose` Flag (Rust-Only Addition — Acceptable)
 
 **Behavior difference:** Rust has `--verbose` / `-v` flag that prints
-`formatting <path>` to stderr for each file processed. Python has no equivalent.
+`formatting <path>` to stderr for each file processed.
+Python has no equivalent.
 
-**Assessment:** This is an **intentional feature addition**, not a gap. It prints to
-stderr only (never affects stdout), has no effect on formatting output, and does not
-break drop-in compatibility. A Python user switching to Rust will never notice `--verbose`
-unless they explicitly pass the flag.
+**Assessment:** This is an **intentional feature addition**, not a gap.
+It prints to stderr only (never affects stdout), has no effect on formatting output, and
+does not break drop-in compatibility.
+A Python user switching to Rust will never notice `--verbose` unless they explicitly
+pass the flag.
 
-**Status:** Accepted. No fix needed. Excluded from binary-agnostic tryscript tests.
+**Status:** Accepted.
+No fix needed. Excluded from binary-agnostic tryscript tests.
 
 ### Test Masking Patterns Removed
 
@@ -2205,32 +2241,162 @@ The tryscript tests passed because they were designed with output-masking patter
 hid the behavioral differences:
 
 1. **F10 (comprehensive formatting)**: Used `flowmark comprehensive.md | head -20` to
-   only check the first 20 lines. The reference link inlining (line 75), footnote
-   relocation (lines 97-105), and nested list spacing (line 41) were all beyond line 20.
+   only check the first 20 lines.
+   The reference link inlining (line 75), footnote relocation (lines 97-105), and nested
+   list spacing (line 41) were all beyond line 20.
 2. **T6 (escapes with smart quotes)**: The golden output was written against the Rust
    binary, encoding `"literal quotes"` (with backslash stripped) as the expected output.
    The correct Python output is `\"literal quotes\"`.
 3. **T4/T5 (typography in code blocks)**: Used `tail -1` to only check the last line,
    hiding any differences in how code block content is formatted.
 
-These masking patterns violated the principle stated in the Goals section: "Any deviation
-in drop-in behavior is a bug and must be surfaced as a CI failure." The tests have been
-corrected to assert the full, Python-matching output. They will fail in CI until the
-corresponding Rust bugs are fixed.
+These masking patterns violated the principle stated in the Goals section: “Any
+deviation in drop-in behavior is a bug and must be surfaced as a CI failure.”
+The tests have been corrected to assert the full, Python-matching output.
+They will fail in CI until the corresponding Rust bugs are fixed.
+
+### P6: Extra Blank Line Before Code Fence (High)
+
+**Behavior difference:**
+- **Input:** Paragraph text tight against opening code fence (no blank line)
+- **Python output:** Preserves tight transition (no blank line inserted)
+- **Rust output:** Inserts blank line between paragraph and code fence
+
+**Demonstrated diff (454 instances across 81 files in real-world corpus):**
+
+````diff
+ Add to root `package.json`:
++
+ ```json
+ {
+   "scripts": {
+````
+
+**Root cause:** `render_block_children()` in `filling.rs:1039-1070` has a
+`suppress_for_tight` check that only handles 3 tight transition types: HTML
+comment→block, block→HTML comment, and paragraph→list.
+When a paragraph is followed by a `CodeBlock` with `originally_tight=true`, none of the
+rules match, so `need_separator` fires and inserts a blank line.
+Python/Marko preserves the original spacing.
+
+**Impact:** This is the **most common parity gap** — 454 instances (99.6% of all
+differences) found in a real-world corpus.
+Every Markdown document with tight paragraph→code fence transitions gets modified.
+This violates the “identical output” requirement on a massive scale.
+
+**Fix approach:** Add Rule 4 to `suppress_for_tight`: when `originally_tight` is true
+and the child node is a `CodeBlock`, suppress the blank line separator.
+May need to generalize to other tight transitions (e.g., any→CodeBlock) depending on
+testing.
+
+**Failing tests:**
+- `test_d12_paragraph_before_code_fence_tight`
+- `test_d12_inline_code_paragraph_before_code_fence`
+- `test_d12_multiple_tight_code_fences`
+
+### P7: Blockquote Blank Continuation Loses `>` Prefix (Medium)
+
+**Behavior difference:**
+- **Input:** `> ` (blockquote prefix + trailing spaces on blank continuation line)
+- **Python output:** `> ` (blockquote-prefixed blank line preserved)
+- **Rust output:** `` (bare empty line, no `>` prefix)
+
+**Demonstrated diff (9 instances):**
+
+```diff
+ > 2. **Review the previous** for context:
+->
++
+ >    - Check the section
+```
+
+**Root cause:** The blockquote renderer strips the `>` prefix from blank continuation
+lines inside blockquotes, outputting a bare empty line.
+Python preserves the blockquote prefix on blank lines within blockquotes.
+
+**Impact:** Medium — affects blockquotes with lists containing blank continuation lines.
+Could cause re-parsing issues if the bare empty line breaks the blockquote context.
+
+**Fix approach:** Ensure blockquote blank continuation lines retain the `>` prefix in
+the rendered output.
+
+**Failing tests:**
+- `test_d13_blockquote_blank_continuation_preserves_prefix`
+- `test_d13_blockquote_list_with_blank_continuation`
+
+### P8: Escaped Backtick Stripped in Table Inline Code (Medium)
+
+**Behavior difference:**
+- **Input:** `` `throw new CLIError(\`${msg}: ${error.message}\`)` `` in table cell
+- **Python output:** Both ``` escapes preserved
+- **Rust output:** Trailing `\`` stripped → `` `throw new CLIError(\`${msg}:
+  ${error.message}`)` ``
+
+**Demonstrated diff (1 instance):**
+
+```diff
+-| Include original: `throw new CLIError(\`${msg}: ${error.message}\`)` |
++| Include original: `throw new CLIError(\`${msg}: ${error.message}`)` |
+```
+
+**Root cause:** Related to P3 (ESCAPE_CHARS) — backtick (```) within inline code in
+table cells is not being properly preserved.
+The first escaped backtick is kept but the trailing one is stripped.
+
+**Fix approach:** Investigate how escaped backticks within inline code are handled,
+particularly in table cell context.
+May require extending the PUA placeholder system or fixing inline code rendering.
+
+**Failing tests:**
+- `test_d14_escaped_backtick_in_table_inline_code`
+
+### P9: Smart Quote After Inline Code Backtick (Low)
+
+**Behavior difference:**
+- **Input:** `` `foo()`'s result ``
+- **Python output:** Straight apostrophe preserved: `` `foo()`'s ``
+- **Rust output:** Converted to smart quote: `` `foo()`\u{2019}s ``
+
+**Root cause:** Rust’s smart quote engine converts apostrophes that immediately follow a
+closing inline code backtick.
+Python’s smart quote engine does not convert in this context, likely because the
+backtick-ended inline code acts as a boundary that prevents the smart quote heuristic
+from triggering.
+
+**Fix approach:** Adjust the smart quote engine to not convert apostrophes that
+immediately follow an inline code span boundary (closing backtick).
+
+**Failing tests:**
+- `test_d15_no_smart_quote_after_inline_code`
 
 ### Resolution Plan
 
 **Priority order (by impact and fix difficulty):**
 
-1. **P3 (escape chars)** — Easy fix, high impact. Add missing chars to `ESCAPE_CHARS`.
+1. **P6 (code fence blank line)** — Easy fix, **highest real-world impact** (454
+   instances). Add paragraph→CodeBlock to `suppress_for_tight`. Estimated: 1 hour.
+2. **P3 (escape chars)** — Easy fix, high impact.
+   Add missing chars to `ESCAPE_CHARS`. Estimated: 1 hour.
+3. **P9 (smart quote after inline code)** — Easy fix, low impact.
+   Adjust smart quote context.
    Estimated: 1 hour.
-2. **P4 (nested list spacing)** — Medium fix, medium impact. Adjust list renderer
-   spacing logic. Estimated: 2-4 hours.
-3. **P1 (reference links)** — Hard fix, critical impact. Requires pre-parse extraction
-   system (similar to existing PUA escape system). Estimated: 1-2 days.
-4. **P2 (footnote position)** — Hard fix, critical impact. Requires position tracking
-   through comrak's AST reordering. Estimated: 1-2 days.
-5. **P5 (verbose)** — No fix needed. Accepted addition.
+4. **P4 (nested list spacing)** — Medium fix, medium impact.
+   Adjust list renderer spacing logic.
+   Estimated: 2-4 hours.
+5. **P7 (blockquote blank continuation)** — Medium fix, medium impact.
+   Fix blockquote blank line rendering.
+   Estimated: 2-4 hours.
+6. **P8 (escaped backtick in table)** — Medium fix, medium impact.
+   Fix inline code escape handling in tables.
+   Estimated: 2-4 hours.
+7. **P1 (reference links)** — Hard fix, critical impact.
+   Requires pre-parse extraction system (similar to existing PUA escape system).
+   Estimated: 1-2 days.
+8. **P2 (footnote position)** — Hard fix, critical impact.
+   Requires position tracking through comrak’s AST reordering.
+   Estimated: 1-2 days.
+9. **P5 (verbose)** — No fix needed.
+   Accepted addition.
 
 **Completion criteria:** All tryscript tests pass against both binaries with no masking
 patterns. `diff` between Rust and Python output on all fixture files produces zero

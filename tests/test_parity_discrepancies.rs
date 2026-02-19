@@ -401,6 +401,138 @@ fn test_d11_nonexistent_file_error_format() {
 }
 
 // =============================================================================
+// D12: Paragraph before code fence — extra blank line inserted (P6)
+// Python preserves tight paragraph→code fence transition (no blank line).
+// Rust inserts a blank line between the paragraph and the opening code fence.
+// Root cause: render_block_children() suppress_for_tight doesn't handle
+// paragraph→CodeBlock transitions.
+// Discovered: Real-world corpus test (ai-trade-arena docs/, 454 instances).
+// =============================================================================
+
+#[test]
+#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
+fn test_d12_paragraph_before_code_fence_tight() {
+    // Python keeps paragraph tight against code fence (no blank line).
+    let input = "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
+    let python_output = "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D12/P6: Should not insert blank line before code fence when source is tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
+fn test_d12_inline_code_paragraph_before_code_fence() {
+    // Paragraph ending with inline code, tight against a code fence.
+    let input = "Add to root `package.json`:\n```json\n{\n  \"scripts\": {}\n}\n```\n";
+    let python_output = "Add to root `package.json`:\n```json\n{\n  \"scripts\": {}\n}\n```\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D12/P6: Inline-code paragraph should stay tight before code fence.\nGot:\n{result}"
+    );
+}
+
+#[test]
+#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
+fn test_d12_multiple_tight_code_fences() {
+    // Multiple tight paragraph→code fence transitions in one document.
+    let input = "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
+    let python_output = "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D12/P6: Multiple tight code fences should not get extra blank lines.\nGot:\n{result}"
+    );
+}
+
+// =============================================================================
+// D13: Blockquote blank continuation line loses `>` prefix (P7)
+// Python preserves blockquote-prefixed blank lines (e.g., ">    " with trailing spaces).
+// Rust strips the `>` prefix, outputting a bare empty line.
+// Discovered: Real-world corpus test (ai-trade-arena docs/, 9 instances).
+// =============================================================================
+
+#[test]
+#[ignore] // P7: blockquote blank continuation loses `>` prefix
+fn test_d13_blockquote_blank_continuation_preserves_prefix() {
+    // Blockquote with a blank continuation line between ordered list and unordered list.
+    let input = "> 2. **Review the previous** for context:\n>    \n>    - Check the section\n";
+    let result = fmt(input);
+    // Python preserves the blockquote prefix on blank lines.
+    // The blank line should have a `>` prefix (possibly with trailing spaces).
+    assert!(
+        !result.contains("\n\n>"),
+        "D13/P7: Blockquote blank continuation should keep `>` prefix, not become bare empty line.\nGot:\n{result}"
+    );
+}
+
+#[test]
+#[ignore] // P7: blockquote blank continuation loses `>` prefix
+fn test_d13_blockquote_list_with_blank_continuation() {
+    // Blockquote with rules list and blank continuation line.
+    let input = "> - Rules:\n>   \n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
+    let result = fmt(input);
+    // Blank continuation line inside blockquote list should keep `>` prefix.
+    let lines: Vec<&str> = result.lines().collect();
+    for (i, line) in lines.iter().enumerate() {
+        if line.trim().is_empty() && i > 0 && i < lines.len() - 1 {
+            // Every blank line within the blockquote should have a `>` prefix
+            assert!(
+                line.starts_with('>'),
+                "D13/P7: Blank line {i} inside blockquote should keep `>` prefix.\nFull output:\n{result}"
+            );
+        }
+    }
+}
+
+// =============================================================================
+// D14: Escaped backtick stripped in table inline code (P8)
+// Python preserves \` inside inline code in table cells.
+// Rust strips the trailing \` escape.
+// Related to P3 (missing ESCAPE_CHARS) but specific to backtick in inline code.
+// Discovered: Real-world corpus test (ai-trade-arena docs/, 1 instance).
+// =============================================================================
+
+#[test]
+#[ignore] // P8: escaped backtick stripped in table inline code
+fn test_d14_escaped_backtick_in_table_inline_code() {
+    let input = "| Col1 | Col2 |\n| --- | --- |\n| swallowing | `throw new CLIError(\\`${msg}: ${error.message}\\`)` |\n";
+    let result = fmt(input);
+    // Python preserves both \` escapes in inline code within the table cell.
+    assert!(
+        result.contains("\\`)` |") || result.contains("\\`)`|"),
+        "D14/P8: Escaped backtick at end of inline code in table should be preserved.\nGot:\n{result}"
+    );
+}
+
+// =============================================================================
+// D15: Smart quote conversion after inline code backtick (P9)
+// Python does NOT convert apostrophes immediately after inline code to smart quotes.
+// Rust converts them. This is a smartquotes engine difference.
+// Discovered: Real-world corpus test (ai-trade-arena docs/, 1 instance).
+// =============================================================================
+
+fn fmt_auto(input: &str) -> String {
+    // Match --auto mode: semantic + cleanups + smartquotes (no ellipses)
+    fill_markdown(input, true, 88, true, true, true, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+#[ignore] // P9: smart quote after inline code backtick
+fn test_d15_no_smart_quote_after_inline_code() {
+    let input = "Call `foo()`'s result.\n";
+    let result = fmt_auto(input);
+    // Python keeps the straight apostrophe after inline code backtick.
+    assert!(
+        result.contains("`'s"),
+        "D15/P9: Apostrophe after inline code should NOT be converted to smart quote.\nGot:\n{result}"
+    );
+}
+
+// =============================================================================
 // Regression: Autolink false positive for relative paths (already fixed)
 // =============================================================================
 
