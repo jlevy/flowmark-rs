@@ -4,6 +4,3 @@
 [submodule "repos/rust-porting-playbook"]
 	path = repos/rust-porting-playbook
 	url = https://github.com/jlevy/rust-porting-playbook.git
-[submodule "repos/autorust"]
-	path = repos/autorust
-	url = https://github.com/jlevy/autorust.git
