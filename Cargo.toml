@@ -21,6 +21,11 @@ name = "flowmark"
 path = "src/main.rs"
 required-features = ["cli"]
 
+[[bin]]
+name = "flowmark-rs"
+path = "src/main.rs"
+required-features = ["cli"]
+
 [features]
 default = ["cli"]
 cli = ["clap", "anyhow"]

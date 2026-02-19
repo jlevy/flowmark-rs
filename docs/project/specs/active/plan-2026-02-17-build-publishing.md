@@ -147,6 +147,10 @@ Prepare Cargo.toml metadata, write README, and verify publishability.
   Dry-run passes.
 - [x] **(Manual) Set up trusted publishing (OIDC) on crates.io** (fmr-db47) — Registered
   `jlevy/flowmark-rs` (Owner ID: 2058167), workflow `publish.yml` as trusted publisher.
+- [x] **Add `flowmark-rs` binary alias** — Added second `[[bin]]` entry in `Cargo.toml`
+  pointing to the same `src/main.rs`. `cargo install flowmark` now installs both
+  `flowmark` and `flowmark-rs` binaries, so users can explicitly pick the Rust
+  implementation when both Python and Rust versions are installed.
 - [ ] **(Manual) First publish** (fmr-tm0t) — After publish workflow is in place, create
   a GitHub Release tagged `v0.2.0` to trigger the automated publish.
   Or run `cargo publish` manually for the first time.
@@ -201,7 +205,7 @@ Standard open source project documentation.
   Follows Keep a Changelog format.
 - [x] **Update badges in README.md** (fmr-7ayu) — 5 badges: @ojoshe X follow, CI,
   crates.io, docs.rs, MSRV. Removed codecov (token not configured, badge showed
-  "unknown").
+  “unknown”).
 - [x] **Add `--version` parity info** (fmr-19zr) — Created `build.rs` that reads
   `[package.metadata.parity]` version and emits `PARITY_VERSION` env var.
   `src/main.rs` uses `long_version` to display:
