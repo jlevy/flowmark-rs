@@ -1823,7 +1823,7 @@ fn is_autolink(node: &AstNode, link: &comrak::nodes::NodeLink) -> bool {
 /// Render a single inline node to string.
 fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool) -> String {
     match &node.data.borrow().value {
-        NodeValue::Text(text) => text.clone(),
+        NodeValue::Text(text) => text.to_string(),
 
         NodeValue::Code(code) => {
             let text = &code.literal;
@@ -1932,7 +1932,7 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
 fn get_tasklist_marker<'a>(para_node: &'a AstNode<'a>) -> Option<String> {
     if let Some(parent) = para_node.parent() {
         if let NodeValue::TaskItem(checked) = &parent.data.borrow().value {
-            let marker = if checked.is_some() { "[x] " } else { "[ ] " };
+            let marker = if checked.symbol.is_some() { "[x] " } else { "[ ] " };
             // Only add marker to first paragraph in the item
             if parent.children().next().is_some_and(|c| std::ptr::eq(c, para_node)) {
                 return Some(marker.to_string());
@@ -2192,7 +2192,7 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
             let new_text: String = converted_chars[start..start + len].iter().collect();
             let mut data = text_node.data.borrow_mut();
             if let NodeValue::Text(ref mut text) = data.value {
-                *text = new_text;
+                *text = new_text.into();
             }
         }
     }
@@ -2203,7 +2203,7 @@ fn apply_ellipses_to_ast<'a>(root: &'a AstNode<'a>) {
     for node in root.descendants() {
         let mut data = node.data.borrow_mut();
         if let NodeValue::Text(ref mut text) = data.value {
-            *text = apply_ellipses(text);
+            *text = apply_ellipses(text).into();
         }
     }
 }
