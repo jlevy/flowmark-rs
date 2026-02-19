@@ -1173,7 +1173,7 @@ Zero informational-only steps.**
 
 | Item | Priority | Bead | Notes |
 | --- | --- | --- | --- |
-| **Performance benchmarks** (Rust vs Python) | P2 | fmr-aq8o | Benchmark both on reference docs; publish results in README (see build-publishing spec) |
+| **Performance optimization + benchmarks** | P1 | fmr-aq8o | File resolver `--list-files` 4× slower than Python due to excessive syscalls; fix with `ignore::WalkBuilder`, then benchmark |
 | **Phase 7C**: Integrate meta-playbook observations into playbook docs | P3 | — | Requires human review of 13 observations |
 | **CI drift detection**: Re-run discovery in CI and diff against committed YAML | P4 | — | Optional — current canonical-form test catches most drift |
 | **Property-based testing** (proptest) | P3 | — | Idempotency, width invariants, round-trip properties |
@@ -1183,25 +1183,76 @@ Zero informational-only steps.**
 | **`clap_complete` shell completions** | P4 | — | Generate bash/zsh/fish completions |
 | **Color flag** (`--color auto/always/never`) | P4 | — | Standard CLI convention |
 
-#### Performance Benchmarks (fmr-aq8o)
+#### Performance Benchmarks and Optimization (fmr-aq8o)
 
 Benchmark the Rust binary against Python flowmark on the same inputs to quantify the
 speedup. This is a key selling point for the Rust port.
 
-**Approach:**
+**Observed regression — file resolver (`--list-files`):**
+
+Initial benchmarking on a medium-sized repository (~ai-trade-arena) revealed the Rust
+binary is **~4× slower** than Python for `--list-files`:
+
+| | real | user | sys |
+| --- | --- | --- | --- |
+| Rust (`flowmark-rs`) | 0.963s | 0.335s | **0.623s** |
+| Python (`flowmark`) | 0.261s | 0.151s | **0.070s** |
+
+The 9× higher `sys` time indicates excessive syscalls in the Rust file resolver. Root
+causes identified in `src/file_resolver/resolver.rs`:
+
+1. **`canonicalize()` on every discovered file** (line 364) — `realpath()` does multiple
+   stat() calls per path component to resolve symlinks. Called for every file.
+2. **Extra stat() per directory entry** (lines 132-139) — `path.is_dir()` /
+   `path.is_file()` each issue a fresh stat(). Should use `entry.file_type()` (free on
+   macOS/Linux via `d_type` from readdir).
+3. **Gitignore chain rebuilt per directory** (lines 298-321) —
+   `get_gitignore_chain()` calls `canonicalize()` on both root and directory, then walks
+   from root to current for every directory visited.
+4. **Glob patterns recompiled per-check** (lines 340-361) — `glob::Pattern::new()`
+   called for every pattern on every file instead of pre-compiling once.
+5. **Manual walker instead of `ignore::WalkBuilder`** — The `ignore` crate (already a
+   dependency) provides the same optimized parallel walker that ripgrep uses. It handles
+   gitignore, efficient stat batching, and directory pruning natively.
+
+**Optimization plan — replace manual walker with `ignore::WalkBuilder`:**
+
+The highest-impact fix is replacing the manual `walk_recursive` implementation with
+`ignore::WalkBuilder`, which eliminates issues 1-3 in one shot:
+
+- `WalkBuilder::new(root)` with `.git_ignore(bool)` replaces manual gitignore chain
+- `.add_custom_ignore_filename(".flowmarkignore")` replaces `load_tool_ignore_patterns`
+- `OverrideBuilder` handles include/exclude patterns (gitignore syntax, already
+  compatible with our patterns)
+- `WalkBuilder` uses `DirEntry::file_type()` internally (no extra stat)
+- No `canonicalize()` needed — `WalkBuilder` returns canonical-ish paths already
+- Pre-compile glob patterns for any residual matching (explicit file filtering)
+
+File-level changes:
+- `src/file_resolver/resolver.rs` — Replace `walk_directory`/`walk_recursive` with
+  `WalkBuilder`-based implementation. Pre-compile glob patterns in `new()`. Remove
+  `canonicalize_or_absolute()` from the hot path (keep for explicit file dedup only).
+  Simplify `is_dir_excluded` (handled by WalkBuilder overrides).
+- `src/file_resolver/gitignore.rs` — `load_gitignore` and `get_gitignore_chain` become
+  unused for walking (WalkBuilder handles this). Keep `read_ignore_patterns` for any
+  non-walk use cases. `load_tool_ignore_patterns` no longer needed for walking.
+- `tests/test_file_resolver.rs` — All 28 existing tests must continue to pass (behavioral
+  parity). No new tests needed unless behavior changes.
+
+**Benchmarking approach:**
 - Use `hyperfine` (standard CLI benchmarking tool) to compare:
-  - `flowmark` (Rust) vs `uvx flowmark` (Python) on the reference doc
+  - `flowmark-rs` (Rust) vs `flowmark` (Python) on the reference doc
     (`tests/testdocs/testdoc.orig.md`, 1,416 lines)
   - Both in `--auto` mode and plain mode
-  - Single file and batch directory (once file resolver is ported)
+  - `--list-files .` on medium and large repositories
 - Optionally add `criterion` benchmarks for library-level performance (internal only,
   not for README)
 - Record results in a `benchmarks/` directory with reproduction instructions
 
 **Results for README** (in the build-publishing spec):
 - Include a simple comparison table in the Rust README showing wall-clock times
-- Example format: “flowmark (Rust) formats a 1,400-line Markdown file in Xms vs Yms for
-  Python — Z× faster”
+- Example format: "flowmark (Rust) formats a 1,400-line Markdown file in Xms vs Yms for
+  Python — Z× faster"
 
 ## Open Questions
 

@@ -491,6 +491,35 @@ fn test_resolver_nested_gitignore_combines_parent_rules() {
     assert!(!names.contains(&"output.log".to_string()));
 }
 
+/// Regression test: nested .gitignore with a directory pattern must exclude
+/// that subdirectory. Previously the manual walker failed to apply nested
+/// gitignore directory patterns (e.g., `generated/` in `sub/.gitignore`).
+#[test]
+fn test_resolver_nested_gitignore_dir_pattern() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::create_dir_all(dir.path().join("sub/generated")).expect("create sub/generated");
+    fs::create_dir_all(dir.path().join("sub/kept")).expect("create sub/kept");
+    fs::write(dir.path().join("README.md"), "# Root\n").expect("write root");
+    fs::write(dir.path().join("sub/kept/visible.md"), "# Visible\n").expect("write visible");
+    fs::write(dir.path().join("sub/generated/output.md"), "# Output\n").expect("write output");
+    // Nested .gitignore excludes the generated/ directory
+    fs::write(dir.path().join("sub/.gitignore"), "generated/\n")
+        .expect("write nested .gitignore");
+
+    let config = FileResolverConfig::default();
+    let mut resolver = FileResolver::new(config);
+    let dir_str = dir.path().to_string_lossy().to_string();
+    let result = resolver.resolve(&[&dir_str]).expect("resolve");
+
+    let names = file_names(&result);
+    assert!(names.contains(&"README.md".to_string()));
+    assert!(names.contains(&"visible.md".to_string()), "sub/kept/visible.md should be included");
+    assert!(
+        !names.contains(&"output.md".to_string()),
+        "sub/generated/output.md should be excluded by nested gitignore dir pattern"
+    );
+}
+
 #[test]
 fn test_resolver_gitignore_file_patterns() {
     let dir = tempfile::tempdir().expect("create temp dir");

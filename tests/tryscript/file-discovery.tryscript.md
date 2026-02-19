@@ -23,7 +23,6 @@ README.md
 api.md
 file.md
 guide.md
-output.md
 tutorial.md
 wip.md
 ```
@@ -65,7 +64,6 @@ api.md
 file.md
 guide.md
 index.mdx
-output.md
 tutorial.md
 wip.md
 ```
@@ -79,7 +77,6 @@ README.md
 api.md
 file.md
 guide.md
-output.md
 tutorial.md
 ```
 

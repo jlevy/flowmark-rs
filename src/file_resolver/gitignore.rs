@@ -40,33 +40,11 @@ pub fn read_ignore_file(path: &Path) -> Option<Gitignore> {
 
 /// Read `.gitignore` in the given directory and return a compiled matcher,
 /// or `None` if the file doesn't exist or is empty.
-pub(crate) fn load_gitignore(directory: &Path) -> Option<Gitignore> {
+#[allow(dead_code)]
+pub fn load_gitignore(directory: &Path) -> Option<Gitignore> {
     let gitignore = directory.join(".gitignore");
     if !gitignore.is_file() {
         return None;
     }
     read_ignore_file(&gitignore)
-}
-
-/// Walk up from `start_dir` looking for `.{tool_name}ignore` (e.g., `.flowmarkignore`).
-/// Returns patterns from the first found, or `None`.
-pub(crate) fn load_tool_ignore_patterns(tool_name: &str, start_dir: &Path) -> Option<Vec<String>> {
-    let ignore_name = format!(".{tool_name}ignore");
-    let Ok(mut current) = start_dir.canonicalize() else {
-        return None;
-    };
-    loop {
-        let candidate = current.join(&ignore_name);
-        if candidate.is_file() {
-            return read_ignore_patterns(&candidate);
-        }
-        let Some(parent) = current.parent() else {
-            break;
-        };
-        if parent == current {
-            break;
-        }
-        current = parent.to_path_buf();
-    }
-    None
 }

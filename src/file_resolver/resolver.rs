@@ -2,14 +2,16 @@
 //!
 //! Resolves a mix of files, directories, and glob patterns into a deduplicated,
 //! sorted list of concrete file paths, applying all configured filters.
+//!
+//! Uses `ignore::WalkBuilder` (the same walker used by ripgrep) for efficient
+//! directory traversal with native gitignore support.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
-use ignore::gitignore::Gitignore;
+use ignore::WalkBuilder;
 
 use super::config::FileResolverConfig;
-use super::gitignore::{load_gitignore, load_tool_ignore_patterns};
 
 /// Characters that indicate a path is a glob pattern rather than a literal path.
 const GLOB_CHARS: &[char] = &['*', '?', '['];
@@ -19,9 +21,8 @@ const GLOB_CHARS: &[char] = &['*', '?', '['];
 pub struct FileResolver {
     config: FileResolverConfig,
     exclude_patterns: Vec<String>,
-    include_patterns: Vec<String>,
-    tool_ignore_cache: HashMap<PathBuf, Option<Vec<String>>>,
-    gitignore_cache: HashMap<PathBuf, Option<Gitignore>>,
+    compiled_includes: Vec<glob::Pattern>,
+    compiled_dir_excludes: Vec<glob::Pattern>,
 }
 
 impl FileResolver {
@@ -29,13 +30,18 @@ impl FileResolver {
     pub fn new(config: FileResolverConfig) -> Self {
         let exclude_patterns = config.effective_exclude();
         let include_patterns = config.effective_include();
-        Self {
-            config,
-            exclude_patterns,
-            include_patterns,
-            tool_ignore_cache: HashMap::new(),
-            gitignore_cache: HashMap::new(),
-        }
+
+        let compiled_includes =
+            include_patterns.iter().filter_map(|p| glob::Pattern::new(p).ok()).collect();
+
+        // Pre-compile directory exclude patterns (patterns ending with '/')
+        let compiled_dir_excludes = exclude_patterns
+            .iter()
+            .filter(|p| p.ends_with('/'))
+            .filter_map(|p| glob::Pattern::new(&p[..p.len() - 1]).ok())
+            .collect();
+
+        Self { config, exclude_patterns, compiled_includes, compiled_dir_excludes }
     }
 
     /// Resolve input paths into a sorted, deduplicated list of files.
@@ -59,10 +65,9 @@ impl FileResolver {
                 }
             } else if p.is_dir() {
                 for found in self.walk_directory(p) {
-                    let resolved = canonicalize_or_absolute(&found);
-                    if !seen.contains(&resolved) {
-                        seen.insert(resolved.clone());
-                        result.push(resolved);
+                    if !seen.contains(&found) {
+                        seen.insert(found.clone());
+                        result.push(found);
                     }
                 }
             } else if raw_path.contains(GLOB_CHARS) {
@@ -107,125 +112,71 @@ impl FileResolver {
         !self.exceeds_max_size(path)
     }
 
-    /// Walk a directory tree, pruning excluded directories in-place.
-    fn walk_directory(&mut self, root: &Path) -> Vec<PathBuf> {
-        let tool_ignore_patterns = self.get_tool_ignore_patterns(root);
+    /// Walk a directory tree using `ignore::WalkBuilder` for efficient traversal.
+    ///
+    /// `WalkBuilder` handles gitignore natively, uses `DirEntry::file_type()` (no
+    /// extra stat syscalls), and prunes excluded directories without descending.
+    fn walk_directory(&self, root: &Path) -> Vec<PathBuf> {
+        // Canonicalize the root once for consistent output paths.
+        let canonical_root = root.canonicalize().unwrap_or_else(|_| {
+            if root.is_absolute() {
+                root.to_path_buf()
+            } else {
+                std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join(root)
+            }
+        });
+
+        let mut builder = WalkBuilder::new(&canonical_root);
+
+        // Don't skip hidden files — our exclude patterns handle specific hidden dirs.
+        builder.hidden(false);
+        // Don't read .ignore files — we only use .gitignore and .flowmarkignore.
+        builder.ignore(false);
+        // Gitignore support. Only read .gitignore files within the walked tree
+        // (matches Python behavior). Don't read global git excludes or parent
+        // directory gitignore files.
+        builder.git_ignore(self.config.respect_gitignore);
+        builder.git_global(false);
+        builder.git_exclude(false);
+        builder.parents(false);
+        builder.require_git(false);
+        // Tool-specific ignore file (e.g., .flowmarkignore).
+        builder.add_custom_ignore_filename(format!(".{}ignore", self.config.tool_name));
+        // Max file size (0 = no limit, handled by not setting it).
+        if self.config.files_max_size > 0 {
+            builder.max_filesize(Some(self.config.files_max_size));
+        }
+
+        // Clone pre-compiled exclude patterns into the filter closure.
+        let dir_excludes = self.compiled_dir_excludes.clone();
+        builder.filter_entry(move |entry| {
+            // Always allow the root directory (depth 0) through.
+            if entry.depth() == 0 {
+                return true;
+            }
+            let Some(ft) = entry.file_type() else { return true };
+            if !ft.is_dir() {
+                return true;
+            }
+            let name = entry.file_name().to_string_lossy();
+            !dir_excludes.iter().any(|p| p.matches(&name))
+        });
+
+        let compiled_includes = &self.compiled_includes;
         let mut results = Vec::new();
-        self.walk_recursive(root, root, tool_ignore_patterns.as_deref(), &mut results);
+        for entry in builder.build().flatten() {
+            let Some(ft) = entry.file_type() else { continue };
+            if !ft.is_file() {
+                continue;
+            }
+            let path = entry.into_path();
+            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+                if compiled_includes.iter().any(|p| p.matches(name)) {
+                    results.push(path);
+                }
+            }
+        }
         results
-    }
-
-    fn walk_recursive(
-        &mut self,
-        current: &Path,
-        root: &Path,
-        tool_ignore_patterns: Option<&[String]>,
-        results: &mut Vec<PathBuf>,
-    ) {
-        let Ok(entries) = std::fs::read_dir(current) else {
-            return;
-        };
-
-        let mut dirs: Vec<PathBuf> = Vec::new();
-        let mut files: Vec<PathBuf> = Vec::new();
-
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if path.is_dir() {
-                dirs.push(path);
-            } else if path.is_file() {
-                files.push(path);
-            }
-        }
-
-        dirs.sort();
-        files.sort();
-
-        // Collect gitignore specs for this directory
-        let gitignore_specs: Vec<Gitignore> = if self.config.respect_gitignore {
-            self.get_gitignore_chain(current, root)
-        } else {
-            Vec::new()
-        };
-
-        // Process files
-        for filepath in &files {
-            let Some(filename) = filepath.file_name().and_then(|n| n.to_str()) else {
-                continue;
-            };
-
-            if !matches_any_pattern(&self.include_patterns, filename) {
-                continue;
-            }
-            if self.exceeds_max_size(filepath) {
-                continue;
-            }
-            // Use relative path for gitignore matching so path-based patterns work
-            let rel_path = filepath.strip_prefix(root).unwrap_or(filepath);
-            if gitignore_specs.iter().any(|spec| spec.matched(rel_path, false).is_ignore()) {
-                continue;
-            }
-            if let Some(ti_patterns) = tool_ignore_patterns {
-                if matches_any_pattern(ti_patterns, filename) {
-                    continue;
-                }
-            }
-            results.push(filepath.clone());
-        }
-
-        // Recurse into non-excluded directories
-        let rel_to_root = current.strip_prefix(root).unwrap_or(Path::new(""));
-        for dir_path in &dirs {
-            let Some(dirname) = dir_path.file_name().and_then(|n| n.to_str()) else {
-                continue;
-            };
-            let rel_path = rel_to_root.join(dirname);
-            if !self.is_dir_excluded(dirname, &rel_path, current, tool_ignore_patterns, Some(root))
-            {
-                self.walk_recursive(dir_path, root, tool_ignore_patterns, results);
-            }
-        }
-    }
-
-    /// Check if a directory should be pruned during traversal.
-    fn is_dir_excluded(
-        &mut self,
-        dirname: &str,
-        rel_path: &Path,
-        current_dir: &Path,
-        tool_ignore_patterns: Option<&[String]>,
-        walk_root: Option<&Path>,
-    ) -> bool {
-        let dir_with_slash = format!("{dirname}/");
-        let rel_with_slash = format!("{}/", rel_path.display());
-
-        if matches_any_pattern(&self.exclude_patterns, &dir_with_slash) {
-            return true;
-        }
-        if matches_any_pattern(&self.exclude_patterns, &rel_with_slash) {
-            return true;
-        }
-
-        if self.config.respect_gitignore {
-            let root = walk_root.unwrap_or(current_dir);
-            let chain = self.get_gitignore_chain(current_dir, root);
-            for spec in &chain {
-                if spec.matched(&dir_with_slash, true).is_ignore() {
-                    return true;
-                }
-            }
-        }
-
-        if let Some(ti_patterns) = tool_ignore_patterns {
-            if matches_any_pattern(ti_patterns, &dir_with_slash) {
-                return true;
-            }
-            if matches_any_pattern(ti_patterns, &rel_with_slash) {
-                return true;
-            }
-        }
-
-        false
     }
 
     /// Expand a glob pattern, then apply all filters (include, exclude,
@@ -252,7 +203,7 @@ impl FileResolver {
         let Some(name) = entry.file_name().and_then(|n| n.to_str()) else {
             return false;
         };
-        if !matches_any_pattern(&self.include_patterns, name) {
+        if !self.compiled_includes.iter().any(|p| p.matches(name)) {
             return false;
         }
         if self.exceeds_max_size(entry) {
@@ -264,8 +215,7 @@ impl FileResolver {
                 continue;
             }
             let part = component.as_os_str().to_string_lossy();
-            let dir_with_slash = format!("{part}/");
-            if matches_any_pattern(&self.exclude_patterns, &dir_with_slash) {
+            if self.compiled_dir_excludes.iter().any(|p| p.matches(&part)) {
                 return false;
             }
         }
@@ -281,54 +231,6 @@ impl FileResolver {
             Ok(meta) => meta.len() > self.config.files_max_size,
             Err(_) => false,
         }
-    }
-
-    /// Load and cache gitignore for a directory.
-    fn get_gitignore(&mut self, directory: &Path) -> Option<Gitignore> {
-        let key = directory.to_path_buf();
-        if let Some(cached) = self.gitignore_cache.get(&key) {
-            return cached.clone();
-        }
-        let result = load_gitignore(directory);
-        self.gitignore_cache.insert(key, result.clone());
-        result
-    }
-
-    /// Collect all gitignore specs from `walk_root` down to `directory` (inclusive).
-    fn get_gitignore_chain(&mut self, directory: &Path, walk_root: &Path) -> Vec<Gitignore> {
-        let mut specs: Vec<Gitignore> = Vec::new();
-
-        let resolved_root = walk_root.canonicalize().unwrap_or_else(|_| walk_root.to_path_buf());
-        let resolved_dir = directory.canonicalize().unwrap_or_else(|_| directory.to_path_buf());
-
-        let mut current = resolved_root;
-        loop {
-            if let Some(spec) = self.get_gitignore(&current) {
-                specs.push(spec);
-            }
-            if current == resolved_dir {
-                break;
-            }
-            let Ok(remaining) = resolved_dir.strip_prefix(&current) else {
-                break;
-            };
-            match remaining.components().next() {
-                Some(c) => current = current.join(c),
-                None => break,
-            }
-        }
-        specs
-    }
-
-    /// Lazily load tool-specific ignore patterns, cached per resolved start directory.
-    fn get_tool_ignore_patterns(&mut self, start_dir: &Path) -> Option<Vec<String>> {
-        let resolved = start_dir.canonicalize().unwrap_or_else(|_| start_dir.to_path_buf());
-        if let Some(cached) = self.tool_ignore_cache.get(&resolved) {
-            return cached.clone();
-        }
-        let result = load_tool_ignore_patterns(&self.config.tool_name, start_dir);
-        self.tool_ignore_cache.insert(resolved, result.clone());
-        result
     }
 }
 
