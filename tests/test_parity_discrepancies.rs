@@ -410,7 +410,6 @@ fn test_d11_nonexistent_file_error_format() {
 // =============================================================================
 
 #[test]
-#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
 fn test_d12_paragraph_before_code_fence_tight() {
     // Python keeps paragraph tight against code fence (no blank line).
     let input = "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
@@ -423,7 +422,6 @@ fn test_d12_paragraph_before_code_fence_tight() {
 }
 
 #[test]
-#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
 fn test_d12_inline_code_paragraph_before_code_fence() {
     // Paragraph ending with inline code, tight against a code fence.
     let input = "Add to root `package.json`:\n```json\n{\n  \"scripts\": {}\n}\n```\n";
@@ -436,7 +434,6 @@ fn test_d12_inline_code_paragraph_before_code_fence() {
 }
 
 #[test]
-#[ignore] // P6: paragraph→code fence tight transition inserts extra blank line
 fn test_d12_multiple_tight_code_fences() {
     // Multiple tight paragraph→code fence transitions in one document.
     let input = "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
@@ -456,7 +453,6 @@ fn test_d12_multiple_tight_code_fences() {
 // =============================================================================
 
 #[test]
-#[ignore] // P7: blockquote blank continuation loses `>` prefix
 fn test_d13_blockquote_blank_continuation_preserves_prefix() {
     // Blockquote with a blank continuation line between ordered list and unordered list.
     let input = "> 2. **Review the previous** for context:\n>    \n>    - Check the section\n";
@@ -470,7 +466,6 @@ fn test_d13_blockquote_blank_continuation_preserves_prefix() {
 }
 
 #[test]
-#[ignore] // P7: blockquote blank continuation loses `>` prefix
 fn test_d13_blockquote_list_with_blank_continuation() {
     // Blockquote with rules list and blank continuation line.
     let input = "> - Rules:\n>   \n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
@@ -497,7 +492,6 @@ fn test_d13_blockquote_list_with_blank_continuation() {
 // =============================================================================
 
 #[test]
-#[ignore] // P8: escaped backtick stripped in table inline code
 fn test_d14_escaped_backtick_in_table_inline_code() {
     let input = "| Col1 | Col2 |\n| --- | --- |\n| swallowing | `throw new CLIError(\\`${msg}: ${error.message}\\`)` |\n";
     let result = fmt(input);
@@ -521,7 +515,6 @@ fn fmt_auto(input: &str) -> String {
 }
 
 #[test]
-#[ignore] // P9: smart quote after inline code backtick
 fn test_d15_no_smart_quote_after_inline_code() {
     let input = "Call `foo()`'s result.\n";
     let result = fmt_auto(input);

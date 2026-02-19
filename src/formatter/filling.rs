@@ -729,81 +729,29 @@ fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipse
     result
 }
 
-/// Pattern matching inline code spans (single or double backtick).
-/// Regex for inline code spans (backtick-delimited).
-static INLINE_CODE_SPAN_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"``[^`]+``|`[^`]+`").expect("valid INLINE_CODE_SPAN_RE regex"));
-
-/// COMRAK-WORKAROUND4: Replace `\x` escapes with PUA placeholders, but only outside
-/// fenced code blocks AND inline code spans. Prevents comrak from stripping backslash
-/// escapes during parsing, while preserving literal backslashes inside code (where they
-/// are not `CommonMark` escape sequences).
+/// COMRAK-WORKAROUND4: Replace `\x` escapes with PUA placeholders outside fenced code
+/// blocks. Prevents comrak from stripping backslash escapes during parsing. Within each
+/// non-fenced line, replacements are applied uniformly (including inside inline code
+/// spans) because Comrak can strip escapes even in code-span-like contexts such as GFM
+/// table cells (P8).
 fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
     transform_outside_code_fences(text, |line| {
-        let processed = replace_outside_code_spans(line, placeholders);
+        let processed = replace_escapes_in_line(line, placeholders);
         vec![processed]
     })
 }
 
-/// COMRAK-WORKAROUND4: Apply escape replacements only to text OUTSIDE inline code spans.
-fn replace_outside_code_spans(line: &str, placeholders: &[(String, String)]) -> String {
-    // Temporarily hide escaped backticks so the code span regex doesn't treat
-    // them as code span delimiters (e.g., `\`text\`` is not a code span).
-    // We detect code spans on the modified string but apply replacements on the
-    // original string using the same byte offsets (since \` and the placeholder
-    // are both 2 bytes, offsets are preserved when using a 2-byte placeholder).
-    let escaped_backtick_positions: Vec<usize> =
-        line.match_indices("\\`").map(|(i, _)| i).collect();
-
-    if escaped_backtick_positions.is_empty() {
-        // No escaped backticks — use the fast regex path
-        let mut result = String::new();
-        let mut last_end = 0;
-        for m in INLINE_CODE_SPAN_RE.find_iter(line) {
-            let before = &line[last_end..m.start()];
-            let mut processed = before.to_string();
-            for (escaped, placeholder) in placeholders {
-                processed = processed.replace(escaped.as_str(), placeholder.as_str());
-            }
-            result.push_str(&processed);
-            result.push_str(m.as_str());
-            last_end = m.end();
-        }
-        let rest = &line[last_end..];
-        let mut processed = rest.to_string();
-        for (escaped, placeholder) in placeholders {
-            processed = processed.replace(escaped.as_str(), placeholder.as_str());
-        }
-        result.push_str(&processed);
-        return result;
-    }
-
-    // Has escaped backticks — replace them with a same-length placeholder,
-    // find code spans on the modified string, then apply replacements to
-    // the original string using the same byte offsets.
-    // Use two ASCII chars that won't appear in markdown for the 2-byte \`
-    let modified = line.replace("\\`", "\x01\x01");
-
-    let mut result = String::new();
-    let mut last_end = 0;
-    for m in INLINE_CODE_SPAN_RE.find_iter(&modified) {
-        // Apply replacements to original text outside code spans
-        let before = &line[last_end..m.start()];
-        let mut processed = before.to_string();
-        for (escaped, placeholder) in placeholders {
-            processed = processed.replace(escaped.as_str(), placeholder.as_str());
-        }
-        result.push_str(&processed);
-        // Keep code span from original unchanged
-        result.push_str(&line[m.start()..m.end()]);
-        last_end = m.end();
-    }
-    let rest = &line[last_end..];
-    let mut processed = rest.to_string();
+/// COMRAK-WORKAROUND4: Apply escape replacements to all text in a line, including
+/// inside inline code spans. Previously this only replaced outside code spans, but
+/// Comrak can strip backslash escapes even inside inline code in certain contexts
+/// (e.g., GFM table cells). PUA-protecting everywhere is safe because the round-trip
+/// is idempotent: the PUA placeholder survives Comrak parsing as literal content and
+/// is restored to the original `\x` escape in post-processing (P8).
+fn replace_escapes_in_line(line: &str, placeholders: &[(String, String)]) -> String {
+    let mut result = line.to_string();
     for (escaped, placeholder) in placeholders {
-        processed = processed.replace(escaped.as_str(), placeholder.as_str());
+        result = result.replace(escaped.as_str(), placeholder.as_str());
     }
-    result.push_str(&processed);
     result
 }
 
@@ -1011,6 +959,7 @@ fn render_block_children<'a>(
         let child_is_refdef_only = is_refdef_marker(child);
         let child_is_html_comment = is_html_comment_only(child);
         let child_is_list = matches!(child.data.borrow().value, NodeValue::List(_));
+        let child_is_code_block = matches!(child.data.borrow().value, NodeValue::CodeBlock(_));
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -1034,6 +983,7 @@ fn render_block_children<'a>(
         //         list/table (lists/tables always get a blank line before a
         //         following HTML comment)
         // Rule 3: Paragraph → list (tight): suppress separator
+        // Rule 4: Paragraph → code block (tight): suppress separator
         //
         // All other block pairs get the standard blank line separator.
         let suppress_for_tight = if originally_tight {
@@ -1047,6 +997,10 @@ fn render_block_children<'a>(
             } else if child_is_list && prev_was_paragraph {
                 // Rule 3: Paragraph → list (tight): suppress (GAP11)
                 // This handles cases like "**Header**:\n- item1\n- item2"
+                true
+            } else if child_is_code_block && prev_was_paragraph {
+                // Rule 4: Paragraph → code block (tight): suppress (P6)
+                // This handles cases like "**Config**:\n```json\n{}\n```"
                 true
             } else {
                 false
@@ -1767,7 +1721,15 @@ fn render_list_item<'a>(
                 && !current_is_tag_block
                 && !suppress_nested_blank
             {
-                output.push('\n');
+                // Use the item's subsequent prefix (trimmed) to maintain
+                // blockquote context on blank separator lines (P7).
+                let blank_prefix = item_subsequent.trim_end();
+                if blank_prefix.is_empty() {
+                    output.push('\n');
+                } else {
+                    output.push_str(blank_prefix);
+                    output.push('\n');
+                }
             }
         }
 
@@ -2159,9 +2121,13 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
                     text_nodes.push(child);
                 }
                 NodeValue::Code(_) | NodeValue::HtmlInline(_) => {
-                    // Skip code spans and raw HTML - don't apply smart quotes
-                    // But add placeholder chars to maintain context
-                    concatenated.push('X'); // placeholder for quote context
+                    // Skip code spans and raw HTML - don't apply smart quotes.
+                    // Use a non-word placeholder to act as a boundary that
+                    // prevents apostrophe conversion across code spans (P9).
+                    // A word char like 'X' would cause `foo()`'s to match
+                    // the contraction pattern (\w)'(\w) and convert to a
+                    // smart quote.
+                    concatenated.push(' ');
                 }
                 NodeValue::SoftBreak => {
                     concatenated.push(' ');
