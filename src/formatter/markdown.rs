@@ -35,23 +35,23 @@ pub(crate) fn flowmark_comrak_options<'c>() -> Options<'c> {
 
     // Parse options
     options.parse.smart = false;
+    options.parse.ignore_setext = false;
+    options.parse.escaped_char_spans = false;
 
     // Render options
     options.render.hardbreaks = true;
     options.render.width = 0;
-    options.render.unsafe_ = true;
+    options.render.r#unsafe = true;
     options.render.escape = false;
-    options.render.list_style = comrak::ListStyleType::Dash;
+    options.render.list_style = comrak::options::ListStyleType::Dash;
     options.render.sourcepos = false;
     options.render.escaped_char_spans = false;
-    options.render.ignore_setext = false;
     options.render.ignore_empty_links = false;
     options.render.gfm_quirks = false;
     options.render.prefer_fenced = true;
     options.render.figure_with_caption = false;
     options.render.tasklist_classes = false;
     options.render.ol_width = 0;
-    options.render.experimental_inline_sourcepos = false;
 
     options
 }
