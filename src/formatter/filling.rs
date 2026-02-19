@@ -999,7 +999,9 @@ fn render_block_children<'a>(
                 // This handles cases like "**Header**:\n- item1\n- item2"
                 // In loose mode, Python adds the blank separator here.
                 true
-            } else if child_is_code_block && prev_was_paragraph && list_spacing != ListSpacing::Loose
+            } else if child_is_code_block
+                && prev_was_paragraph
+                && list_spacing != ListSpacing::Loose
             {
                 // Rule 4: Paragraph → code block (tight): suppress (P6)
                 // This handles cases like "**Config**:\n```json\n{}\n```"
@@ -1178,8 +1180,7 @@ fn render_block<'a>(
             // list children), Python treats the parent list as loose between items
             // even in tight mode. Match this behavior for parity.
             let any_item_has_sublist = node.children().any(|item| {
-                item.children()
-                    .any(|c| matches!(c.data.borrow().value, NodeValue::List(_)))
+                item.children().any(|c| matches!(c.data.borrow().value, NodeValue::List(_)))
             });
             let is_tight = match list_spacing {
                 ListSpacing::Preserve => list.tight,
@@ -1658,8 +1659,7 @@ fn item_needs_child_spacing<'a>(
         let has_complex_sublist = children.iter().any(|c| {
             if matches!(c.data.borrow().value, NodeValue::List(_)) {
                 c.children().any(|item| {
-                    item.children()
-                        .any(|gc| matches!(gc.data.borrow().value, NodeValue::List(_)))
+                    item.children().any(|gc| matches!(gc.data.borrow().value, NodeValue::List(_)))
                 })
             } else {
                 false

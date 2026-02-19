@@ -141,8 +141,7 @@ fn test_d4_tight_nested_lists_match_python() {
     // Python: blank after "Level 1a" (item has complex sublist with deeper nesting),
     // tight between "Level 2a" and "Level 3a", blank before "Level 1b",
     // tight between "Level 1b" and "Level 2b" (item has flat sublist).
-    let python_output =
-        "- Level 1a\n\n  - Level 2a\n    - Level 3a\n\n- Level 1b\n  - Level 2b\n";
+    let python_output = "- Level 1a\n\n  - Level 2a\n    - Level 3a\n\n- Level 1b\n  - Level 2b\n";
     assert_eq!(
         result, python_output,
         "D4: Tight nested lists should match Python behavior.\nGot:\n{result}"
@@ -442,7 +441,8 @@ fn test_d11_nonexistent_file_error_format() {
 fn test_d12_paragraph_before_code_fence_tight() {
     // Python keeps paragraph tight against code fence (no blank line).
     let input = "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
-    let python_output = "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
+    let python_output =
+        "**Configuration Options**:\n```typescript\n{\n  minTime: number,\n}\n```\n";
     let result = fmt(input);
     assert_eq!(
         result, python_output,
@@ -465,8 +465,10 @@ fn test_d12_inline_code_paragraph_before_code_fence() {
 #[test]
 fn test_d12_multiple_tight_code_fences() {
     // Multiple tight paragraph→code fence transitions in one document.
-    let input = "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
-    let python_output = "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
+    let input =
+        "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
+    let python_output =
+        "First block:\n```bash\necho hello\n```\n\nSecond block:\n```python\nprint(\"hi\")\n```\n";
     let result = fmt(input);
     assert_eq!(
         result, python_output,
