@@ -328,12 +328,7 @@ fn run_cli_stdin(bin: &str, args: &[&str], stdin: &str) -> (String, i32) {
 
 #[cfg(feature = "cli")]
 fn python_flowmark() -> &'static str {
-    // Prefer the known local install; fall back to PATH lookup.
-    if std::path::Path::new("/Users/levy/.local/bin/flowmark").exists() {
-        "/Users/levy/.local/bin/flowmark"
-    } else {
-        "flowmark"
-    }
+    "flowmark"
 }
 
 #[cfg(feature = "cli")]

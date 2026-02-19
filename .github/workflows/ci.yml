@@ -47,6 +47,9 @@ jobs:
           node-version: "22"
       - name: Pre-install tryscript
         run: npm install -g tryscript@latest
+      - uses: astral-sh/setup-uv@v7
+      - name: Install Python flowmark for parity tests
+        run: uv tool install flowmark==0.6.4
       - name: Build flowmark binary for tryscript tests
         run: cargo build --locked --all-features
         env:
@@ -103,6 +106,13 @@ jobs:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: astral-sh/setup-uv@v7
+      - name: Install Python flowmark for parity tests
+        run: uv tool install flowmark==0.6.4
+      - name: Build flowmark binary for parity tests
+        run: cargo build --locked --all-features
+        env:
+          RUSTFLAGS: "-D warnings"
       - name: Run coverage (excluding tryscript golden tests that need external binary)
         run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info --ignore-filename-regex test_tryscript_golden -- --skip tryscript
         env:
