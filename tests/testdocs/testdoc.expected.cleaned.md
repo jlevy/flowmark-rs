@@ -980,7 +980,7 @@ And let’s try some links with angle brackets.
 
 [^217]: Testing - : Is Ketamine Contraindicated in Patients with Psychiatric Disorders?
     - REBEL EM - more words - accessed April 24, 2025,
-    <https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/>
+      <https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/>
 
 [^multiline]: The distinction between “hiring” and “recruiting” isn’t universally agreed
     upon. Some people think of hiring as a superset of recruiting, some consider it to be

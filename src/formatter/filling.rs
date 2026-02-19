@@ -1196,12 +1196,52 @@ fn render_block<'a>(
                                     output.push_str("\n\n");
                                 }
                             } else {
-                                // Single-paragraph footnote
-                                let body = body_lines.join(" ");
-                                let wrapped = line_wrapper(body.trim(), &fn_prefix, &fn_subsequent);
-                                output.push_str(&wrapped);
-                                // Footnote definitions end with a blank line (matching Python behavior)
-                                output.push_str("\n\n");
+                                // Single-paragraph footnote.
+                                // Check for embedded list items: lines starting with
+                                // `- `, `* `, or `+ ` are list items within the footnote.
+                                // Python/marko treats these as list blocks, rendering
+                                // continuation lines with 2 extra spaces of indent.
+                                let list_start_idx = body_lines.iter().skip(1).position(|l| {
+                                    l.starts_with("- ")
+                                        || l.starts_with("* ")
+                                        || l.starts_with("+ ")
+                                });
+                                if let Some(idx) = list_start_idx {
+                                    let idx = idx + 1; // adjust for skip(1)
+                                    // Preamble paragraph before the list
+                                    let preamble = body_lines[..idx].join(" ");
+                                    let wrapped =
+                                        line_wrapper(preamble.trim(), &fn_prefix, &fn_subsequent);
+                                    output.push_str(&wrapped);
+                                    output.push('\n');
+                                    // List items: join from the `- ` line through the
+                                    // rest, treating as one list item with 6-space
+                                    // continuation indent (4 footnote + 2 list item).
+                                    let marker = &body_lines[idx][..2]; // "- " etc.
+                                    let item_text = &body_lines[idx][2..]; // after marker
+                                    let rest: Vec<&str> = body_lines[idx + 1..].to_vec();
+                                    let mut full_text = item_text.to_string();
+                                    for line in &rest {
+                                        full_text.push(' ');
+                                        full_text.push_str(line);
+                                    }
+                                    let list_prefix = format!("{fn_subsequent}{marker}");
+                                    let list_subsequent = format!("{fn_subsequent}  ");
+                                    let wrapped = line_wrapper(
+                                        full_text.trim(),
+                                        &list_prefix,
+                                        &list_subsequent,
+                                    );
+                                    output.push_str(&wrapped);
+                                    output.push_str("\n\n");
+                                } else {
+                                    let body = body_lines.join(" ");
+                                    let wrapped =
+                                        line_wrapper(body.trim(), &fn_prefix, &fn_subsequent);
+                                    output.push_str(&wrapped);
+                                    // Footnote definitions end with a blank line (matching Python behavior)
+                                    output.push_str("\n\n");
+                                }
                             }
                         } else {
                             // Fallback: output content lines as-is
