@@ -107,6 +107,9 @@ pub fn fill_text(
     let mut wrapped_paragraphs: Vec<String> = Vec::new();
 
     for (i, paragraph) in paragraphs.iter().enumerate() {
+        if paragraph.is_empty() {
+            continue;
+        }
         if text_wrap.initial_indent_first_para_only() && i > 0 {
             initial_indent.clone_from(&subsequent_indent);
         }

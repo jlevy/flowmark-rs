@@ -20,7 +20,9 @@ pub use formatter::filling::fill_markdown;
 pub use wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
 pub use wrapping::sentence::split_sentences_regex;
 pub use wrapping::text_filling::{Wrap, fill_text};
-pub use wrapping::text_wrapping::{html_md_word_split, wrap_paragraph, wrap_paragraph_lines};
+pub use wrapping::text_wrapping::{
+    html_md_word_split, simple_word_split, wrap_paragraph, wrap_paragraph_lines,
+};
 
 impl FormatOptions {
     /// Reformat a Markdown or plain text string.
@@ -46,7 +48,12 @@ impl FormatOptions {
     /// ```
     pub fn reformat_text(&self, text: &str) -> String {
         if self.plaintext {
-            let wrap = if self.width > 0 { Wrap::WrapFull } else { Wrap::None };
+            // Python uses Wrap.WRAP (not WRAP_FULL) with the HTML/Markdown-aware
+            // word splitter. This is likely a bug in Python (fmr-5u8i): plaintext
+            // mode should use simple_word_splitter, but instead uses
+            // html_md_word_splitter which incidentally treats markdown links and
+            // fenced code blocks as atomic tokens. We match this behavior for parity.
+            let wrap = if self.width > 0 { Wrap::Wrap } else { Wrap::None };
             fill_text(text, wrap, self.width, "", "", 0, None)
         } else {
             fill_markdown(

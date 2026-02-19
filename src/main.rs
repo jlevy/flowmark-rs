@@ -182,9 +182,16 @@ mod cli {
         respect_gitignore: bool,
         force_exclude: bool,
         files_max_size: u64,
-    ) -> Result<Vec<String>> {
+    ) -> Vec<String> {
         if !needs_file_resolution(files) && !list_files {
-            return Ok(files.to_vec());
+            // Validate all non-stdin paths exist (matches Python's file_resolver behavior).
+            for f in files {
+                if f != "-" && !Path::new(f).exists() {
+                    eprintln!("Error: Path not found: {f}");
+                    std::process::exit(1);
+                }
+            }
+            return files.to_vec();
         }
 
         // Filter out stdin marker before passing to resolver
@@ -203,7 +210,13 @@ mod cli {
         };
 
         let mut file_resolver = FileResolver::new(config);
-        let found = file_resolver.resolve(&resolvable).context("failed to resolve file paths")?;
+        let found = match file_resolver.resolve(&resolvable) {
+            Ok(paths) => paths,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                std::process::exit(1);
+            }
+        };
 
         let mut result: Vec<String> =
             found.iter().map(|p| p.to_string_lossy().to_string()).collect();
@@ -212,7 +225,7 @@ mod cli {
             result.insert(0, "-".to_string());
         }
 
-        Ok(result)
+        result
     }
 
     pub fn run() -> Result<()> {
@@ -300,7 +313,7 @@ mod cli {
             respect_gitignore,
             args.force_exclude,
             args.files_max_size,
-        )?;
+        );
 
         // Handle --list-files mode
         if args.list_files {
@@ -319,6 +332,12 @@ mod cli {
             ellipses: args.ellipses,
             list_spacing: args.list_spacing,
         };
+
+        // Validate: cannot use --inplace with stdin
+        if args.inplace && resolved_files.iter().any(|f| f == "-") {
+            eprintln!("Error: Cannot use `inplace` with stdin");
+            std::process::exit(1);
+        }
 
         // Validate: cannot use --output with multiple files
         let has_explicit_output = args.output != "-";

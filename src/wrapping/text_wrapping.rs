@@ -11,6 +11,8 @@ use crate::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacen
 /// Placeholder format for atomic construct extraction.
 const PLACEHOLDER_PREFIX: &str = "\x00AC";
 const PLACEHOLDER_SUFFIX: &str = "\x00";
+/// Filler character used to pad placeholders to match original construct width.
+const PLACEHOLDER_FILLER: char = '\x01';
 
 /// Pattern to identify words that need escaping if they start a wrapped markdown line.
 static MD_SPECIALS_PAT: LazyLock<Regex> =
@@ -24,27 +26,44 @@ static MD_NUMERAL_PAT: LazyLock<Regex> =
 static WHITESPACE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\s+").expect("valid WHITESPACE_RE regex"));
 
-/// Extract all atomic constructs from text, replacing them with placeholders.
-fn extract_atomic_constructs(text: &str) -> (Vec<String>, String) {
-    let mut construct_map: Vec<String> = Vec::new();
+/// Extract all atomic constructs from text, replacing them with width-preserving
+/// placeholders. The placeholder is padded with filler chars so the wrapping
+/// algorithm counts the same character width as the original construct.
+fn extract_atomic_constructs(text: &str) -> (Vec<String>, Vec<String>, String) {
+    let mut constructs: Vec<String> = Vec::new();
+    let mut placeholders: Vec<String> = Vec::new();
     let result = ATOMIC_CONSTRUCT_PATTERN.replace_all(text, |caps: &regex::Captures<'_>| {
         let construct = caps.get(0).expect("group 0 always exists").as_str().to_string();
-        let idx = construct_map.len();
-        construct_map.push(construct);
-        format!("{PLACEHOLDER_PREFIX}{idx}{PLACEHOLDER_SUFFIX}")
+        let idx = constructs.len();
+        let construct_len = construct.chars().count();
+        let core = format!("{PLACEHOLDER_PREFIX}{idx}{PLACEHOLDER_SUFFIX}");
+        let core_len = core.chars().count();
+        let placeholder = if construct_len > core_len {
+            let padding: String =
+                std::iter::repeat_n(PLACEHOLDER_FILLER, construct_len - core_len).collect();
+            format!("{PLACEHOLDER_PREFIX}{idx}{padding}{PLACEHOLDER_SUFFIX}")
+        } else {
+            core
+        };
+        constructs.push(construct);
+        placeholders.push(placeholder.clone());
+        placeholder
     });
-    (construct_map, result.into_owned())
+    (constructs, placeholders, result.into_owned())
 }
 
 /// Restore original constructs from placeholders in token list.
-fn restore_atomic_constructs(tokens: &[String], construct_map: &[String]) -> Vec<String> {
+fn restore_atomic_constructs(
+    tokens: &[String],
+    constructs: &[String],
+    placeholders: &[String],
+) -> Vec<String> {
     tokens
         .iter()
         .map(|token| {
             let mut result = token.clone();
-            for (idx, construct) in construct_map.iter().enumerate() {
-                let placeholder = format!("{PLACEHOLDER_PREFIX}{idx}{PLACEHOLDER_SUFFIX}");
-                result = result.replace(&placeholder, construct);
+            for (placeholder, construct) in placeholders.iter().zip(constructs.iter()) {
+                result = result.replace(placeholder.as_str(), construct);
             }
             result
         })
@@ -61,14 +80,14 @@ pub fn html_md_word_split(text: &str) -> Vec<String> {
     // Normalize adjacent tags to ensure proper tokenization
     let text = normalize_adjacent_tags(text);
 
-    // Extract all atomic constructs and replace with placeholders
-    let (construct_map, text_with_placeholders) = extract_atomic_constructs(&text);
+    // Extract all atomic constructs and replace with width-preserving placeholders
+    let (constructs, placeholders, text_with_placeholders) = extract_atomic_constructs(&text);
 
     // Split on whitespace (placeholders are single tokens)
     let tokens: Vec<String> = text_with_placeholders.split_whitespace().map(String::from).collect();
 
     // Restore original constructs
-    restore_atomic_constructs(&tokens, &construct_map)
+    restore_atomic_constructs(&tokens, &constructs, &placeholders)
 }
 
 /// Simple word splitter that splits on whitespace.

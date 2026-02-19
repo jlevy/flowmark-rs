@@ -191,16 +191,17 @@ fn test_pua_chars_safe_range_preserved() {
     );
 }
 
-/// M2 known limitation: PUA chars that collide with escape placeholders are corrupted.
-/// U+E05C = U+E000 + 0x5C (backslash), used as the `\\` placeholder.
+/// M2 resolved: PUA chars no longer collide with escape placeholders because
+/// escape placeholders use 2-char sequences (U+E0xx + U+E100).
+/// A standalone U+E05C in the input is now preserved.
 #[test]
-fn test_pua_placeholder_collision_known_limitation() {
+fn test_pua_placeholder_no_collision() {
     let input = "Text with \u{E05C} inside.\n";
     let result = fmt(input);
-    // This documents the known collision: U+E05C gets replaced with `\\`
+    // The 2-char placeholder (U+E05C + U+E100) no longer matches standalone U+E05C
     assert!(
-        !result.contains('\u{E05C}'),
-        "PUA char U+E05C collides with backslash placeholder and is corrupted (known limitation)"
+        result.contains('\u{E05C}'),
+        "PUA char U+E05C should be preserved (no collision with 2-char placeholder): {result:?}"
     );
 }
 

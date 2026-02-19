@@ -65,7 +65,7 @@ Error: --auto requires at least one file or directory argument (use '.' for curr
 
 ```console
 $ flowmark nonexistent.md 2>&1
-error: failed to format nonexistent.md[..]
+Error: Path not found: nonexistent.md
 ? 1
 ```
 

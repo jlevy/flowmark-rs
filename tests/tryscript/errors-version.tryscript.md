@@ -56,7 +56,7 @@ Error: --auto requires at least one file or directory argument (use '.' for curr
 
 ```console
 $ flowmark nonexistent.md 2>&1
-[..]
+Error: Path not found: nonexistent.md
 ? 1
 ```
 
@@ -68,7 +68,15 @@ Error: Cannot specify output file when processing multiple files (use --inplace 
 ? 1
 ```
 
-## E8: Explicit dash with --semantic
+## E8: Inplace with stdin
+
+```console
+$ printf 'hello\n' | flowmark --inplace - 2>&1
+Error: Cannot use `inplace` with stdin
+? 1
+```
+
+## E9: Explicit dash with --semantic
 
 ```console
 $ printf '# Hello\n\nFirst sentence here. Second sentence here.\n' | flowmark --semantic -

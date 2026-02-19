@@ -75,16 +75,24 @@ pub(crate) static HTML_CLOSE_TAG: AtomicPattern = AtomicPattern {
 
 /// Compiled regex combining all atomic patterns with alternation.
 ///
-/// Patterns are in priority order: code spans (multi-backtick before single),
+/// Patterns are in priority order: code spans/fences (longest fence first),
 /// links, paired tags, single tags, HTML tags.
 ///
-/// Note: The Python version uses backreferences for code spans (`` (`+)...\1 ``).
+/// Note: The Python version uses a backreference pattern for code spans.
 /// Since Rust's regex crate doesn't support backreferences, we handle common
-/// code span cases: double-backtick, then single-backtick.
+/// fence lengths explicitly: quadruple, triple, double, single backtick.
+/// Triple/quadruple patterns also match fenced code blocks.
 ///
 /// Similarly, paired tag patterns use simplified matching without lookahead.
 pub(crate) static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     let patterns = [
+        // Quadruple-backtick fences/spans: ````content```` (lazy match)
+        // These also match fenced code blocks, which Python's html_md_word_splitter
+        // treats as atomic via backreferences. Likely a Python bug (fmr-5u8i) but
+        // we match for parity.
+        r"````[\s\S]*?````",
+        // Triple-backtick fences/spans: ```content``` (lazy match)
+        r"```[\s\S]*?```",
         // Double-backtick code spans: ``code``
         r"``[^`]+``",
         // Single-backtick code spans: `code`

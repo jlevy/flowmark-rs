@@ -32,7 +32,9 @@
 //! | `U+F002`   | (in markers)        | FNDEF/REFDEF HTML comment sentinel       |
 //! | `U+F003`   | `AUTOLINK_OPEN`     | Autolink `<` replacement                 |
 //! | `U+F004`   | `AUTOLINK_CLOSE`    | Autolink `>` replacement                 |
+//! | `U+F005`   | `ENTITY_AMP`        | HTML entity `&` replacement              |
 //! | `U+E0xx`   | (computed)          | Escape placeholder for `\x` (xx = ASCII) |
+//! | `U+E100`   | (filler)            | Width-preserving filler for escape pairs  |
 //!
 //! ## Pre-parse workarounds (input → comrak)
 //!
@@ -396,6 +398,15 @@ const AUTOLINK_OPEN: char = '\u{F003}';
 /// COMRAK-WORKAROUND3: PUA replacement for `>` in autolinks.
 const AUTOLINK_CLOSE: char = '\u{F004}';
 
+/// COMRAK-WORKAROUND13: PUA replacement for `&` in HTML entities.
+/// Prevents comrak from decoding entities like `&amp;` → `&`.
+const ENTITY_AMP: char = '\u{F005}';
+
+/// COMRAK-WORKAROUND13: Regex matching HTML named/decimal/hex entities.
+static HTML_ENTITY_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"&(?:[a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);").expect("valid regex")
+});
+
 /// COMRAK-WORKAROUND3: Regex for angle-bracket autolinks: `<scheme://...>` or `<email@host>`.
 static ANGLE_AUTOLINK_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
@@ -481,6 +492,23 @@ fn restore_autolinks(text: &str) -> String {
         }
     }
     result
+}
+
+/// COMRAK-WORKAROUND13: Replace `&` in HTML entities with a PUA placeholder
+/// so comrak cannot decode them. Operates outside fenced code blocks.
+fn protect_html_entities(text: &str) -> String {
+    transform_outside_code_fences(text, |line| {
+        let replaced = HTML_ENTITY_RE.replace_all(line, |caps: &regex::Captures| {
+            // Replace leading '&' with PUA char, keep the rest (e.g., "amp;")
+            format!("{ENTITY_AMP}{}", &caps[0][1..])
+        });
+        vec![replaced.into_owned()]
+    })
+}
+
+/// COMRAK-WORKAROUND13: Restore PUA entity placeholders back to `&`.
+fn restore_html_entities(text: &str) -> String {
+    text.replace(ENTITY_AMP, "&")
 }
 
 /// COMRAK-WORKAROUND1: HTML comment marker for reference definition placeholders.
@@ -1088,10 +1116,16 @@ fn render_block_children_quoted<'a>(
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
+        let child_is_blockquote = matches!(child.data.borrow().value, NodeValue::BlockQuote);
 
-        // Add blank line between consecutive block elements
-        // Use the blank_prefix (e.g., "> ") to maintain the quote context
-        if child_is_block && prev_was_block && !prev_ended_with_double_newline {
+        // Add blank line between consecutive block elements.
+        // Use the blank_prefix (e.g., "> ") to maintain the quote context.
+        // Don't add separator before nested blockquotes — Python doesn't.
+        if child_is_block
+            && prev_was_block
+            && !prev_ended_with_double_newline
+            && !child_is_blockquote
+        {
             output.push_str(blank_prefix);
             output.push_str(" \n");
         }
@@ -1174,10 +1208,12 @@ fn render_block<'a>(
         }
 
         NodeValue::List(list) => {
-            // Determine effective tightness
+            // Determine effective tightness.
+            // Python forces tight unconditionally when --list-spacing tight is used,
+            // even for items with nested lists (which have para + list children).
             let is_tight = match list_spacing {
                 ListSpacing::Preserve => list.tight,
-                ListSpacing::Tight => can_be_tight(node),
+                ListSpacing::Tight => true,
                 ListSpacing::Loose => false,
             };
 
@@ -1385,16 +1421,45 @@ fn render_block<'a>(
                                 }
                             } else {
                                 // Single-paragraph footnote.
-                                // COMRAK-WORKAROUND9: Detect embedded list items
+
+                                // COMRAK-WORKAROUND9a: Detect blockquote continuation
+                                // (lines starting with `>`). Python/marko preserves these
+                                // on separate lines under the footnote definition.
+                                let blockquote_start_idx =
+                                    body_lines.iter().skip(1).position(|l| l.starts_with('>'));
+
+                                // COMRAK-WORKAROUND9b: Detect embedded list items
                                 // (lines starting with `- `, `* `, or `+ `).
-                                // Python/marko treats these as list blocks, rendering
-                                // continuation lines with 2 extra spaces of indent.
                                 let list_start_idx = body_lines.iter().skip(1).position(|l| {
                                     l.starts_with("- ")
                                         || l.starts_with("* ")
                                         || l.starts_with("+ ")
                                 });
-                                if let Some(idx) = list_start_idx {
+
+                                if let Some(bq_idx) = blockquote_start_idx {
+                                    let bq_idx = bq_idx + 1; // adjust for skip(1)
+                                    // Preamble paragraph before the blockquote
+                                    let preamble = body_lines[..bq_idx].join(" ");
+                                    let wrapped =
+                                        line_wrapper(preamble.trim(), &fn_prefix, &fn_subsequent);
+                                    output.push_str(&wrapped);
+                                    output.push('\n');
+                                    // Blockquote lines
+                                    for line in &body_lines[bq_idx..] {
+                                        let bq_body = line
+                                            .strip_prefix("> ")
+                                            .unwrap_or(line.strip_prefix('>').unwrap_or(line));
+                                        let bq_prefix = format!("{fn_subsequent}> ");
+                                        let bq_subsequent = format!("{fn_subsequent}> ");
+                                        let wrapped = line_wrapper(
+                                            bq_body.trim(),
+                                            &bq_prefix,
+                                            &bq_subsequent,
+                                        );
+                                        output.push_str(&wrapped);
+                                    }
+                                    output.push_str("\n\n");
+                                } else if let Some(idx) = list_start_idx {
                                     let idx = idx + 1; // adjust for skip(1)
                                     // Preamble paragraph before the list
                                     let preamble = body_lines[..idx].join(" ");
@@ -1402,25 +1467,48 @@ fn render_block<'a>(
                                         line_wrapper(preamble.trim(), &fn_prefix, &fn_subsequent);
                                     output.push_str(&wrapped);
                                     output.push('\n');
-                                    // List items: join from the `- ` line through the
-                                    // rest, treating as one list item with 6-space
-                                    // continuation indent (4 footnote + 2 list item).
-                                    let marker = &body_lines[idx][..2]; // "- " etc.
-                                    let item_text = &body_lines[idx][2..]; // after marker
-                                    let rest: Vec<&str> = body_lines[idx + 1..].to_vec();
-                                    let mut full_text = item_text.to_string();
-                                    for line in &rest {
-                                        full_text.push(' ');
-                                        full_text.push_str(line);
+                                    // Render each list item separately.
+                                    // Python/marko treats each `- ` line as a separate item.
+                                    let mut current_marker = "";
+                                    let mut current_text = String::new();
+                                    for line in &body_lines[idx..] {
+                                        let is_item_start = line.starts_with("- ")
+                                            || line.starts_with("* ")
+                                            || line.starts_with("+ ");
+                                        if is_item_start {
+                                            // Flush previous item if any
+                                            if !current_text.is_empty() {
+                                                let list_prefix =
+                                                    format!("{fn_subsequent}{current_marker}");
+                                                let list_subsequent = format!("{fn_subsequent}  ");
+                                                let wrapped = line_wrapper(
+                                                    current_text.trim(),
+                                                    &list_prefix,
+                                                    &list_subsequent,
+                                                );
+                                                output.push_str(&wrapped);
+                                                output.push('\n');
+                                            }
+                                            current_marker = &line[..2];
+                                            current_text = line[2..].to_string();
+                                        } else {
+                                            // Continuation of current item
+                                            current_text.push(' ');
+                                            current_text.push_str(line);
+                                        }
                                     }
-                                    let list_prefix = format!("{fn_subsequent}{marker}");
-                                    let list_subsequent = format!("{fn_subsequent}  ");
-                                    let wrapped = line_wrapper(
-                                        full_text.trim(),
-                                        &list_prefix,
-                                        &list_subsequent,
-                                    );
-                                    output.push_str(&wrapped);
+                                    // Flush last item
+                                    if !current_text.is_empty() {
+                                        let list_prefix =
+                                            format!("{fn_subsequent}{current_marker}");
+                                        let list_subsequent = format!("{fn_subsequent}  ");
+                                        let wrapped = line_wrapper(
+                                            current_text.trim(),
+                                            &list_prefix,
+                                            &list_subsequent,
+                                        );
+                                        output.push_str(&wrapped);
+                                    }
                                     output.push_str("\n\n");
                                 } else {
                                     let body = body_lines.join(" ");
@@ -1610,7 +1698,7 @@ fn render_list_item<'a>(
         if let NodeValue::List(list) = &parent.data.borrow().value {
             match list_spacing {
                 ListSpacing::Preserve => list.tight,
-                ListSpacing::Tight => can_be_tight(parent),
+                ListSpacing::Tight => true,
                 ListSpacing::Loose => false,
             }
         } else {
@@ -1840,20 +1928,6 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
     }
 }
 
-/// Check if a list can be rendered tight.
-fn can_be_tight<'a>(list_node: &'a AstNode<'a>) -> bool {
-    for item in list_node.children() {
-        if !matches!(item.data.borrow().value, NodeValue::Item(_)) {
-            continue;
-        }
-        // If the item has more than one child, it must be loose
-        if item.children().count() > 1 {
-            return false;
-        }
-    }
-    true
-}
-
 /// Get tasklist marker for a paragraph if its parent is a tasklist item.
 fn get_tasklist_marker<'a>(para_node: &'a AstNode<'a>) -> Option<String> {
     if let Some(parent) = para_node.parent() {
@@ -1981,12 +2055,18 @@ pub fn fill_markdown(
     // COMRAK-WORKAROUND3: Protect angle-bracket autolinks from comrak parsing.
     text = protect_autolinks(&text);
 
+    // COMRAK-WORKAROUND13: Protect HTML entities from comrak decoding.
+    text = protect_html_entities(&text);
+
     // COMRAK-WORKAROUND4: Replace `\x` escape sequences with PUA placeholders.
+    // Each `\x` is 2 chars, so use a 2-char PUA placeholder to preserve width
+    // during line wrapping.
     let mut escape_placeholders: Vec<(String, String)> = Vec::new();
     for &ch in ESCAPE_CHARS {
         let escaped = format!("\\{ch}");
-        let placeholder =
-            char::from_u32(0xE000 + ch as u32).expect("valid PUA code point").to_string();
+        let pua_char = char::from_u32(0xE000 + ch as u32).expect("valid PUA code point");
+        // Use 2-char placeholder (PUA + filler) to match the 2-char `\x` width
+        let placeholder = format!("{pua_char}\u{E100}");
         escape_placeholders.push((escaped, placeholder));
     }
     text = protect_escapes_outside_code(&text, &escape_placeholders);
@@ -2023,11 +2103,17 @@ pub fn fill_markdown(
     // COMRAK-WORKAROUND11: Remove unnecessary period escapes.
     let result = postprocess_period_escapes(&result);
 
+    // COMRAK-WORKAROUND13: Restore HTML entity ampersands from PUA placeholders.
+    let result = restore_html_entities(&result);
+
     // COMRAK-WORKAROUND3: Restore autolink angle brackets from PUA placeholders.
     let result = restore_autolinks(&result);
 
     // COMRAK-WORKAROUND12: Normalize comrak output formatting differences.
     let result = normalize_comrak_output(&result);
+
+    // Python always outputs at least a trailing newline for empty/whitespace input.
+    let result = if result.is_empty() { "\n".to_string() } else { result };
 
     // Reattach frontmatter if present
     if frontmatter.is_empty() { result } else { format!("{frontmatter}{result}") }
