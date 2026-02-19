@@ -994,13 +994,16 @@ fn render_block_children<'a>(
                 // Rule 2: Any block → HTML comment (tight): suppress,
                 // UNLESS prev is list or table (GAP13)
                 !prev_was_list_or_table
-            } else if child_is_list && prev_was_paragraph {
+            } else if child_is_list && prev_was_paragraph && list_spacing != ListSpacing::Loose {
                 // Rule 3: Paragraph → list (tight): suppress (GAP11)
                 // This handles cases like "**Header**:\n- item1\n- item2"
+                // In loose mode, Python adds the blank separator here.
                 true
-            } else if child_is_code_block && prev_was_paragraph {
+            } else if child_is_code_block && prev_was_paragraph && list_spacing != ListSpacing::Loose
+            {
                 // Rule 4: Paragraph → code block (tight): suppress (P6)
                 // This handles cases like "**Config**:\n```json\n{}\n```"
+                // In loose mode, Python adds the blank separator here.
                 true
             } else {
                 false
@@ -1067,19 +1070,25 @@ fn render_block_children_quoted<'a>(
     let mut output = String::new();
     let mut prev_was_block = false;
     let mut prev_ended_with_double_newline = false;
+    let mut prev_source_end_line: usize = 0;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
         let child_is_blockquote = matches!(child.data.borrow().value, NodeValue::BlockQuote);
 
+        // Use source positions to detect whether blocks were originally tight.
+        let child_source_start = child.data.borrow().sourcepos.start.line;
+        let child_source_end = last_content_line(child);
+        let originally_tight =
+            prev_source_end_line > 0 && child_source_start <= prev_source_end_line + 1;
+
         // Add blank line between consecutive block elements.
         // Use the blank_prefix (e.g., "> ") to maintain the quote context.
-        // Don't add separator before nested blockquotes — Python doesn't.
-        if child_is_block
-            && prev_was_block
-            && !prev_ended_with_double_newline
-            && !child_is_blockquote
-        {
+        // Suppress separator before nested blockquotes only when the original
+        // source was tight (no blank line). When the source had a blank `>`
+        // line between blocks, preserve it to match Python behavior.
+        let suppress = child_is_blockquote && originally_tight;
+        if child_is_block && prev_was_block && !prev_ended_with_double_newline && !suppress {
             output.push_str(blank_prefix);
             output.push_str(" \n");
         }
@@ -1096,6 +1105,7 @@ fn render_block_children_quoted<'a>(
         prev_ended_with_double_newline = block_output.ends_with("\n\n");
         output.push_str(&block_output);
         prev_was_block = child_is_block;
+        prev_source_end_line = child_source_end;
     }
 
     output
@@ -1163,11 +1173,17 @@ fn render_block<'a>(
 
         NodeValue::List(list) => {
             // Determine effective tightness.
-            // Python forces tight unconditionally when --list-spacing tight is used,
-            // even for items with nested lists (which have para + list children).
+            // Python's --list-spacing tight forces tight only when all items are
+            // simple (single child block). When any item has sublists (paragraph +
+            // list children), Python treats the parent list as loose between items
+            // even in tight mode. Match this behavior for parity.
+            let any_item_has_sublist = node.children().any(|item| {
+                item.children()
+                    .any(|c| matches!(c.data.borrow().value, NodeValue::List(_)))
+            });
             let is_tight = match list_spacing {
                 ListSpacing::Preserve => list.tight,
-                ListSpacing::Tight => true,
+                ListSpacing::Tight => !any_item_has_sublist,
                 ListSpacing::Loose => false,
             };
 
@@ -1549,6 +1565,11 @@ fn render_block<'a>(
 
             let mut first_child = true;
             for child in node.children() {
+                // In loose mode, add blank separator between footnote children
+                // (matching Python behavior where footnote para + list get spacing).
+                if !first_child && list_spacing == ListSpacing::Loose {
+                    output.push('\n');
+                }
                 let (p, sp) = if first_child {
                     (fn_prefix.clone(), fn_subsequent.clone())
                 } else {
@@ -1615,7 +1636,11 @@ fn render_block<'a>(
 /// This is true when:
 /// - The item's parent list is loose (not tight)
 /// - OR the item has multiple block children that aren't just para+nested-list
-fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, parent_is_tight: bool) -> bool {
+fn item_needs_child_spacing<'a>(
+    node: &'a AstNode<'a>,
+    parent_is_tight: bool,
+    list_spacing: ListSpacing,
+) -> bool {
     if !parent_is_tight {
         // For loose lists, always add blank lines between children
         return true;
@@ -1624,8 +1649,27 @@ fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, parent_is_tight: bool) ->
     if children.len() <= 1 {
         return false;
     }
-    // For tight lists, only add spacing if there are multiple paragraphs
-    // (not counting para + nested list as needing spacing)
+    // In forced tight mode (ListSpacing::Tight), add spacing between an item's
+    // children when the item contains a sublist that itself has items with deeper
+    // sublists. Python's tight mode adds within-item spacing for complex nesting
+    // but keeps simple para+sublist items tight.
+    // In Preserve mode, respect the original source tightness without this override.
+    if list_spacing == ListSpacing::Tight {
+        let has_complex_sublist = children.iter().any(|c| {
+            if matches!(c.data.borrow().value, NodeValue::List(_)) {
+                c.children().any(|item| {
+                    item.children()
+                        .any(|gc| matches!(gc.data.borrow().value, NodeValue::List(_)))
+                })
+            } else {
+                false
+            }
+        });
+        if has_complex_sublist {
+            return true;
+        }
+    }
+    // Also add spacing if there are multiple paragraphs
     let para_count =
         children.iter().filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph)).count();
     para_count > 1
@@ -1646,8 +1690,7 @@ fn render_list_item<'a>(
     let mut first_child = true;
     let children: Vec<_> = node.children().collect();
 
-    // Check if parent list is tight by looking at the list spacing context
-    // We determine this by checking if the parent list node is tight
+    // Check if parent list is tight by looking at the list spacing context.
     let parent_is_tight = node.parent().is_some_and(|parent| {
         if let NodeValue::List(list) = &parent.data.borrow().value {
             match list_spacing {
@@ -1660,7 +1703,7 @@ fn render_list_item<'a>(
         }
     });
 
-    let needs_spacing = item_needs_child_spacing(node, parent_is_tight);
+    let needs_spacing = item_needs_child_spacing(node, parent_is_tight, list_spacing);
 
     for (i, child) in children.iter().enumerate() {
         let (p, sp) = if first_child {
