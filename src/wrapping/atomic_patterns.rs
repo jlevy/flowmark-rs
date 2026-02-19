@@ -100,13 +100,15 @@ pub(crate) static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         // Markdown links: [text](url) or [text][ref] or [text]
         r"\[[^\]]*\](?:\([^)]*\)|\[[^\]]*\])?",
         // Paired Jinja tags: {% tag %}...{% /tag %}
-        r"\{%[^%]*%\}\s*\{%\s*/[^%]*%\}",
+        // The opening tag must start with a letter (not `/`) to avoid
+        // matching two closing tags as a pair.
+        r"\{%\s+[a-zA-Z][^%]*%\}\s*\{%\s*/[^%]*%\}",
         // Paired Jinja comments: {# tag #}...{# /tag #}
-        r"\{#[^#]*#\}\s*\{#\s*/[^#]*#\}",
+        r"\{#\s*[a-zA-Z][^#]*#\}\s*\{#\s*/[^#]*#\}",
         // Paired Jinja vars: {{ tag }}...{{ /tag }}
-        r"\{\{[^}]*\}\}\s*\{\{\s*/[^}]*\}\}",
+        r"\{\{\s*[a-zA-Z][^}]*\}\}\s*\{\{\s*/[^}]*\}\}",
         // Paired HTML comments: <!-- tag -->...<!-- /tag -->
-        r"<!--[^-]*(?:-[^-]+)*-->\s*<!--\s*/[^-]*(?:-[^-]+)*-->",
+        r"<!--\s*[a-zA-Z:][^-]*(?:-[^-]+)*-->\s*<!--\s*/[^-]*(?:-[^-]+)*-->",
         // Single Jinja tags
         SINGLE_JINJA_TAG.pattern,
         SINGLE_JINJA_COMMENT.pattern,

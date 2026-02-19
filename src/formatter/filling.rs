@@ -1176,15 +1176,25 @@ fn render_block<'a>(
         NodeValue::List(list) => {
             // Determine effective tightness.
             // Python's --list-spacing tight forces tight only when all items are
-            // simple (single child block). When any item has sublists (paragraph +
-            // list children), Python treats the parent list as loose between items
-            // even in tight mode. Match this behavior for parity.
-            let any_item_has_sublist = node.children().any(|item| {
-                item.children().any(|c| matches!(c.data.borrow().value, NodeValue::List(_)))
+            // simple (single paragraph, no sublists/code blocks). When any item
+            // is "complex" (has sublists, code blocks, or multiple paragraphs),
+            // Python treats the entire list as loose even in tight mode.
+            let any_item_is_complex = node.children().any(|item| {
+                let children: Vec<_> = item.children().collect();
+                let has_sublist =
+                    children.iter().any(|c| matches!(c.data.borrow().value, NodeValue::List(_)));
+                let has_code = children
+                    .iter()
+                    .any(|c| matches!(c.data.borrow().value, NodeValue::CodeBlock(_)));
+                let para_count = children
+                    .iter()
+                    .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
+                    .count();
+                has_sublist || has_code || para_count > 1
             });
             let is_tight = match list_spacing {
                 ListSpacing::Preserve => list.tight,
-                ListSpacing::Tight => !any_item_has_sublist,
+                ListSpacing::Tight => !any_item_is_complex,
                 ListSpacing::Loose => false,
             };
 
@@ -1437,7 +1447,13 @@ fn render_block<'a>(
                                     let wrapped =
                                         line_wrapper(preamble.trim(), &fn_prefix, &fn_subsequent);
                                     output.push_str(&wrapped);
-                                    output.push('\n');
+                                    // In loose mode, add blank separator between
+                                    // footnote preamble and embedded list.
+                                    if list_spacing == ListSpacing::Loose {
+                                        output.push_str("\n\n");
+                                    } else {
+                                        output.push('\n');
+                                    }
                                     // Render each list item separately.
                                     // Python/marko treats each `- ` line as a separate item.
                                     let mut current_marker = "";
@@ -1634,45 +1650,93 @@ fn render_block<'a>(
 }
 
 /// Check if a list item needs blank lines between its children.
-/// This is true when:
-/// - The item's parent list is loose (not tight)
-/// - OR the item has multiple block children that aren't just para+nested-list
+///
+/// In Loose mode or when the list is natively loose (Preserve + `!tight`):
+/// always add blank lines between children.
+///
+/// In Tight mode: Python makes the list loose between ITEMS (handled by
+/// `is_tight`), but within each item only adds spacing when the item has
+/// code blocks, multiple paragraphs, or complex sublists (sublists with
+/// deeper nesting). Simple para+sublist items stay tight within.
+///
+/// In Preserve mode with tight list: only add spacing for multiple paragraphs.
 fn item_needs_child_spacing<'a>(
     node: &'a AstNode<'a>,
     parent_is_tight: bool,
     list_spacing: ListSpacing,
 ) -> bool {
-    if !parent_is_tight {
-        // For loose lists, always add blank lines between children
-        return true;
-    }
     let children: Vec<_> = node.children().collect();
     if children.len() <= 1 {
         return false;
     }
-    // In forced tight mode (ListSpacing::Tight), add spacing between an item's
-    // children when the item contains a sublist that itself has items with deeper
-    // sublists. Python's tight mode adds within-item spacing for complex nesting
-    // but keeps simple para+sublist items tight.
-    // In Preserve mode, respect the original source tightness without this override.
-    if list_spacing == ListSpacing::Tight {
-        let has_complex_sublist = children.iter().any(|c| {
-            if matches!(c.data.borrow().value, NodeValue::List(_)) {
-                c.children().any(|item| {
-                    item.children().any(|gc| matches!(gc.data.borrow().value, NodeValue::List(_)))
-                })
-            } else {
-                false
+
+    match list_spacing {
+        ListSpacing::Loose => true,
+        ListSpacing::Preserve => {
+            if !parent_is_tight {
+                return true;
             }
-        });
-        if has_complex_sublist {
-            return true;
+            // For tight preserved lists, only add spacing if there are multiple paragraphs
+            let para_count = children
+                .iter()
+                .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
+                .count();
+            para_count > 1
+        }
+        ListSpacing::Tight => {
+            // Python's tight mode adds within-item spacing for items with:
+            // 1. Code blocks
+            // 2. Complex sublists (sublists with deeper nesting)
+            // 3. Multiple paragraphs
+            // 4. Children that were originally separated by blank lines
+            let has_code =
+                children.iter().any(|c| matches!(c.data.borrow().value, NodeValue::CodeBlock(_)));
+            if has_code {
+                return true;
+            }
+            // Check if any child sublist is effectively loose. A sublist is
+            // effectively loose when it has complex items (sublists, code blocks,
+            // or multi-paragraph) or when Comrak marked it as not tight.
+            let has_effectively_loose_sublist = children.iter().any(|c| {
+                if let NodeValue::List(sub_list) = &c.data.borrow().value {
+                    if !sub_list.tight {
+                        return true;
+                    }
+                    // Check for complex items: sublists, code blocks, multi-para
+                    c.children().any(|item| {
+                        let ch: Vec<_> = item.children().collect();
+                        let has_sub = ch
+                            .iter()
+                            .any(|gc| matches!(gc.data.borrow().value, NodeValue::List(_)));
+                        let has_code = ch
+                            .iter()
+                            .any(|gc| matches!(gc.data.borrow().value, NodeValue::CodeBlock(_)));
+                        let paras = ch
+                            .iter()
+                            .filter(|gc| matches!(gc.data.borrow().value, NodeValue::Paragraph))
+                            .count();
+                        has_sub || has_code || paras > 1
+                    })
+                } else {
+                    false
+                }
+            });
+            if has_effectively_loose_sublist {
+                return true;
+            }
+            // Check if any consecutive children were originally separated
+            // by a blank line (i.e. not tight). If so, preserve spacing.
+            let mut prev_end: usize = 0;
+            for c in &children {
+                let start = c.data.borrow().sourcepos.start.line;
+                if prev_end > 0 && start > prev_end + 1 {
+                    return true;
+                }
+                prev_end = last_content_line(c);
+            }
+            false
         }
     }
-    // Also add spacing if there are multiple paragraphs
-    let para_count =
-        children.iter().filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph)).count();
-    para_count > 1
 }
 
 /// Render a list item's children.
@@ -1690,12 +1754,31 @@ fn render_list_item<'a>(
     let mut first_child = true;
     let children: Vec<_> = node.children().collect();
 
-    // Check if parent list is tight by looking at the list spacing context.
+    // Check if parent list is effectively tight, using the same logic as
+    // the List rendering arm. For Tight mode, lists with complex items
+    // (sublists, code blocks, multi-paragraph) are treated as loose.
     let parent_is_tight = node.parent().is_some_and(|parent| {
-        if let NodeValue::List(list) = &parent.data.borrow().value {
+        let data = parent.data.borrow();
+        if let NodeValue::List(list) = &data.value {
             match list_spacing {
                 ListSpacing::Preserve => list.tight,
-                ListSpacing::Tight => true,
+                ListSpacing::Tight => {
+                    // Mirror the any_item_is_complex check from the List arm
+                    let any_complex = parent.children().any(|item| {
+                        let ch: Vec<_> = item.children().collect();
+                        let has_sub =
+                            ch.iter().any(|c| matches!(c.data.borrow().value, NodeValue::List(_)));
+                        let has_code = ch
+                            .iter()
+                            .any(|c| matches!(c.data.borrow().value, NodeValue::CodeBlock(_)));
+                        let paras = ch
+                            .iter()
+                            .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
+                            .count();
+                        has_sub || has_code || paras > 1
+                    });
+                    !any_complex
+                }
                 ListSpacing::Loose => false,
             }
         } else {
