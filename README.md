@@ -12,6 +12,8 @@ This is a Rust port of [flowmark](https://github.com/jlevy/flowmark) (Python).
 Identical CLI, identical output.
 The port was created and fully tested using the
 [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook).
+Every Python test (292 total) has a verified Rust counterpart — see the
+[port coverage mapping](port-coverage-mapping/) for details.
 
 See the [Python project](https://github.com/jlevy/flowmark) for full documentation,
 including features, CLI reference, configuration, IDE setup, and agent use.

@@ -126,7 +126,7 @@ class TestDiscoveryCounts:
 
     def test_rust_test_count(self) -> None:
         records = load_rust_tests_yaml(RUST_YAML)
-        assert len(records) == 341, f"Expected 341 Rust tests, got {len(records)}"
+        assert len(records) == 408, f"Expected 408 Rust tests, got {len(records)}"
 
     def test_mapping_count(self) -> None:
         records = load_mapping_yaml(MAPPING_YAML)
