@@ -416,14 +416,14 @@ fn protect_autolinks(text: &str) -> String {
 
     for line in &lines {
         if in_code {
-            result_lines.push(line.to_string());
+            result_lines.push((*line).to_string());
             if is_closing_fence(line.trim(), &fence_str) {
                 in_code = false;
             }
             continue;
         }
         if in_html_comment {
-            result_lines.push(line.to_string());
+            result_lines.push((*line).to_string());
             if line.contains("-->") {
                 in_html_comment = false;
             }
@@ -432,7 +432,7 @@ fn protect_autolinks(text: &str) -> String {
         if let Some(fs) = detect_opening_fence(line.trim()) {
             fence_str = fs;
             in_code = true;
-            result_lines.push(line.to_string());
+            result_lines.push((*line).to_string());
             continue;
         }
         // Skip FNDEF/REFDEF markers — their content contains raw autolinks
@@ -440,7 +440,7 @@ fn protect_autolinks(text: &str) -> String {
         if line.trim().starts_with(FNDEF_MARKER_START)
             || line.trim().starts_with(REFDEF_MARKER_PREFIX)
         {
-            result_lines.push(line.to_string());
+            result_lines.push((*line).to_string());
             if !line.contains("-->") {
                 in_html_comment = true;
             }
@@ -1705,6 +1705,9 @@ fn render_inline_children<'a>(
 
 /// Check if a Link node is an autolink (inner text matches URL).
 /// Autolinks are created by comrak for `<url>`, `<email>`, and bare URLs.
+/// Only URLs with a scheme (http://, https://, etc.) or email addresses can be
+/// autolinks — relative paths like `[foo.md](foo.md)` are explicit links even
+/// when text == URL.
 fn is_autolink(node: &AstNode, link: &comrak::nodes::NodeLink) -> bool {
     // Must have exactly one child that is a Text node
     let Some(first_child) = node.first_child() else {
@@ -1717,8 +1720,15 @@ fn is_autolink(node: &AstNode, link: &comrak::nodes::NodeLink) -> bool {
         NodeValue::Text(t) => t.clone(),
         _ => return false,
     };
-    // Inner text matches URL (autolink) or URL minus "mailto:" (email autolink)
     let url = &link.url;
+    // Comrak's autolink extension only creates autolinks for URLs with a scheme
+    // or email addresses. Relative paths are never autolinks.
+    let has_scheme = url.contains("://") || url.starts_with("mailto:");
+    let is_email = !url.contains("://") && url.contains('@');
+    if !has_scheme && !is_email {
+        return false;
+    }
+    // Inner text matches URL (autolink) or URL minus "mailto:" (email autolink)
     text == *url || url.strip_prefix("mailto:").is_some_and(|stripped| text == stripped)
 }
 
