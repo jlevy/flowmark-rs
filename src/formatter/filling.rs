@@ -709,12 +709,12 @@ fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
                 last_content_line(last_child)
             } else {
                 let sp = node.data.borrow().sourcepos;
-                if sp.end.line > 0 { sp.end.line } else { sp.start.line }
+                if sp.end.line >= sp.start.line { sp.end.line } else { sp.start.line }
             }
         }
         _ => {
             let sp = data.sourcepos;
-            if sp.end.line > 0 { sp.end.line } else { sp.start.line }
+            if sp.end.line >= sp.start.line { sp.end.line } else { sp.start.line }
         }
     }
 }
@@ -800,11 +800,14 @@ fn render_block_children<'a>(
     let mut prev_was_refdef_only = false;
     let mut prev_source_end_line: usize = 0;
     let mut prev_was_html_comment = false;
+    let mut prev_was_list_or_table = false;
+    let mut prev_was_paragraph = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
         let child_is_refdef_only = is_refdef_marker(child);
         let child_is_html_comment = is_html_comment_only(child);
+        let child_is_list = matches!(child.data.borrow().value, NodeValue::List(_));
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -812,24 +815,46 @@ fn render_block_children<'a>(
                 && inline_ends_with_hard_break(child);
 
         // Use source positions to detect whether blocks were originally separated
-        // by a blank line. Only applied for HTML comments to avoid cascading effects
-        // on other block types. Uses last_content_line() to get the true end of content
-        // (compensating for comrak's List/Item nodes including trailing blank lines).
+        // by a blank line. Uses last_content_line() to get the true end of content
+        // (compensating for comrak's List/Item nodes including trailing blank lines
+        // and HtmlBlock type 2 reporting end.line < start.line).
         let child_source_start = child.data.borrow().sourcepos.start.line;
         let child_source_end = last_content_line(child);
         let originally_tight =
             prev_source_end_line > 0 && child_source_start <= prev_source_end_line + 1;
-        // Suppress blank line separators only when adjacent to an HTML comment
-        // AND the blocks were on consecutive lines (no blank line in original).
-        // This matches Python's behavior for tight HTML comments without affecting
-        // other block pairs like lists, paragraphs, blockquotes, etc.
-        let adjacent_html_comment = prev_was_html_comment || child_is_html_comment;
-        let tight_html_comment = originally_tight && adjacent_html_comment;
+
+        // Determine whether to suppress the blank line separator between blocks.
+        // Python's behavior for tight block transitions:
+        //
+        // 1. HTML comment → any block (tight): suppress separator
+        // 2. Any block → HTML comment (tight): suppress, UNLESS prev is list/table
+        //    (GAP13: lists/tables always get a blank line before a following HTML comment)
+        // 3. Paragraph → list (tight): suppress separator (GAP11)
+        //
+        // All other block pairs get the standard blank line separator.
+        let suppress_for_tight = if originally_tight {
+            if prev_was_html_comment {
+                // Rule 1: HTML comment → any block (tight): suppress
+                true
+            } else if child_is_html_comment {
+                // Rule 2: Any block → HTML comment (tight): suppress,
+                // UNLESS prev is list or table (GAP13)
+                !prev_was_list_or_table
+            } else if child_is_list && prev_was_paragraph {
+                // Rule 3: Paragraph → list (tight): suppress (GAP11)
+                // This handles cases like "**Header**:\n- item1\n- item2"
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        };
 
         // Add blank line between consecutive block elements,
         // unless adjacent to a heading ending with a hard break,
         // or between consecutive REFDEF markers (link reference defs are grouped tightly),
-        // or tight with an adjacent HTML comment (matching Python behavior).
+        // or tight transition matching Python behavior (HTML comments, paragraph→list).
         // Note: footnote defs DO get blank lines between them (matching Python).
         let both_refdefs = prev_was_refdef_only && child_is_refdef_only;
         let need_separator = child_is_block
@@ -838,7 +863,7 @@ fn render_block_children<'a>(
             && !prev_was_hard_break_heading
             && !child_is_hard_break_heading
             && !both_refdefs
-            && !tight_html_comment;
+            && !suppress_for_tight;
         if need_separator {
             output.push('\n');
         }
@@ -859,6 +884,11 @@ fn render_block_children<'a>(
         prev_was_block = child_is_block;
         prev_was_refdef_only = child_is_refdef_only;
         prev_was_html_comment = child_is_html_comment;
+        prev_was_list_or_table = matches!(
+            child.data.borrow().value,
+            NodeValue::List(_) | NodeValue::Table(_)
+        );
+        prev_was_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
         prev_source_end_line = child_source_end;
     }
 

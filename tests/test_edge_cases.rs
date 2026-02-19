@@ -243,6 +243,58 @@ fn test_html_comment_pair_tight_with_text() {
     );
 }
 
+// === GAP11: Paragraph before list (tight) ===
+
+#[test]
+fn test_paragraph_then_tight_list() {
+    // Paragraph followed by list with no blank line should stay tight (Python behavior)
+    let input = "**Related Architecture**:\n- [Item one](link) - description\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("**Related Architecture**:\n-"),
+        "Paragraph-list tight transition should have no blank line: got {result:?}"
+    );
+}
+
+// === GAP12: HTML comment after blank line, tight text after ===
+
+#[test]
+fn test_html_comment_after_blank_line_tight_text() {
+    // When there's a blank line BEFORE the comment but NO blank line after,
+    // the text after should remain tight with the comment.
+    let input = "Text before.\n\n<!-- comment -->\nText after.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- comment -->\nText after."),
+        "Text should be tight after HTML comment even when blank line precedes comment: got {result:?}"
+    );
+}
+
+// === GAP13: Blank line before closing HTML comment after list/table ===
+
+#[test]
+fn test_list_then_html_comment_gets_blank_line() {
+    // Python adds a blank line between a list and a following HTML comment
+    // even when original is tight (list output already ends with \n).
+    let input = "<!-- f:field -->\n- Option 1\n- Option 2\n- Option 3\n<!-- /f:field -->\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("- Option 3\n\n<!-- /f:field -->"),
+        "Should have blank line between list and closing HTML comment: got {result:?}"
+    );
+}
+
+#[test]
+fn test_table_then_html_comment_gets_blank_line() {
+    // Python adds a blank line between a table and a following HTML comment
+    let input = "| A | B |\n|---|---|\n| 1 | 2 |\n<!-- end -->\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("| 1 | 2 |\n\n<!-- end -->"),
+        "Should have blank line between table and closing HTML comment: got {result:?}"
+    );
+}
+
 // === GAP8: Sentence breaks after closing paren/quote ===
 
 fn fmt_semantic(input: &str) -> String {
@@ -321,3 +373,4 @@ fn test_ellipsis_in_footnote_body() {
         "Ellipsis should be applied in footnote body: got {fn_line:?}"
     );
 }
+

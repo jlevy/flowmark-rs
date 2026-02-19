@@ -86,8 +86,8 @@ The stated reason—“I’m working on myself”—may be sincere on one level.
 Cas’ surprise at John’s question hung over them both for a brief moment, like a thinly
 disguised sack of potatoes.
 “From 2002-2004 I specialized in the Sarbanes-Oxley Act (Pub.L. 107–204, 116 Stat.
-745, enacted July 30, 2002), which was known (in the House) as the 'Corporate and
-Auditing Accountability, Responsibility, and Transparency Act' and--” But here he cut
+745, enacted July 30, 2002), which was known (in the House) as the ‘Corporate and
+Auditing Accountability, Responsibility, and Transparency Act’ and--” But here he cut
 her off! And who could blame him?
 He had spoken with the FBI. There was no time to lose.
 
@@ -841,11 +841,11 @@ The same is true for links.
 “The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google).” "The
+[Google](https://en.wikipedia.org/wiki/Google).” “The
 [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google)." (The
+[Google](https://en.wikipedia.org/wiki/Google).” (The
 [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
@@ -947,7 +947,7 @@ not complaining)[^urbanthowt.wy49lp].
 ❗️️️ Having multiple automatic conversion thresholds can give the investor with a higher
 threshold leverage to block an IPO.[^210]
 
-1. **Initial Scan with -X importtime:** Run the application with python -X importtime...
+1. **Initial Scan with -X importtime:** Run the application with python -X importtime …
    \> import.log. Visualize the output using tuna import.log.<sup>42</sup> Look for
    modules with large *cumulative* times at the top level or deep in the call stack.
    These are the primary candidates for further investigation.<sup>1</sup>
@@ -1028,7 +1028,6 @@ valuation, shares, fundraising, and dilution
   [Pricing](https://aws.amazon.com/cloudwatch/pricing/) - 🔹Blahxxx - ❗Blahxxx
 
 **Related Architecture**:
-
 - [arch-execution.md](../architecture/arch-execution.md) - Execution model context
 
 ## Corner Cases
@@ -1427,7 +1426,6 @@ It should remain on separate lines after the tag.
 {% /description %}
 
 <!-- f:description ref="example" -->
-
 HTML comment opening tag should also preserve newlines.
 Content should start on a new line.
 <!-- /f:description -->
@@ -1449,6 +1447,7 @@ Closing tags should NOT be merged onto list item lines:
 - Option 1 <!-- #opt1 -->
 - Option 2 <!-- #opt2 -->
 - Option 3 <!-- #opt3 -->
+
 <!-- /f:field -->
 
 ### Issue 3: Same-Line Tag Pairs
@@ -1521,6 +1520,7 @@ Tables inside HTML comment tags without blank lines:
 | --- | --- | --- |
 | Speed | Fast | Faster |
 | Cost | Low | Medium |
+
 <!-- /f:table -->
 
 Tables inside Jinja variable tags (edge case):
@@ -1563,7 +1563,6 @@ Just plain paragraph text that wraps normally.
 {% /note %}
 
 <!-- f:warning -->
-
 This warning contains only paragraph text.
 No block elements here, so no extra blank lines needed.
 <!-- /f:warning -->
@@ -1606,6 +1605,7 @@ Self-closing tags with tables:
 | Item | Value |
 | --- | --- |
 | X | 1 |
+
 <!-- end-section -->
 
 ### Issue 7: Multi-Line Opening Tags (GitHub Issue #17)
