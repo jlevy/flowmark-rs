@@ -182,10 +182,7 @@ fn test_bare_url_not_linkified() {
 fn test_email_not_linkified() {
     let input = "Contact user@example.com for details.\n";
     let result = fmt(input);
-    assert!(
-        result.contains("user@example.com"),
-        "Email should be present: got {result:?}"
-    );
+    assert!(result.contains("user@example.com"), "Email should be present: got {result:?}");
     assert!(
         !result.contains("[user@example.com](mailto:user@example.com)"),
         "Email should NOT be converted to mailto link: got {result:?}"
@@ -306,10 +303,7 @@ fn test_sentence_break_after_period_paren() {
     // `word.)` should be recognized as end of sentence
     let input = "This is a long sentence that ends with a paren (like you.) Next sentence starts here and keeps going for a while.\n";
     let result = fmt_semantic(input);
-    assert!(
-        result.contains("you.)\n"),
-        "Should break sentence after .): got {result:?}"
-    );
+    assert!(result.contains("you.)\n"), "Should break sentence after .): got {result:?}");
 }
 
 #[test]
@@ -337,7 +331,7 @@ fn test_escaped_char_in_code_span_width() {
     let input = "Backslashes that are NOT CommonMark escape sequences are preserved. Note: `\\.` is a valid CommonMark escape (escaped period).\n";
     let result = fmt_plain(input);
     // Python wraps before "valid" (83 chars on first line), Rust should too.
-    let first_line = result.lines().next().unwrap();
+    let first_line = result.lines().next().expect("non-empty result");
     assert!(
         first_line.chars().count() <= 88,
         "First line should not exceed 88 chars (got {}): {first_line:?}",
@@ -356,7 +350,7 @@ fn test_smart_quotes_in_footnote_body() {
     let input = "Text with footnote[^1].\n\n[^1]: He said \"hello\" and she said \"goodbye\".\n";
     let result = fmt_auto(input);
     // Smart quotes should be applied inside footnote body
-    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).unwrap();
+    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).expect("footnote line");
     assert!(
         fn_line.contains('\u{201c}') || fn_line.contains('\u{201d}'),
         "Smart quotes should be applied in footnote body: got {fn_line:?}"
@@ -367,10 +361,9 @@ fn test_smart_quotes_in_footnote_body() {
 fn test_ellipsis_in_footnote_body() {
     let input = "Text with footnote[^1].\n\n[^1]: This is a long footnote...\n";
     let result = fmt_auto(input);
-    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).unwrap();
+    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).expect("footnote line");
     assert!(
         fn_line.contains('\u{2026}'),
         "Ellipsis should be applied in footnote body: got {fn_line:?}"
     );
 }
-

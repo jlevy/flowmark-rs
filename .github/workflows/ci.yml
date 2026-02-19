@@ -44,7 +44,13 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
+      - name: Pre-install tryscript
+        run: npm install -g tryscript@latest
+      - name: Build flowmark binary for tryscript tests
+        run: cargo build --locked --all-features
+        env:
+          RUSTFLAGS: "-D warnings"
       - run: cargo test --locked --all-features
         env:
           RUSTFLAGS: "-D warnings"
@@ -97,7 +103,8 @@ jobs:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
-      - run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info
+      - name: Run coverage (excluding tryscript golden tests that need external binary)
+        run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info --ignore-filename-regex test_tryscript_golden -- --skip tryscript
         env:
           RUSTFLAGS: "-D warnings"
       - uses: codecov/codecov-action@v4

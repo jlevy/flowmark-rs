@@ -143,7 +143,7 @@
 //! ### COMRAK-WORKAROUND9: Footnote list item rendering
 //!
 //! **Problem:** Comrak treats `- item` at footnote continuation indent
-//! as paragraph continuation text (per CommonMark's rule that bullet
+//! as paragraph continuation text (per `CommonMark`'s rule that bullet
 //! lists cannot interrupt paragraphs). Python/marko treats it as a
 //! list item within the footnote, rendering continuation lines with
 //! 6-space indent (4 footnote + 2 list) instead of 4.
@@ -398,8 +398,10 @@ const AUTOLINK_CLOSE: char = '\u{F004}';
 
 /// COMRAK-WORKAROUND3: Regex for angle-bracket autolinks: `<scheme://...>` or `<email@host>`.
 static ANGLE_AUTOLINK_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"<((?:https?|ftp|mailto):[^\s>]+|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})>")
-        .expect("valid ANGLE_AUTOLINK_RE regex")
+    Regex::new(
+        r"<((?:https?|ftp|mailto):[^\s>]+|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})>",
+    )
+    .expect("valid ANGLE_AUTOLINK_RE regex")
 });
 
 /// COMRAK-WORKAROUND3: Replace `<url>` with PUA-wrapped text so comrak cannot
@@ -435,7 +437,9 @@ fn protect_autolinks(text: &str) -> String {
         }
         // Skip FNDEF/REFDEF markers — their content contains raw autolinks
         // that should be preserved as-is (they're rendered from the marker, not by comrak).
-        if line.trim().starts_with(FNDEF_MARKER_START) || line.trim().starts_with(REFDEF_MARKER_PREFIX) {
+        if line.trim().starts_with(FNDEF_MARKER_START)
+            || line.trim().starts_with(REFDEF_MARKER_PREFIX)
+        {
             result_lines.push(line.to_string());
             if !line.contains("-->") {
                 in_html_comment = true;
@@ -641,7 +645,7 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
 
 /// COMRAK-WORKAROUND5: Apply typography transforms (smart quotes, ellipsis) to
 /// footnote definition bodies inside FNDEF HTML comment markers. These markers become
-/// HtmlBlock nodes in the comrak AST, which the AST-level typography transforms skip.
+/// `HtmlBlock` nodes in the comrak AST, which the AST-level typography transforms skip.
 fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipses: bool) -> String {
     let mut result = String::new();
     let mut remaining = text.as_bytes();
@@ -654,16 +658,15 @@ fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipse
             result.push_str(&String::from_utf8_lossy(&remaining[..pos]));
             let after_marker = &remaining[pos..];
             // Find closing -->
-            if let Some(end_pos) = after_marker
-                .windows(end_marker.len())
-                .position(|w| w == end_marker)
+            if let Some(end_pos) =
+                after_marker.windows(end_marker.len()).position(|w| w == end_marker)
             {
                 let block_end = end_pos + end_marker.len();
                 let block = &String::from_utf8_lossy(&after_marker[..block_end]);
                 // The block is: <!-- FNDEF\n[^label]: body text\n-->
                 // Apply typography to the body (everything after the first line)
                 if let Some(first_nl) = block.find('\n') {
-                    let header = &block[..first_nl + 1];
+                    let header = &block[..=first_nl];
                     let body_and_close = &block[first_nl + 1..];
                     if let Some(close_pos) = body_and_close.rfind("-->") {
                         let body = &body_and_close[..close_pos];
@@ -706,7 +709,7 @@ static INLINE_CODE_SPAN_RE: LazyLock<Regex> =
 /// COMRAK-WORKAROUND4: Replace `\x` escapes with PUA placeholders, but only outside
 /// fenced code blocks AND inline code spans. Prevents comrak from stripping backslash
 /// escapes during parsing, while preserving literal backslashes inside code (where they
-/// are not CommonMark escape sequences).
+/// are not `CommonMark` escape sequences).
 fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
     transform_outside_code_fences(text, |line| {
         let processed = replace_outside_code_spans(line, placeholders);
@@ -721,10 +724,8 @@ fn replace_outside_code_spans(line: &str, placeholders: &[(String, String)]) -> 
     // We detect code spans on the modified string but apply replacements on the
     // original string using the same byte offsets (since \` and the placeholder
     // are both 2 bytes, offsets are preserved when using a 2-byte placeholder).
-    let escaped_backtick_positions: Vec<usize> = line
-        .match_indices("\\`")
-        .map(|(i, _)| i)
-        .collect();
+    let escaped_backtick_positions: Vec<usize> =
+        line.match_indices("\\`").map(|(i, _)| i).collect();
 
     if escaped_backtick_positions.is_empty() {
         // No escaped backticks — use the fast regex path
@@ -1059,10 +1060,8 @@ fn render_block_children<'a>(
         prev_was_block = child_is_block;
         prev_was_refdef_only = child_is_refdef_only;
         prev_was_html_comment = child_is_html_comment;
-        prev_was_list_or_table = matches!(
-            child.data.borrow().value,
-            NodeValue::List(_) | NodeValue::Table(_)
-        );
+        prev_was_list_or_table =
+            matches!(child.data.borrow().value, NodeValue::List(_) | NodeValue::Table(_));
         prev_was_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
         prev_source_end_line = child_source_end;
     }
@@ -1326,20 +1325,28 @@ fn render_block<'a>(
                             }
 
                             // Check if this is a multi-paragraph footnote (contains blank lines)
-                            let has_blank_lines = body_lines.iter().skip(1).any(|l| l.trim().is_empty());
+                            let has_blank_lines =
+                                body_lines.iter().skip(1).any(|l| l.trim().is_empty());
                             if has_blank_lines {
                                 // Multi-paragraph footnote: split into paragraphs and wrap each.
                                 let mut paragraphs: Vec<Vec<&str>> = vec![Vec::new()];
                                 for line in &body_lines {
                                     if line.trim().is_empty() {
-                                        if !paragraphs.last().unwrap().is_empty() {
+                                        if !paragraphs
+                                            .last()
+                                            .expect("paragraphs is non-empty")
+                                            .is_empty()
+                                        {
                                             paragraphs.push(Vec::new());
                                         }
                                     } else {
-                                        paragraphs.last_mut().unwrap().push(line);
+                                        paragraphs
+                                            .last_mut()
+                                            .expect("paragraphs is non-empty")
+                                            .push(line);
                                     }
                                 }
-                                if paragraphs.last().is_some_and(|p| p.is_empty()) {
+                                if paragraphs.last().is_some_and(Vec::is_empty) {
                                     paragraphs.pop();
                                 }
                                 for (pi, para) in paragraphs.iter().enumerate() {
@@ -1347,9 +1354,13 @@ fn render_block<'a>(
                                     let is_blockquote = para.iter().all(|l| l.starts_with('>'));
                                     if is_blockquote {
                                         // Strip > prefix, join, wrap with blockquote prefix
-                                        let bq_body: Vec<&str> = para.iter().map(|l| {
-                                            l.strip_prefix("> ").unwrap_or(l.strip_prefix('>').unwrap_or(l))
-                                        }).collect();
+                                        let bq_body: Vec<&str> = para
+                                            .iter()
+                                            .map(|l| {
+                                                l.strip_prefix("> ")
+                                                    .unwrap_or(l.strip_prefix('>').unwrap_or(l))
+                                            })
+                                            .collect();
                                         let joined = bq_body.join(" ");
                                         let bq_prefix = if pi == 0 {
                                             format!("{fn_prefix}> ")
@@ -1357,7 +1368,8 @@ fn render_block<'a>(
                                             format!("{fn_subsequent}> ")
                                         };
                                         let bq_subsequent = format!("{fn_subsequent}> ");
-                                        let wrapped = line_wrapper(joined.trim(), &bq_prefix, &bq_subsequent);
+                                        let wrapped =
+                                            line_wrapper(joined.trim(), &bq_prefix, &bq_subsequent);
                                         output.push_str(&wrapped);
                                     } else {
                                         let joined = para.join(" ");
@@ -1695,9 +1707,8 @@ fn render_inline_children<'a>(
 /// Autolinks are created by comrak for `<url>`, `<email>`, and bare URLs.
 fn is_autolink(node: &AstNode, link: &comrak::nodes::NodeLink) -> bool {
     // Must have exactly one child that is a Text node
-    let first_child = match node.first_child() {
-        Some(c) => c,
-        None => return false,
+    let Some(first_child) = node.first_child() else {
+        return false;
     };
     if first_child.next_sibling().is_some() {
         return false;
@@ -1761,7 +1772,7 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
                 // COMRAK-WORKAROUND3: Autolink rendering — inner text matches URL,
                 // render as bare text. Angle-bracket autolinks were protected by
                 // PUA markers and are restored during postprocessing.
-                inner.to_string()
+                inner.clone()
             } else {
                 let title = if link.title.is_empty() {
                     String::new()
@@ -2239,6 +2250,8 @@ mod tests {
 
     #[test]
     fn extract_footnote_with_autolink_blank_line_preserved() {
+        use crate::config::ListSpacing;
+
         let input = "[^2]: <https://example.com/path>\n\n[^3]: <https://example.com/other>\n";
         let extracted = extract_footnote_defs(input);
         let marker_count = extracted.matches(FNDEF_MARKER_START).count();
@@ -2255,8 +2268,8 @@ mod tests {
         );
 
         // Check the full pipeline output
-        use crate::config::ListSpacing;
-        let result = fill_markdown(input, true, 88, false, false, false, false, None, ListSpacing::Preserve);
+        let result =
+            fill_markdown(input, true, 88, false, false, false, false, None, ListSpacing::Preserve);
         assert!(
             result.contains("\n\n[^3]:"),
             "Full pipeline should preserve blank line between footnote defs with autolinks, got:\n{result}"

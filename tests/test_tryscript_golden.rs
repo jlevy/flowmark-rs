@@ -17,17 +17,34 @@ fn project_root() -> PathBuf {
 }
 
 /// Run a single tryscript file and assert it passes.
+/// Prefers globally installed `tryscript` over `npx` to avoid npm install
+/// race conditions in parallel test execution.
 fn run_tryscript(file: &str) {
     let root = project_root();
     let script = root.join("tests/tryscript").join(file);
     assert!(script.exists(), "tryscript file not found: {}", script.display());
 
-    let output = Command::new("npx")
-        .args(["tryscript@latest", "run", script.to_str().expect("utf-8 path")])
-        .env("TRYSCRIPT_GIT_ROOT", &root)
-        .current_dir(&root)
-        .output()
-        .expect("failed to execute npx tryscript — is Node.js installed?");
+    let script_path = script.to_str().expect("utf-8 path");
+
+    // Prefer globally installed tryscript (avoids npx install races in parallel tests).
+    let has_global =
+        Command::new("tryscript").arg("--version").output().is_ok_and(|o| o.status.success());
+
+    let output = if has_global {
+        Command::new("tryscript")
+            .args(["run", script_path])
+            .env("TRYSCRIPT_GIT_ROOT", &root)
+            .current_dir(&root)
+            .output()
+            .expect("failed to execute tryscript")
+    } else {
+        Command::new("npx")
+            .args(["tryscript@latest", "run", script_path])
+            .env("TRYSCRIPT_GIT_ROOT", &root)
+            .current_dir(&root)
+            .output()
+            .expect("failed to execute npx tryscript — is Node.js installed?")
+    };
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
