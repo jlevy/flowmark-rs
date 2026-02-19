@@ -1381,7 +1381,6 @@ This is a multi-line description. It should remain on separate lines after the t
 
 HTML comment opening tag should also preserve newlines. Content should start on a new
 line.
-
 <!-- /f:description -->
 
 ### Issue 2: Closing Tags After Lists
@@ -1401,7 +1400,6 @@ Closing tags should NOT be merged onto list item lines:
 - Option 1 <!-- #opt1 -->
 - Option 2 <!-- #opt2 -->
 - Option 3 <!-- #opt3 -->
-
 <!-- /f:field -->
 
 ### Issue 3: Same-Line Tag Pairs
@@ -1418,9 +1416,9 @@ with text after.
 
 ### Issue 3a: Backslash in Attributes
 
-Backslashes that are NOT CommonMark escape sequences are preserved. Note: `\.` is a valid
-CommonMark escape (escaped period), so use `\\.` in source. Characters like `\+`, `\-`,
-`\s` are NOT CommonMark escapes and are preserved.
+Backslashes that are NOT CommonMark escape sequences are preserved. Note: `\.` is a
+valid CommonMark escape (escaped period), so use `\\.` in source. Characters like `\+`,
+`\-`, `\s` are NOT CommonMark escapes and are preserved.
 
 {% field kind="string" id="phone" pattern="^\+?[0-9\-\s]+$" %}{% /field %}
 
@@ -1474,7 +1472,6 @@ Tables inside HTML comment tags without blank lines:
 | --- | --- | --- |
 | Speed | Fast | Faster |
 | Cost | Low | Medium |
-
 <!-- /f:table -->
 
 Tables inside Jinja variable tags (edge case):
@@ -1520,7 +1517,6 @@ normally.
 
 This warning contains only paragraph text. No block elements here, so no extra blank
 lines needed.
-
 <!-- /f:warning -->
 
 {% tip title="Helpful Tip" %}
@@ -1561,7 +1557,6 @@ Self-closing tags with tables:
 | Item | Value |
 | --- | --- |
 | X | 1 |
-
 <!-- end-section -->
 
 ### Issue 7: Multi-Line Opening Tags (GitHub Issue #17)

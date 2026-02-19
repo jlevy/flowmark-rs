@@ -205,3 +205,119 @@ fn test_angle_bracket_email_preserved() {
         "Should NOT be converted to mailto link: got {result:?}"
     );
 }
+
+// === GAP9: Extra blank lines between HTML comment blocks and adjacent text ===
+
+#[test]
+fn test_html_comment_no_extra_blank_line_tight() {
+    // When original has no blank line between HTML comment and text,
+    // output should also have no blank line.
+    let input = "<!-- comment -->\nText after comment.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- comment -->\nText after comment."),
+        "No blank line should be inserted after tight HTML comment: got {result:?}"
+    );
+}
+
+#[test]
+fn test_html_comment_preserves_blank_line_when_present() {
+    // When original HAS a blank line between HTML comment and text,
+    // output should preserve it.
+    let input = "<!-- comment -->\n\nText after comment.\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- comment -->\n\nText after comment."),
+        "Blank line after HTML comment should be preserved when present: got {result:?}"
+    );
+}
+
+#[test]
+fn test_html_comment_pair_tight_with_text() {
+    // HTML comment pair surrounding text with no blank lines
+    let input = "<!-- start -->\nInner text here.\n<!-- end -->\n";
+    let result = fmt(input);
+    assert!(
+        result.contains("<!-- start -->\nInner text here.\n<!-- end -->"),
+        "HTML comment pair should stay tight with enclosed text: got {result:?}"
+    );
+}
+
+// === GAP8: Sentence breaks after closing paren/quote ===
+
+fn fmt_semantic(input: &str) -> String {
+    fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_sentence_break_after_period_paren() {
+    // `word.)` should be recognized as end of sentence
+    let input = "This is a long sentence that ends with a paren (like you.) Next sentence starts here and keeps going for a while.\n";
+    let result = fmt_semantic(input);
+    assert!(
+        result.contains("you.)\n"),
+        "Should break sentence after .): got {result:?}"
+    );
+}
+
+#[test]
+fn test_no_sentence_break_inside_link_paren() {
+    // `[Google](url)."` should NOT be treated as sentence end (false positive from URL)
+    let input = "He worked at [Google](https://en.wikipedia.org/wiki/Google).\" \"The next sentence starts here and keeps going.\n";
+    let result = fmt_semantic(input);
+    assert!(
+        !result.contains("Google).\"\n\"The"),
+        "Should NOT break sentence inside link construct: got {result:?}"
+    );
+}
+
+// === GAP6: Escaped char backslash in code span counted in line width ===
+
+fn fmt_plain(input: &str) -> String {
+    fill_markdown(input, true, 88, false, false, false, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_escaped_char_in_code_span_width() {
+    // The backslash in `\.` inside a code span should count correctly for width.
+    // Escape placeholder substitution should NOT happen inside code spans.
+    // Plain mode (non-semantic) wrapping to demonstrate the width issue.
+    let input = "Backslashes that are NOT CommonMark escape sequences are preserved. Note: `\\.` is a valid CommonMark escape (escaped period).\n";
+    let result = fmt_plain(input);
+    // Python wraps before "valid" (83 chars on first line), Rust should too.
+    let first_line = result.lines().next().unwrap();
+    assert!(
+        first_line.chars().count() <= 88,
+        "First line should not exceed 88 chars (got {}): {first_line:?}",
+        first_line.chars().count()
+    );
+}
+
+// === GAP10: Typography transforms in footnote bodies ===
+
+fn fmt_auto(input: &str) -> String {
+    fill_markdown(input, true, 88, true, true, true, true, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_smart_quotes_in_footnote_body() {
+    let input = "Text with footnote[^1].\n\n[^1]: He said \"hello\" and she said \"goodbye\".\n";
+    let result = fmt_auto(input);
+    // Smart quotes should be applied inside footnote body
+    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).unwrap();
+    assert!(
+        fn_line.contains('\u{201c}') || fn_line.contains('\u{201d}'),
+        "Smart quotes should be applied in footnote body: got {fn_line:?}"
+    );
+}
+
+#[test]
+fn test_ellipsis_in_footnote_body() {
+    let input = "Text with footnote[^1].\n\n[^1]: This is a long footnote...\n";
+    let result = fmt_auto(input);
+    let fn_line = result.lines().find(|l| l.starts_with("[^1]:")).unwrap();
+    assert!(
+        fn_line.contains('\u{2026}'),
+        "Ellipsis should be applied in footnote body: got {fn_line:?}"
+    );
+}

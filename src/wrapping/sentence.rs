@@ -13,10 +13,14 @@ use std::sync::LazyLock;
 /// Note: Python uses `\p{L}` and `\p{Ll}` for Unicode letter classes.
 /// Rust's `regex` crate supports these.
 static SENTENCE_END_RE: LazyLock<Regex> = LazyLock::new(|| {
-    // Allow optional closing brackets/parens/angle brackets between word and punctuation
-    // to handle cases like [link](url). and <tag>word</tag>.
+    // Match sentence-ending punctuation (.?!) optionally followed by a closing
+    // quote or paren, OR a closing quote/paren followed by punctuation.
+    // Matches Python's regex: `)` is in the same character class as quotes,
+    // appearing either before or after the punctuation mark.
+    // This avoids false positives from URLs like [Google](url)." where the
+    // `)` from the link syntax would otherwise bridge to the sentence-final `."`
     Regex::new(
-        r"(\b\p{L}+[\p{Ll}])[)\]>]*([.?!]['\x22\u{2019}\u{201d}]?|['\x22\u{2019}\u{201d}][.?!]) *$",
+        r"(\b\p{L}+[\p{Ll}])([.?!]['\x22\u{2019}\u{201d})]?|['\x22\u{2019}\u{201d})][.?!]) *$",
     )
     .expect("valid SENTENCE_END_RE regex")
 });

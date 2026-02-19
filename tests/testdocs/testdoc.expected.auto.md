@@ -57,7 +57,7 @@ high-stakes decisions for those who give and *receive it*. Blah blah blah and bl
 
 - Additional parameters become options (e.g., `model=gpt-4o`, `language=en`)
 
-[^uptimenote]: In engineering, "counting nines" traditionally refers to *service
+[^uptimenote]: In engineering, “counting nines” traditionally refers to *service
     availability* (uptime)—99.99% uptime means ≤ 52 minutes of downtime per year.
 
 ## Some apostrophes and quotes--and dashes, too
@@ -347,15 +347,16 @@ eye on.
   vested shares. It’s simple enough to ask, "Does the company have any repurchase right
   to *vested* shares?”
   (Note repurchasing *unvested* shares that were purchased via early exercise is
-  different, and helps you.) If you don’t want to ask, the fair market value repurchase
-  right should be included in the documents you are being asked to sign or acknowledge
-  that you have read and understood.
-  (Skype had a
+  different, and helps you.)
+  If you don’t want to ask, the fair market value repurchase right should be included in
+  the documents you are being asked to sign or acknowledge that you have read and
+  understood. (Skype had a
   [complex](https://www.quora.com/Which-valley-startups-have-a-Skype-like-repurchase-right)
   [controversy](http://www.wac6.com/wac6/2011/07/skypes-employee-stock-option-plan-worthless-only-if-you-quit-before-2014.html)
-  related to repurchasing.) You might find a repurchase right for vested shares in the
-  Stock Plan itself, the Stock Option Agreement, the Exercise Agreement, the bylaws, the
-  certificate of incorporation, or any other stockholder agreement.
+  related to repurchasing.)
+  You might find a repurchase right for vested shares in the Stock Plan itself, the
+  Stock Option Agreement, the Exercise Agreement, the bylaws, the certificate of
+  incorporation, or any other stockholder agreement.
 
 Venture capital firms fund companies-commonly referred to as startups-that have
 ambitious goals of being dominant high-value businesses in their target market
@@ -840,12 +841,12 @@ The same is true for links.
 “The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google).”
-"The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
+[Google](https://en.wikipedia.org/wiki/Google).” "The
+[Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google)."
-(The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
+[Google](https://en.wikipedia.org/wiki/Google)." (The
+[Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
 [Google](https://en.wikipedia.org/wiki/Google).) The
@@ -988,7 +989,7 @@ And let’s try some links with angle brackets.
     the value proposition of a company and ensuring the alignment of interests between
     the two parties.
 
-[^multiparagraph]: This is an even longer footnote...
+[^multiparagraph]: This is an even longer footnote …
 
     Paragraph 1.
 
@@ -1429,7 +1430,6 @@ It should remain on separate lines after the tag.
 
 HTML comment opening tag should also preserve newlines.
 Content should start on a new line.
-
 <!-- /f:description -->
 
 ### Issue 2: Closing Tags After Lists
@@ -1449,7 +1449,6 @@ Closing tags should NOT be merged onto list item lines:
 - Option 1 <!-- #opt1 -->
 - Option 2 <!-- #opt2 -->
 - Option 3 <!-- #opt3 -->
-
 <!-- /f:field -->
 
 ### Issue 3: Same-Line Tag Pairs
@@ -1522,7 +1521,6 @@ Tables inside HTML comment tags without blank lines:
 | --- | --- | --- |
 | Speed | Fast | Faster |
 | Cost | Low | Medium |
-
 <!-- /f:table -->
 
 Tables inside Jinja variable tags (edge case):
@@ -1568,7 +1566,6 @@ Just plain paragraph text that wraps normally.
 
 This warning contains only paragraph text.
 No block elements here, so no extra blank lines needed.
-
 <!-- /f:warning -->
 
 {% tip title="Helpful Tip" %}
@@ -1609,7 +1606,6 @@ Self-closing tags with tables:
 | Item | Value |
 | --- | --- |
 | X | 1 |
-
 <!-- end-section -->
 
 ### Issue 7: Multi-Line Opening Tags (GitHub Issue #17)

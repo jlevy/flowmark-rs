@@ -118,15 +118,17 @@ fn is_tag_only_line(line: &str) -> bool {
         return false;
     }
 
+    // Only consider Jinja/Markdoc tags for block spacing, NOT HTML comments.
+    // HTML comments are natively parsed by comrak as HTML blocks (type 2),
+    // so they don't need blank lines injected around them. Adding blank lines
+    // around HTML comments causes extra blank lines in the output.
     let starts_tag = stripped.starts_with(SINGLE_JINJA_TAG.open_delim)
         || stripped.starts_with(SINGLE_JINJA_COMMENT.open_delim)
-        || stripped.starts_with(SINGLE_JINJA_VAR.open_delim)
-        || stripped.starts_with(SINGLE_HTML_COMMENT.open_delim);
+        || stripped.starts_with(SINGLE_JINJA_VAR.open_delim);
 
     let ends_tag = stripped.ends_with(SINGLE_JINJA_TAG.close_delim)
         || stripped.ends_with(SINGLE_JINJA_COMMENT.close_delim)
-        || stripped.ends_with(SINGLE_JINJA_VAR.close_delim)
-        || stripped.ends_with(SINGLE_HTML_COMMENT.close_delim);
+        || stripped.ends_with(SINGLE_JINJA_VAR.close_delim);
 
     starts_tag && ends_tag
 }

@@ -464,16 +464,143 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
     })
 }
 
-/// Replace escaped characters with placeholders, but only outside fenced code blocks.
-/// This prevents comrak from stripping backslash escapes during parsing.
+/// Apply typography transforms (smart quotes, ellipsis) to footnote definition bodies
+/// inside FNDEF HTML comment markers. These markers become HtmlBlock nodes in the
+/// comrak AST, which the AST-level typography transforms skip.
+fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipses: bool) -> String {
+    let mut result = String::new();
+    let mut remaining = text.as_bytes();
+    let marker = FNDEF_MARKER_START.as_bytes();
+    let end_marker = b"-->";
+
+    while !remaining.is_empty() {
+        if let Some(pos) = remaining.windows(marker.len()).position(|w| w == marker) {
+            // Copy text before the marker
+            result.push_str(&String::from_utf8_lossy(&remaining[..pos]));
+            let after_marker = &remaining[pos..];
+            // Find closing -->
+            if let Some(end_pos) = after_marker
+                .windows(end_marker.len())
+                .position(|w| w == end_marker)
+            {
+                let block_end = end_pos + end_marker.len();
+                let block = &String::from_utf8_lossy(&after_marker[..block_end]);
+                // The block is: <!-- FNDEF\n[^label]: body text\n-->
+                // Apply typography to the body (everything after the first line)
+                if let Some(first_nl) = block.find('\n') {
+                    let header = &block[..first_nl + 1];
+                    let body_and_close = &block[first_nl + 1..];
+                    if let Some(close_pos) = body_and_close.rfind("-->") {
+                        let body = &body_and_close[..close_pos];
+                        let close = &body_and_close[close_pos..];
+                        let mut transformed = body.to_string();
+                        if do_smartquotes {
+                            transformed = smart_quotes(&transformed);
+                        }
+                        if do_ellipses {
+                            transformed = apply_ellipses(&transformed);
+                        }
+                        result.push_str(header);
+                        result.push_str(&transformed);
+                        result.push_str(close);
+                    } else {
+                        result.push_str(block);
+                    }
+                } else {
+                    result.push_str(block);
+                }
+                remaining = &after_marker[block_end..];
+            } else {
+                // No closing marker found, copy rest as-is
+                result.push_str(&String::from_utf8_lossy(after_marker));
+                break;
+            }
+        } else {
+            result.push_str(&String::from_utf8_lossy(remaining));
+            break;
+        }
+    }
+    result
+}
+
+/// Pattern matching inline code spans (single or double backtick).
+/// Regex for inline code spans (backtick-delimited).
+static INLINE_CODE_SPAN_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"``[^`]+``|`[^`]+`").expect("valid INLINE_CODE_SPAN_RE regex"));
+
+/// Replace escaped characters with placeholders, but only outside fenced code blocks
+/// AND outside inline code spans. This prevents comrak from stripping backslash escapes
+/// during parsing, while preserving literal backslashes inside code spans (where they
+/// are not CommonMark escape sequences).
 fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
     transform_outside_code_fences(text, |line| {
-        let mut processed = line.to_string();
+        let processed = replace_outside_code_spans(line, placeholders);
+        vec![processed]
+    })
+}
+
+/// Apply escape replacements only to text OUTSIDE inline code spans.
+fn replace_outside_code_spans(line: &str, placeholders: &[(String, String)]) -> String {
+    // Temporarily hide escaped backticks so the code span regex doesn't treat
+    // them as code span delimiters (e.g., `\`text\`` is not a code span).
+    // We detect code spans on the modified string but apply replacements on the
+    // original string using the same byte offsets (since \` and the placeholder
+    // are both 2 bytes, offsets are preserved when using a 2-byte placeholder).
+    let escaped_backtick_positions: Vec<usize> = line
+        .match_indices("\\`")
+        .map(|(i, _)| i)
+        .collect();
+
+    if escaped_backtick_positions.is_empty() {
+        // No escaped backticks — use the fast regex path
+        let mut result = String::new();
+        let mut last_end = 0;
+        for m in INLINE_CODE_SPAN_RE.find_iter(line) {
+            let before = &line[last_end..m.start()];
+            let mut processed = before.to_string();
+            for (escaped, placeholder) in placeholders {
+                processed = processed.replace(escaped.as_str(), placeholder.as_str());
+            }
+            result.push_str(&processed);
+            result.push_str(m.as_str());
+            last_end = m.end();
+        }
+        let rest = &line[last_end..];
+        let mut processed = rest.to_string();
         for (escaped, placeholder) in placeholders {
             processed = processed.replace(escaped.as_str(), placeholder.as_str());
         }
-        vec![processed]
-    })
+        result.push_str(&processed);
+        return result;
+    }
+
+    // Has escaped backticks — replace them with a same-length placeholder,
+    // find code spans on the modified string, then apply replacements to
+    // the original string using the same byte offsets.
+    // Use two ASCII chars that won't appear in markdown for the 2-byte \`
+    let modified = line.replace("\\`", "\x01\x01");
+
+    let mut result = String::new();
+    let mut last_end = 0;
+    for m in INLINE_CODE_SPAN_RE.find_iter(&modified) {
+        // Apply replacements to original text outside code spans
+        let before = &line[last_end..m.start()];
+        let mut processed = before.to_string();
+        for (escaped, placeholder) in placeholders {
+            processed = processed.replace(escaped.as_str(), placeholder.as_str());
+        }
+        result.push_str(&processed);
+        // Keep code span from original unchanged
+        result.push_str(&line[m.start()..m.end()]);
+        last_end = m.end();
+    }
+    let rest = &line[last_end..];
+    let mut processed = rest.to_string();
+    for (escaped, placeholder) in placeholders {
+        processed = processed.replace(escaped.as_str(), placeholder.as_str());
+    }
+    result.push_str(&processed);
+    result
 }
 
 /// Remove unnecessary period escapes from the formatted output.
@@ -569,6 +696,29 @@ fn remove_period_escapes_preserving_code(line: &str) -> String {
     result
 }
 
+/// Get the last actual content line for a node, compensating for comrak's
+/// tendency to include trailing blank lines in List/Item sourcepos.
+/// For List nodes, recurses to the last Item's last child to find the true
+/// content end line. For other nodes, uses sourcepos directly.
+fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
+    let data = node.data.borrow();
+    match &data.value {
+        NodeValue::List(_) | NodeValue::Item(_) => {
+            drop(data);
+            if let Some(last_child) = node.children().last() {
+                last_content_line(last_child)
+            } else {
+                let sp = node.data.borrow().sourcepos;
+                if sp.end.line > 0 { sp.end.line } else { sp.start.line }
+            }
+        }
+        _ => {
+            let sp = data.sourcepos;
+            if sp.end.line > 0 { sp.end.line } else { sp.start.line }
+        }
+    }
+}
+
 /// Check if a node is a block-level element that needs blank line separation.
 fn is_block_element(node: &AstNode) -> bool {
     matches!(
@@ -604,6 +754,22 @@ fn inline_ends_with_hard_break<'a>(node: &'a AstNode<'a>) -> bool {
     false
 }
 
+/// Check if a node is a standalone HTML comment (single-line `<!-- ... -->`).
+/// These should not force blank line separators when adjacent to other blocks,
+/// matching Python's behavior of preserving tight spacing around HTML comments.
+fn is_html_comment_only(node: &AstNode) -> bool {
+    if let NodeValue::HtmlBlock(html) = &node.data.borrow().value {
+        let trimmed = html.literal.trim();
+        trimmed.starts_with("<!--")
+            && trimmed.ends_with("-->")
+            && !trimmed.contains('\n')
+            && !trimmed.contains(FNDEF_MARKER_START)
+            && !trimmed.contains(REFDEF_MARKER_PREFIX)
+    } else {
+        false
+    }
+}
+
 /// Check if a node is an HTML block containing a REFDEF or FNDEF marker.
 /// Check if a node is a REFDEF marker (link reference definition).
 /// Consecutive refdefs are grouped tightly (no blank line between them).
@@ -632,19 +798,38 @@ fn render_block_children<'a>(
     let mut prev_ended_with_double_newline = false;
     let mut prev_was_hard_break_heading = false;
     let mut prev_was_refdef_only = false;
+    let mut prev_source_end_line: usize = 0;
+    let mut prev_was_html_comment = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
         let child_is_refdef_only = is_refdef_marker(child);
+        let child_is_html_comment = is_html_comment_only(child);
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
             matches!(child.data.borrow().value, NodeValue::Heading(_))
                 && inline_ends_with_hard_break(child);
 
+        // Use source positions to detect whether blocks were originally separated
+        // by a blank line. Only applied for HTML comments to avoid cascading effects
+        // on other block types. Uses last_content_line() to get the true end of content
+        // (compensating for comrak's List/Item nodes including trailing blank lines).
+        let child_source_start = child.data.borrow().sourcepos.start.line;
+        let child_source_end = last_content_line(child);
+        let originally_tight =
+            prev_source_end_line > 0 && child_source_start <= prev_source_end_line + 1;
+        // Suppress blank line separators only when adjacent to an HTML comment
+        // AND the blocks were on consecutive lines (no blank line in original).
+        // This matches Python's behavior for tight HTML comments without affecting
+        // other block pairs like lists, paragraphs, blockquotes, etc.
+        let adjacent_html_comment = prev_was_html_comment || child_is_html_comment;
+        let tight_html_comment = originally_tight && adjacent_html_comment;
+
         // Add blank line between consecutive block elements,
-        // unless adjacent to a heading ending with a hard break
-        // or between consecutive REFDEF markers (link reference defs are grouped tightly).
+        // unless adjacent to a heading ending with a hard break,
+        // or between consecutive REFDEF markers (link reference defs are grouped tightly),
+        // or tight with an adjacent HTML comment (matching Python behavior).
         // Note: footnote defs DO get blank lines between them (matching Python).
         let both_refdefs = prev_was_refdef_only && child_is_refdef_only;
         let need_separator = child_is_block
@@ -652,7 +837,8 @@ fn render_block_children<'a>(
             && !prev_ended_with_double_newline
             && !prev_was_hard_break_heading
             && !child_is_hard_break_heading
-            && !both_refdefs;
+            && !both_refdefs
+            && !tight_html_comment;
         if need_separator {
             output.push('\n');
         }
@@ -672,6 +858,8 @@ fn render_block_children<'a>(
         output.push_str(&block_output);
         prev_was_block = child_is_block;
         prev_was_refdef_only = child_is_refdef_only;
+        prev_was_html_comment = child_is_html_comment;
+        prev_source_end_line = child_source_end;
     }
 
     output
@@ -1519,6 +1707,13 @@ pub fn fill_markdown(
     // and replacing them with FNDEF markers (preserved as HtmlBlock nodes),
     // we keep definitions at their original positions.
     text = extract_footnote_defs(&text);
+
+    // Apply typography transforms to footnote definition bodies inside FNDEF markers.
+    // These markers become HtmlBlock nodes in the comrak AST, so the AST-level
+    // typography transforms (which only process Paragraph/Text nodes) skip them.
+    if smartquotes || ellipses {
+        text = apply_typography_to_fndef_bodies(&text, smartquotes, ellipses);
+    }
 
     // Protect angle-bracket autolinks from comrak parsing.
     // Comrak's autolink extension converts both <url> and bare url to Link nodes,
