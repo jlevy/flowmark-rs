@@ -142,21 +142,20 @@ Prepare Cargo.toml metadata, write README, and verify publishability.
   docs/port-sync-playbook.md references.
 - [x] **Write root README.md** (fmr-swma) — Created `/README.md` with project
   description, installation, CLI usage, library usage example, and license.
-- [x] **Verify `cargo publish --dry-run` succeeds** (fmr-6evz) — Added
-  `package.exclude` to trim crate from 102 to 71 files. Dry-run passes cleanly.
-- [ ] **(Manual) Set up trusted publishing (OIDC) on crates.io** (fmr-db47) — Register
-  GitHub repo as trusted publisher at https://crates.io/settings/tokens. Configure:
-  owner `jlevy/flowmark-rs`, workflow `publish.yml`, environment (none). This is a
-  one-time manual web UI step.
+- [x] **Verify `cargo publish --dry-run` succeeds** (fmr-6evz) — Updated
+  `package.exclude` to trim crate to 70 files (234 KiB compressed).
+  Dry-run passes.
+- [x] **(Manual) Set up trusted publishing (OIDC) on crates.io** (fmr-db47) — Registered
+  `jlevy/flowmark-rs` (Owner ID: 2058167), workflow `publish.yml` as trusted publisher.
 - [ ] **(Manual) First publish** (fmr-tm0t) — After publish workflow is in place, create
-  a GitHub Release tagged `v0.2.0` to trigger the automated publish. Or run
-  `cargo publish` manually for the first time. Depends on: fmr-aarf (publish workflow),
-  fmr-db47 (OIDC setup).
+  a GitHub Release tagged `v0.2.0` to trigger the automated publish.
+  Or run `cargo publish` manually for the first time.
+  Depends on: fmr-aarf (publish workflow), fmr-db47 (OIDC setup).
 
 ### Phase 4: Publish Workflow — DONE
 
-Create `.github/workflows/publish.yml` for automated crates.io publishing, and write
-the publishing docs.
+Create `.github/workflows/publish.yml` for automated crates.io publishing, and write the
+publishing docs.
 
 - [x] **Create `.github/workflows/publish.yml`** (fmr-aarf) — Created with OIDC trusted
   publishing, test-before-publish safety check, and manual dispatch trigger.
@@ -172,22 +171,23 @@ Set up automated cross-platform binary builds via cargo-dist.
   This generates:
   - `[workspace.metadata.dist]` section in `Cargo.toml`
   - `.github/workflows/release.yml`
-  - `dist-workspace.toml` (or equivalent config)
-  Configure targets: `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`,
-  `x86_64-apple-darwin`, `aarch64-apple-darwin`. Enable `shell` installer (generates
-  `curl | sh` one-liner). Homebrew installer deferred to future.
+  - `dist-workspace.toml` (or equivalent config) Configure targets:
+    `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-apple-darwin`,
+    `aarch64-apple-darwin`. Enable `shell` installer (generates `curl | sh` one-liner).
+    Homebrew installer deferred to future.
 - [ ] **Review generated release workflow** (fmr-c1l6) — Review
-  `.github/workflows/release.yml` for correctness. Depends on: fmr-t8qq.
+  `.github/workflows/release.yml` for correctness.
+  Depends on: fmr-t8qq.
   - Triggers on tag push (`v*`)
   - Builds binaries for all 4 targets
   - Creates GitHub Release with artifacts
   - Uploads tarballs containing: binary, LICENSE, README.md
-- [ ] **Coordinate with publish workflow** (fmr-ttf7) — Ensure release creation
-  triggers the publish workflow (Phase 4). Depends on: fmr-aarf, fmr-c1l6. The flow:
-  push tag → release.yml builds binaries and creates GitHub Release → publish.yml
-  triggers on release published → publishes to crates.io.
-- [ ] **(Manual) Test with `v0.2.0` tag** (fmr-ya3n) — Push `v0.2.0` tag, verify
-  release workflow creates artifacts, verify publish workflow publishes to crates.io.
+- [ ] **Coordinate with publish workflow** (fmr-ttf7) — Ensure release creation triggers
+  the publish workflow (Phase 4). Depends on: fmr-aarf, fmr-c1l6. The flow: push tag →
+  release.yml builds binaries and creates GitHub Release → publish.yml triggers on
+  release published → publishes to crates.io.
+- [ ] **(Manual) Test with `v0.2.0` tag** (fmr-ya3n) — Push `v0.2.0` tag, verify release
+  workflow creates artifacts, verify publish workflow publishes to crates.io.
   Depends on: fmr-ttf7.
 
 ### Phase 6: Documentation and Community — DONE
@@ -197,18 +197,22 @@ Standard open source project documentation.
 - [x] **Write CONTRIBUTING.md** (fmr-nc8i) — Created `/CONTRIBUTING.md` with
   prerequisites, build/test/lint commands, PR guidelines, and link to publishing docs.
 - [x] **Add CHANGELOG.md** (fmr-4v5g) — Created `/CHANGELOG.md` with v0.2.0 entry
-  including parity version reference. Follows Keep a Changelog format.
-- [x] **Add badges to README.md** (fmr-7ayu) — Added 5 badges: CI, crates.io, docs.rs,
-  MSRV, codecov.
+  including parity version reference.
+  Follows Keep a Changelog format.
+- [x] **Update badges in README.md** (fmr-7ayu) — 5 badges: @ojoshe X follow, CI,
+  crates.io, docs.rs, MSRV. Removed codecov (token not configured, badge showed
+  "unknown").
 - [x] **Add `--version` parity info** (fmr-19zr) — Created `build.rs` that reads
-  `[package.metadata.parity]` version and emits `PARITY_VERSION` env var. `src/main.rs`
-  uses `long_version` to display: `flowmark 0.2.0 (parity: flowmark-py 0.6.4)`.
+  `[package.metadata.parity]` version and emits `PARITY_VERSION` env var.
+  `src/main.rs` uses `long_version` to display:
+  `flowmark 0.2.0 (parity: flowmark-py 0.6.4)`.
 - [x] **Verify `cargo doc` output** (fmr-ghvq) — Docs build cleanly with `-D warnings`.
   No broken links or missing documentation.
 
 ### Future: Homebrew Tap — DEFERRED
 
-Not part of this plan. Tracked for future work.
+Not part of this plan.
+Tracked for future work.
 
 - [ ] Create `jlevy/homebrew-tap` repository on GitHub
 - [ ] Configure cargo-dist to auto-update the tap formula on release
@@ -217,8 +221,10 @@ Not part of this plan. Tracked for future work.
 
 ### Future: CLI Polish — DEFERRED
 
-Not part of this plan. Tracked for future work. The CLI is self-documenting via
-`--help`, so these are nice-to-haves rather than blockers.
+Not part of this plan.
+Tracked for future work.
+The CLI is self-documenting via `--help`, so these are nice-to-haves rather than
+blockers.
 
 - [ ] Add `clap_complete` for shell completion generation (bash, zsh, fish)
 - [ ] Add `clap_mangen` for man page generation (or a build script approach)
@@ -289,7 +295,7 @@ Do not duplicate feature documentation from the Python project.
    reference doc, measured with `hyperfine`). See exact-parity spec fmr-aq8o for
    benchmark methodology.
 4. **Library Usage** — brief `use flowmark::FormatOptions` example, link to docs.rs
-5. **Badges** — CI, crates.io, docs.rs, MSRV
+5. **Badges** — @ojoshe X follow, CI, crates.io, docs.rs, MSRV
 
 ## Release Notes Format
 
@@ -349,7 +355,7 @@ Adapted from Python project’s `docs/publishing.md`:
 - [cargo-dist documentation](https://opensource.axo.dev/cargo-dist/)
 - [crates.io trusted publishing](https://doc.rust-lang.org/cargo/reference/registry-authentication.html)
 - [ripgrep release workflow](https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml)
-- [Orhun's automated Rust releases guide](https://blog.orhun.dev/automated-rust-releases/)
+- [Orhun’s automated Rust releases guide](https://blog.orhun.dev/automated-rust-releases/)
 - Python flowmark project: https://github.com/jlevy/flowmark (reference for README
   structure, publishing process, release notes format)
 - Current CI config: `.github/workflows/ci.yml`

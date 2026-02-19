@@ -1,10 +1,10 @@
 # flowmark
 
+[![Follow @ojoshe on X](https://img.shields.io/badge/follow_%40ojoshe-black?logo=x&logoColor=white)](https://x.com/ojoshe)
 [![CI](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/flowmark.svg)](https://crates.io/crates/flowmark)
 [![docs.rs](https://docs.rs/flowmark/badge.svg)](https://docs.rs/flowmark)
 ![MSRV](https://img.shields.io/badge/MSRV-1.85-blue)
-[![codecov](https://codecov.io/gh/jlevy/flowmark-rs/graph/badge.svg)](https://codecov.io/gh/jlevy/flowmark-rs)
 
 A Markdown auto-formatter for clean diffs and semantic line breaks.
 
