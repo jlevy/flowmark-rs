@@ -194,7 +194,7 @@ fn pyproject_has_flowmark_section(path: &Path) -> bool {
     let Ok(text) = std::fs::read_to_string(path) else {
         return false;
     };
-    let Ok(data) = text.parse::<toml::Value>() else {
+    let Ok(data) = toml::from_str::<toml::Value>(&text) else {
         return false;
     };
     data.get("tool").and_then(|t| t.get("flowmark")).is_some()
@@ -211,7 +211,7 @@ pub fn load_config(config_path: &Path) -> FlowmarkConfig {
         return FlowmarkConfig::default();
     };
 
-    let Ok(data) = text.parse::<toml::Value>() else {
+    let Ok(data) = toml::from_str::<toml::Value>(&text) else {
         eprintln!("Warning: could not parse config file {}", config_path.display());
         return FlowmarkConfig::default();
     };
