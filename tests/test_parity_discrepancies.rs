@@ -297,6 +297,7 @@ fn test_d10_html_entity_in_paragraph() {
 // Requires the Python flowmark binary to be available at the expected path.
 // =============================================================================
 
+#[cfg(feature = "cli")]
 /// Run a CLI binary with args and capture stderr + exit code.
 fn run_cli(bin: &str, args: &[&str]) -> (String, i32) {
     let output = std::process::Command::new(bin)
@@ -308,6 +309,7 @@ fn run_cli(bin: &str, args: &[&str]) -> (String, i32) {
     (stderr.trim_end().to_string(), code)
 }
 
+#[cfg(feature = "cli")]
 fn run_cli_stdin(bin: &str, args: &[&str], stdin: &str) -> (String, i32) {
     use std::io::Write;
     let mut child = std::process::Command::new(bin)
@@ -324,6 +326,7 @@ fn run_cli_stdin(bin: &str, args: &[&str], stdin: &str) -> (String, i32) {
     (stderr.trim_end().to_string(), code)
 }
 
+#[cfg(feature = "cli")]
 fn python_flowmark() -> &'static str {
     // Prefer the known local install; fall back to PATH lookup.
     if std::path::Path::new("/Users/levy/.local/bin/flowmark").exists() {
@@ -333,12 +336,14 @@ fn python_flowmark() -> &'static str {
     }
 }
 
+#[cfg(feature = "cli")]
 fn rust_flowmark() -> String {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     root.join("target/debug/flowmark").to_string_lossy().to_string()
 }
 
 #[test]
+#[cfg(feature = "cli")]
 fn test_d11_no_args_error_matches_python() {
     let (py_err, py_code) = run_cli(python_flowmark(), &[]);
     let (rs_err, rs_code) = run_cli(&rust_flowmark(), &[]);
@@ -347,6 +352,7 @@ fn test_d11_no_args_error_matches_python() {
 }
 
 #[test]
+#[cfg(feature = "cli")]
 fn test_d11_auto_no_args_error_matches_python() {
     let (py_err, py_code) = run_cli(python_flowmark(), &["--auto"]);
     let (rs_err, rs_code) = run_cli(&rust_flowmark(), &["--auto"]);
@@ -355,6 +361,7 @@ fn test_d11_auto_no_args_error_matches_python() {
 }
 
 #[test]
+#[cfg(feature = "cli")]
 fn test_d11_inplace_stdin_error_matches_python() {
     let (py_err, py_code) = run_cli_stdin(python_flowmark(), &["--inplace", "-"], "hello\n");
     let (rs_err, rs_code) = run_cli_stdin(&rust_flowmark(), &["--inplace", "-"], "hello\n");
@@ -363,6 +370,7 @@ fn test_d11_inplace_stdin_error_matches_python() {
 }
 
 #[test]
+#[cfg(feature = "cli")]
 fn test_d11_output_multiple_files_error_matches_python() {
     let (py_err, py_code) = run_cli(python_flowmark(), &["-o", "out.md", "/dev/null", "/dev/null"]);
     let (rs_err, rs_code) = run_cli(&rust_flowmark(), &["-o", "out.md", "/dev/null", "/dev/null"]);
@@ -371,6 +379,7 @@ fn test_d11_output_multiple_files_error_matches_python() {
 }
 
 #[test]
+#[cfg(feature = "cli")]
 fn test_d11_nonexistent_file_error_format() {
     let (py_err, _py_code) = run_cli(python_flowmark(), &["nonexistent.md"]);
     let (rs_err, _rs_code) = run_cli(&rust_flowmark(), &["nonexistent.md"]);
