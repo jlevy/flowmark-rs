@@ -3,9 +3,9 @@ type: is
 id: is-01khqqs2hc65pjc3dnzavzpftd
 title: "Phase 1: Create all fixture files and directories"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 11
+version: 12
 spec_path: docs/project/specs/active/plan-2026-02-17-comprehensive-tryscript-golden-tests.md
 labels: []
 dependencies:
@@ -31,5 +31,7 @@ dependencies:
     target: is-01khqqs3xeyn07e22yzcnsh1rp
 parent_id: is-01khqqnh7skbbjp6r9dn84v3ae
 created_at: 2026-02-18T06:42:38.763Z
-updated_at: 2026-02-18T06:42:52.856Z
+updated_at: 2026-02-19T07:02:34.866Z
+closed_at: 2026-02-19T07:02:34.865Z
+close_reason: All fixture files and directories created
 ---
