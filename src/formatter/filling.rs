@@ -1279,13 +1279,19 @@ fn render_block<'a>(
             let fence: String = std::iter::repeat_n(fence_char, fence_len).collect();
 
             let _ = writeln!(output, "{prefix}{fence}{info}");
-            let empty_prefix = subsequent_prefix.trim_end();
-            for line in code_content.split('\n') {
-                if line.is_empty() {
-                    output.push_str(empty_prefix);
-                    output.push('\n');
-                } else {
-                    let _ = writeln!(output, "{subsequent_prefix}{line}");
+            // Only output content lines if the code block has actual content.
+            // An empty code block (content is empty or whitespace-only) should
+            // produce just the opening and closing fences with no lines between
+            // them, matching Python's behavior (D16).
+            if !code_content.is_empty() {
+                let empty_prefix = subsequent_prefix.trim_end();
+                for line in code_content.split('\n') {
+                    if line.is_empty() {
+                        output.push_str(empty_prefix);
+                        output.push('\n');
+                    } else {
+                        let _ = writeln!(output, "{subsequent_prefix}{line}");
+                    }
                 }
             }
             let _ = writeln!(output, "{subsequent_prefix}{fence}");
@@ -1824,20 +1830,28 @@ fn render_list_item<'a>(
                     false
                 };
 
-            // COMRAK-WORKAROUND10: In Preserve mode, don't add a blank line before
-            // a nested list unless the original source had one. Comrak marks
-            // the whole parent list as loose when *any* sibling pair has a blank
-            // line, which would insert blanks inside every item. Python/marko
-            // only inserts the blank when the author actually wrote one.
-            let suppress_nested_blank = if matches!(child.data.borrow().value, NodeValue::List(_))
-                && !parent_is_tight
-                && list_spacing == ListSpacing::Preserve
-                && i > 0
-            {
-                let prev_end = children[i - 1].data.borrow().sourcepos.end.line;
-                let curr_start = child.data.borrow().sourcepos.start.line;
-                // No blank line in original source → suppress
-                curr_start <= prev_end + 1
+            // COMRAK-WORKAROUND10: Don't add a blank line before a child block
+            // unless the original source had one. Comrak marks the whole parent
+            // list as loose when *any* sibling pair has a blank line, which would
+            // insert blanks inside every item. Python/marko only inserts the
+            // blank when the author actually wrote one.
+            //
+            // Applies to:
+            // - List children in Preserve mode (original workaround)
+            // - CodeBlock children in all modes (D12b/P6: mixed loose/tight lists)
+            let suppress_nested_blank = if !parent_is_tight && i > 0 {
+                let child_value = &child.data.borrow().value;
+                let should_check = matches!(child_value, NodeValue::CodeBlock(_))
+                    || (matches!(child_value, NodeValue::List(_))
+                        && list_spacing == ListSpacing::Preserve);
+                if should_check {
+                    let prev_end = children[i - 1].data.borrow().sourcepos.end.line;
+                    let curr_start = child.data.borrow().sourcepos.start.line;
+                    // No blank line in original source → suppress
+                    curr_start <= prev_end + 1
+                } else {
+                    false
+                }
             } else {
                 false
             };
@@ -1847,13 +1861,14 @@ fn render_list_item<'a>(
                 && !current_is_tag_block
                 && !suppress_nested_blank
             {
-                // Use the item's subsequent prefix (trimmed) to maintain
-                // blockquote context on blank separator lines (P7).
-                let blank_prefix = item_subsequent.trim_end();
-                if blank_prefix.is_empty() {
+                // Use the item's subsequent prefix to maintain blockquote
+                // context and list indentation on blank separator lines (P7).
+                // Python preserves the full list-content indent (e.g., ">    "
+                // for numbered lists in blockquotes), not just the bare ">" marker.
+                if item_subsequent.trim().is_empty() {
                     output.push('\n');
                 } else {
-                    output.push_str(blank_prefix);
+                    output.push_str(item_subsequent);
                     output.push('\n');
                 }
             }
@@ -2246,16 +2261,22 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
                     char_boundaries.push((start, len));
                     text_nodes.push(child);
                 }
-                NodeValue::Code(_) | NodeValue::HtmlInline(_) => {
-                    // Skip code spans and raw HTML - don't apply smart quotes.
-                    // Use a non-word placeholder to act as a boundary that
-                    // prevents apostrophe conversion across code spans (P9).
-                    // A word char like 'X' would cause `foo()`'s to match
-                    // the contraction pattern (\w)'(\w) and convert to a
-                    // smart quote.
-                    concatenated.push(' ');
+                NodeValue::Code(code) => {
+                    // Skip code spans - don't apply smart quotes inside them.
+                    // Use the last character of the code content as a placeholder
+                    // to preserve context for smart quote detection (P9).
+                    // Python's behavior is context-sensitive: apostrophe after
+                    // code ending with a word char (e.g., `config`'s) IS converted
+                    // to a smart quote, but after a non-word char (e.g., `foo()`'s)
+                    // it stays ASCII. Using the actual last char matches this.
+                    let last_char = code.literal.chars().last().unwrap_or(' ');
+                    concatenated.push(if last_char.is_alphanumeric() || last_char == '_' {
+                        last_char
+                    } else {
+                        ' '
+                    });
                 }
-                NodeValue::SoftBreak => {
+                NodeValue::HtmlInline(_) | NodeValue::SoftBreak => {
                     concatenated.push(' ');
                 }
                 _ => {

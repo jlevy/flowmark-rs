@@ -480,41 +480,171 @@ fn test_d12_multiple_tight_code_fences() {
 }
 
 // =============================================================================
-// D13: Blockquote blank continuation line loses `>` prefix (P7)
-// Python preserves blockquote-prefixed blank lines (e.g., ">    " with trailing spaces).
-// Rust strips the `>` prefix, outputting a bare empty line.
-// Discovered: Real-world corpus test (ai-trade-arena docs/, 9 instances).
+// D12b: Paragraph before code fence in mixed loose/tight list items (P6)
+// When a list has both tight and loose items (some items have blank lines
+// before code blocks, some don't), comrak treats the entire list as loose.
+// Python preserves the tight transitions (no blank line) even in a loose list.
+// Rust adds blank lines before ALL code fences in the list.
+// Verified byte-by-byte against Python flowmark v0.6.4 (2026-02-19).
 // =============================================================================
 
 #[test]
-fn test_d13_blockquote_blank_continuation_preserves_prefix() {
-    // Blockquote with a blank continuation line between ordered list and unordered list.
-    let input = "> 2. **Review the previous** for context:\n>    \n>    - Check the section\n";
+fn test_d12b_mixed_loose_tight_list_code_fences() {
+    // When one list item has a blank line before its code block (making the list
+    // "loose"), Rust adds blank lines before ALL code fences. Python doesn't.
+    let input = "\
+- [ ] Create output:
+  ```bash
+  cd web
+  ```
+- [ ] Launch all:
+
+  ```bash
+  cd web
+  pnpm batch
+  ```
+
+  Note: If key not available, skip.
+- [ ] Monitor:
+  ```bash
+  watch ls
+  ```
+- [ ] Check failures:
+  ```bash
+  echo check
+  ```
+";
+    let python_output = "\
+- [ ] Create output:
+  ```bash
+  cd web
+  ```
+
+- [ ] Launch all:
+
+  ```bash
+  cd web
+  pnpm batch
+  ```
+
+  Note: If key not available, skip.
+
+- [ ] Monitor:
+  ```bash
+  watch ls
+  ```
+
+- [ ] Check failures:
+  ```bash
+  echo check
+  ```
+";
     let result = fmt(input);
-    // Python preserves the blockquote prefix on blank lines.
-    // The blank line should have a `>` prefix (possibly with trailing spaces).
-    assert!(
-        !result.contains("\n\n>"),
-        "D13/P7: Blockquote blank continuation should keep `>` prefix, not become bare empty line.\nGot:\n{result}"
+    assert_eq!(
+        result, python_output,
+        "D12b/P6: Mixed loose/tight list should not add blank lines before tight code fences.\nGot:\n{result}"
+    );
+}
+
+// =============================================================================
+// D16: Adjacent empty code blocks — extra blank line (Bug 4)
+// When a ```` (4-backtick) code block is followed by ``` blocks, comrak
+// normalizes to ``` and Rust adds an extra blank line between them.
+// Verified against Python flowmark v0.6.4 (2026-02-19).
+// =============================================================================
+
+#[test]
+fn test_d16_adjacent_empty_code_blocks() {
+    // Four-backtick fence followed by empty code blocks.
+    // Both normalize ```` to ```, but Rust adds an extra blank line between
+    // the adjacent empty ``` blocks.
+    let input = "\
+Emergency commits:
+
+```bash
+git commit --no-verify -m \"WIP: emergency fix\"
+````
+
+```
+
+```
+
+Only use `--no-verify` when absolutely necessary.
+";
+    let python_output = "\
+Emergency commits:
+
+```bash
+git commit --no-verify -m \"WIP: emergency fix\"
+```
+
+```
+```
+
+Only use `--no-verify` when absolutely necessary.
+";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D16: Adjacent empty code blocks should not have extra blank line between them.\nGot:\n{result}"
+    );
+}
+
+// =============================================================================
+// D13: Blockquote blank continuation line indentation (P7)
+// Inside blockquotes, blank lines between a list item's text and its child
+// content (code block, nested list) must have the list-content indentation.
+// Python outputs ">    " (with 4 spaces for numbered list indent).
+// Rust outputs just ">" (bare blockquote marker, no indentation).
+// Verified byte-by-byte against Python flowmark v0.6.4 (2026-02-19).
+// =============================================================================
+
+#[test]
+fn test_d13_blockquote_list_code_block_blank_line_indent() {
+    // Blockquote with numbered list item followed by code block.
+    // Python output verified byte-by-byte: blank line between item text and
+    // code block has ">    " (> + 4 spaces), not bare ">".
+    let input = "\
+> 1. **Copy this file** to a dated version:
+>
+>    ```
+>    template-process.md
+>    ```
+>
+> 2. **Review the previous** for context:
+>
+>    - Check the section
+";
+    let python_output = "\
+> 1. **Copy this file** to a dated version:
+>    \n\
+>    ```
+>    template-process.md
+>    ```
+>
+> 2. **Review the previous** for context:
+>    \n\
+>    - Check the section
+";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D13/P7: Blank lines between blockquote list items and children should have list indentation.\nGot:\n{result}"
     );
 }
 
 #[test]
 fn test_d13_blockquote_list_with_blank_continuation() {
     // Blockquote with rules list and blank continuation line.
-    let input = "> - Rules:\n>   \n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
+    // Python: blank between "Rules:" and "1." has ">   " (3 spaces for bullet indent).
+    let input = "> - Rules:\n>\n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
+    let python_output =
+        "> - Rules:\n>   \n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
     let result = fmt(input);
-    // Blank continuation line inside blockquote list should keep `>` prefix.
-    let lines: Vec<&str> = result.lines().collect();
-    for (i, line) in lines.iter().enumerate() {
-        if line.trim().is_empty() && i > 0 && i < lines.len() - 1 {
-            // Every blank line within the blockquote should have a `>` prefix
-            assert!(
-                line.starts_with('>'),
-                "D13/P7: Blank line {i} inside blockquote should keep `>` prefix.\nFull output:\n{result}"
-            );
-        }
-    }
+    assert_eq!(
+        result, python_output,
+        "D13/P7: Blank line between blockquote list item and child should have list indent.\nGot:\n{result}"
+    );
 }
 
 // =============================================================================
@@ -538,9 +668,11 @@ fn test_d14_escaped_backtick_in_table_inline_code() {
 
 // =============================================================================
 // D15: Smart quote conversion after inline code backtick (P9)
-// Python does NOT convert apostrophes immediately after inline code to smart quotes.
-// Rust converts them. This is a smartquotes engine difference.
-// Discovered: Real-world corpus test (ai-trade-arena docs/, 1 instance).
+// Python's behavior is CONTEXT-SENSITIVE: if the inline code content ends with
+// a word character (e.g., `config`'s), the apostrophe IS converted to a smart
+// quote (U+2019). If it ends with a non-word char (e.g., `foo()`'s), it stays
+// ASCII. This was verified byte-by-byte against Python flowmark v0.6.4.
+// Discovered: Real-world corpus test (2026-02-19).
 // =============================================================================
 
 fn fmt_auto(input: &str) -> String {
@@ -549,13 +681,49 @@ fn fmt_auto(input: &str) -> String {
 }
 
 #[test]
-fn test_d15_no_smart_quote_after_inline_code() {
+fn test_d15_smart_quote_after_code_ending_with_word_char() {
+    // Python converts apostrophe to smart quote when code ends with word char.
+    // Verified: `config`'s → `config`\u{2019}s in Python v0.6.4.
+    let input = "The `config`'s value is important.\n";
+    let result = fmt_auto(input);
+    assert!(
+        result.contains("`\u{2019}s"),
+        "D15/P9: Apostrophe after code ending with word char should be smart quote.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d15_no_smart_quote_after_code_ending_with_non_word_char() {
+    // Python keeps ASCII apostrophe when code ends with non-word char.
+    // Verified: `foo()`'s → `foo()`'s (ASCII 0x27) in Python v0.6.4.
     let input = "Call `foo()`'s result.\n";
     let result = fmt_auto(input);
-    // Python keeps the straight apostrophe after inline code backtick.
     assert!(
         result.contains("`'s"),
-        "D15/P9: Apostrophe after inline code should NOT be converted to smart quote.\nGot:\n{result}"
+        "D15/P9: Apostrophe after code ending with non-word char should stay ASCII.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d15_smart_quote_after_various_code_spans() {
+    // Python converts for word-ending code, keeps ASCII for non-word-ending code.
+    // Verified byte-by-byte against Python flowmark v0.6.4.
+    let input = "Use `@react-spring/web`'s API and `x`'s type but `foo()`'s result.\n";
+    let result = fmt_auto(input);
+    // `web`'s → smart quote (word char 'b')
+    assert!(
+        result.contains("web`\u{2019}s"),
+        "D15/P9: `web` ends with word char, apostrophe should be smart quote.\nGot:\n{result}"
+    );
+    // `x`'s → smart quote (word char 'x')
+    assert!(
+        result.contains("x`\u{2019}s"),
+        "D15/P9: `x` ends with word char, apostrophe should be smart quote.\nGot:\n{result}"
+    );
+    // `foo()`'s → ASCII (non-word char ')')
+    assert!(
+        result.contains("foo()`'s"),
+        "D15/P9: `foo()` ends with non-word char, apostrophe should stay ASCII.\nGot:\n{result}"
     );
 }
 
