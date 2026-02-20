@@ -89,6 +89,20 @@ This prevents the PR #17 failure mode where tests were written to pass from the 
 they never actually validated anything because they asserted the wrong expected output.
 Red-first ensures the test can distinguish broken from fixed.
 
+**L11. Prefer running both programs on the same input over hand-copying expected
+output.** The strongest parity test invokes both implementations on the exact same input
+and asserts the outputs match --- encapsulating the original program inside the testing
+process eliminates human transcription errors entirely.
+The D11 CLI tests do this correctly: they call both `flowmark` (Rust) and
+`flowmark` (Python) with the same args and assert `rs_output == py_output`.
+Hand-transcribing expected output is acceptable as a supplement (e.g., for documenting
+what Python does) but is error-prone as the sole source of truth --- PR #17's D15 test
+asserted that Python does NOT convert apostrophes after code spans, when Python actually
+DOES in some cases.
+When two-program comparison is not practical (e.g., library-level tests without CLI
+invocation), capture the expected output by running the original program and saving its
+output to a fixture file, not by guessing.
+
 **L8. Error parity is a first-class surface.** CLI error messages, exit codes, and
 stderr output must be tested with the same rigor as formatting output.
 Golden-test wildcards (`[..]`) can mask error message bugs.
@@ -307,32 +321,42 @@ project-specific detail.
 | **L10** (red/green discipline) | **P8** (disparities must be tested before fixed) | L10 is P8 restated as a workflow: red first, then green |
 | **L1** (verify source byte output) | **P8** (test before fix) + **P4** (don't hide) | Specific technique: use pinned version, byte-by-byte diff |
 | **L8** (error parity is first-class) | **P1** (parity must be defined crisply) | Error messages/exit codes are a parity surface; P1 says enumerate every dimension |
+| **L11** (run both programs, compare) | **P8** (test before fix) + **P4** (don't hide) | Strongest form of P8: no hand-copied expected values, just two programs and a diff |
 
 ### Lessons that should be graduated into principles
 
 These lessons identify gaps in the current principles --- patterns that recurred despite
 the existing 8 rules.
 
-**L5 + L9: Corpus-level validation and regression extraction.**
+**L5 + L9 + L11: End-to-end parity validation.**
 
-The current principles focus on individual disparity tests (P8) and test integrity
-(P4).
-They do not address corpus-level validation --- running both implementations on a
-large, real-world input set and diffing the output.
-This is a fundamentally different validation method that catches bugs targeted tests
-miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
+The current principles focus on individual disparity tests (P8) and test integrity (P4).
+They have two gaps:
+
+1. **No corpus-level validation.** P8 says to write disparity tests, but not to run both
+   implementations on a large, real-world input set and diff the output.
+   This is a fundamentally different validation method that catches bugs targeted tests
+   miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
+
+2. **No guidance on how to obtain expected output.** P8 says "expected output comes from
+   the Python reference" but does not say *how*.
+   Hand-transcription is error-prone --- the strongest parity test encapsulates the
+   original program inside the test and compares outputs directly.
 
 A candidate Principle 9 would be:
 
-> **Validate against a real-world corpus, and extract reproducers into permanent
-> regression tests.** Individual disparity tests are necessary but insufficient.
-> Before claiming parity, run both implementations on a large, diverse corpus and diff
-> the output.
+> **Validate end-to-end by running both implementations on the same input.** Where
+> possible, parity tests should encapsulate the original program inside the testing
+> process and assert identical output, rather than relying on hand-copied expected values.
+> Hand-copied assertions are acceptable as supplementary documentation but not as the
+> sole source of truth.
+> Before claiming parity, also run both implementations on a large, diverse corpus and
+> diff the output.
 > When the corpus reveals a difference, extract the minimal input into a checked-in
 > regression corpus (e.g., `tests/corpus-regressions/`) so the bug can never recur
 > silently.
-> The full corpus may be too large to commit, but the extracted reproducers are
-> permanent test fixtures.
+> The full corpus may be too large to commit, but the extracted reproducers are permanent
+> test fixtures.
 
 ### Domain-specific lessons (not candidates for principles)
 
