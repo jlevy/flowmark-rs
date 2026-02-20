@@ -39,4 +39,11 @@ jobs:
           RUSTFLAGS: "-D warnings"
 
       - name: Publish to crates.io
-        run: cargo publish
+        run: |
+          # Exchange GitHub OIDC token for crates.io publish token
+          OIDC_TOKEN=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=crates.io" \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" | jq -r '.value')
+          CRATES_TOKEN=$(curl -sLS 'https://crates.io/api/v1/trusted_publishing/tokens' \
+            -X POST --data "{\"jwt\": \"${OIDC_TOKEN}\"}" \
+            -H 'Content-Type: application/json' | jq -r '.token')
+          cargo publish --token "${CRATES_TOKEN}"
