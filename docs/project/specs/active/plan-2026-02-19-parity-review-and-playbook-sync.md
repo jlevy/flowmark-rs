@@ -4,7 +4,7 @@
 
 **Author:** Joshua Levy
 
-**Status:** Draft
+**Status:** Complete (WI-1 through WI-11 done; WI-12 deferred to upstream)
 
 ## Overview
 
@@ -868,6 +868,23 @@ WI-2 (independent — this repo)
 WI-3 (independent — this repo)
 WI-12 (independent — upstream)
 ```
+
+#### Work Item Completion Status
+
+| Work Item | Status | Notes |
+| --- | --- | --- |
+| WI-1: Initialize playbook submodule | Done | Audit confirmed 53-fix commit applied |
+| WI-2: Clean up flowmark-rs docs | Done | No XXX: in source; porting-checklist already removed |
+| WI-3: Housekeeping — stale YAMLs | Done | rust-tests.yaml 408→456; mapping notes cleaned |
+| WI-4: Playbook critical factual fixes | Done | 7 of 11 already fixed; 4 remaining applied |
+| WI-5: Graduate lessons L1-L11 | Done | Principle 9 added; error parity guidance added |
+| WI-6: Cross-language test mapping doc | Done | New reference/cross-language-test-mapping.md |
+| WI-7: Case study v2 data | Done | All 7 case study docs updated with v2 metrics |
+| WI-8: Update reference docs | Done | Code review checklist + parity spec pattern |
+| WI-9: Update guidelines | Done | Golden test multi-mode + post-port cleanup |
+| WI-10: Phase 7C observations | Done | Actionable items covered by WI-4 through WI-9 |
+| WI-11: Playbook README | Done | v2 metrics, new reference doc, cross-references |
+| WI-12: PR tryscripts to Python | Deferred | Upstream work; tracked as fmr-03xy |
 
 #### Summary by Repo
 
