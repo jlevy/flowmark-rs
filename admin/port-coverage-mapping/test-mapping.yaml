@@ -1571,3 +1571,38 @@
   rust_file: tests/tryscript/verbose-docs.tryscript.md
   rust_function: verbose-docs
   notes: Binary-agnostic tryscript golden test (5 scenarios). Identical file in both repos.
+# Parity golden tests — Rust-only, compare Rust library output against Python-generated expected files
+- rust_file: tests/test_parity_golden.rs
+  rust_function: test_parity_corner_cases_default
+  status: custom
+  notes: 'Tier 1 parity: default mode (w=88, no semantic) vs Python v0.6.4 golden file. Exercises D1-D16, P1-P9.'
+- rust_file: tests/test_parity_golden.rs
+  rust_function: test_parity_corner_cases_auto
+  status: custom
+  notes: 'Tier 1 parity: auto mode (semantic+cleanups+smartquotes+ellipses) vs Python v0.6.4 golden file.'
+- rust_file: tests/test_parity_golden.rs
+  rust_function: test_parity_corner_cases_tight
+  status: custom
+  notes: 'Tier 1 parity: tight list spacing mode vs Python v0.6.4 golden file. Exercises D4.'
+- rust_file: tests/test_parity_golden.rs
+  rust_function: test_parity_corner_cases_loose
+  status: custom
+  notes: 'Tier 1 parity: loose list spacing mode vs Python v0.6.4 golden file. Exercises D5.'
+- rust_file: tests/test_parity_golden.rs
+  rust_function: test_parity_corner_cases_plaintext
+  status: custom
+  notes: 'Tier 1 parity: plaintext mode vs Python v0.6.4 golden file. Exercises D1, D2.'
+# Cross-binary parity tests — opt-in, run Python and Rust binaries and compare
+- rust_file: tests/test_parity_cross_binary.rs
+  rust_function: test_cross_binary_corner_cases
+  status: custom
+  notes: 'Tier 2 parity: byte-for-byte identity between uvx flowmark@0.6.4 and Rust binary. Opt-in via FLOWMARK_PARITY_PYTHON=1.'
+- rust_file: tests/test_parity_cross_binary.rs
+  rust_function: test_golden_files_match_python
+  status: custom
+  notes: 'Tier 2 parity: validates committed golden files have not drifted from Python output. Opt-in via FLOWMARK_PARITY_PYTHON=1.'
+# Red/green v0.2.0 regression tests — opt-in, prove bugs existed in old binary
+- rust_file: tests/test_parity_red_green.rs
+  rust_function: test_red_green_v020_regression
+  status: custom
+  notes: 'Tier 3 parity: old v0.2.0 binary fails (RED), current binary passes (GREEN). Opt-in via FLOWMARK_OLD_BINARY.'

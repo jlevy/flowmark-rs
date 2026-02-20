@@ -994,18 +994,17 @@ fn render_block_children<'a>(
                 // Rule 2: Any block → HTML comment (tight): suppress,
                 // UNLESS prev is list or table (GAP13)
                 !prev_was_list_or_table
-            } else if child_is_list && prev_was_paragraph && list_spacing != ListSpacing::Loose {
+            } else if child_is_list && prev_was_paragraph {
                 // Rule 3: Paragraph → list (tight): suppress (GAP11)
                 // This handles cases like "**Header**:\n- item1\n- item2"
-                // In loose mode, Python adds the blank separator here.
+                // Note: render_block_children is only called for Document-level
+                // children, so list_spacing mode doesn't affect this rule.
+                // List-item-level spacing is handled in render_list_item.
                 true
-            } else if child_is_code_block
-                && prev_was_paragraph
-                && list_spacing != ListSpacing::Loose
-            {
+            } else if child_is_code_block && prev_was_paragraph {
                 // Rule 4: Paragraph → code block (tight): suppress (P6)
                 // This handles cases like "**Config**:\n```json\n{}\n```"
-                // In loose mode, Python adds the blank separator here.
+                // Note: same as Rule 3, this is Document-level only.
                 true
             } else {
                 false
