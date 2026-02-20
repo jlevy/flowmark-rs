@@ -347,6 +347,7 @@ pr-run-mode = "plan"
 checksum = "sha256"
 create-release = true
 source-tarball = false
+github-attestations = true
 ```
 
 Configuration notes:
