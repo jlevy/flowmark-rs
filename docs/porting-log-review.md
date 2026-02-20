@@ -9,6 +9,15 @@ Anyone working on this codebase should read the [Key Lessons](#key-lessons) sect
 
 **Reference version:** Python flowmark v0.6.4
 
+**Foundational principles:** The
+[Porting Principles and Anti-Patterns](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
+document defines 8 non-negotiable rules for agent-driven porting.
+The lessons below were learned from applying those principles to this project --- some
+reinforce existing principles with concrete techniques, and some identify gaps that
+should be graduated into new principles.
+See [Relationship to Porting Principles](#relationship-to-porting-principles) for the
+full mapping.
+
 ## Summary
 
 | Category | Count | PRs |
@@ -276,6 +285,60 @@ diff -rq attic/td-rs/ attic/td-py/
 
 This principle existed in the spec before PR #17 was written.
 The agent violated it for all 4 bugs.
+
+## Relationship to Porting Principles
+
+The
+[Porting Principles](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
+define 8 non-negotiable rules.
+The lessons in this log relate to them as follows:
+
+### Lessons that reinforce existing principles
+
+These lessons are concrete techniques or instances of existing principles.
+They don't need to become new principles --- they're already covered --- but they add
+project-specific detail.
+
+| Lesson | Reinforces Principle | How |
+| --- | --- | --- |
+| **L2** (use `assert_eq!`, not `contains`) | **P4** (tests must never hide failures) | Specific technique: weak assertions are a form of hidden failure |
+| **L3** (test edge cases) | **P8** (investigate the class, not the instance) | P8 says to enumerate all instances in a category; L3 is the same insight |
+| **L7** (don't trust CI alone) | **P4** (tests must never hide failures) | Tests can be wrong even when CI is green; P4's anti-patterns cover this |
+| **L10** (red/green discipline) | **P8** (disparities must be tested before fixed) | L10 is P8 restated as a workflow: red first, then green |
+| **L1** (verify source byte output) | **P8** (test before fix) + **P4** (don't hide) | Specific technique: use pinned version, byte-by-byte diff |
+| **L8** (error parity is first-class) | **P1** (parity must be defined crisply) | Error messages/exit codes are a parity surface; P1 says enumerate every dimension |
+
+### Lessons that should be graduated into principles
+
+These lessons identify gaps in the current principles --- patterns that recurred despite
+the existing 8 rules.
+
+**L5 + L9: Corpus-level validation and regression extraction.**
+
+The current principles focus on individual disparity tests (P8) and test integrity
+(P4).
+They do not address corpus-level validation --- running both implementations on a
+large, real-world input set and diffing the output.
+This is a fundamentally different validation method that catches bugs targeted tests
+miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
+
+A candidate Principle 9 would be:
+
+> **Validate against a real-world corpus, and extract reproducers into permanent
+> regression tests.** Individual disparity tests are necessary but insufficient.
+> Before claiming parity, run both implementations on a large, diverse corpus and diff
+> the output.
+> When the corpus reveals a difference, extract the minimal input into a checked-in
+> regression corpus (e.g., `tests/corpus-regressions/`) so the bug can never recur
+> silently.
+> The full corpus may be too large to commit, but the extracted reproducers are
+> permanent test fixtures.
+
+### Domain-specific lessons (not candidates for principles)
+
+**L4** (comrak loose/tight classification) and **L6** (smart quote context) are specific
+to the comrak/marko parser difference.
+They belong in this project's log, not in the general porting playbook.
 
 ## How to Add New Entries
 
