@@ -68,7 +68,7 @@ with full feature parity:
 - Identical CLI flags, configuration files, and file discovery
 - 430 tests (0 ignored, 0 failures), including 31 cross-language parity tests
 - All 292 Python tests have verified Rust counterparts — see the
-  [port coverage mapping](port-coverage-mapping/) for the full test-by-test
+  [port coverage mapping](admin/port-coverage-mapping/) for the full test-by-test
   mapping, which is CI-enforced
 
 The port was created using the
@@ -78,9 +78,10 @@ The port was created using the
 
 | Document | Description |
 | --- | --- |
-| [docs/STATUS.md](docs/STATUS.md) | **Full project status**, release readiness, architecture, and doc index |
+| [docs/port-status.md](docs/port-status.md) | **Full project status**, release readiness, architecture, and doc index |
 | [docs/publishing.md](docs/publishing.md) | Release process and crates.io publishing |
 | [docs/port-sync-playbook.md](docs/port-sync-playbook.md) | How the Rust codebase stays in sync with Python upstream |
+| [admin/](admin/) | Port administration: test mapping, dev tools, maintenance procedures |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Build, test, and lint instructions |
 | [CHANGELOG.md](CHANGELOG.md) | Release notes |
 

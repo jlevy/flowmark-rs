@@ -24,7 +24,7 @@ from flowmark_dev_tools.yaml_io import (
 
 # All paths relative to the repo root (flowmark-rs/).
 REPO_ROOT = Path(__file__).parent.parent.parent
-MAPPING_DIR = REPO_ROOT / "port-coverage-mapping"
+MAPPING_DIR = REPO_ROOT / "admin" / "port-coverage-mapping"
 PYTHON_YAML = MAPPING_DIR / "python-tests.yaml"
 RUST_YAML = MAPPING_DIR / "rust-tests.yaml"
 MAPPING_YAML = MAPPING_DIR / "test-mapping.yaml"

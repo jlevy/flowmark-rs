@@ -30,7 +30,7 @@ from flowmark_dev_tools.yaml_io import (
 )
 
 # Default paths relative to the flowmark-rs repo root.
-DEFAULT_MAPPING_DIR = "port-coverage-mapping"
+DEFAULT_MAPPING_DIR = "admin/port-coverage-mapping"
 DEFAULT_PYTHON_YAML = f"{DEFAULT_MAPPING_DIR}/python-tests.yaml"
 DEFAULT_RUST_YAML = f"{DEFAULT_MAPPING_DIR}/rust-tests.yaml"
 DEFAULT_MAPPING_YAML = f"{DEFAULT_MAPPING_DIR}/test-mapping.yaml"

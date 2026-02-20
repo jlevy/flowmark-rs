@@ -180,7 +180,7 @@ Compliance verified 2026-02-19:
 - **Golden reference document** tested across 4 modes (default, semantic, auto,
   plaintext)
 - **292 Python tests** have verified Rust counterparts — see
-  [port-coverage-mapping/](../port-coverage-mapping/) for the full mapping
+  [admin/port-coverage-mapping/](../admin/port-coverage-mapping/) for the full mapping
 
 ### Test Dependencies
 
@@ -243,7 +243,8 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 | Document | Description |
 | --- | --- |
 | [docs/publishing.md](publishing.md) | Release process, crates.io, trusted publishing |
-| [docs/port-sync-playbook.md](port-sync-playbook.md) | Keeping Rust in sync with Python upstream |
+| [docs/port-sync-playbook.md](port-sync-playbook.md) | Sync with Python upstream, porting methodology, test mapping procedures |
+| [admin/](../admin/) | Port administration: test mapping data, dev tools overview |
 
 ### Specifications (Active)
 
@@ -267,8 +268,8 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 
 | Document | Description |
 | --- | --- |
-| [port-coverage-mapping/](../port-coverage-mapping/) | Python-to-Rust test mapping (292 tests) |
-| [port-coverage-mapping/test-mapping.yaml](../port-coverage-mapping/test-mapping.yaml) | Hand-maintained 1:1 and 1:N test mappings |
+| [admin/port-coverage-mapping/](../admin/port-coverage-mapping/) | Python-to-Rust test mapping (292 tests) |
+| [admin/port-coverage-mapping/test-mapping.yaml](../admin/port-coverage-mapping/test-mapping.yaml) | Hand-maintained 1:1 and 1:N test mappings |
 
 ### Porting Playbook (Submodule)
 
