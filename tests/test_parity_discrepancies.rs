@@ -638,7 +638,8 @@ fn test_d13_blockquote_list_with_blank_continuation() {
     // Blockquote with rules list and blank continuation line.
     // Python: blank between "Rules:" and "1." has ">   " (3 spaces for bullet indent).
     let input = "> - Rules:\n>\n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
-    let python_output = "> - Rules:\n>   \n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
+    let python_output =
+        "> - Rules:\n>   \n>   1. Look for duplicated code\n>\n>   2. Look for dead code\n";
     let result = fmt(input);
     assert_eq!(
         result, python_output,
