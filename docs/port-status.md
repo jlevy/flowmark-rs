@@ -10,9 +10,9 @@
 
 flowmark-rs is a complete Rust port of the Python
 [flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter.
-The port achieves full behavioral parity with Python flowmark v0.6.4 — identical
-CLI interface, identical formatting output across all modes, and identical file
-discovery behavior.
+The port achieves full behavioral parity with Python flowmark v0.6.4 — identical CLI
+interface, identical formatting output across all modes, and identical file discovery
+behavior.
 
 This is one of the first fully automated ports of a complex Python program to Rust,
 managed through a systematic
@@ -24,8 +24,7 @@ test-driven parity verification.
 
 This port adheres to the 8 non-negotiable principles from the
 [Porting Principles and Anti-Patterns](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
-guide.
-Each principle was learned from an actual mistake during agent-driven porting.
+guide. Each principle was learned from an actual mistake during agent-driven porting.
 None are hypothetical.
 
 ### Parity Definition (Principle 1)
@@ -53,14 +52,15 @@ Everything not on this list is required to be identical.
 
 ### Tests Always Run in CI (Principle 3)
 
-All 430 tests run in CI on every commit. No test file is orphaned.
+All 430 tests run in CI on every commit.
+No test file is orphaned.
 The CI test job installs all required external tools:
 - Python flowmark v0.6.4 (via `uv tool install`)
 - tryscript (via `npm install -g`)
 
 ### Tests Never Hide Failures (Principle 4)
 
-- No "graceful skip" logic — tests fail loudly when dependencies are missing
+- No “graceful skip” logic — tests fail loudly when dependencies are missing
 - Golden test expected outputs come from the Python reference implementation
 - No output truncation, path stripping, or assertion weakening
 - D11 cross-binary parity tests invoke both Python and Rust binaries with identical
@@ -80,29 +80,28 @@ The CI test job installs all required external tools:
 - Node.js 22+ (for tryscript)
 
 CI workflows install all dependencies before running tests.
-The publish workflow mirrors the test job's dependency setup.
+The publish workflow mirrors the test job’s dependency setup.
 
 ### Ignored Tests Tracked (Principle 7)
 
 Zero `#[ignore]` annotations.
-Zero ignored tests.
-No technical debt from silenced failures.
+Zero ignored tests. No technical debt from silenced failures.
 
 ### Disparities Tested Before Fixed (Principle 8)
 
 Every discrepancy followed the test-before-fix protocol:
-1. Write test against Python's behavior (expected output from Python)
+1. Write test against Python’s behavior (expected output from Python)
 2. Confirm test fails against Rust
-3. Investigate the class of behavior (e.g., D4 tight list spacing led to
-   investigating all list spacing modes)
+3. Investigate the class of behavior (e.g., D4 tight list spacing led to investigating
+   all list spacing modes)
 4. Fix, verify test goes green
 
-All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` labels
-in `src/formatter/filling.rs` with rationale for each.
+All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` labels in
+`src/formatter/filling.rs` with rationale for each.
 
 ## Release Readiness
 
-### What's Done
+### What’s Done
 
 | Area | Status | Details |
 | --- | --- | --- |
@@ -177,8 +176,7 @@ Compliance verified 2026-02-19:
 
 - **33 parity-specific tests** verify exact output match with Python across all
   discrepancy areas (D1-D15)
-- **5 D11 tests** invoke both Python and Rust binaries, comparing stderr and
-  exit codes
+- **5 D11 tests** invoke both Python and Rust binaries, comparing stderr and exit codes
 - **Golden reference document** tested across 4 modes (default, semantic, auto,
   plaintext)
 - **292 Python tests** have verified Rust counterparts — see
@@ -219,17 +217,16 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 
 ### Key Design Decisions
 
-- **Zero `unsafe` code** — `unsafe_code = "deny"` in Cargo.toml (1 exception:
-  SIGPIPE handler)
+- **Zero `unsafe` code** — `unsafe_code = "deny"` in Cargo.toml (1 exception: SIGPIPE
+  handler)
 - **No `unwrap()` in library** — `unwrap_used = "deny"`, all errors use `?` or
   `expect()` with messages
-- **Feature-gated CLI** — library usable without clap/anyhow via
-  `--no-default-features`
+- **Feature-gated CLI** — library usable without clap/anyhow via `--no-default-features`
 - **Pedantic clippy at deny level** — catches issues locally, not just in CI
 - **Supply chain security** — `deny.toml` with license allowlist
 - **Atomic file writes** — tempfile + persist pattern prevents corruption
-- **13 comrak workarounds** — documented in `src/formatter/filling.rs` module docs,
-  each tagged with `COMRAK-WORKAROUNDn` and rationale
+- **13 comrak workarounds** — documented in `src/formatter/filling.rs` module docs, each
+  tagged with `COMRAK-WORKAROUNDn` and rationale
 
 ## Documentation Index
 
@@ -275,8 +272,8 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 
 ### Porting Playbook (Submodule)
 
-The [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook) is
-available at `repos/rust-porting-playbook/` with these key documents:
+The [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook) is available
+at `repos/rust-porting-playbook/` with these key documents:
 
 | Document | Description |
 | --- | --- |
@@ -340,4 +337,4 @@ Each release documents which Python version it targets:
 > flowmark v0.2.0 (parity: flowmark-py v0.6.4)
 
 The Rust version follows its own semver independently.
-The parity note indicates which Python version's behavior is fully covered.
+The parity note indicates which Python version’s behavior is fully covered.
