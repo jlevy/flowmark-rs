@@ -337,20 +337,80 @@ not yet integrated into the playbook.
 - **D10**: Playbook references archived/stale crates (`serde_yaml`, `once_cell`,
   `actions/checkout@v5`, `color-eyre`)
 
-### New Lessons for Playbook (from Current Port)
+### Comprehensive Retrospective → Playbook Action Map
 
-| Lesson | Playbook Impact | Category |
-| --- | --- | --- |
-| Cross-language test mapping system (YAML-based) | Major — reusable for any port | ADD |
-| `flowmark-dev` CLI for test discovery + mapping | Major — tool pattern for ports | ADD |
-| Test mapping as CI hard gate | Important — enforcement pattern | ADD |
-| Golden test with 4 formatting modes | Important — testing pattern | ADD |
-| Exact parity spec as tracking document | Important — project management | ADD |
-| `pub(crate)` visibility audit as post-port step | Medium — code quality | ADD |
-| Unicode PUA placeholder pattern for escape preservation | Niche — text processing | ADD (case study) |
-| Lint configuration: pedantic as deny, not warn | Important — stricter than playbook | CLARIFY |
-| `warnings = "deny"` in Cargo.toml (not just CI) | Important — consistency | ADD |
-| Edition 2024 `resolver = "3"` | Important — already identified | FIX |
+A full retrospective of the porting log (L1-L11), code review (P0-P3), spec analysis,
+and new methodology developed during this port. Every finding is mapped to a specific
+playbook action, target document, and work item (WI-N).
+
+#### Lessons Learned (L1-L11) → Playbook Principles & Guidelines
+
+| # | Finding | Action | Target Document(s) | WI |
+| --- | --- | --- | --- | --- |
+| F1 | L1: Always verify source language's actual byte output | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
+| F2 | L2: Use `assert_eq!` with exact output, not weak assertions | ADD technique | `porting-principles-and-antipatterns.md`, `test-coverage-for-porting.md` | WI-5 |
+| F3 | L3: Test edge cases, not just happy path | ADD technique | `test-coverage-for-porting.md` | WI-5 |
+| F4 | L4: Comrak loose/tight classification is recurring bug source | ADD to case study | `flowmark-port-analysis.md` | WI-7 |
+| F5 | L5: Post-merge corpus validation essential | ADD as Principle 9 candidate | `porting-principles-and-antipatterns.md` | WI-5 |
+| F6 | L6: Smart quote context depends on surrounding chars | ADD to case study | `flowmark-port-analysis.md` | WI-7 |
+| F7 | L7: Don't trust CI alone — read the diff | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
+| F8 | L8: Error parity is first-class surface | ADD technique | `python-to-rust-cli-porting.md` | WI-5, WI-9 |
+| F9 | L9: Extract corner-cases from corpus into regression corpus | ADD as Principle 9 candidate | `porting-principles-and-antipatterns.md` | WI-5 |
+| F10 | L10: Red/green discipline for parity fixes | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
+| F11 | L11: Dynamic parity assertions > static assertions | ADD as Principle 9 | `porting-principles-and-antipatterns.md` | WI-5 |
+| F12 | PR #17 false parity: tests passed but were wrong | ADD anti-pattern | `porting-principles-and-antipatterns.md` | WI-5 |
+
+#### Code Review Findings → Playbook Gaps
+
+| # | Finding | Action | Target Document(s) | WI |
+| --- | --- | --- | --- | --- |
+| F13 | P0: Clippy pedantic as `deny`, not `warn` | FIX | `rust-project-setup.md`, `python-to-rust-porting-rules.md` | WI-4 |
+| F14 | P0.5: Lint config Cargo.toml `warn` vs CI `deny` mismatch | FIX | `rust-project-setup.md` | WI-4 |
+| F15 | P1: Dead dependency detection (`cargo machete`) not covered | ADD | `rust-code-review-checklist.md` | WI-8 |
+| F16 | P1: Dead error variants / speculative additions not covered | ADD | `rust-code-review-checklist.md` | WI-8 |
+| F17 | P2: Code duplication detection not in checklist | ADD | `rust-code-review-checklist.md` | WI-8 |
+| F18 | P3: Stale Python-reference comments — no cleanup guidance | ADD | `python-to-rust-porting-rules.md` | WI-9 |
+
+#### Spec Analysis → Playbook Factual Fixes
+
+| # | Finding | Action | Target Document(s) | WI |
+| --- | --- | --- | --- | --- |
+| F19 | Effort allocation sums to 105% | FIX | `python-to-rust-playbook.md` | WI-4 |
+| F20 | Pitfall #6 has identical wrong/correct examples | FIX | `python-to-rust-porting-rules.md` | WI-4 |
+| F21 | `assert` → `debug_assert!` dangerous mapping | FIX | `python-to-rust-mapping-reference.md` | WI-4 |
+| F22 | Stale crate references (`serde_yaml`, `once_cell`) | FIX | `rust-cli-best-practices.md`, `rust-general-rules.md` | WI-4 |
+| F23 | Stale GitHub Actions versions (`actions/checkout@v5`) | FIX | `rust-project-setup.md` | WI-4 |
+| F24 | Non-compiling `build.rs` examples | FIX | `python-to-rust-porting-guide.md` | WI-4 |
+| F25 | `color-eyre` maintenance status not noted | FIX | `rust-cli-best-practices.md` | WI-4 |
+| F26 | `XXX:` → `HACK:`/`FIXME:` convention | FIX | `python-to-rust-porting-rules.md`, source code | WI-2, WI-4 |
+| F27 | Version constraint mappings swapped | FIX | `python-to-rust-mapping-reference.md` | WI-4 |
+| F35 | Edition 2024 `resolver = "3"` not documented | FIX | `rust-project-setup.md` | WI-4 |
+
+#### New Methodology → Playbook New Content
+
+| # | Finding | Action | Target Document(s) | WI |
+| --- | --- | --- | --- | --- |
+| F28 | Cross-language test mapping system (YAML-based) | ADD reference doc | NEW: `cross-language-test-mapping.md` | WI-6 |
+| F29 | `flowmark-dev` CLI for test discovery + mapping | ADD tool pattern | NEW: `cross-language-test-mapping.md` | WI-6 |
+| F30 | Test mapping as CI hard gate | ADD enforcement pattern | NEW: `cross-language-test-mapping.md`, `python-to-rust-playbook.md` | WI-6 |
+| F31 | Golden test with 4 formatting modes | ADD testing pattern | `test-coverage-for-porting.md` | WI-9 |
+| F32 | Exact parity spec as tracking document | ADD project management | `python-to-rust-playbook.md` | WI-8 |
+| F33 | `pub(crate)` visibility audit as post-port step | ADD step | `rust-code-review-checklist.md` | WI-8 |
+| F34 | Unicode PUA placeholder pattern for escape preservation | ADD technique | `flowmark-port-analysis.md` | WI-7 |
+
+#### Case Study & Infrastructure Updates
+
+| # | Finding | Action | Target Document(s) | WI |
+| --- | --- | --- | --- | --- |
+| F36 | All 7 case study docs use old port metrics | UPDATE | All `case-studies/flowmark/*.md` | WI-7 |
+| F37 | Workaround counts inconsistent (13/14/15/17) | RECONCILE | All case study docs | WI-7 |
+| F38 | 13 Phase 7C observations not integrated | TRIAGE+APPLY | Various playbook docs | WI-10 |
+| F39 | Playbook README uses old port data | UPDATE | `README.md` | WI-11 |
+| F40 | Internal cross-reference links may be stale | VERIFY | All playbook docs | WI-11 |
+| F41 | `rust-tests.yaml` stale (408 vs 442) | REGENERATE | `admin/port-coverage-mapping/rust-tests.yaml` | WI-3 |
+| F42 | Smoke test assertions stale | UPDATE | `python/tests/test_smoke.py` | WI-3 |
+| F43 | Mapping notes reference fixed bugs as "Ignored" | CLEAN UP | `admin/port-coverage-mapping/test-mapping.yaml` | WI-3 |
+| F44 | `porting-checklist.md` is stale duplicate | REMOVE | `docs/porting-checklist.md` | WI-2 |
 
 ### Document Inventory
 
@@ -671,13 +731,152 @@ Complete the pending meta-playbook Phase C work.
 - [ ] Check all internal links resolve
 - [ ] Update "validated by N case studies" if applicable
 
-#### 8.8: Consolidate Findings into Action Items
+#### 8.8: Consolidated Work Items
 
-- [ ] Compile all FIX/ADD/CLARIFY/GENERALIZE items from Phases 8.1-8.7
-- [ ] Organize by target file for efficient editing
-- [ ] Prioritize: factual errors first, then missing content, then clarity improvements
-- [ ] Create beads for each actionable change
-- [ ] Determine which changes go to the playbook repo vs this repo
+All findings from Phases 8.1-8.7 and the retrospective mapping (F1-F44) have been
+consolidated into 12 discrete work items. Each is bead-sized and has a clear scope.
+
+**Priority P1 — Prerequisites and Critical Fixes:**
+
+**WI-1: Initialize playbook submodule and audit prior fixes**
+- Bead: fmr-xxmm | Scope: Phase 8.1 | Repo: both
+- `git submodule update --init repos/rust-porting-playbook`
+- Check if 53+ fixes from `plan-2026-02-08` were actually applied
+- Check status of comprehensive review from `plan-2026-02-12`
+- Create status matrix: {fix-id, target-file, applied-or-not}
+- **Prerequisite for WI-4 through WI-11**
+
+**WI-2: Clean up flowmark-rs docs**
+- Bead: fmr-cwct | Scope: Phase 8.2 | Repo: flowmark-rs
+- Remove stale `docs/porting-checklist.md` (F44)
+- Grep source for `XXX:` → convert to `HACK:`/`FIXME:` per convention (F26)
+- Verify `HACK:` comments exist for all COMRAK-WORKAROUND labels
+- Cross-reference `code-review-2026-02-17.md` findings against playbook coverage
+
+**WI-3: Housekeeping — stale YAMLs and mapping notes**
+- Bead: fmr-hasj | Scope: Phase 6 remaining | Repo: flowmark-rs
+- Regenerate `rust-tests.yaml` via `flowmark-dev discover-rust` (F41)
+- Update `python/tests/test_smoke.py` Rust test count assertion (F42)
+- Clean mapping notes for fmr-2tll, fmr-4l1x, fmr-5ojk — remove "Ignored" (F43)
+
+**WI-4: Playbook critical factual fixes**
+- Bead: fmr-mzel | Scope: Phase 8.4/8.5 critical items | Repo: playbook
+- Depends on: WI-1
+- Findings: F13, F14, F19-F27, F35 (11 factual fixes)
+- Fix effort allocation 105% → 100% in `python-to-rust-playbook.md`
+- Fix Pitfall #6 identical examples in `porting-rules.md`
+- Fix `assert` → `debug_assert!` mapping in `mapping-reference.md`
+- Fix stale crate refs (`serde_yaml`, `once_cell`) in `cli-best-practices.md`
+- Fix stale GitHub Actions versions in `project-setup.md`
+- Fix non-compiling `build.rs` examples in `porting-guide.md`
+- Fix `color-eyre` status in `cli-best-practices.md`
+- Fix `XXX:` → `HACK:`/`FIXME:` in `porting-rules.md`
+- Fix version constraint mappings in `mapping-reference.md`
+- Fix lint config warn vs deny in `project-setup.md`
+- Fix Edition 2024 `resolver = "3"` in `project-setup.md`
+
+**Priority P2 — Important New Content:**
+
+**WI-5: Graduate lessons L1-L11 into playbook**
+- Bead: fmr-hr43 | Scope: Phase 8.5/8.6 | Repo: playbook
+- Depends on: WI-1, WI-4
+- Findings: F1-F12 (12 lessons + anti-patterns)
+- Add L1-L11 techniques to `porting-principles-and-antipatterns.md`
+- Propose Principle 9: dynamic parity assertions (from L5/L9/L11)
+- Add PR #17 false parity as anti-pattern case study
+- Add red/green discipline (L10) to porting principles
+- Add error parity guidance (L8) to `python-to-rust-cli-porting.md`
+- Add corpus validation (L5/L9) to porting principles
+
+**WI-6: Create cross-language test mapping reference doc**
+- Bead: fmr-xei7 | Scope: Phase 8.4 new content | Repo: playbook
+- Depends on: WI-1
+- Findings: F28, F29, F30
+- Create new `reference/cross-language-test-mapping.md`
+- Document YAML-based mapping system (python-tests.yaml, rust-tests.yaml,
+  test-mapping.yaml)
+- Document `flowmark-dev` CLI tool pattern for automated discovery
+- Document CI enforcement pattern (`check-mapping` as hard gate)
+- Link from playbook Phase 5, `test-coverage-playbook.md`, and `README.md`
+
+**WI-12: PR tryscript tests to Python repo**
+- Bead: fmr-03xy (existing) | Scope: Phase 7 | Repo: upstream (flowmark)
+- PR tryscript tests and end-to-end CLI tests to Python flowmark repo
+- Bump Python source pin once merged
+- Update `flowmark-dev discover-python` to pick up new tests
+
+**Priority P3 — Broader Updates:**
+
+**WI-7: Update case study docs with v2 port data**
+- Bead: fmr-5hjg | Scope: Phase 8.3 | Repo: playbook
+- Depends on: WI-1
+- Findings: F4, F6, F34, F36, F37
+- Update all 7 `case-studies/flowmark/*.md` docs with current metrics
+- Add "v2 port" sections with 442 tests, 292 mapped, ~1.0x LOC ratio
+- Reconcile workaround counts across all docs
+- Add PUA placeholder pattern, comrak loose/tight analysis, smart quote analysis
+
+**WI-8: Update playbook reference docs**
+- Bead: fmr-kmfo | Scope: Phase 8.4 non-critical items | Repo: playbook
+- Depends on: WI-1, WI-4
+- Findings: F15, F16, F17, F32, F33
+- Update `python-to-rust-playbook.md` with data from both ports
+- Update `rust-code-review-checklist.md` with dead-dep detection (F15), dead error
+  variants (F16), code duplication (F17), `pub(crate)` audit (F33)
+- Update `python-to-rust-test-coverage-playbook.md` with test mapping approach
+- Add exact parity spec as project management pattern (F32)
+- Walk through checklist templates against this port
+
+**WI-9: Update playbook guidelines**
+- Bead: fmr-ohhi | Scope: Phase 8.5 non-critical items | Repo: playbook
+- Depends on: WI-1, WI-4
+- Findings: F8, F18, F31
+- Update `python-to-rust-cli-porting.md` with error parity guidance
+- Update `test-coverage-for-porting.md` with golden test patterns
+- Add stale Python-reference comment cleanup guidance to `porting-rules.md`
+- Validate remaining guideline docs per Phase 8.5 checklist
+
+**WI-10: Integrate Phase 7C observations**
+- Bead: fmr-hugi | Scope: Phase 8.6 | Repo: playbook
+- Depends on: WI-1
+- Finding: F38
+- Read and triage 13 observations from `flowmark-port-observations-2.md`
+- Categorize each as FIX/ADD/CLARIFY/GENERALIZE/VALIDATE
+- Draft specific text changes for non-VALIDATE items
+- Apply to target docs
+
+**WI-11: Update playbook README and cross-references**
+- Bead: fmr-af9y | Scope: Phase 8.7 | Repo: playbook
+- Depends on: WI-7
+- Findings: F39, F40
+- Update README.md case study metrics table with current port data
+- Update "Case studies completed" table
+- Verify all cross-references and internal links
+- Update "validated by N case studies" text
+
+#### Work Item Dependencies
+
+```
+WI-1 ──┬──→ WI-4 ──┬──→ WI-5
+       │           ├──→ WI-8
+       │           └──→ WI-9
+       ├──→ WI-6
+       ├──→ WI-7 ──→ WI-11
+       └──→ WI-10
+
+WI-2 (independent — this repo)
+WI-3 (independent — this repo)
+WI-12 (independent — upstream)
+```
+
+#### Summary by Repo
+
+| Repo | Work Items | Total Findings |
+| --- | --- | --- |
+| flowmark-rs (this repo) | WI-2, WI-3 | F26, F41-F44 |
+| Both repos | WI-1 | Audit |
+| Playbook repo | WI-4 through WI-11 | F1-F40 |
+| Upstream (Python flowmark) | WI-12 | Phase 7 |
 
 ### Phase 9: Final Acceptance
 
