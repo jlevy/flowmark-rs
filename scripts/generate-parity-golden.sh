@@ -1,14 +1,18 @@
 #!/bin/bash
-# Generate golden expected files by running Python flowmark v0.6.4 on corner-case inputs.
+# Generate golden expected files by running the pinned Python flowmark on corner-case inputs.
 # These files are the ground truth for parity testing.
 #
 # Usage: ./scripts/generate-parity-golden.sh
-# Requires: uvx (uv tool runner) with access to flowmark==0.6.4
+# Requires: uvx (uv tool runner) with access to the pinned flowmark version
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 PARITY_DIR="tests/parity"
-PYTHON_VERSION="0.6.4"
+# Read Python parity version from the single source of truth in Cargo.toml
+PYTHON_VERSION=$(grep -A1 '\[package.metadata.parity\]' "$REPO_ROOT/Cargo.toml" | grep version | sed 's/.*"\(.*\)"/\1/')
 
 # Verify Python flowmark version
 ACTUAL_VERSION=$(uvx "flowmark@${PYTHON_VERSION}" --version 2>/dev/null || true)

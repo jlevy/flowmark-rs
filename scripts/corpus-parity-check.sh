@@ -1,5 +1,5 @@
 #!/bin/bash
-# Corpus parity check: run both Python flowmark v0.6.4 and Rust flowmark on a directory
+# Corpus parity check: run both the pinned Python flowmark and Rust flowmark on a directory
 # of markdown files and report any differences.
 #
 # Usage: ./scripts/corpus-parity-check.sh [corpus_dir] [rust_binary]
@@ -10,9 +10,13 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 CORPUS_DIR="${1:-attic/test-docs}"
 RUST_BIN="${2:-target/release/flowmark}"
-PYTHON_VERSION="0.6.4"
+# Read Python parity version from the single source of truth in Cargo.toml
+PYTHON_VERSION=$(grep -A1 '\[package.metadata.parity\]' "$REPO_ROOT/Cargo.toml" | grep version | sed 's/.*"\(.*\)"/\1/')
 
 if [ ! -d "$CORPUS_DIR" ]; then
     echo "ERROR: Corpus directory not found: $CORPUS_DIR"

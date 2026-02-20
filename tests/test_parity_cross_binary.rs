@@ -1,10 +1,12 @@
-//! Tier 2: Cross-binary parity tests — invoke Python flowmark v0.6.4 and Rust flowmark
+//! Tier 2: Cross-binary parity tests — invoke Python flowmark and Rust flowmark
 //! on the same input and assert byte-for-byte identity.
 //!
 //! These tests are opt-in: set `FLOWMARK_PARITY_PYTHON=1` to enable.
-//! Requires: uvx (uv tool runner) with access to flowmark==0.6.4
+//! Requires: uvx (uv tool runner) with access to the pinned Python flowmark version.
 //!
 //! Also validates that committed golden files still match Python output (drift detection).
+//!
+//! The Python version is read from `PARITY_VERSION` (set by build.rs from Cargo.toml).
 #![allow(clippy::unwrap_used)]
 #![cfg(feature = "cli")]
 
@@ -12,13 +14,20 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
+/// Python flowmark uvx package spec, e.g. `"flowmark@0.6.4"`.
+/// Version is read at compile time from `[package.metadata.parity]` in Cargo.toml.
+fn flowmark_uvx_spec() -> String {
+    format!("flowmark@{}", env!("PARITY_VERSION"))
+}
+
 fn parity_python_enabled() -> bool {
     std::env::var("FLOWMARK_PARITY_PYTHON").is_ok()
 }
 
 fn python_flowmark_available() -> bool {
+    let spec = flowmark_uvx_spec();
     Command::new("uvx")
-        .args(["flowmark@0.6.4", "--version"])
+        .args([spec.as_str(), "--version"])
         .output()
         .map(|o| o.status.success())
         .unwrap_or(false)
@@ -26,7 +35,7 @@ fn python_flowmark_available() -> bool {
 
 fn run_python_stdin(args: &[&str], input: &str) -> String {
     let mut child = Command::new("uvx")
-        .arg("flowmark@0.6.4")
+        .arg(flowmark_uvx_spec())
         .args(args)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -107,7 +116,7 @@ fn test_cross_binary_corner_cases() {
         return;
     }
     if !python_flowmark_available() {
-        eprintln!("SKIP: uvx flowmark@0.6.4 not available");
+        eprintln!("SKIP: uvx {} not available", flowmark_uvx_spec());
         return;
     }
 
@@ -147,7 +156,7 @@ fn test_golden_files_match_python() {
         return;
     }
     if !python_flowmark_available() {
-        eprintln!("SKIP: uvx flowmark@0.6.4 not available");
+        eprintln!("SKIP: uvx {} not available", flowmark_uvx_spec());
         return;
     }
 
