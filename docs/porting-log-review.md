@@ -53,7 +53,9 @@ These apply when porting any codebase from one language to another.
 
 **L1. Always verify the source language's actual byte output.** Never assume what the
 source implementation does.
-Run the original binary, capture output, and compare byte-by-byte with `diff` or `xxd`.
+Run the original binary at the **pinned version** (currently `uvx flowmark@0.6.4`),
+capture output, and compare byte-by-byte with `diff` or `xxd`.
+Never use `@latest` --- the reference version must be fixed so results are reproducible.
 PR #17 claimed "exact parity" but 4 bugs slipped through because tests asserted assumed
 behavior, not verified behavior.
 
@@ -199,7 +201,7 @@ differences across 4 bug categories.
 Branch: (to be created) | Follows PR #17
 
 These 4 fixes correct bugs that PR #17 claimed were resolved.
-All verified byte-for-byte against `uvx flowmark@latest` on 623-file corpus.
+All verified byte-for-byte against `uvx flowmark@0.6.4` on 623-file corpus.
 
 | ID | File:Line | Root Cause | Fix |
 | --- | --- | --- | --- |
@@ -248,7 +250,7 @@ The claim was false --- 4 bugs remained.
 # The verification command that would have caught all 4 bugs:
 cp -a attic/test-docs attic/td-rs && cp -a attic/test-docs attic/td-py
 ./target/release/flowmark --auto --inplace attic/td-rs/
-uvx flowmark@latest --auto --inplace attic/td-py/
+uvx flowmark@0.6.4 --auto --inplace attic/td-py/
 diff -rq attic/td-rs/ attic/td-py/
 ```
 
