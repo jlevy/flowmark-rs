@@ -6,18 +6,27 @@
 [![docs.rs](https://docs.rs/flowmark/badge.svg)](https://docs.rs/flowmark)
 ![MSRV](https://img.shields.io/badge/MSRV-1.85-blue)
 
-A Markdown auto-formatter for clean diffs and semantic line breaks.
+Flowmark is a Markdown auto-formatter designed for **better LLM workflows**, **clean git
+diffs**, and **flexible use from CLI, from IDEs, or as a library**.
 
-This is a Rust port of [flowmark](https://github.com/jlevy/flowmark) (Python),
-with identical CLI and identical output.
-See the [Python project](https://github.com/jlevy/flowmark) for full
-documentation, including features, CLI reference, configuration, IDE setup, and
-agent use.
+## Rust Port of Python Flowmark
+
+This is an auto-synced Rust port of the
+[Python version](https://github.com/jlevy/flowmark).
+The original Python version is well tested and this port aims for identical CLI usage
+and formatting behavior.
+
+Last sync: **2026-02-19** against **Python v0.6.4**
+
+## More Info
+
+[**See the Python version**](https://github.com/jlevy/flowmark) for full documentation,
+including features, CLI reference, configuration, IDE setup, and agent use.
 
 ## Why the Rust version?
 
-- **Single binary, no runtime** — `cargo install` or download a binary. No Python
-  environment needed.
+- **Single binary, no runtime** — `cargo install` or download a binary.
+  No Python environment needed.
 - **Fast** — useful for large repos or CI pipelines.
 - **Library crate** — embed formatting in Rust toolchains via
   [docs.rs/flowmark](https://docs.rs/flowmark).
@@ -58,13 +67,13 @@ assert_eq!(formatted, "# Hello\n\nSome text.\n");
 
 See [docs.rs/flowmark](https://docs.rs/flowmark) for full API documentation.
 
-## Port status
+## Port Status
 
-This crate tracks [flowmark](https://github.com/jlevy/flowmark) **v0.6.4**
-with full feature parity:
+This crate tracks [flowmark](https://github.com/jlevy/flowmark) with full feature
+parity:
 
-- Identical formatting output for all supported Markdown constructs
-  (CommonMark + GFM: tables, footnotes, alerts, strikethrough, task lists, math)
+- Identical formatting output for all supported Markdown constructs (CommonMark + GFM:
+  tables, footnotes, alerts, strikethrough, task lists, math)
 - Identical CLI flags, configuration files, and file discovery
 - 430 tests (0 ignored, 0 failures), including 31 cross-language parity tests
 - All 292 Python tests have verified Rust counterparts — see the

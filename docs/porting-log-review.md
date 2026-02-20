@@ -89,6 +89,33 @@ This prevents the PR #17 failure mode where tests were written to pass from the 
 they never actually validated anything because they asserted the wrong expected output.
 Red-first ensures the test can distinguish broken from fixed.
 
+**L11. Parity tests should be dynamic assertions that two programs behave identically,
+not static assertions about a single expected behavior.** What makes a parity test
+"dynamic" is that it ensures exact matching of two pieces of code, not matching of code
+against a test assertion.
+A static assertion compares output against a hand-copied string literal --- the copying
+process itself introduces errors (see PR #17 D15).
+A dynamic assertion ensures the two implementations produce identical results, with three
+equally strong variations:
+
+1. **Run both and assert equivalent:** Execute both implementations on the same input in
+   the test harness and assert `rs_output == py_output` directly.
+   The D11 CLI tests do this.
+2. **Run both and auto-compare saved results:** Execute both implementations separately,
+   save their outputs, and have an automatic process (e.g., `diff -rq`) assert they are
+   identical.
+   This is how corpus validation works (L5).
+3. **Shared golden test script:** Maintain a shared input corpus and a test script that
+   runs on both codebases, so the same test definition validates both implementations.
+
+All three forms are fundamentally stronger than static assertions because the parity
+gate is code-to-code, not code-to-copied-value.
+Static assertions are still useful as supplementary documentation, but the primary parity
+gate should be one of these dynamic forms wherever practical.
+When none is practical (e.g., library-level tests without CLI invocation), capture the
+expected output by running the original program and saving to a fixture file, not by
+guessing.
+
 **L8. Error parity is a first-class surface.** CLI error messages, exit codes, and
 stderr output must be tested with the same rigor as formatting output.
 Golden-test wildcards (`[..]`) can mask error message bugs.
@@ -307,32 +334,52 @@ project-specific detail.
 | **L10** (red/green discipline) | **P8** (disparities must be tested before fixed) | L10 is P8 restated as a workflow: red first, then green |
 | **L1** (verify source byte output) | **P8** (test before fix) + **P4** (don't hide) | Specific technique: use pinned version, byte-by-byte diff |
 | **L8** (error parity is first-class) | **P1** (parity must be defined crisply) | Error messages/exit codes are a parity surface; P1 says enumerate every dimension |
+| **L11** (dynamic code-to-code assertion) | **P8** (test before fix) + **P4** (don't hide) | Parity gate should be code-to-code, not code-to-copied-value (3 variations) |
 
 ### Lessons that should be graduated into principles
 
 These lessons identify gaps in the current principles --- patterns that recurred despite
 the existing 8 rules.
 
-**L5 + L9: Corpus-level validation and regression extraction.**
+**L5 + L9 + L11: End-to-end parity validation.**
 
-The current principles focus on individual disparity tests (P8) and test integrity
-(P4).
-They do not address corpus-level validation --- running both implementations on a
-large, real-world input set and diffing the output.
-This is a fundamentally different validation method that catches bugs targeted tests
-miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
+The current principles focus on individual disparity tests (P8) and test integrity (P4).
+They have two gaps:
+
+1. **No corpus-level validation.** P8 says to write disparity tests, but not to run both
+   implementations on a large, real-world input set and diff the output.
+   This is a fundamentally different validation method that catches bugs targeted tests
+   miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
+
+2. **Static vs dynamic assertions.** P8 says "expected output comes from the Python
+   reference" but does not distinguish between a static hand-copied string literal and a
+   dynamic assertion that runs both programs.
+   A static assertion tests one expected behavior; a dynamic assertion tests that two
+   programs behave identically.
+   The dynamic form is fundamentally stronger because the copying process itself
+   introduces errors (see PR #17 D15).
 
 A candidate Principle 9 would be:
 
-> **Validate against a real-world corpus, and extract reproducers into permanent
-> regression tests.** Individual disparity tests are necessary but insufficient.
+> **Parity gates must be dynamic code-to-code assertions, not static
+> code-to-copied-value assertions.**
+> What makes a parity test "dynamic" is that it ensures two pieces of code produce
+> identical results, rather than comparing one piece of code against a hand-copied
+> expected value.
+> Three equally strong forms:
+> (1) run both implementations in the test harness and assert equivalent output,
+> (2) run both implementations separately, save outputs, and auto-compare
+> (e.g., `diff -rq`),
+> (3) maintain a shared golden test corpus and run the same test script on both
+> codebases.
+> Static assertions (comparing against string literals) are useful as supplementary
+> documentation, but not as the primary parity gate, because the copying process itself
+> introduces errors.
 > Before claiming parity, run both implementations on a large, diverse corpus and diff
 > the output.
 > When the corpus reveals a difference, extract the minimal input into a checked-in
 > regression corpus (e.g., `tests/corpus-regressions/`) so the bug can never recur
 > silently.
-> The full corpus may be too large to commit, but the extracted reproducers are
-> permanent test fixtures.
 
 ### Domain-specific lessons (not candidates for principles)
 
