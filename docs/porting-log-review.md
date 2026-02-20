@@ -65,6 +65,21 @@ that targeted tests miss.
 Run `diff -rq` between the two implementations' output on the full corpus before claiming
 parity.
 
+**L9. Extract corner-case inputs from corpus diffs into a checked-in regression corpus.**
+The full corpus may be too large to commit, but every corpus diff reveals a minimal
+reproducer.
+Extract those files into a small checked-in corpus (e.g., `tests/corpus-regressions/`)
+with a test that runs both implementations and asserts byte-for-byte match.
+This turns ephemeral one-off validation into a permanent regression gate.
+
+**L10. Use red/green discipline for parity fixes.** Before writing any fix, first add
+tests (or corpus entries) that **fail** against the current code, confirming the bug is
+real and reproducible.
+Only then write the fix and verify all tests go green.
+This prevents the PR #17 failure mode where tests were written to pass from the start ---
+they never actually validated anything because they asserted the wrong expected output.
+Red-first ensures the test can distinguish broken from fixed.
+
 **L8. Error parity is a first-class surface.** CLI error messages, exit codes, and
 stderr output must be tested with the same rigor as formatting output.
 Golden-test wildcards (`[..]`) can mask error message bugs.
@@ -264,13 +279,20 @@ The agent violated it for all 4 bugs.
 
 ## How to Add New Entries
 
-When fixing a new bug, add an entry to the relevant PR section (or create a new section)
-with:
+When fixing a parity bug, follow the red/green process (**L10**):
+
+1. **Red:** Extract a minimal reproducer from the corpus diff. Add it to
+   `tests/corpus-regressions/` (**L9**) and/or as a test case. Confirm the test **fails**
+   against current code.
+2. **Fix:** Implement the fix.
+3. **Green:** Confirm the new test passes, all existing tests still pass, and the full
+   corpus diff is clean (`uvx flowmark@0.6.4`, not `@latest` --- **L1**).
+4. **Log:** Add an entry to the relevant PR section (or create a new section) with:
 
 ```markdown
 | ID | Bead | Title | Root Cause | Fix | Lesson |
 ```
 
 If the bug reveals a new reusable lesson, add it to the [Key Lessons](#key-lessons)
-section with the next available number (L9, L10, ...) and cross-reference it from the
+section with the next available number (L11, L12, ...) and cross-reference it from the
 bug entry.
