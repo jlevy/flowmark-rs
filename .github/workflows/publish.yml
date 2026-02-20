@@ -38,22 +38,11 @@ jobs:
         env:
           RUSTFLAGS: "-D warnings"
 
+      - name: Authenticate with crates.io
+        uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
       - name: Publish to crates.io
-        run: |
-          # Exchange GitHub OIDC token for crates.io publish token (trusted publishing)
-          OIDC_TOKEN=$(curl -sLS "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=crates.io" \
-            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" | jq -r '.value')
-          if [ -z "${OIDC_TOKEN}" ] || [ "${OIDC_TOKEN}" = "null" ]; then
-            echo "::error::Failed to obtain OIDC token from GitHub"
-            exit 1
-          fi
-          RESPONSE=$(curl -sLS 'https://crates.io/api/v1/trusted_publishing/tokens' \
-            -X POST --data "{\"jwt\": \"${OIDC_TOKEN}\"}" \
-            -H 'Content-Type: application/json')
-          CRATES_TOKEN=$(echo "${RESPONSE}" | jq -r '.token')
-          if [ -z "${CRATES_TOKEN}" ] || [ "${CRATES_TOKEN}" = "null" ]; then
-            echo "::error::Failed to exchange OIDC token for crates.io token. Response: ${RESPONSE}"
-            echo "Ensure trusted publishing is configured at https://crates.io/settings/tokens"
-            exit 1
-          fi
-          cargo publish --token "${CRATES_TOKEN}"
+        run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
