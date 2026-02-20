@@ -33,12 +33,7 @@ fn run_python_stdin(args: &[&str], input: &str) -> String {
         .stderr(Stdio::piped())
         .spawn()
         .expect("Failed to spawn uvx flowmark");
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(input.as_bytes())
-        .unwrap();
+    child.stdin.take().unwrap().write_all(input.as_bytes()).unwrap();
     let output = child.wait_with_output().unwrap();
     assert!(
         output.status.success(),
@@ -50,9 +45,7 @@ fn run_python_stdin(args: &[&str], input: &str) -> String {
 
 fn rust_binary() -> String {
     let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    root.join("target/debug/flowmark")
-        .to_string_lossy()
-        .to_string()
+    root.join("target/debug/flowmark").to_string_lossy().to_string()
 }
 
 fn run_rust_stdin(args: &[&str], input: &str) -> String {
@@ -63,12 +56,7 @@ fn run_rust_stdin(args: &[&str], input: &str) -> String {
         .stderr(Stdio::piped())
         .spawn()
         .expect("Failed to spawn Rust flowmark");
-    child
-        .stdin
-        .take()
-        .unwrap()
-        .write_all(input.as_bytes())
-        .unwrap();
+    child.stdin.take().unwrap().write_all(input.as_bytes()).unwrap();
     let output = child.wait_with_output().unwrap();
     assert!(
         output.status.success(),
@@ -92,15 +80,7 @@ const MODES: &[CrossBinaryMode] = &[
     },
     CrossBinaryMode {
         name: "auto",
-        args: &[
-            "-w",
-            "88",
-            "--semantic",
-            "--cleanups",
-            "--smartquotes",
-            "--ellipses",
-            "-",
-        ],
+        args: &["-w", "88", "--semantic", "--cleanups", "--smartquotes", "--ellipses", "-"],
         expected_file: "corner-cases.expected.auto.md",
     },
     CrossBinaryMode {
@@ -157,11 +137,7 @@ fn test_cross_binary_corner_cases() {
         }
     }
 
-    assert!(
-        failures.is_empty(),
-        "Cross-binary parity failures:\n{}",
-        failures.join("\n")
-    );
+    assert!(failures.is_empty(), "Cross-binary parity failures:\n{}", failures.join("\n"));
 }
 
 #[test]
