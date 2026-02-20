@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.1] (parity: flowmark-py 0.6.4)
+
+Patch release fixing four formatting parity bugs discovered by corpus-wide
+comparison against Python flowmark on 623 real-world files, plus new systematic
+parity testing infrastructure.
+
+### Fixes
+
+- **Mixed loose/tight list code fences** (D12b): Code blocks inside loose list
+  items no longer get spurious blank lines when the source had none
+- **Blockquote blank line indentation** (D13): Blank separator lines inside
+  blockquote lists now preserve the full list-content indent (e.g., `">    "`)
+  instead of trimming to a bare `">"`
+- **Smart quote after inline code** (D15): Apostrophes after code spans are now
+  context-sensitive — `config`'s converts to a smart quote while `foo()`'s stays
+  ASCII, matching Python's behavior
+- **Empty code blocks** (D16): Empty fenced code blocks no longer produce a
+  spurious blank line between the opening and closing fences
+
+### Testing
+
+- New Python-generated golden file parity tests (`tests/parity/corner-cases.md`)
+  covering all four fixed bugs across 5 formatting modes
+- New cross-binary parity test suite comparing Rust and Python CLI output directly
+- Parity verification scripts (`scripts/corpus-parity-check.sh`,
+  `scripts/generate-parity-golden.sh`) for corpus-wide regression testing
+
 ## [0.2.0] (parity: flowmark-py 0.6.4)
 
 First formal release.
@@ -47,6 +74,7 @@ Complete Rust port with full behavioral parity to Python flowmark v0.6.4.
 
 Early development release.
 
-[Unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/jlevy/flowmark-rs/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jlevy/flowmark-rs/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/jlevy/flowmark-rs/releases/tag/v0.1.3
