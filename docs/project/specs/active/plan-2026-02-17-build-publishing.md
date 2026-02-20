@@ -1,10 +1,11 @@
 # Feature: Build, CI Hardening, and Publishing Improvements
 
-**Date:** 2026-02-17 (last updated 2026-02-18)
+**Date:** 2026-02-17 (last updated 2026-02-20)
 
 **Author:** Joshua Levy
 
-**Status:** Phases 1-4, 6 Complete — Phase 5 (binary releases) deferred
+**Status:** Phases 1-4, 6 Complete — Phase 5 (binary releases) planned in detail, ready
+for implementation
 
 **Epic bead:** fmr-8yos
 
@@ -168,31 +169,356 @@ publishing docs.
 
 ### Phase 5: Binary Release Workflow — PENDING
 
-Set up automated cross-platform binary builds via cargo-dist.
+Set up automated cross-platform binary builds via
+[cargo-dist](https://opensource.axo.dev/cargo-dist/) (v0.30.x, the current community
+standard for Rust CLI distribution), with
+[cargo-binstall](https://github.com/cargo-bins/cargo-binstall) compatibility, a shell
+installer, and Homebrew tap support.
 
-- [ ] **Run `cargo dist init` and configure** (fmr-t8qq) — Install cargo-dist
-  (`cargo install cargo-dist`) and run `cargo dist init` to bootstrap configuration.
-  This generates:
-  - `[workspace.metadata.dist]` section in `Cargo.toml`
-  - `.github/workflows/release.yml`
-  - `dist-workspace.toml` (or equivalent config) Configure targets:
-    `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-apple-darwin`,
-    `aarch64-apple-darwin`. Enable `shell` installer (generates `curl | sh` one-liner).
-    Homebrew installer deferred to future.
-- [ ] **Review generated release workflow** (fmr-c1l6) — Review
-  `.github/workflows/release.yml` for correctness.
-  Depends on: fmr-t8qq.
-  - Triggers on tag push (`v*`)
-  - Builds binaries for all 4 targets
-  - Creates GitHub Release with artifacts
-  - Uploads tarballs containing: binary, LICENSE, README.md
-- [ ] **Coordinate with publish workflow** (fmr-ttf7) — Ensure release creation triggers
-  the publish workflow (Phase 4). Depends on: fmr-aarf, fmr-c1l6. The flow: push tag →
-  release.yml builds binaries and creates GitHub Release → publish.yml triggers on
-  release published → publishes to crates.io.
-- [ ] **(Manual) Test with `v0.2.0` tag** (fmr-ya3n) — Push `v0.2.0` tag, verify release
-  workflow creates artifacts, verify publish workflow publishes to crates.io.
-  Depends on: fmr-ttf7.
+#### 5A: Background and Tool Choices
+
+**Why cargo-dist?**
+cargo-dist is the de facto standard for Rust binary distribution (used by uv, zoxide,
+dump_syms, and hundreds of other Rust CLI tools). It generates cross-platform build CI,
+shell/PowerShell installers, Homebrew formulae, and GitHub Release artifacts from a single
+configuration file. It auto-detects `cargo-binstall` compatibility via the `repository`
+field in `Cargo.toml` (already set), so `cargo binstall flowmark` will work automatically
+once release artifacts exist.
+
+**Alternatives considered:**
+- **Manual GitHub Actions workflow** (ripgrep-style): Maximum flexibility but requires
+  maintaining ~200 lines of custom workflow YAML per target, cross-compilation toolchains,
+  and manual installer scripts. Overkill for a project this size.
+- **cross-rs**: Good for cross-compilation but doesn't handle release orchestration,
+  installers, or GitHub Releases. Would need to be combined with manual workflow YAML.
+- **release-plz / cargo-release**: Handle version bumping and changelog automation but
+  not binary builds. Complementary to cargo-dist but not a replacement.
+
+**Configuration format:** cargo-dist now supports both `[workspace.metadata.dist]` in
+`Cargo.toml` (legacy) and the standalone `dist-workspace.toml` file (preferred for new
+setups, since v0.23+). We will use `dist-workspace.toml` to keep `Cargo.toml` clean.
+
+#### 5B: Target Platforms
+
+Build pre-compiled static binaries for four Unix targets (no Windows — this project uses
+`libc` with `cfg(unix)` by design):
+
+| Target Triple | OS | Arch | Libc | Notes |
+| --- | --- | --- | --- | --- |
+| `x86_64-unknown-linux-musl` | Linux | x86_64 | musl (static) | Most common Linux servers/CI |
+| `aarch64-unknown-linux-musl` | Linux | ARM64 | musl (static) | AWS Graviton, ARM servers |
+| `x86_64-apple-darwin` | macOS | x86_64 | system | Intel Macs (pre-2020) |
+| `aarch64-apple-darwin` | macOS | ARM64 | system | Apple Silicon (M1+) |
+
+**Why musl for Linux?** Static linking with musl produces fully self-contained binaries
+that work on any Linux distribution regardless of glibc version. This avoids the common
+"GLIBC_2.XX not found" errors. The binary size increase is negligible for a CLI tool.
+
+**Why no `linux-gnu` targets?** With musl providing universal Linux compatibility, gnu
+targets add CI cost without user benefit. Projects like uv include gnu targets for maximum
+glibc performance, but for a text formatter the difference is immaterial.
+
+#### 5C: Installer Strategy
+
+**Shell installer (priority — ship immediately):**
+cargo-dist generates a shell installer script that provides a `curl | sh` one-liner:
+```bash
+curl --proto '=https' --tlsv1.2 -LsSf \
+  https://github.com/jlevy/flowmark-rs/releases/latest/download/flowmark-installer.sh | sh
+```
+The installer auto-detects the platform, downloads the correct binary, installs to
+`~/.cargo/bin/` (or `$CARGO_HOME/bin/`), and updates PATH. This is the standard Rust
+ecosystem install path (matching `cargo install` behavior).
+
+**cargo-binstall (automatic — no configuration needed):**
+Since `Cargo.toml` already has `repository = "https://github.com/jlevy/flowmark-rs"`,
+cargo-binstall will automatically discover and install pre-built binaries from GitHub
+Releases. Users can run:
+```bash
+cargo binstall flowmark
+```
+This downloads the pre-built binary instead of compiling from source, providing a much
+faster install experience.
+
+**Homebrew tap (Phase 5 scope — include in initial setup):**
+cargo-dist can auto-generate and publish a Homebrew formula on each release. This requires:
+1. A `jlevy/homebrew-tap` repository on GitHub
+2. A `HOMEBREW_TAP_TOKEN` secret (personal access token with `repo` scope)
+3. Setting `tap = "jlevy/homebrew-tap"` and adding `"homebrew"` to the installers list
+
+Once configured, users can install via:
+```bash
+brew install jlevy/tap/flowmark
+```
+Homebrew handles auto-updates via `brew upgrade`.
+
+**npm installer (not planned):**
+cargo-dist supports npm-based installation but this adds complexity without clear user
+benefit for a Markdown tool. Defer indefinitely.
+
+#### 5D: Release Artifact Contents
+
+Each platform release tarball (`.tar.xz` for Unix) will contain:
+- `flowmark` binary (stripped, LTO-optimized — already configured in `[profile.release]`)
+- `flowmark-rs` binary (alias, same binary)
+- `LICENSE` (MIT)
+- `README.md`
+
+Additionally, cargo-dist generates:
+- `flowmark-installer.sh` — Shell installer script
+- SHA-256 checksums for all artifacts (cargo-dist default)
+- `dist-manifest.json` — Machine-readable manifest of all release artifacts (used by
+  cargo-binstall and other tools for auto-discovery)
+
+#### 5E: Release Flow and Workflow Coordination
+
+The release process involves two GitHub Actions workflows that chain together:
+
+```
+Developer pushes tag v0.X.Y
+        │
+        ▼
+release.yml (cargo-dist) ──────────────────────────────┐
+  ├─ plan: compute build matrix                         │
+  ├─ build-local: compile for each target (4 jobs)      │
+  ├─ build-global: shell installer, checksums           │
+  ├─ host: create GitHub Release, upload all artifacts  │
+  ├─ publish: update Homebrew tap                       │
+  └─ announce: done                                     │
+                                                        │
+        GitHub Release "published" event ◄──────────────┘
+        │
+        ▼
+publish.yml (existing OIDC workflow)
+  ├─ run tests
+  └─ cargo publish to crates.io
+```
+
+**Key coordination points:**
+- `release.yml` triggers on tag push (`v*`) — this is the cargo-dist default
+- `release.yml` creates the GitHub Release with binary artifacts
+- `publish.yml` (already exists) triggers on `release: published` event
+- `publish.yml` handles crates.io publishing via OIDC trusted publishing
+- cargo-dist does NOT need to publish to crates.io — we keep the existing workflow
+
+**Configuration to disable cargo-dist's crates.io publish:**
+Set `publish-jobs = ["homebrew"]` in `dist-workspace.toml` (only the Homebrew publish
+job, no built-in crates.io publish). Our existing `publish.yml` handles crates.io via
+the GitHub Release event trigger.
+
+#### 5F: Implementation Steps
+
+**Step 5.1: Install cargo-dist and initialize configuration**
+
+Install cargo-dist locally:
+```bash
+cargo install cargo-dist
+```
+
+Run interactive init (or with `--yes` for defaults):
+```bash
+cargo dist init
+```
+
+This generates:
+- `dist-workspace.toml` — Top-level config file
+- `.github/workflows/release.yml` — The release CI workflow
+
+Then manually edit `dist-workspace.toml` to the desired configuration:
+
+```toml
+[workspace]
+members = ["cargo:."]
+
+[dist]
+cargo-dist-version = "0.30.4"
+ci = "github"
+installers = ["shell", "homebrew"]
+targets = [
+  "aarch64-apple-darwin",
+  "x86_64-apple-darwin",
+  "x86_64-unknown-linux-musl",
+  "aarch64-unknown-linux-musl",
+]
+publish-jobs = ["homebrew"]
+tap = "jlevy/homebrew-tap"
+install-path = "CARGO_HOME"
+pr-run-mode = "plan"
+checksum = "sha256"
+create-release = true
+source-tarball = false
+```
+
+Configuration notes:
+- `installers = ["shell", "homebrew"]`: Generate shell installer + Homebrew formula.
+  No `"powershell"` since this is Unix-only.
+- `targets`: The four Unix targets described in 5B. No Windows targets.
+- `publish-jobs = ["homebrew"]`: Only publish to Homebrew tap. crates.io publishing is
+  handled by the existing `publish.yml` workflow.
+- `tap = "jlevy/homebrew-tap"`: The Homebrew tap repository.
+- `install-path = "CARGO_HOME"`: Install to `~/.cargo/bin/` for consistency with
+  `cargo install`.
+- `pr-run-mode = "plan"`: Run `dist plan` on PRs to catch release config errors early.
+- `source-tarball = false`: GitHub auto-generates source tarballs; no need to duplicate.
+
+**Step 5.2: Create the Homebrew tap repository**
+
+This is a manual step (requires GitHub repo creation):
+
+1. Create `jlevy/homebrew-tap` repository on GitHub (public, with a README)
+2. Generate a GitHub personal access token (classic) with `repo` scope
+3. Add the token as a secret named `HOMEBREW_TAP_TOKEN` in the `jlevy/flowmark-rs`
+   repository settings (Settings → Secrets → Actions)
+
+The tap repository is just a Git repo that Homebrew reads formulae from. cargo-dist
+auto-pushes updated formulae on each release.
+
+**Step 5.3: Review and customize the generated release workflow**
+
+After `cargo dist init`, review `.github/workflows/release.yml`:
+
+- Verify it triggers on `push: tags: ["v*"]` (not on release creation, to avoid
+  circular triggers with `publish.yml`)
+- Verify the build matrix includes all 4 targets
+- Verify the `host` job creates a GitHub Release and uploads artifacts
+- Verify musl builds use the correct cross-compilation setup (cargo-dist handles this
+  automatically via `cross` or target-specific runners)
+- Ensure the `HOMEBREW_TAP_TOKEN` secret is referenced correctly
+- Confirm `id-token: write` permission is set if needed for attestations
+
+Specific things to check/customize:
+- The workflow should use `Swatinem/rust-cache@v2` for build caching (cargo-dist
+  includes this by default)
+- ARM Linux builds may use cross-compilation via `cross` or a dedicated ARM runner
+- macOS builds use `macos-latest` (which is ARM64 on GitHub Actions) with an
+  additional x86_64 build via `--target`
+
+**Step 5.4: Coordinate release.yml with existing publish.yml**
+
+Verify the trigger chain works correctly:
+
+1. `release.yml` triggers on tag push (`v*`) — builds binaries, creates GitHub Release
+2. `publish.yml` triggers on `release: published` — publishes to crates.io
+3. Both workflows must not conflict or race
+
+Check for potential issues:
+- Ensure `release.yml` does NOT also trigger `publish.yml` via `workflow_dispatch`
+- If `release.yml` creates the release as a draft first and then publishes, the
+  `published` event fires once when the release is finalized (cargo-dist handles this
+  correctly with `github-release = "announce"` which waits until all builds complete)
+- Verify that `publish.yml` runs AFTER binaries are uploaded (it already does since it
+  triggers on the `published` event, not on tag push)
+
+**Step 5.5: Update documentation**
+
+Update these files to reflect the new installation methods:
+
+1. **README.md** — Add shell installer and Homebrew install instructions:
+   ```markdown
+   ## Installation
+
+   Install from [crates.io](https://crates.io/crates/flowmark):
+   ```bash
+   cargo install flowmark
+   ```
+
+   Or install via the shell installer:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -LsSf https://github.com/jlevy/flowmark-rs/releases/latest/download/flowmark-installer.sh | sh
+   ```
+
+   Or via Homebrew:
+   ```bash
+   brew install jlevy/tap/flowmark
+   ```
+
+   Or download a pre-built binary from
+   [GitHub Releases](https://github.com/jlevy/flowmark-rs/releases).
+   ```
+
+2. **docs/publishing.md** — Add a section on the binary release flow and how the two
+   workflows (release.yml and publish.yml) coordinate.
+
+3. **CONTRIBUTING.md** — Add a note about `cargo dist plan` for verifying release config.
+
+**Step 5.6: Verify locally with `cargo dist plan`**
+
+Before pushing, run:
+```bash
+cargo dist plan
+```
+
+This executes the same logic as the CI `plan` step without building anything. Verify:
+- All 4 targets are listed
+- Shell installer is listed
+- Homebrew formula is listed
+- Artifact names look correct (e.g., `flowmark-v0.2.2-x86_64-unknown-linux-musl.tar.xz`)
+- No errors or warnings about missing configuration
+
+**Step 5.7: Test the full release cycle**
+
+1. Merge the cargo-dist setup PR to main
+2. Create a patch release (e.g., `v0.2.2`) to test the pipeline:
+   - Bump version in `Cargo.toml`
+   - Update CHANGELOG.md
+   - Commit, push, merge to main
+   - Tag and push: `git tag v0.2.2 && git push origin v0.2.2`
+3. Watch `release.yml`: `gh run list --workflow=release.yml --limit 1`
+4. Verify GitHub Release appears with all artifacts (4 tarballs + installer script +
+   checksums)
+5. Watch `publish.yml`: `gh run list --workflow=publish.yml --limit 1`
+6. Verify crates.io publication: https://crates.io/crates/flowmark
+7. Test each installation method from a clean environment:
+   - `cargo install flowmark` (from crates.io)
+   - `cargo binstall flowmark` (from GitHub Releases)
+   - Shell installer (curl | sh)
+   - `brew install jlevy/tap/flowmark` (from Homebrew tap)
+   - Direct binary download from GitHub Releases
+8. Verify `flowmark --version` shows correct version and parity info
+
+**Step 5.8: Add cargo-dist version update to Dependabot**
+
+The existing `.github/dependabot.yml` already covers Cargo and GitHub Actions. No changes
+needed — cargo-dist's generated workflow uses pinned action versions that Dependabot will
+update automatically.
+
+However, the `cargo-dist-version` in `dist-workspace.toml` needs manual bumping when
+upgrading cargo-dist. Consider adding a comment in the config file noting this.
+
+#### 5G: Checksums and Security
+
+cargo-dist provides several security features out of the box:
+
+- **SHA-256 checksums**: Generated for every artifact by default (configurable via
+  `checksum` setting). Each release includes a `dist-manifest.json` with checksums.
+- **GitHub Attestations**: cargo-dist supports
+  [GitHub artifact attestations](https://github.blog/2024-05-02-introducing-artifact-attestations-now-in-public-beta/)
+  which provide cryptographic proof that artifacts were built in CI. Enable with
+  `github-attestations = true` in `dist-workspace.toml`.
+- **HTTPS-only installer**: The shell installer enforces HTTPS (`--proto '=https'`
+  `--tlsv1.2`) for all downloads.
+- **Reproducible builds**: cargo-dist pins its own version and uses `--locked` builds,
+  so the same tag always produces the same artifacts.
+
+**Signing (future consideration):**
+cargo-dist does not yet have built-in binary signing (tracked in
+[axodotdev/cargo-dist#1121](https://github.com/axodotdev/cargo-dist/issues/1121)).
+For now, SHA-256 checksums + GitHub attestations provide sufficient integrity verification
+for an open-source CLI tool. Signing can be added later when cargo-dist supports it or via
+a custom post-build step using `cosign` or `minisign`.
+
+#### 5H: Maintenance and Upgrades
+
+After the initial setup, ongoing maintenance is minimal:
+
+- **Updating cargo-dist**: Run `cargo dist init` again to regenerate the workflow with a
+  newer version. Bump `cargo-dist-version` in `dist-workspace.toml`.
+- **Adding targets**: Add new target triples to `dist-workspace.toml` and re-run
+  `cargo dist init` to regenerate the workflow.
+- **Adding installers**: Re-run `cargo dist init`, select new installers, and the
+  workflow updates automatically.
+- **PR validation**: The `plan` job runs on every PR, catching release config problems
+  before they reach main.
 
 ### Phase 6: Documentation and Community — DONE
 
@@ -213,15 +539,11 @@ Standard open source project documentation.
 - [x] **Verify `cargo doc` output** (fmr-ghvq) — Docs build cleanly with `-D warnings`.
   No broken links or missing documentation.
 
-### Future: Homebrew Tap — DEFERRED
+### Future: Homebrew Tap — INCLUDED IN PHASE 5
 
-Not part of this plan.
-Tracked for future work.
-
-- [ ] Create `jlevy/homebrew-tap` repository on GitHub
-- [ ] Configure cargo-dist to auto-update the tap formula on release
-- [ ] Test `brew install jlevy/tap/flowmark` from a clean environment
-- [ ] Add Homebrew install instructions to README
+Homebrew tap setup is now part of Phase 5 (steps 5.1, 5.2, and 5.7). cargo-dist handles
+auto-generating and publishing the Homebrew formula on each release, so it is straightforward
+to include in the initial binary distribution setup rather than deferring it.
 
 ### Future: CLI Polish — DEFERRED
 
@@ -243,8 +565,11 @@ blockers.
    (since `0.1.3` is already on crates.io from earlier work).
    Each release links to the Python version it targets for parity (see Version
    Convention below).
-3. **cargo-dist vs manual release workflow**: cargo-dist is simpler but less flexible.
-   For a project this size, cargo-dist is likely the right choice initially.
+3. ~~**cargo-dist vs manual release workflow**~~: **Resolved** — cargo-dist (v0.30.x)
+   selected. It is the community standard, supports all needed targets (including musl
+   static Linux builds), generates shell installers and Homebrew formulae, and integrates
+   with the existing publish.yml workflow via the GitHub Release event chain. The
+   `dist-workspace.toml` config file keeps Cargo.toml clean. See Phase 5 for full details.
 4. ~~**Shell completions scope**~~: **Deferred** — moved to future work (not blocking
    initial release).
 
@@ -356,11 +681,24 @@ Adapted from Python project’s `docs/publishing.md`:
 
 ## References
 
-- [cargo-dist documentation](https://opensource.axo.dev/cargo-dist/)
+- [cargo-dist documentation](https://opensource.axo.dev/cargo-dist/) — Primary tool for
+  binary distribution (v0.30.x)
+- [cargo-dist quickstart (Rust)](https://axodotdev.github.io/cargo-dist/book/quickstart/rust.html) —
+  Setup guide
+- [cargo-dist configuration reference](https://axodotdev.github.io/cargo-dist/book/reference/config.html) —
+  All config keys
+- [cargo-binstall](https://github.com/cargo-bins/cargo-binstall) — Binary install from
+  crates.io metadata (auto-compatible with cargo-dist releases)
+- [GitHub artifact attestations](https://github.blog/2024-05-02-introducing-artifact-attestations-now-in-public-beta/) —
+  Cryptographic build provenance
 - [crates.io trusted publishing](https://doc.rust-lang.org/cargo/reference/registry-authentication.html)
-- [ripgrep release workflow](https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml)
+- [ripgrep release workflow](https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml) —
+  Example of a manual (non-cargo-dist) approach
 - [Orhun’s automated Rust releases guide](https://blog.orhun.dev/automated-rust-releases/)
+- [uv dist-workspace.toml](https://github.com/astral-sh/uv/blob/main/dist-workspace.toml) —
+  Real-world cargo-dist config for a major Rust CLI
 - Python flowmark project: https://github.com/jlevy/flowmark (reference for README
   structure, publishing process, release notes format)
 - Current CI config: `.github/workflows/ci.yml`
 - Current Cargo.toml: `Cargo.toml`
+- Existing publish workflow: `.github/workflows/publish.yml`
