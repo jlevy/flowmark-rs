@@ -89,19 +89,21 @@ This prevents the PR #17 failure mode where tests were written to pass from the 
 they never actually validated anything because they asserted the wrong expected output.
 Red-first ensures the test can distinguish broken from fixed.
 
-**L11. Prefer running both programs on the same input over hand-copying expected
-output.** The strongest parity test invokes both implementations on the exact same input
-and asserts the outputs match --- encapsulating the original program inside the testing
-process eliminates human transcription errors entirely.
-The D11 CLI tests do this correctly: they call both `flowmark` (Rust) and
-`flowmark` (Python) with the same args and assert `rs_output == py_output`.
-Hand-transcribing expected output is acceptable as a supplement (e.g., for documenting
-what Python does) but is error-prone as the sole source of truth --- PR #17's D15 test
-asserted that Python does NOT convert apostrophes after code spans, when Python actually
-DOES in some cases.
-When two-program comparison is not practical (e.g., library-level tests without CLI
-invocation), capture the expected output by running the original program and saving its
-output to a fixture file, not by guessing.
+**L11. Parity tests should be dynamic assertions that two programs behave identically,
+not static assertions about a single expected behavior.** A test that runs both
+implementations on the same input and asserts `rs_output == py_output` is a dynamic code
+assertion about behavioral equivalence.
+A test that compares against a hand-copied string literal is a static assertion about one
+expected behavior --- and the copying process itself introduces errors.
+The D11 CLI tests do this correctly: they call both binaries with the same args and
+assert the outputs match.
+PR #17's D15 test shows the failure mode: the agent hand-wrote what seemed logical for
+Python's behavior rather than running Python, and got it wrong.
+Static assertions are useful as supplementary documentation, but the primary parity gate
+should be dynamic two-program comparison wherever practical.
+When it is not practical (e.g., library-level tests without CLI invocation), capture the
+expected output by running the original program and saving to a fixture file, not by
+guessing.
 
 **L8. Error parity is a first-class surface.** CLI error messages, exit codes, and
 stderr output must be tested with the same rigor as formatting output.
@@ -321,7 +323,7 @@ project-specific detail.
 | **L10** (red/green discipline) | **P8** (disparities must be tested before fixed) | L10 is P8 restated as a workflow: red first, then green |
 | **L1** (verify source byte output) | **P8** (test before fix) + **P4** (don't hide) | Specific technique: use pinned version, byte-by-byte diff |
 | **L8** (error parity is first-class) | **P1** (parity must be defined crisply) | Error messages/exit codes are a parity surface; P1 says enumerate every dimension |
-| **L11** (run both programs, compare) | **P8** (test before fix) + **P4** (don't hide) | Strongest form of P8: no hand-copied expected values, just two programs and a diff |
+| **L11** (dynamic two-program assertion) | **P8** (test before fix) + **P4** (don't hide) | Dynamic behavioral equivalence assertion vs static hand-copied expected values |
 
 ### Lessons that should be graduated into principles
 
@@ -338,18 +340,22 @@ They have two gaps:
    This is a fundamentally different validation method that catches bugs targeted tests
    miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
 
-2. **No guidance on how to obtain expected output.** P8 says "expected output comes from
-   the Python reference" but does not say *how*.
-   Hand-transcription is error-prone --- the strongest parity test encapsulates the
-   original program inside the test and compares outputs directly.
+2. **Static vs dynamic assertions.** P8 says "expected output comes from the Python
+   reference" but does not distinguish between a static hand-copied string literal and a
+   dynamic assertion that runs both programs.
+   A static assertion tests one expected behavior; a dynamic assertion tests that two
+   programs behave identically.
+   The dynamic form is fundamentally stronger because the copying process itself
+   introduces errors (see PR #17 D15).
 
 A candidate Principle 9 would be:
 
-> **Validate end-to-end by running both implementations on the same input.** Where
-> possible, parity tests should encapsulate the original program inside the testing
-> process and assert identical output, rather than relying on hand-copied expected values.
-> Hand-copied assertions are acceptable as supplementary documentation but not as the
-> sole source of truth.
+> **Parity tests should be dynamic assertions that two programs behave identically.**
+> Where possible, parity tests should run both the original and the port on the same
+> input and assert identical output --- a dynamic code assertion about behavioral
+> equivalence, not a static assertion about a single expected value.
+> Static assertions are useful as supplementary documentation but not as the primary
+> parity gate, because the process of hand-copying expected output introduces errors.
 > Before claiming parity, also run both implementations on a large, diverse corpus and
 > diff the output.
 > When the corpus reveals a difference, extract the minimal input into a checked-in
