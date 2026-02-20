@@ -66,14 +66,23 @@ with full feature parity:
 - Identical formatting output for all supported Markdown constructs
   (CommonMark + GFM: tables, footnotes, alerts, strikethrough, task lists, math)
 - Identical CLI flags, configuration files, and file discovery
+- 430 tests (0 ignored, 0 failures), including 31 cross-language parity tests
 - All 292 Python tests have verified Rust counterparts — see the
   [port coverage mapping](port-coverage-mapping/) for the full test-by-test
   mapping, which is CI-enforced
 
 The port was created using the
 [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook).
-See [docs/port-sync-playbook.md](docs/port-sync-playbook.md) for how the Rust
-codebase stays in sync when the Python upstream is updated.
+
+## Documentation
+
+| Document | Description |
+| --- | --- |
+| [docs/STATUS.md](docs/STATUS.md) | **Full project status**, release readiness, architecture, and doc index |
+| [docs/publishing.md](docs/publishing.md) | Release process and crates.io publishing |
+| [docs/port-sync-playbook.md](docs/port-sync-playbook.md) | How the Rust codebase stays in sync with Python upstream |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Build, test, and lint instructions |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes |
 
 ## License
 

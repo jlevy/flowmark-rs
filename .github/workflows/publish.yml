@@ -20,6 +20,19 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+      - name: Pre-install tryscript
+        run: npm install -g tryscript@latest
+      - uses: astral-sh/setup-uv@v7
+      - name: Install Python flowmark for parity tests
+        run: uv tool install flowmark==0.6.4
+      - name: Build flowmark binary for tests
+        run: cargo build --locked --all-features
+        env:
+          RUSTFLAGS: "-D warnings"
+
       - name: Run tests before publishing
         run: cargo test --locked --all-features
         env:
