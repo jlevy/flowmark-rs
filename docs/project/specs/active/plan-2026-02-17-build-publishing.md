@@ -24,21 +24,21 @@ popular Rust CLI tools like ripgrep, bat, and fd.
 
 - CI pipeline covers all best-practice checks with zero gaps.
 - Library crate published on crates.io with proper metadata and trusted publishing.
-- Pre-built binaries for Linux (x86_64, arm64), macOS (x86_64, arm64) via GitHub
-  Releases.
-- Shell installer for quick install on any Unix system (`curl | sh`).
+- Pre-built binaries for all major platforms — Linux (x86_64, arm64), macOS (x86_64,
+  arm64), Windows (x86_64, arm64) — via GitHub Releases.
+- SHA256 checksums for all release artifacts.
 - Automated release workflow triggered by version tags.
 - Dependency updates automated via Dependabot.
 - Code coverage tracked and visible.
 - README and CONTRIBUTING docs ready for public consumption.
 
 **Future (not in scope for this plan):**
+- Shell installer (`curl | sh`) and PowerShell installer.
 - One-line install via Homebrew (`brew install jlevy/tap/flowmark`).
 - Shell completions and man pages.
 
 ## Non-Goals
 
-- Windows support (project uses `libc` with `cfg(unix)` — Unix-targeted by design).
 - Feature work on the formatter itself (covered by the exact-parity spec).
 - Performance benchmarking or optimization.
 - Full changelog automation (can be added later with git-cliff/release-plz).
@@ -96,10 +96,12 @@ The CI pipeline is already well above average:
 
 ### Approach
 
-Use **cargo-dist** for binary release automation (the current community standard for
-Rust CLI distribution).
-This generates the release workflow, shell/PowerShell installers, and Homebrew formula
-updates automatically.
+Use a **custom GitHub Actions release workflow** modeled on
+[casey/just](https://github.com/casey/just)’s release workflow for binary distribution.
+This is the dominant approach among popular Rust CLI tools (12 of 14 surveyed in the
+[binary distribution research](../research/research-rust-cli-binary-distribution.md) use
+custom workflows). just is the closest comparable project: pure Rust, single maintainer,
+focused CLI utility with all-musl Linux targets and Windows support.
 
 For crates.io publishing, start with manual `cargo publish` for the first release, then
 set up trusted publishing (OIDC) for subsequent releases.
@@ -169,106 +171,114 @@ publishing docs.
 
 ### Phase 5: Binary Release Workflow — PENDING
 
-Set up automated cross-platform binary builds via
-[cargo-dist](https://opensource.axo.dev/cargo-dist/) (v0.30.x, the current community
-standard for Rust CLI distribution), with
-[cargo-binstall](https://github.com/cargo-bins/cargo-binstall) compatibility, a shell
-installer, and Homebrew tap support.
+Set up automated cross-platform binary builds via a custom GitHub Actions release
+workflow, modeled on
+[casey/just](https://github.com/casey/just/blob/master/.github/workflows/release.yaml).
+This is the dominant approach among popular Rust CLI tools — 12 of 14 tools surveyed in
+the [binary distribution research](../research/research-rust-cli-binary-distribution.md)
+use custom workflows.
+just is the closest comparable project (pure Rust, focused CLI, single maintainer,
+all-musl Linux, Windows support).
 
 #### 5A: Background and Tool Choices
 
-**Why cargo-dist?**
-cargo-dist is the de facto standard for Rust binary distribution (used by uv, zoxide,
-dump_syms, and hundreds of other Rust CLI tools). It generates cross-platform build CI,
-shell/PowerShell installers, Homebrew formulae, and GitHub Release artifacts from a single
-configuration file. It auto-detects `cargo-binstall` compatibility via the `repository`
-field in `Cargo.toml` (already set), so `cargo binstall flowmark` will work automatically
-once release artifacts exist.
+**Why a custom workflow (not cargo-dist)?**
+
+A survey of 14 popular Rust CLI tools found that 12 use fully custom GitHub Actions
+release workflows.
+Only Astral’s uv and ruff use cargo-dist, both in a heavily customized
+way for Python wheel builds.
+See the
+[binary distribution research](../research/research-rust-cli-binary-distribution.md) for
+the full survey and analysis.
+
+The custom workflow approach is preferred for flowmark-rs because:
+- Battle-tested by ripgrep, bat, fd, just, typst, jj, and others
+- Full control and visibility — every line is understood
+- No version coupling or breaking changes from an external tool
+- Straightforward for a pure-Rust CLI with no C dependencies
+- Supports all targets including `aarch64-pc-windows-msvc` (which cargo-dist does not)
+
+**Primary template:** just’s
+[release.yaml](https://github.com/casey/just/blob/master/.github/workflows/release.yaml)
+and [bin/package](https://github.com/casey/just/blob/master/bin/package) script.
 
 **Alternatives considered:**
-- **Manual GitHub Actions workflow** (ripgrep-style): Maximum flexibility but requires
-  maintaining ~200 lines of custom workflow YAML per target, cross-compilation toolchains,
-  and manual installer scripts. Overkill for a project this size.
-- **cross-rs**: Good for cross-compilation but doesn't handle release orchestration,
-  installers, or GitHub Releases. Would need to be combined with manual workflow YAML.
+- **cargo-dist** (v0.30.x): Generates workflow + installers + Homebrew from TOML config.
+  Appealing for zero-YAML setup, but: version coupling (must keep `cargo-dist-version`
+  in sync with generated YAML), opaque generated workflow (~300 lines), pre-1.0 with
+  breaking changes, cross-compilation issue #74 still open, and no
+  `aarch64-pc-windows-msvc` support.
+  Only 2 of 14 surveyed tools use it.
+- **cross-rs**: Good for cross-compilation but doesn’t handle release orchestration.
+  Not needed for flowmark-rs since all targets can be built with direct linker flags or
+  native runners (just’s approach).
 - **release-plz / cargo-release**: Handle version bumping and changelog automation but
-  not binary builds. Complementary to cargo-dist but not a replacement.
-
-**Configuration format:** cargo-dist now supports both `[workspace.metadata.dist]` in
-`Cargo.toml` (legacy) and the standalone `dist-workspace.toml` file (preferred for new
-setups, since v0.23+). We will use `dist-workspace.toml` to keep `Cargo.toml` clean.
+  not binary builds. Complementary, can be added later.
 
 #### 5B: Target Platforms
 
-Build pre-compiled static binaries for four Unix targets (no Windows — this project uses
-`libc` with `cfg(unix)` by design):
+Build pre-compiled binaries for 6 targets covering all major platforms:
 
-| Target Triple | OS | Arch | Libc | Notes |
+| Target Triple | OS | Arch | Runner | Cross-Compilation |
 | --- | --- | --- | --- | --- |
-| `x86_64-unknown-linux-musl` | Linux | x86_64 | musl (static) | Most common Linux servers/CI |
-| `aarch64-unknown-linux-musl` | Linux | ARM64 | musl (static) | AWS Graviton, ARM servers |
-| `x86_64-apple-darwin` | macOS | x86_64 | system | Intel Macs (pre-2020) |
-| `aarch64-apple-darwin` | macOS | ARM64 | system | Apple Silicon (M1+) |
+| `x86_64-unknown-linux-musl` | Linux | x86_64 | `ubuntu-latest` | Native (musl-tools) |
+| `aarch64-unknown-linux-musl` | Linux | ARM64 | `ubuntu-latest` | `--codegen linker=aarch64-linux-gnu-gcc` |
+| `x86_64-apple-darwin` | macOS | x86_64 | `macos-latest` | `--target` on ARM runner |
+| `aarch64-apple-darwin` | macOS | ARM64 | `macos-latest` | Native |
+| `x86_64-pc-windows-msvc` | Windows | x86_64 | `windows-latest` | Native |
+| `aarch64-pc-windows-msvc` | Windows | ARM64 | `windows-latest` | `rustup target add` |
 
 **Why musl for Linux?** Static linking with musl produces fully self-contained binaries
-that work on any Linux distribution regardless of glibc version. This avoids the common
-"GLIBC_2.XX not found" errors. The binary size increase is negligible for a CLI tool.
+that work on any Linux distribution regardless of glibc version.
+just, typst, and jj all use musl-only for Linux.
+The performance difference is negligible for a text formatter.
 
-**Why no `linux-gnu` targets?** With musl providing universal Linux compatibility, gnu
-targets add CI cost without user benefit. Projects like uv include gnu targets for maximum
-glibc performance, but for a text formatter the difference is immaterial.
+**Why include Windows?** The core Markdown processing is platform-agnostic.
+Unix-specific code (SIGPIPE handling, file permissions) is behind `#[cfg(unix)]` guards
+and simply absent on Windows.
+13 of 14 surveyed tools include Windows.
+
+**Cross-compilation approach (just’s model):** No Docker, no `cross-rs`. For Linux
+ARM64, install `gcc-aarch64-linux-gnu` via apt and pass
+`--codegen linker=aarch64-linux-gnu-gcc` via RUSTFLAGS. For macOS x86_64, build via
+`--target` on the ARM64 runner (macOS supports this natively).
+For Windows ARM64, `rustup target add aarch64-pc-windows-msvc` on the x86_64 runner.
+All of this works for pure-Rust projects with no C dependencies.
 
 #### 5C: Installer Strategy
 
-**Shell installer (priority — ship immediately):**
-cargo-dist generates a shell installer script that provides a `curl | sh` one-liner:
-```bash
-curl --proto '=https' --tlsv1.2 -LsSf \
-  https://github.com/jlevy/flowmark-rs/releases/latest/download/flowmark-installer.sh | sh
-```
-The installer auto-detects the platform, downloads the correct binary, installs to
-`~/.cargo/bin/` (or `$CARGO_HOME/bin/`), and updates PATH. This is the standard Rust
-ecosystem install path (matching `cargo install` behavior).
+**Phase 5 scope (ship immediately):**
+- **GitHub Releases** with `.tar.gz` (Unix) and `.zip` (Windows) archives
+- **SHA256 checksums** via a unified `SHA256SUMS` file (just’s checksum job pattern)
+- **`cargo binstall` compatibility** — automatic with standard archive naming
+  (`flowmark-vX.Y.Z-TARGET.tar.gz`). Since `Cargo.toml` has the `repository` field set,
+  `cargo binstall flowmark` will discover and install pre-built binaries.
 
-**cargo-binstall (automatic — no configuration needed):**
-Since `Cargo.toml` already has `repository = "https://github.com/jlevy/flowmark-rs"`,
-cargo-binstall will automatically discover and install pre-built binaries from GitHub
-Releases. Users can run:
-```bash
-cargo binstall flowmark
-```
-This downloads the pre-built binary instead of compiling from source, providing a much
-faster install experience.
-
-**Homebrew tap (Phase 5 scope — include in initial setup):**
-cargo-dist can auto-generate and publish a Homebrew formula on each release. This requires:
-1. A `jlevy/homebrew-tap` repository on GitHub
-2. A `HOMEBREW_TAP_TOKEN` secret (personal access token with `repo` scope)
-3. Setting `tap = "jlevy/homebrew-tap"` and adding `"homebrew"` to the installers list
-
-Once configured, users can install via:
-```bash
-brew install jlevy/tap/flowmark
-```
-Homebrew handles auto-updates via `brew upgrade`.
-
-**npm installer (not planned):**
-cargo-dist supports npm-based installation but this adds complexity without clear user
-benefit for a Markdown tool. Defer indefinitely.
+**Future (defer to later):**
+- Shell installer (`curl | sh`) — can copy from starship or just’s install scripts
+- PowerShell installer — for Windows users who don’t use `cargo install`
+- Homebrew tap — via `mislav/bump-homebrew-formula-action` (as starship does)
 
 #### 5D: Release Artifact Contents
 
-Each platform release tarball (`.tar.xz` for Unix) will contain:
-- `flowmark` binary (stripped, LTO-optimized — already configured in `[profile.release]`)
-- `flowmark-rs` binary (alias, same binary)
+Each platform archive will contain:
+- `flowmark` binary (or `flowmark.exe` on Windows), stripped and LTO-optimized (already
+  configured in `[profile.release]`)
 - `LICENSE` (MIT)
 - `README.md`
 
-Additionally, cargo-dist generates:
-- `flowmark-installer.sh` — Shell installer script
-- SHA-256 checksums for all artifacts (cargo-dist default)
-- `dist-manifest.json` — Machine-readable manifest of all release artifacts (used by
-  cargo-binstall and other tools for auto-discovery)
+The release will also include:
+- `SHA256SUMS` — unified checksum file for all artifacts (generated by a separate
+  checksum job after all builds complete)
+
+Archive formats follow the standard convention:
+- `.tar.gz` for Linux and macOS (consistent with just, ripgrep, jj)
+- `.zip` for Windows (consistent with just, ripgrep, typst)
+
+Archive naming: `flowmark-vX.Y.Z-TARGET.tar.gz` (e.g.,
+`flowmark-v0.2.2-x86_64-unknown-linux-musl.tar.gz`). This is the standard convention
+that `cargo-binstall` auto-detects.
 
 #### 5E: Release Flow and Workflow Coordination
 
@@ -276,250 +286,133 @@ The release process involves two GitHub Actions workflows that chain together:
 
 ```
 Developer pushes tag v0.X.Y
-        │
-        ▼
-release.yml (cargo-dist) ──────────────────────────────┐
-  ├─ plan: compute build matrix                         │
-  ├─ build-local: compile for each target (4 jobs)      │
-  ├─ build-global: shell installer, checksums           │
-  ├─ host: create GitHub Release, upload all artifacts  │
-  ├─ publish: update Homebrew tap                       │
-  └─ announce: done                                     │
-                                                        │
-        GitHub Release "published" event ◄──────────────┘
-        │
-        ▼
+        |
+        v
+release.yml (custom workflow) ---------------------------------.
+  |-- prerelease: detect semver vs prerelease tag               |
+  |-- package: matrix build for each target (6 jobs)            |
+  |     |-- install target deps (apt/rustup)                    |
+  |     |-- cargo build --release --target $TARGET              |
+  |     |-- create archive (.tar.gz / .zip)                     |
+  |     '-- upload archive to GitHub Release                    |
+  |-- checksum: download all artifacts, generate SHA256SUMS     |
+  '-- upload SHA256SUMS to GitHub Release                       |
+                                                                |
+        GitHub Release "published" event <----------------------'
+        |
+        v
 publish.yml (existing OIDC workflow)
-  ├─ run tests
-  └─ cargo publish to crates.io
+  |-- run tests
+  '-- cargo publish to crates.io
 ```
 
 **Key coordination points:**
-- `release.yml` triggers on tag push (`v*`) — this is the cargo-dist default
-- `release.yml` creates the GitHub Release with binary artifacts
+- `release.yml` triggers on tag push (`*`) and uses `softprops/action-gh-release@v2` to
+  publish archives directly (not as draft)
 - `publish.yml` (already exists) triggers on `release: published` event
 - `publish.yml` handles crates.io publishing via OIDC trusted publishing
-- cargo-dist does NOT need to publish to crates.io — we keep the existing workflow
-
-**Configuration to disable cargo-dist's crates.io publish:**
-Set `publish-jobs = ["homebrew"]` in `dist-workspace.toml` (only the Homebrew publish
-job, no built-in crates.io publish). Our existing `publish.yml` handles crates.io via
-the GitHub Release event trigger.
+- Prerelease detection: tags matching `^[0-9]+\.[0-9]+\.[0-9]+$` are releases; all
+  others are prereleases (just’s approach)
 
 #### 5F: Implementation Steps
 
-**Step 5.1: Install cargo-dist and initialize configuration**
+**Step 5.1: Create `.github/workflows/release.yml`**
 
-Install cargo-dist locally:
-```bash
-cargo install cargo-dist
+Write the release workflow with three jobs, modeled on just’s release.yaml:
+
+1. **`prerelease`** — determines if the tag is a stable release or prerelease
+2. **`package`** — matrix of 6 targets, each: install deps, build, create archive,
+   publish to GitHub Release
+3. **`checksum`** — downloads all release artifacts, generates `SHA256SUMS`, uploads it
+
+Key workflow details:
+- Trigger: `push: tags: ['*']`
+- Global RUSTFLAGS: `--deny warnings --codegen target-feature=+crt-static`
+- Target-specific RUSTFLAGS for cross-compilation (linker overrides)
+- Dependencies installed via apt for Linux ARM targets
+- `softprops/action-gh-release@v2` for uploading archives and checksums
+- `actions/checkout@v6`, `Swatinem/rust-cache@v2` for caching
+
+**Step 5.2: Add Windows CI testing**
+
+Add `windows-latest` to the CI test matrix in `ci.yml` to catch platform-specific issues
+before release:
+```yaml
+strategy:
+  matrix:
+    os: [ubuntu-latest, macos-latest, windows-latest]
 ```
 
-Run interactive init (or with `--yes` for defaults):
-```bash
-cargo dist init
-```
-
-This generates:
-- `dist-workspace.toml` — Top-level config file
-- `.github/workflows/release.yml` — The release CI workflow
-
-Then manually edit `dist-workspace.toml` to the desired configuration:
-
-```toml
-[workspace]
-members = ["cargo:."]
-
-[dist]
-cargo-dist-version = "0.30.4"
-ci = "github"
-installers = ["shell", "homebrew"]
-targets = [
-  "aarch64-apple-darwin",
-  "x86_64-apple-darwin",
-  "x86_64-unknown-linux-musl",
-  "aarch64-unknown-linux-musl",
-]
-publish-jobs = ["homebrew"]
-tap = "jlevy/homebrew-tap"
-install-path = "CARGO_HOME"
-pr-run-mode = "plan"
-checksum = "sha256"
-create-release = true
-source-tarball = false
-github-attestations = true
-```
-
-Configuration notes:
-- `installers = ["shell", "homebrew"]`: Generate shell installer + Homebrew formula.
-  No `"powershell"` since this is Unix-only.
-- `targets`: The four Unix targets described in 5B. No Windows targets.
-- `publish-jobs = ["homebrew"]`: Only publish to Homebrew tap. crates.io publishing is
-  handled by the existing `publish.yml` workflow.
-- `tap = "jlevy/homebrew-tap"`: The Homebrew tap repository.
-- `install-path = "CARGO_HOME"`: Install to `~/.cargo/bin/` for consistency with
-  `cargo install`.
-- `pr-run-mode = "plan"`: Run `dist plan` on PRs to catch release config errors early.
-- `source-tarball = false`: GitHub auto-generates source tarballs; no need to duplicate.
-
-**Step 5.2: Create the Homebrew tap repository**
-
-This is a manual step (requires GitHub repo creation):
-
-1. Create `jlevy/homebrew-tap` repository on GitHub (public, with a README)
-2. Generate a GitHub personal access token (classic) with `repo` scope
-3. Add the token as a secret named `HOMEBREW_TAP_TOKEN` in the `jlevy/flowmark-rs`
-   repository settings (Settings → Secrets → Actions)
-
-The tap repository is just a Git repo that Homebrew reads formulae from. cargo-dist
-auto-pushes updated formulae on each release.
-
-**Step 5.3: Review and customize the generated release workflow**
-
-After `cargo dist init`, review `.github/workflows/release.yml`:
-
-- Verify it triggers on `push: tags: ["v*"]` (not on release creation, to avoid
-  circular triggers with `publish.yml`)
-- Verify the build matrix includes all 4 targets
-- Verify the `host` job creates a GitHub Release and uploads artifacts
-- Verify musl builds use the correct cross-compilation setup (cargo-dist handles this
-  automatically via `cross` or target-specific runners)
-- Ensure the `HOMEBREW_TAP_TOKEN` secret is referenced correctly
-- Confirm `id-token: write` permission is set if needed for attestations
-
-Specific things to check/customize:
-- The workflow should use `Swatinem/rust-cache@v2` for build caching (cargo-dist
-  includes this by default)
-- ARM Linux builds may use cross-compilation via `cross` or a dedicated ARM runner
-- macOS builds use `macos-latest` (which is ARM64 on GitHub Actions) with an
-  additional x86_64 build via `--target`
-
-**Step 5.4: Coordinate release.yml with existing publish.yml**
-
-Verify the trigger chain works correctly:
-
-1. `release.yml` triggers on tag push (`v*`) — builds binaries, creates GitHub Release
-2. `publish.yml` triggers on `release: published` — publishes to crates.io
-3. Both workflows must not conflict or race
-
-Check for potential issues:
-- Ensure `release.yml` does NOT also trigger `publish.yml` via `workflow_dispatch`
-- If `release.yml` creates the release as a draft first and then publishes, the
-  `published` event fires once when the release is finalized (cargo-dist handles this
-  correctly with `github-release = "announce"` which waits until all builds complete)
-- Verify that `publish.yml` runs AFTER binaries are uploaded (it already does since it
-  triggers on the `published` event, not on tag push)
-
-**Step 5.5: Update documentation**
+**Step 5.3: Update documentation**
 
 Update these files to reflect the new installation methods:
 
-1. **README.md** — Add shell installer and Homebrew install instructions:
-   ```markdown
+1. **README.md** — Add pre-built binary download instructions:
+
+   ````markdown
    ## Installation
 
    Install from [crates.io](https://crates.io/crates/flowmark):
    ```bash
    cargo install flowmark
-   ```
-
-   Or install via the shell installer:
-   ```bash
-   curl --proto '=https' --tlsv1.2 -LsSf https://github.com/jlevy/flowmark-rs/releases/latest/download/flowmark-installer.sh | sh
-   ```
-
-   Or via Homebrew:
-   ```bash
-   brew install jlevy/tap/flowmark
-   ```
+   ````
 
    Or download a pre-built binary from
    [GitHub Releases](https://github.com/jlevy/flowmark-rs/releases).
+
+   ```
+
    ```
 
 2. **docs/publishing.md** — Add a section on the binary release flow and how the two
    workflows (release.yml and publish.yml) coordinate.
 
-3. **CONTRIBUTING.md** — Add a note about `cargo dist plan` for verifying release config.
+**Step 5.4: Test the full release cycle**
 
-**Step 5.6: Verify locally with `cargo dist plan`**
-
-Before pushing, run:
-```bash
-cargo dist plan
-```
-
-This executes the same logic as the CI `plan` step without building anything. Verify:
-- All 4 targets are listed
-- Shell installer is listed
-- Homebrew formula is listed
-- Artifact names look correct (e.g., `flowmark-v0.2.2-x86_64-unknown-linux-musl.tar.xz`)
-- No errors or warnings about missing configuration
-
-**Step 5.7: Test the full release cycle**
-
-1. Merge the cargo-dist setup PR to main
+1. Merge the release workflow PR to main
 2. Create a patch release (e.g., `v0.2.2`) to test the pipeline:
    - Bump version in `Cargo.toml`
    - Update CHANGELOG.md
    - Commit, push, merge to main
    - Tag and push: `git tag v0.2.2 && git push origin v0.2.2`
 3. Watch `release.yml`: `gh run list --workflow=release.yml --limit 1`
-4. Verify GitHub Release appears with all artifacts (4 tarballs + installer script +
-   checksums)
+4. Verify GitHub Release appears with all artifacts (6 archives + SHA256SUMS)
 5. Watch `publish.yml`: `gh run list --workflow=publish.yml --limit 1`
 6. Verify crates.io publication: https://crates.io/crates/flowmark
-7. Test each installation method from a clean environment:
+7. Test installation methods:
    - `cargo install flowmark` (from crates.io)
    - `cargo binstall flowmark` (from GitHub Releases)
-   - Shell installer (curl | sh)
-   - `brew install jlevy/tap/flowmark` (from Homebrew tap)
    - Direct binary download from GitHub Releases
 8. Verify `flowmark --version` shows correct version and parity info
 
-**Step 5.8: Add cargo-dist version update to Dependabot**
-
-The existing `.github/dependabot.yml` already covers Cargo and GitHub Actions. No changes
-needed — cargo-dist's generated workflow uses pinned action versions that Dependabot will
-update automatically.
-
-However, the `cargo-dist-version` in `dist-workspace.toml` needs manual bumping when
-upgrading cargo-dist. Consider adding a comment in the config file noting this.
-
 #### 5G: Checksums and Security
 
-cargo-dist provides several security features out of the box:
+- **SHA256 checksums**: Generated via a post-build `checksum` job that downloads ALL
+  release artifacts with `gh release download`, runs `shasum -a 256 * > SHA256SUMS`, and
+  uploads the result. This is just’s approach and ensures the checksum file covers every
+  artifact.
+- **Static CRT linking**: Windows binaries use `--codegen target-feature=+crt-static` to
+  statically link the C runtime, avoiding “VCRUNTIME140.dll not found” errors.
+  This is standard practice (just, cargo-dist, and others all do this).
+- **`--locked` builds**: Ensures Cargo.lock is respected for reproducible builds.
+- **`--deny warnings`**: Global RUSTFLAGS prevent building with warnings.
 
-- **SHA-256 checksums**: Generated for every artifact by default (configurable via
-  `checksum` setting). Each release includes a `dist-manifest.json` with checksums.
-- **GitHub Attestations**: cargo-dist supports
-  [GitHub artifact attestations](https://github.blog/2024-05-02-introducing-artifact-attestations-now-in-public-beta/)
-  which provide cryptographic proof that artifacts were built in CI. Enable with
-  `github-attestations = true` in `dist-workspace.toml`.
-- **HTTPS-only installer**: The shell installer enforces HTTPS (`--proto '=https'`
-  `--tlsv1.2`) for all downloads.
-- **Reproducible builds**: cargo-dist pins its own version and uses `--locked` builds,
-  so the same tag always produces the same artifacts.
-
-**Signing (future consideration):**
-cargo-dist does not yet have built-in binary signing (tracked in
-[axodotdev/cargo-dist#1121](https://github.com/axodotdev/cargo-dist/issues/1121)).
-For now, SHA-256 checksums + GitHub attestations provide sufficient integrity verification
-for an open-source CLI tool. Signing can be added later when cargo-dist supports it or via
-a custom post-build step using `cosign` or `minisign`.
+**Future security enhancements:**
+- GitHub artifact attestations (`actions/attest-build-provenance`) — as fd and jj do
+- Homebrew formula with SHA256 verification
+- Binary signing via `cosign` or `minisign`
 
 #### 5H: Maintenance and Upgrades
 
-After the initial setup, ongoing maintenance is minimal:
+The custom workflow has minimal ongoing maintenance:
 
-- **Updating cargo-dist**: Run `cargo dist init` again to regenerate the workflow with a
-  newer version. Bump `cargo-dist-version` in `dist-workspace.toml`.
-- **Adding targets**: Add new target triples to `dist-workspace.toml` and re-run
-  `cargo dist init` to regenerate the workflow.
-- **Adding installers**: Re-run `cargo dist init`, select new installers, and the
-  workflow updates automatically.
-- **PR validation**: The `plan` job runs on every PR, catching release config problems
-  before they reach main.
+- **Adding targets**: Add a new entry to the matrix in `release.yml`.
+- **Updating action versions**: Dependabot already covers GitHub Actions updates.
+- **Updating Rust toolchain**: The workflow uses whatever stable toolchain is on the
+  runner (just’s approach).
+  No pinning needed unless reproducibility is a concern.
+- **Adding installers**: Shell/PowerShell installers and Homebrew tap can be added as
+  separate jobs or workflows when needed.
 
 ### Phase 6: Documentation and Community — DONE
 
@@ -540,11 +433,11 @@ Standard open source project documentation.
 - [x] **Verify `cargo doc` output** (fmr-ghvq) — Docs build cleanly with `-D warnings`.
   No broken links or missing documentation.
 
-### Future: Homebrew Tap — INCLUDED IN PHASE 5
+### Future: Homebrew Tap — DEFERRED
 
-Homebrew tap setup is now part of Phase 5 (steps 5.1, 5.2, and 5.7). cargo-dist handles
-auto-generating and publishing the Homebrew formula on each release, so it is straightforward
-to include in the initial binary distribution setup rather than deferring it.
+Not part of this plan.
+Can be added later via `mislav/bump-homebrew-formula-action` (as starship does) or a
+manual formula in a `jlevy/homebrew-tap` repository.
 
 ### Future: CLI Polish — DEFERRED
 
@@ -566,11 +459,15 @@ blockers.
    (since `0.1.3` is already on crates.io from earlier work).
    Each release links to the Python version it targets for parity (see Version
    Convention below).
-3. ~~**cargo-dist vs manual release workflow**~~: **Resolved** — cargo-dist (v0.30.x)
-   selected. It is the community standard, supports all needed targets (including musl
-   static Linux builds), generates shell installers and Homebrew formulae, and integrates
-   with the existing publish.yml workflow via the GitHub Release event chain. The
-   `dist-workspace.toml` config file keeps Cargo.toml clean. See Phase 5 for full details.
+3. ~~**cargo-dist vs manual release workflow**~~: **Resolved** — Custom GitHub Actions
+   workflow selected, modeled on casey/just.
+   A survey of 14 popular Rust CLI tools found 12 use custom workflows; only 2 use
+   cargo-dist (both heavily customized).
+   The custom approach provides full control, no version coupling, and supports all
+   targets including `aarch64-pc-windows-msvc` (which cargo-dist does not).
+   See Phase 5 and the
+   [binary distribution research](../research/research-rust-cli-binary-distribution.md)
+   for full analysis.
 4. ~~**Shell completions scope**~~: **Deferred** — moved to future work (not blocking
    initial release).
 
@@ -682,22 +579,20 @@ Adapted from Python project’s `docs/publishing.md`:
 
 ## References
 
-- [cargo-dist documentation](https://opensource.axo.dev/cargo-dist/) — Primary tool for
-  binary distribution (v0.30.x)
-- [cargo-dist quickstart (Rust)](https://axodotdev.github.io/cargo-dist/book/quickstart/rust.html) —
-  Setup guide
-- [cargo-dist configuration reference](https://axodotdev.github.io/cargo-dist/book/reference/config.html) —
-  All config keys
+- [Binary distribution research](../research/research-rust-cli-binary-distribution.md) —
+  Survey of 14 Rust CLI tools’ release practices (the basis for the Phase 5 approach)
+- [just release.yaml](https://github.com/casey/just/blob/master/.github/workflows/release.yaml)
+  — Primary template for the release workflow
+- [just bin/package](https://github.com/casey/just/blob/master/bin/package) — just’s
+  packaging script (archive creation, static CRT linking)
+- [typst release.yml](https://github.com/typst/typst/blob/main/.github/workflows/release.yml)
+  — Alternative template (SHA-pinned actions, ripgrep-derived)
 - [cargo-binstall](https://github.com/cargo-bins/cargo-binstall) — Binary install from
-  crates.io metadata (auto-compatible with cargo-dist releases)
-- [GitHub artifact attestations](https://github.blog/2024-05-02-introducing-artifact-attestations-now-in-public-beta/) —
-  Cryptographic build provenance
+  crates.io metadata (auto-compatible with standard archive naming)
+- [GitHub artifact attestations](https://github.blog/2024-05-02-introducing-artifact-attestations-now-in-public-beta/)
+  — Cryptographic build provenance (future enhancement)
 - [crates.io trusted publishing](https://doc.rust-lang.org/cargo/reference/registry-authentication.html)
-- [ripgrep release workflow](https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml) —
-  Example of a manual (non-cargo-dist) approach
 - [Orhun’s automated Rust releases guide](https://blog.orhun.dev/automated-rust-releases/)
-- [uv dist-workspace.toml](https://github.com/astral-sh/uv/blob/main/dist-workspace.toml) —
-  Real-world cargo-dist config for a major Rust CLI
 - Python flowmark project: https://github.com/jlevy/flowmark (reference for README
   structure, publishing process, release notes format)
 - Current CI config: `.github/workflows/ci.yml`

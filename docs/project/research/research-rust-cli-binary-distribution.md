@@ -3,25 +3,23 @@ title: "Research: Rust CLI Binary Distribution Practices"
 status: complete
 date: 2026-02-20
 ---
-
 # Research: Rust CLI Binary Distribution Practices
 
 ## Motivation
 
-flowmark-rs is preparing to ship pre-built binaries via GitHub Releases (Phase 5 of the
-build-publishing spec).
-The existing spec proposed cargo-dist as the distribution tool.
-This research surveys how 14 popular Rust CLI tools actually distribute their binaries, to
-inform whether cargo-dist, a custom GitHub Actions workflow, or a hybrid approach is best.
+When preparing a Rust CLI tool for public release with pre-built binaries, the main
+question is: use cargo-dist, a custom GitHub Actions workflow, or something else?
+This research surveys how 14 popular Rust CLI tools actually distribute their binaries
+to inform that decision.
 
 ## Key Questions
 
 1. What release mechanisms do popular Rust CLI tools use?
-2. What specific versions of GitHub Actions, Rust toolchains, and cross-compilation tools
-   do they use?
+2. What specific versions of GitHub Actions, Rust toolchains, and cross-compilation
+   tools do they use?
 3. What target platforms do they build for?
 4. How do they handle checksums, signing, and security?
-5. How does Astral's cargo-dist approach differ from everyone else's custom workflows?
+5. How does Astral’s cargo-dist approach differ from everyone else’s custom workflows?
 6. What should a modern, small-to-medium Rust CLI tool use?
 
 ## Findings
@@ -29,7 +27,7 @@ inform whether cargo-dist, a custom GitHub Actions workflow, or a hybrid approac
 ### Overview: Custom GitHub Actions Dominates
 
 Of 14 major Rust CLI tools surveyed, **12 use fully custom GitHub Actions release
-workflows**. Only Astral's uv and ruff use cargo-dist — and they use it in a heavily
+workflows**. Only Astral’s uv and ruff use cargo-dist — and they use it in a heavily
 customized way (with maturin for Python wheel builds).
 
 | Approach | Count | Tools |
@@ -37,17 +35,17 @@ customized way (with maturin for Python wheel builds).
 | Custom GHA workflow | 12 | ripgrep, bat, fd, delta, eza, starship, zoxide, just, jj, typst, mise, nushell |
 | cargo-dist (customized + maturin) | 2 | uv, ruff |
 
----
+* * *
 
 ### Tool-by-Tool Survey
 
 #### 1. ripgrep (BurntSushi/ripgrep)
 
 The template that many others copy.
-Typst explicitly states its workflow is "based on ripgrep's release action."
+Typst explicitly states its workflow is “based on ripgrep’s release action.”
 
-**Release workflow:** `.github/workflows/release.yml`
-**Trigger:** Tag push matching `[0-9]+.[0-9]+.[0-9]+`
+**Release workflow:** `.github/workflows/release.yml` **Trigger:** Tag push matching
+`[0-9]+.[0-9]+.[0-9]+`
 
 **GitHub Actions versions:**
 
@@ -57,10 +55,11 @@ Typst explicitly states its workflow is "based on ripgrep's release action."
 | `dtolnay/rust-toolchain` | `@master` |
 
 **Rust toolchain:** `nightly` for primary platforms (x86_64 musl, macOS, Windows),
-`stable` for cross-compiled ARM/i686/s390x Linux targets. Not pinned — floats to latest.
+`stable` for cross-compiled ARM/i686/s390x Linux targets.
+Not pinned — floats to latest.
 
-**Build profile:** Custom `release-lto` profile with LTO enabled. Builds with
-`--features pcre2` (`PCRE2_SYS_STATIC: 1`).
+**Build profile:** Custom `release-lto` profile with LTO enabled.
+Builds with `--features pcre2` (`PCRE2_SYS_STATIC: 1`).
 
 **Binary stripping:** Explicit — native `strip` on macOS, Docker-based strip via
 cross-rs images on Linux (`aarch64-linux-gnu-strip`, etc.).
@@ -99,12 +98,13 @@ Releases.
 **Notable:** Three-job structure: `create-release` → `build-release` (matrix) →
 `build-release-deb`. Uses `windows-11-arm` runner for aarch64 Windows.
 
----
+* * *
 
 #### 2. bat (sharkdp/bat)
 
 **Release workflow:** `.github/workflows/CICD.yml` (combined CI/CD in one file)
-**Trigger:** Tag push matching `v[0-9]+.*`
+**Trigger:** Runs on all pushes (master, tags, PRs); release behavior gated on tags
+matching `v[0-9].*`
 
 **GitHub Actions versions:**
 
@@ -116,8 +116,8 @@ Releases.
 | `softprops/action-gh-release` | `@v2` |
 | `vedantmgoyal9/winget-releaser` | pinned SHA |
 
-**Rust toolchain:** `stable` (floating). MSRV tested separately via
-`cargo metadata` extraction.
+**Rust toolchain:** `stable` (floating).
+MSRV tested separately via `cargo metadata` extraction.
 
 **Cross-compilation:** `cross` installed via `taiki-e/install-action@v2` (not pinned to
 a specific cross version — uses whatever `install-action` provides).
@@ -146,18 +146,18 @@ a specific cross version — uses whatever `install-action` provides).
 `windows-2025`, `windows-11-arm`.
 
 **Packaging:** Manual `.deb` creation via `fakeroot dpkg-deb --build` (not cargo-deb).
-Builds `.deb` for ALL Linux targets, not just x86_64. Naming: `bat_${version}_${arch}.deb`
-or `bat-musl_${version}_${arch}.deb`.
-Auto-publishes to Winget via `vedantmgoyal9/winget-releaser` (pinned SHA).
+Builds `.deb` for ALL Linux targets, not just x86_64. Naming:
+`bat_${version}_${arch}.deb` or `bat-musl_${version}_${arch}.deb`. Auto-publishes to
+Winget via `vedantmgoyal9/winget-releaser` (pinned SHA).
 
----
+* * *
 
 #### 3. fd-find (sharkdp/fd)
 
 Same author and very similar structure to bat.
 
-**Release workflow:** `.github/workflows/CICD.yml`
-**Trigger:** Tag push matching `v[0-9]+.*`
+**Release workflow:** `.github/workflows/CICD.yml` **Trigger:** Tag push matching
+`v[0-9]+.*`
 
 **GitHub Actions versions:** Same as bat, except `softprops/action-gh-release` pinned to
 commit SHA (`@a06a81a...` = v2.5.0).
@@ -181,12 +181,12 @@ third-party actions to commit SHAs, uses `persist-credentials: false` on all che
 **Packaging:** Manual `.deb` via external `scripts/create-deb.sh` with
 `fakeroot dpkg-deb --build`. Auto-publishes to Winget (v2, pinned SHA).
 
----
+* * *
 
 #### 4. delta (dandavison/delta)
 
-**Release workflow:** `.github/workflows/cd.yml`
-**Trigger:** Tag push matching `[0-9]+.[0-9]+.[0-9]+`
+**Release workflow:** `.github/workflows/cd.yml` **Trigger:** Tag push matching
+`[0-9]+.[0-9]+.[0-9]+`
 
 **GitHub Actions versions:**
 
@@ -203,40 +203,42 @@ third-party actions to commit SHAs, uses `persist-credentials: false` on all che
 **Cross-compilation:** `cross` via `taiki-e/install-action@v2`, conditionally used when
 `use-cross: true`.
 
-**Targets (7):**
-`aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, `x86_64-unknown-linux-gnu`,
-`x86_64-unknown-linux-musl`, `i686-unknown-linux-gnu`, `arm-unknown-linux-gnueabihf`,
-`aarch64-unknown-linux-gnu`
+**Targets (7):** `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`,
+`x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`, `i686-unknown-linux-gnu`,
+`arm-unknown-linux-gnueabihf`, `aarch64-unknown-linux-gnu`
 
-**Checksums:** None. Packaging via custom `./etc/ci/before_deploy.sh` script.
+**Checksums:** None.
+Packaging via custom `./etc/ci/before_deploy.sh` script.
 
 **Notable:** Sets `MACOSX_DEPLOYMENT_TARGET: 10.7` for broad macOS compatibility.
 Publishes to crates.io and Winget as separate jobs.
 
----
+* * *
 
 #### 5. eza (eza-community/eza)
 
-**Release mechanism:** `justfile` recipes + `gh release create` (no release workflow YAML).
+**Release mechanism:** `justfile` recipes + `gh release create` (no release workflow
+YAML).
 
 **Cross-compilation:** Uses `cross` directly from justfile recipes.
 
-**Targets:** Linux x86_64 (GNU+musl), aarch64, ARM; Windows x86_64.
-Builds three variants: standard (with libgit2), `no_libgit`, and `static`.
+**Targets:** Linux x86_64 (GNU+musl), aarch64, ARM; Windows x86_64. Builds three
+variants: standard (with libgit2), `no_libgit`, and `static`.
 
 **Checksums:** MD5 + SHA256 checksums generated.
 
-**Notable:** Uses `convco` for conventional-commit-based versioning. Most manual approach
-of all tools surveyed.
+**Notable:** Uses `convco` for conventional-commit-based versioning.
+Most manual approach of all tools surveyed.
 
----
+* * *
 
 #### 6. starship (starship/starship)
 
-The most sophisticated custom workflow. Includes MSI, PKG, and code signing.
+The most sophisticated custom workflow.
+Includes MSI, PKG, and code signing.
 
-**Release workflow:** `.github/workflows/release.yml`
-**Trigger:** `release-please` creates the release, then the workflow builds artifacts.
+**Release workflow:** `.github/workflows/release.yml` **Trigger:** `release-please`
+creates the release, then the workflow builds artifacts.
 
 **GitHub Actions versions:**
 
@@ -275,13 +277,14 @@ macOS and Windows use native `cargo build --target`.
 
 **Checksums:** SHA256 via `openssl dgst -sha256 -r`.
 
-**Signing:** Windows binaries signed via SignPath (`signpath/github-action-submit-signing-request@v2`).
+**Signing:** Windows binaries signed via SignPath
+(`signpath/github-action-submit-signing-request@v2`).
 
 **Packaging:**
 - MSI: `cargo-wix` **v0.3.8** (`cargo install --version 0.3.8 cargo-wix`) with custom
   `install/windows/main.wxs`. MSIs signed via SignPath.
-- macOS PKG: Custom `build_and_notarize.sh` with Apple notarization via `xcrun notarytool`.
-  Both x86_64 and aarch64 `.pkg` files built and notarized.
+- macOS PKG: Custom `build_and_notarize.sh` with Apple notarization via
+  `xcrun notarytool`. Both x86_64 and aarch64 `.pkg` files built and notarized.
 - Shell installer: `curl -sS https://starship.rs/install.sh | sh`
 - Chocolatey: Updated via `install/windows/choco/update.ps1`
 - Winget: Updated via `wingetcreate.exe` with MSI and ZIP URLs
@@ -299,12 +302,12 @@ and Chocolatey.
 **Environment:** `MACOSX_DEPLOYMENT_TARGET: 10.7`, `CARGO_INCREMENTAL: 0`,
 `CARGO_NET_RETRY: 10`. Windows targets set `RUSTFLAGS: -C target-feature=+crt-static`.
 
----
+* * *
 
 #### 7. zoxide (ajeetdsouza/zoxide)
 
-**Release workflow:** `.github/workflows/release.yml`
-**Trigger:** Push to `main` and manual dispatch.
+**Release workflow:** `.github/workflows/release.yml` **Trigger:** Push to `main` and
+manual dispatch.
 
 **GitHub Actions versions:**
 
@@ -320,11 +323,10 @@ and Chocolatey.
 
 **Rust toolchain:** `stable` (floating) with `minimal` profile.
 
-**Cross-compilation:** `cross` from specific commit
-(`cross-rs/cross.git` rev `e281947ca900da425e4ecea7483cfde646c8a1ea`).
+**Cross-compilation:** `cross` from specific commit (`cross-rs/cross.git` rev
+`e281947ca900da425e4ecea7483cfde646c8a1ea`).
 
-**Targets (11):**
-`x86_64-unknown-linux-musl`, `arm-unknown-linux-musleabihf`,
+**Targets (11):** `x86_64-unknown-linux-musl`, `arm-unknown-linux-musleabihf`,
 `armv7-unknown-linux-musleabihf`, `aarch64-unknown-linux-musl`,
 `i686-unknown-linux-musl`, `aarch64-linux-android`, `armv7-linux-androideabi`,
 `x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`,
@@ -334,16 +336,17 @@ and Chocolatey.
 
 **Packaging:** `cargo-deb` with `--no-build --no-strip` flags.
 
-**Notable:** Builds for Android targets. Uses `actions-rs/toolchain@v1` (older, now
-deprecated in favor of `dtolnay/rust-toolchain`). Installs cross from a pinned git
-revision rather than a release version.
+**Notable:** Builds for Android targets.
+Uses `actions-rs/toolchain@v1` (older, now deprecated in favor of
+`dtolnay/rust-toolchain`). Installs cross from a pinned git revision rather than a
+release version.
 
----
+* * *
 
 #### 8. just (casey/just)
 
-**Release workflow:** `.github/workflows/release.yaml`
-**Trigger:** Tag push matching `*`
+**Release workflow:** `.github/workflows/release.yaml` **Trigger:** Tag push matching
+`*`
 
 **GitHub Actions versions:**
 
@@ -362,28 +365,29 @@ revision rather than a release version.
 - LoongArch64: `--codegen linker=loongarch64-linux-gnu-gcc-14`
 - Dependencies installed via `apt-get` (e.g., `gcc-aarch64-linux-gnu`)
 
-**Targets (9):**
-`aarch64-apple-darwin`, `x86_64-apple-darwin`, `aarch64-pc-windows-msvc`,
-`x86_64-pc-windows-msvc`, `aarch64-unknown-linux-musl`,
+**Targets (9):** `aarch64-apple-darwin`, `x86_64-apple-darwin`,
+`aarch64-pc-windows-msvc`, `x86_64-pc-windows-msvc`, `aarch64-unknown-linux-musl`,
 `x86_64-unknown-linux-musl`, `arm-unknown-linux-musleabihf`,
 `armv7-unknown-linux-musleabihf`, `loongarch64-unknown-linux-musl`
 
 **Checksums:** Post-hoc approach: a separate `checksum` job runs after `package`,
-downloads ALL release artifacts via `gh release download`, then generates a single unified
-`SHA256SUMS` file with `shasum -a 256 * > ../SHA256SUMS` and uploads it back to the
-release.
+downloads ALL release artifacts via `gh release download`, then generates a single
+unified `SHA256SUMS` file with `shasum -a 256 * > ../SHA256SUMS` and uploads it back to
+the release.
 
-**Notable:** All Linux targets use musl (static linking). All targets use
-`--codegen target-feature=+crt-static`. Generates manpages via `./target/debug/just --man`.
-Deploys mdbook docs (`mdbook@0.4.52` + `mdbook-linkcheck@0.7.7`) to GitHub Pages.
-Detects prerelease via semver regex. Global `RUSTFLAGS: --deny warnings`.
+**Notable:** All Linux targets use musl (static linking).
+All targets use `--codegen target-feature=+crt-static`. Generates manpages via
+`./target/debug/just --man`. Deploys mdbook docs (`mdbook@0.4.52` +
+`mdbook-linkcheck@0.7.7`) to GitHub Pages.
+Detects prerelease via semver regex.
+Global `RUSTFLAGS: --deny warnings`.
 
----
+* * *
 
 #### 9. jj / jujutsu (jj-vcs/jj)
 
-**Release workflow:** `.github/workflows/release.yml`
-**Trigger:** Published release event.
+**Release workflow:** `.github/workflows/release.yml` **Trigger:** Published release
+event.
 
 **GitHub Actions versions (ALL pinned to full SHAs):**
 
@@ -397,37 +401,41 @@ Detects prerelease via semver regex. Global `RUSTFLAGS: --deny warnings`.
 
 **Rust toolchain:** `stable`.
 
-**Cross-compilation:** **None** — uses native runners for every architecture:
+**Cross-compilation:** Minimal — uses native runners for each architecture where
+possible:
 - `ubuntu-24.04` for x86_64 Linux
 - `ubuntu-24.04-arm` for aarch64 Linux (ARM runner)
-- `macos-15` for both x86_64 and aarch64 macOS
+- `macos-15` for both x86_64 and aarch64 macOS (ARM runner, x86_64 built via `--target`
+  — this is a trivial cross-compile on macOS, not requiring `cross` or Docker)
 - `windows-2022` for x86_64 Windows
 - `windows-11-arm` for aarch64 Windows (ARM runner)
 
-This is distinctive: jj avoids cross-compilation entirely by using GitHub's native ARM
-runners.
+This is distinctive: jj avoids Docker-based cross-compilation entirely by using GitHub’s
+native ARM runners for Linux and Windows, and macOS’s built-in cross-build support for
+the x86_64 macOS target.
 
-**Targets (6):**
-`x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`, `x86_64-apple-darwin`,
-`aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`
+**Targets (6):** `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`,
+`x86_64-apple-darwin`, `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`,
+`aarch64-pc-windows-msvc`
 
 **Checksums:** None in the workflow.
 
-**Security:** `persist-credentials: false` on most checkout steps. `permissions: read-all`
-at top level, `contents: write` only on jobs that need it.
+**Security:** `persist-credentials: false` on most checkout steps.
+`permissions: read-all` at top level, `contents: write` only on jobs that need it.
 
-**Notable:** All action versions pinned to full SHAs (best security practice). Uses
-`astral-sh/setup-uv@v0.5.1` for Python/docs tooling. Docs built with `uv run mkdocs`.
-Fewest targets (6) of all tools surveyed — focuses on the most common platforms only.
+**Notable:** All action versions pinned to full SHAs (best security practice).
+Uses `astral-sh/setup-uv@v0.5.1` for Python/docs tooling.
+Docs built with `uv run mkdocs`. Fewest targets (6) of all tools surveyed — focuses on
+the most common platforms only.
 
----
+* * *
 
 #### 10. typst (typst/typst)
 
-Explicitly based on ripgrep's release workflow.
+Explicitly based on ripgrep’s release workflow.
 
-**Release workflow:** `.github/workflows/release.yml`
-**Trigger:** Tag push matching `v[0-9]+.*`
+**Release workflow:** `.github/workflows/release.yml` **Trigger:** Tag push matching
+`v[0-9]+.*`
 
 **GitHub Actions versions:**
 
@@ -440,11 +448,10 @@ Explicitly based on ripgrep's release workflow.
 
 **Rust toolchain:** Pinned to **Rust 1.91.0** (via dtolnay SHA).
 
-**Cross-compilation:** `cross` installed from `cross-rs` GitHub repo at specific
-commit SHA `085092ca`. Used for Linux targets marked `cross: true`.
+**Cross-compilation:** `cross` installed from `cross-rs` GitHub repo at specific commit
+SHA `085092ca`. Used for Linux targets marked `cross: true`.
 
-**Targets (8):**
-`x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`,
+**Targets (8):** `x86_64-unknown-linux-musl`, `aarch64-unknown-linux-musl`,
 `armv7-unknown-linux-musleabi`, `riscv64gc-unknown-linux-gnu`, `x86_64-apple-darwin`,
 `aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`
 
@@ -453,22 +460,23 @@ commit SHA `085092ca`. Used for Linux targets marked `cross: true`.
 **Archive format:** `.tar.xz` for Unix (xz compression, not gzip), `.zip` for Windows.
 
 **Dual-mode trigger:** On `workflow_dispatch`, artifacts uploaded via
-`actions/upload-artifact` with 3-day retention (for testing). On `release: published`,
-artifacts uploaded to the GitHub Release via `ncipollo/release-action`.
+`actions/upload-artifact` with 3-day retention (for testing).
+On `release: published`, artifacts uploaded to the GitHub Release via
+`ncipollo/release-action`.
 
 **Cross features:** Cross builds use `--features self-update,vendor-openssl`. Native
 builds use `--features self-update`.
 
-**Notable:** Pins ALL action versions to full SHAs (not `@v4` tags). Pins Rust to an
-exact version (1.91.0). Most security-conscious pinning approach. Packages binaries with
-README, LICENSE, and NOTICE files.
+**Notable:** Pins ALL action versions to full SHAs (not `@v4` tags).
+Pins Rust to an exact version (1.91.0). Most security-conscious pinning approach.
+Packages binaries with README, LICENSE, and NOTICE files.
 
----
+* * *
 
 #### 11. uv (astral-sh/uv) — cargo-dist
 
-The most sophisticated distribution of any tool surveyed. Uses cargo-dist as orchestrator
-with maturin for Python wheel builds.
+The most sophisticated distribution of any tool surveyed.
+Uses cargo-dist as orchestrator with maturin for Python wheel builds.
 
 **Release workflow:** `.github/workflows/release.yml` (auto-generated by cargo-dist)
 **Trigger:** `workflow_dispatch` with tag input (default: `"dry-run"`) — not tag push
@@ -524,16 +532,17 @@ x86_64-pc-windows-msvc = ["uv", "uvx", "uvw"]
 
 **How `build-local-artifacts = false` works:**
 
-This is the key differentiator. In standard cargo-dist, the release workflow auto-generates
-build jobs that run `dist build --artifacts=local`. Astral disables this and substitutes
-custom reusable workflows:
+This is the key differentiator.
+In standard cargo-dist, the release workflow auto-generates build jobs that run
+`dist build --artifacts=local`. Astral disables this and substitutes custom reusable
+workflows:
 
 1. `local-artifacts-jobs = ["./build-release-binaries", "./build-docker"]` references
    `.github/workflows/build-release-binaries.yml`
-2. The custom workflow uses **maturin** (not `cargo build`) to produce both Python wheels
-   AND standalone binaries from the same compilation step
+2. The custom workflow uses **maturin** (not `cargo build`) to produce both Python
+   wheels AND standalone binaries from the same compilation step
 3. Artifacts uploaded with `artifacts-*` naming pattern so cargo-dist can find them
-4. cargo-dist's `build-global-artifacts` step then generates installers and checksums
+4. cargo-dist’s `build-global-artifacts` step then generates installers and checksums
    based on those artifacts
 
 **GitHub Actions in release.yml (auto-generated):**
@@ -583,14 +592,14 @@ riscv64), macOS (x86_64 + ARM64), Windows (x86_64 + ARM64 + i686).
 **Custom runners:** Depot (`depot-ubuntu-latest-4`, `depot-ubuntu-24.04-4`,
 `depot-ubuntu-24.04-8`, `depot-macos-14`) for faster builds.
 
----
+* * *
 
 #### 12. ruff (astral-sh/ruff) — cargo-dist
 
 Nearly identical architecture to uv.
 
-**cargo-dist version:** **0.30.2**
-**Maturin version:** **v1.11.5** via `PyO3/maturin-action@v1.50.0`
+**cargo-dist version:** **0.30.2** **Maturin version:** **v1.11.5** via
+`PyO3/maturin-action@v1.50.0`
 
 **dist-workspace.toml differences from uv:**
 
@@ -615,18 +624,18 @@ post-announce-jobs = ["./notify-dependents", "./publish-docs",
 
 **Additional build outputs:** WASM builds published to npm for the Ruff playground.
 
-**Notable:** ruff's auto-generated `release.yml` uses newer action versions than uv's
+**Notable:** ruff’s auto-generated `release.yml` uses newer action versions than uv’s
 (v6 checkout, v6 upload, v7 download), because it was regenerated more recently.
-Both projects' hand-written custom build workflows use the same versions.
+Both projects’ hand-written custom build workflows use the same versions.
 
----
+* * *
 
 #### 13. mise (jdx/mise)
 
 The broadest distribution strategy of any tool surveyed.
 
-**Release workflow:** `.github/workflows/release.yml`
-**Trigger:** Push to `mise` branch (custom release flow).
+**Release workflow:** `.github/workflows/release.yml` **Trigger:** Push to `mise` branch
+(custom release flow).
 
 **GitHub Actions versions:**
 
@@ -644,12 +653,10 @@ The broadest distribution strategy of any tool surveyed.
 
 **Cross-compilation:** `cross` via `taiki-e/install-action` for Linux ARM targets.
 
-**Targets (10):**
-`x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`,
+**Targets (10):** `x86_64-unknown-linux-gnu`, `x86_64-unknown-linux-musl`,
 `aarch64-unknown-linux-gnu`, `aarch64-unknown-linux-musl`,
-`armv7-unknown-linux-gnueabi`, `armv7-unknown-linux-musleabi`,
-`x86_64-apple-darwin`, `aarch64-apple-darwin`,
-`x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`
+`armv7-unknown-linux-gnueabi`, `armv7-unknown-linux-musleabi`, `x86_64-apple-darwin`,
+`aarch64-apple-darwin`, `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`
 
 **Checksums and signing:**
 - `minisign` for binary signing
@@ -660,17 +667,16 @@ The broadest distribution strategy of any tool surveyed.
 **Notable:**
 - LLM-generated release notes (Claude via `ANTHROPIC_API_KEY`, fallback to `git-cliff`)
 - npm wrapper: `@jdxcode/mise` with platform-specific sub-packages
-- Publishes to: GitHub Releases, npm, Snap, Winget, Fedora COPR, Ubuntu PPA, Alpine,
-  own CDN (mise.run)
+- Publishes to: GitHub Releases, npm, Snap, Winget, Fedora COPR, Ubuntu PPA, Alpine, own
+  CDN (mise.run)
 - Shell installer: `curl https://mise.run | sh`
 - Builds in tar.xz, tar.gz, and tar.zst formats
 
----
+* * *
 
 #### 14. nushell (nushell/nushell)
 
-**Release workflow:** `.github/workflows/release.yml`
-**Trigger:** Semver git tags.
+**Release workflow:** `.github/workflows/release.yml` **Trigger:** Semver git tags.
 
 **GitHub Actions versions:**
 
@@ -683,27 +689,29 @@ The broadest distribution strategy of any tool surveyed.
 
 **Rust toolchain:** Not pinned (dynamically set via `rust-toolchain.toml`).
 
-**Cross-compilation:** No `cross` tool. Uses native GitHub Actions runners for each
-platform. Target set via `rust-toolchain.toml` modification:
+**Cross-compilation:** No `cross` tool.
+Uses native GitHub Actions runners for each platform.
+Target set via `rust-toolchain.toml` modification:
 `echo "targets = ['$TARGET']" >> rust-toolchain.toml`
 
-**Targets (13):**
-`aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`,
-`aarch64-pc-windows-msvc`, `x86_64-unknown-linux-gnu`,
-`x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu`,
-`aarch64-unknown-linux-musl`, `armv7-unknown-linux-gnueabihf`,
-`armv7-unknown-linux-musleabihf`, `riscv64gc-unknown-linux-gnu`,
-`loongarch64-unknown-linux-gnu`, `loongarch64-unknown-linux-musl`
+**Targets (13):** `aarch64-apple-darwin`, `x86_64-apple-darwin`,
+`x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`, `x86_64-unknown-linux-gnu`,
+`x86_64-unknown-linux-musl`, `aarch64-unknown-linux-gnu`, `aarch64-unknown-linux-musl`,
+`armv7-unknown-linux-gnueabihf`, `armv7-unknown-linux-musleabihf`,
+`riscv64gc-unknown-linux-gnu`, `loongarch64-unknown-linux-gnu`,
+`loongarch64-unknown-linux-musl`
 
 **Checksums:** `shasum -a 256 * > ../SHA256SUMS` on all artifacts.
 
-**Packaging:** MSI via WiX Toolset 6 (`dotnet tool install --global wix --version 6.0.0`).
+**Packaging:** MSI via WiX Toolset 6
+(`dotnet tool install --global wix --version 6.0.0`).
 
 **Notable:** Installs Nushell itself (`hustcer/setup-nu@v3`) to run release packaging
-scripts written in `.nu` files. Uses `actions-rust-lang/setup-rust-toolchain@v1.12.0`
-instead of the more common `dtolnay/rust-toolchain`.
+scripts written in `.nu` files.
+Uses `actions-rust-lang/setup-rust-toolchain@v1.12.0` instead of the more common
+`dtolnay/rust-toolchain`.
 
----
+* * *
 
 ## Comparative Analysis
 
@@ -712,19 +720,19 @@ instead of the more common `dtolnay/rust-toolchain`.
 | Action | Most Common Version | Tools Using It |
 | --- | --- | --- |
 | `actions/checkout` | `@v6` | bat, fd, starship, zoxide, just, nushell |
-| | `@v4` | ripgrep |
-| | pinned SHA | typst, jj, uv, ruff, mise |
+|  | `@v4` | ripgrep |
+|  | pinned SHA | typst, jj, uv, ruff, mise |
 | `dtolnay/rust-toolchain` | `@stable` | bat, fd, delta, starship, jj |
-| | `@master` | ripgrep, starship |
-| | pinned SHA → specific version | typst (1.91.0) |
+|  | `@master` | ripgrep, starship |
+|  | pinned SHA → specific version | typst (1.91.0) |
 | `actions-rust-lang/setup-rust-toolchain` | `@v1.12.0` | nushell |
 | `taiki-e/install-action` | `@v2` | bat, fd, delta |
-| | `@cross` | starship |
-| | pinned SHA | mise |
+|  | `@cross` | starship |
+|  | pinned SHA | mise |
 | `softprops/action-gh-release` | `@v2` | bat, fd, starship, zoxide |
-| | `@v2.5.0` | just |
-| | `@v2.0.5` | nushell |
-| | `@v1` | delta |
+|  | `@v2.5.0` | just |
+|  | `@v2.0.5` | nushell |
+|  | `@v1` | delta |
 | `ncipollo/release-action` | pinned SHA → v1.14.0 | typst |
 | `Swatinem/rust-cache` | `@v2` | just, mise |
 
@@ -735,7 +743,8 @@ instead of the more common `dtolnay/rust-toolchain`.
 | `cross` via `taiki-e/install-action` | bat, fd, delta, starship, mise | Most common. Version determined by install-action. |
 | `cross` pinned version/SHA | ripgrep (v0.2.5), typst (SHA `085092ca`), zoxide (SHA `e281947c`) | More reproducible. |
 | Direct linker flags via apt | just | No Docker containers needed. Uses `--codegen linker=...`. |
-| Native runners per platform | jj, nushell | Uses ARM runners for ARM builds. No cross-compilation. |
+| Native ARM runners | jj | Uses ARM runners for ARM builds. macOS x86_64 built via `--target` on ARM runners. |
+| `cargo --target` (no cross tool) | nushell | Cross-compiles from x86_64 for ARM/RISC-V via `cargo build --target`. No `cross` or Docker. |
 | maturin (cargo-dist custom) | uv, ruff | Specific to Python wheel builds. |
 
 ### Rust Toolchain Pinning
@@ -822,29 +831,29 @@ Different tools use different runner strategies:
 - Snap (starship, bat, mise)
 - Chocolatey (starship, delta)
 
----
+* * *
 
 ## cargo-dist: Deep Dive
 
 ### What It Is
 
-cargo-dist (renamed to just "dist" at v0.24.0, October 2024) is an opinionated release
+cargo-dist (renamed to just “dist” at v0.24.0, October 2024) is an opinionated release
 automation tool for Rust projects.
 
-**Latest stable version:** **v0.30.4** (February 17, 2026).
+**Latest stable version:** **v0.30.4** (February 16, 2026).
 
 Recent release history:
 
 | Version | Date | Notes |
 | --- | --- | --- |
-| v0.30.4 | 2026-02-17 | Bugfixes, dependency updates (CVE fix in brace-expansion) |
+| v0.30.4 | 2026-02-16 | Bugfixes, dependency updates (CVE fix in brace-expansion) |
 | v0.30.3 | 2025-12-15 | macOS codesign fix, sudo permission fix for shell installer |
 | v0.30.2 | 2025-10-31 | Attestation customization (used by Astral) |
 | v0.30.0 | 2025-09-07 | ZIP compression, installer enhancements, native ARM64 Linux runners |
 | v0.26.0 | 2024-12-12 | CycloneDX SBOM support |
-| v0.24.0 | 2024-10-28 | Renamed to "dist", new config format (`dist-workspace.toml`) |
+| v0.24.0 | 2024-10-28 | Renamed to “dist”, new config format (`dist-workspace.toml`) |
 
-GitHub stats: ~1,900 stars, 80 contributors, 268+ releases.
+GitHub stats: ~1,900 stars, 133 forks (as of Feb 2026).
 
 ### What It Generates
 
@@ -879,12 +888,31 @@ The generated workflow has **8 jobs** in a structured pipeline:
 | **npm** | Fetching | Cross-platform | npm package wrapping native binaries |
 | **msi** | Bundling | Windows | MSI installer with bundled binaries |
 
-### Cross-Compilation Internals
+### Cross-Compilation Approach
 
-cargo-dist uses its own cross-compilation tools, not `cross-rs`:
-- **Linux cross-compilation:** `cargo-zigbuild` (uses Zig as a cross-linker)
-- **Windows cross-compilation:** `cargo-xwin` (from Linux runners)
-- **macOS:** Native builds on macOS runners
+cargo-dist does **not** include a built-in cross-compilation tool.
+Cross-compilation support remains an open feature request (issue #74, opened Feb 2023,
+still open as of Feb 2026). Instead, cargo-dist relies on:
+
+- **macOS:** Native builds on macOS runners.
+  Both x86_64 and aarch64 are “nearby-buildable” on macOS -- either architecture can
+  build the other with just `rustup target add`.
+- **Linux aarch64:** Since mid-2025, cargo-dist uses GitHub’s native ARM64 Linux runners
+  (`ubuntu-24.04-arm`) for aarch64 targets, avoiding cross-compilation entirely.
+- **Linux musl:** Supported via `musl-tools` on Ubuntu runners.
+  The `min-glibc-version` config option exists for glibc-based targets.
+- **Windows:** Native builds on Windows runners.
+  aarch64-pc-windows-msvc is not in the supported targets list (see disadvantages).
+- **User-configured cross-compilation:** Users can manually configure cross-compilation
+  via `dependencies.apt` (to install cross-compiler packages like
+  `gcc-aarch64-linux-gnu`) and `.cargo/config.toml` (to set linker paths).
+  This works for simple cases but struggles with C library dependencies (OpenSSL,
+  libudev, etc.).
+
+The cargo-dist team evaluated `cross-rs`, `cargo-zigbuild`, and `cargo-xwin` as
+potential solutions but has not integrated any of them.
+The trend toward GitHub providing free native ARM64 runners (announced Jan 2025) has
+reduced the urgency of cross-compilation support.
 
 ### Key Configuration Options
 
@@ -932,13 +960,17 @@ msvc-crt-static = true              # Static MSVC CRT (default)
    Must use config system or custom job hooks for customization.
 4. **Debugging** — build matrix is computed dynamically by `dist plan` and passed as
    JSON. Debugging requires running `dist plan` locally to inspect output.
-5. **Adoption** — only Astral (uv/ruff) among major tools. GitHub dependents page shows
-   only 12 repos. Well-known but not ubiquitously adopted.
+5. **Adoption** — only Astral (uv/ruff) among the 14 major tools surveyed.
+   GitHub’s dependents page shows only 12 repos for the `cargo-dist` crate, though this
+   metric is misleading: cargo-dist is a CLI tool, not a library dependency, so most
+   users have `dist-workspace.toml` files rather than Cargo.toml dependencies.
+   Actual usage is higher but hard to quantify precisely.
+   Well-known but not ubiquitously adopted among high-profile projects.
 6. **Breaking changes** — pre-1.0, has had breaking changes between versions
 7. **Complexity for simple cases** — generated workflow for even a simple tool is ~300
    lines of YAML with complex conditional logic
-8. **No `.deb`/`.rpm`/`.pkg`** — only 5 installer types. No Linux distro packages or
-   macOS `.pkg`.
+8. **No `.deb`/`.rpm`/`.pkg`** — only 5 installer types.
+   No Linux distro packages or macOS `.pkg`.
 9. **No ARM64 Windows** — `aarch64-pc-windows-msvc` not yet in supported targets list
    despite Rust Tier 1 since 1.91
 10. **Shell installer + Snap curl** — refuses to work with Snap-installed curl (Ubuntu
@@ -948,177 +980,207 @@ msvc-crt-static = true              # Static MSVC CRT (default)
 
 ### How Astral Uses It Differently
 
-Astral's usage is non-standard in several critical ways:
+Astral’s usage is non-standard in several critical ways:
 
-1. **`build-local-artifacts = false`** — disables cargo-dist's default binary builds
+1. **`build-local-artifacts = false`** — disables cargo-dist’s default binary builds
    entirely. `local-artifacts-jobs` substitutes custom reusable workflows.
 2. **`dist = false`** — cargo-dist does not try to identify or build packages itself.
 3. **Maturin replaces `cargo build`** — `PyO3/maturin-action@v1.50.0` produces both
    Python wheels AND standalone binaries in one compilation step.
 4. **`dispatch-releases = true`** — manual `workflow_dispatch` with tag input (default:
-   `"dry-run"`) instead of tag push. Enables testing the entire release pipeline.
+   `"dry-run"`) instead of tag push.
+   Enables testing the entire release pipeline.
 5. **Custom CI runners** — Depot runners (`depot-ubuntu-latest-4`) instead of
    GitHub-hosted runners, for faster builds.
-6. **XDG-compliant install paths** — `["$XDG_BIN_HOME/", "$XDG_DATA_HOME/../bin",
-   "~/.local/bin"]` instead of cargo-dist's default `$CARGO_HOME/bin`.
+6. **XDG-compliant install paths** —
+   `["$XDG_BIN_HOME/", "$XDG_DATA_HOME/../bin", "~/.local/bin"]` instead of cargo-dist’s
+   default `$CARGO_HOME/bin`.
 7. **`github-action-commits` section** — cargo-dist has a dedicated config section for
    pinning GitHub Actions to full SHAs, so the auto-generated workflow uses pinned
    versions.
-8. **No updater** — `install-updater = false` disables cargo-dist's self-update mechanism.
+8. **No updater** — `install-updater = false` disables cargo-dist’s self-update
+   mechanism.
 
 This means Astral uses cargo-dist primarily as a **release orchestrator** (plan → host →
-announce), not as a build system. The actual builds are done by maturin in custom
-workflows. cargo-dist only generates the installers and manages the GitHub Release.
+announce), not as a build system.
+The actual builds are done by maturin in custom workflows.
+cargo-dist only generates the installers and manages the GitHub Release.
 
-For a project that doesn't need Python wheel distribution, Astral's approach provides no
-advantage over cargo-dist's defaults or a custom workflow. However, two features are
-noteworthy even for simpler projects:
+For a project that doesn’t need Python wheel distribution, Astral’s approach provides no
+advantage over cargo-dist’s defaults or a custom workflow.
+However, two features are noteworthy even for simpler projects:
 
 - **`dispatch-releases = true`** — dry-run testing of the release pipeline is valuable
 - **`github-action-commits`** — SHA pinning via config rather than manual YAML editing
 
----
+* * *
 
 ## Patterns and Anti-Patterns
 
 ### What the Best Tools Do
 
-1. **Pin action versions** — typst and jj pin to full SHAs (best practice). Most others
-   use `@v4`/`@v6` tags (acceptable). Avoid `@master` (ripgrep does this).
+1. **Pin action versions** — typst and jj pin to full SHAs (best practice).
+   Most others use `@v4`/`@v6` tags (acceptable).
+   Avoid `@master` (ripgrep does this).
 
-2. **Use musl for Linux** — static binaries that work on any Linux. No GLIBC version
-   issues. just, typst, jj, and starship use musl-only for Linux.
+2. **Use musl for Linux** — static binaries that work on any Linux.
+   No GLIBC version issues.
+   just, typst, jj, and starship use musl-only for Linux.
 
-3. **Generate SHA256 checksums** — ripgrep, just, nushell, starship do this. Surprisingly,
-   bat, fd, delta, typst, jj, and zoxide don't.
+3. **Generate SHA256 checksums** — ripgrep, just, nushell, starship do this.
+   Surprisingly, bat, fd, delta, typst, jj, and zoxide don’t.
 
-4. **Include Windows** — 13 of 14 tools build for Windows. Even Unix-focused tools include
-   at least `x86_64-pc-windows-msvc`.
+4. **Include Windows** — 13 of 14 tools build for Windows.
+   Even Unix-focused tools include at least `x86_64-pc-windows-msvc`.
 
-5. **Keep it simple** — just uses direct linker flags instead of cross. jj and nushell use
-   native runners. Simpler approaches are easier to debug.
+5. **Keep it simple** — just uses direct linker flags instead of cross.
+   jj and nushell use native runners.
+   Simpler approaches are easier to debug.
 
 ### What to Avoid
 
 1. **Deprecated actions** — zoxide uses `actions-rs/toolchain@v1` and
-   `actions-rs/cargo@v1`, which are unmaintained. Use `dtolnay/rust-toolchain` instead.
+   `actions-rs/cargo@v1`, which are unmaintained.
+   Use `dtolnay/rust-toolchain` instead.
 
-2. **No checksums** — 6 of 14 tools skip checksums entirely. This is a security gap.
+2. **No checksums** — 6 of 14 tools skip checksums entirely.
+   This is a security gap.
 
-3. **Floating nightly** — ripgrep uses nightly without pinning. This can break
-   unexpectedly.
+3. **Floating nightly** — ripgrep uses nightly without pinning.
+   This can break unexpectedly.
 
-4. **Over-engineering** — mise's setup (minisign + GPG + zipsign + Apple signing + LLM
+4. **Over-engineering** — mise’s setup (minisign + GPG + zipsign + Apple signing + LLM
    release notes + own CDN + npm + Snap + COPR + PPA) is impressive but overkill for
    most projects.
 
----
+* * *
 
-## Recommendations
+## Recommended Approach
 
-### For a Modern, Small-to-Medium Rust CLI (like flowmark-rs)
+### For Small-to-Medium Pure-Rust CLI Tools
 
-Based on the practices of all 14 tools surveyed, here is what a modern Rust CLI should use
-for binary distribution:
+**Recommended: Custom GitHub Actions workflow modeled on
+[casey/just](https://github.com/casey/just/blob/master/.github/workflows/release.yaml).**
 
-#### Approach: Custom GitHub Actions Workflow
+just is the best template for a small-to-medium Rust CLI: pure Rust, single maintainer,
+focused utility, all-musl Linux targets, Windows support, direct linker flags (no Docker
+or `cross-rs`), and a clean three-job workflow (prerelease detection, matrix build,
+unified checksums). The workflow is ~120 lines of straightforward YAML.
 
-**Recommendation: Custom GHA workflow** modeled on the ripgrep/typst/just pattern, not
-cargo-dist.
+Other good templates depending on specific needs:
+- **typst** — if you want all actions pinned to full SHAs and a specific Rust version
+- **fd** — if you want GitHub build attestations (`actions/attest-build-provenance`)
+- **jj** — if you want the simplest possible setup using native ARM runners for
+  everything (no cross-compilation at all)
 
-**Rationale:**
-- 12 of 14 major tools use custom workflows — this is the proven, battle-tested approach
-- cargo-dist adds complexity without proportional benefit for a simple CLI
-- Custom workflows are easier to debug, modify, and understand
-- No version coupling or breaking changes from an external tool
-- The two cargo-dist users (uv, ruff) use it in a heavily customized way that doesn't
-  apply to simpler projects
+### When to Use cargo-dist Instead
 
-**The exception:** If you want zero YAML authoring and don't mind the cargo-dist
-abstraction, cargo-dist is a reasonable choice. It does work. The generated workflow is
-correct and well-tested. The issue is that when something goes wrong, you're debugging
-someone else's auto-generated YAML.
+cargo-dist is a reasonable choice when:
+- **You want zero YAML authoring** and are willing to accept an opaque generated
+  workflow in exchange for not writing any release CI yourself
+- **You need auto-generated installers** — shell (`curl | sh`), PowerShell
+  (`irm | iex`), Homebrew formula, npm packages, or MSI. Writing these from scratch is
+  non-trivial.
+- **You have no dedicated release engineer** and want a tool that handles the entire
+  plan/build/host/publish/announce pipeline from a single TOML config
+- **PR validation matters** — `dist plan` catches release config errors on PRs
 
-#### Target Platforms
+cargo-dist is less suitable when:
+- You need `aarch64-pc-windows-msvc` (not in cargo-dist’s supported targets list)
+- You have C dependencies that need cross-compilation (cargo-dist’s cross-compilation
+  support is limited; issue #74 is still open)
+- You want to understand and own every line of your release workflow
+- You’re concerned about version coupling (forgetting to regenerate YAML after bumping
+  `cargo-dist-version` breaks the release)
 
-Minimum recommended set for a text-processing CLI:
+### When to Use cross-rs
+
+Use `cross` (via `taiki-e/install-action`) when:
+- Your project has C dependencies (OpenSSL, libudev, etc.)
+  that need cross-compiled system libraries
+- You need to build for exotic targets (s390x, powerpc64, RISC-V) where native runners
+  aren’t available
+- You want Docker-based build isolation for reproducibility
+
+For pure-Rust projects, `cross` adds Docker overhead without benefit.
+just’s direct linker flags approach is simpler and faster.
+
+* * *
+
+## Best Practices for a Modern Rust CLI
+
+Based on the practices of all 14 tools surveyed, here are the emerging best practices
+for binary distribution of a small-to-medium Rust CLI tool.
+
+### Target Platforms
+
+Minimum recommended set based on surveyed tools:
 
 | Target | Priority | Rationale |
 | --- | --- | --- |
-| `x86_64-unknown-linux-musl` | Required | Most common Linux (static) |
+| `x86_64-unknown-linux-musl` | Required | Most common Linux servers/CI (static) |
 | `aarch64-unknown-linux-musl` | Required | AWS Graviton, ARM servers |
-| `x86_64-apple-darwin` | Required | Intel Macs |
+| `x86_64-apple-darwin` | Required | Intel Macs (pre-2020) |
 | `aarch64-apple-darwin` | Required | Apple Silicon (M1+) |
-| `x86_64-pc-windows-msvc` | Recommended | Windows — 13/14 tools include this |
-| `aarch64-pc-windows-msvc` | Optional | Windows ARM — growing but still niche |
-| `armv7-unknown-linux-musleabihf` | Optional | Raspberry Pi, embedded |
+| `x86_64-pc-windows-msvc` | Recommended | 13/14 surveyed tools include Windows |
+| `aarch64-pc-windows-msvc` | Optional | Windows ARM — growing, Rust Tier 1 since 1.91 |
+| `armv7-unknown-linux-musleabihf` | Optional | Raspberry Pi, embedded — 9/14 tools |
 
-**Why musl for Linux:** Static binaries work on any Linux. No GLIBC version issues.
-just, typst, and jj all use musl-only. The performance difference is negligible for a
-text-processing tool.
+**Why musl for Linux:** Static binaries work on any Linux distribution regardless of
+glibc version. just, typst, and jj all use musl-only for Linux.
+8 of 14 tools build musl-only or musl-primary for Linux.
+The performance difference is negligible for most CLI tools.
 
-**Why include Windows:** flowmark-rs has minimal Unix-specific code (SIGPIPE handling and
-file permissions, both behind `#[cfg(unix)]` guards). The core Markdown processing is
-platform-agnostic. 13 of 14 surveyed tools include Windows.
+### GitHub Actions Component Versions
 
-#### GitHub Actions Component Versions
-
-Based on the most current practices:
+Based on the most current practices across surveyed tools:
 
 | Component | Recommended | Used By |
 | --- | --- | --- |
 | `actions/checkout` | `@v6` | bat, fd, starship, just, nushell |
 | `dtolnay/rust-toolchain` | `@stable` | bat, fd, delta, starship, jj |
 | `softprops/action-gh-release` | `@v2` | bat, fd, starship, zoxide |
-| `Swatinem/rust-cache` | `@v2` | just, mise (already in flowmark CI) |
+| `Swatinem/rust-cache` | `@v2` | just, mise |
 
-For maximum security, pin to full SHAs (as typst and jj do). For maintainability, `@v6`
-tags are acceptable since Dependabot will update them.
+For maximum security, pin to full SHAs (as typst and jj do).
+For maintainability, `@v6` tags are acceptable since Dependabot will update them.
 
-#### Cross-Compilation
+### Cross-Compilation
 
-| Approach | When to Use |
-| --- | --- |
-| `cross` via `taiki-e/install-action@v2` | Default choice. Simple, well-supported. |
-| Direct linker flags (`--codegen linker=...`) | Simpler, no Docker. Good for musl-only. |
-| Native runners per platform | If you can afford the CI cost. No cross-compilation issues. |
+| Approach | Used By | Tradeoffs |
+| --- | --- | --- |
+| `cross` via `taiki-e/install-action@v2` | bat, fd, delta, starship, mise | Most common. Docker-based, handles C deps. |
+| `cross` pinned version/SHA | ripgrep, typst, zoxide | More reproducible. |
+| Direct linker flags (`--codegen linker=...`) | just | Simpler, no Docker. Good for pure-Rust musl-only. |
+| Native ARM runners | jj | No cross-compilation issues. Simplest for common targets. |
+| `cargo --target` (no cross tool) | nushell | Pure-Rust cross-compile from x86_64. No Docker overhead. |
 
-For a simple CLI with no C dependencies, direct linker flags (just's approach) or
-`cross` are both fine. `cross` is more battle-tested for a wider range of targets.
+The trend is toward native ARM runners (GitHub made them free for public repos in Jan
+2025), which avoids cross-compilation complexity entirely for the most common targets.
 
-#### Checksums and Security
+### Checksums and Security
 
-| Practice | Recommendation |
-| --- | --- |
-| SHA256 checksums | **Required** — generate for all artifacts |
-| GitHub attestations | **Recommended** — free, provides build provenance |
-| Code signing | **Optional** — only if distributing via Winget/Homebrew |
+| Practice | Adoption | Notes |
+| --- | --- | --- |
+| SHA256 checksums | 8/14 tools | Standard practice, should be considered baseline |
+| GitHub attestations | 3/14 tools (uv, ruff, fd) | Free, provides cryptographic build provenance (SLSA) |
+| Code signing (Windows) | 1/14 (starship via SignPath) | Needed for Winget/SmartScreen |
+| Binary signing (minisign/GPG) | 1/14 (mise) | Strongest integrity guarantee |
+| macOS notarization | 1/14 (starship) | Needed for macOS Gatekeeper |
 
-#### Installers
+### Installers
 
-| Installer | Priority |
-| --- | --- |
-| GitHub Releases (tar.gz/zip) | Required — every tool does this |
-| Shell installer (`curl \| sh`) | Recommended — 6/14 tools offer this |
-| Homebrew tap | Recommended — universal on macOS |
-| `cargo install` / `cargo binstall` | Automatic — no extra work needed |
-| PowerShell installer | Include if building for Windows |
+| Installer | Adoption | Notes |
+| --- | --- | --- |
+| GitHub Releases (tar.gz/zip) | 14/14 | Universal baseline |
+| `cargo install` / `cargo binstall` | 14/14 | Automatic for any crate on crates.io |
+| Shell installer (`curl \| sh`) | 6/14 | Common for widely-used tools |
+| Homebrew tap | widespread | Not tracked in survey but standard for macOS |
+| PowerShell installer | varies | Include if building for Windows |
+| `.deb` packages | 4/14 (ripgrep, bat, fd, zoxide) | Via cargo-deb or manual dpkg-deb |
+| Winget | 4/14 (bat, fd, delta, starship) | Auto-publish via winget-releaser action |
 
-#### CI Testing Matrix
-
-Add cross-platform testing to `ci.yml`:
-
-```yaml
-strategy:
-  matrix:
-    os: [ubuntu-latest, macos-latest, windows-latest]
-runs-on: ${{ matrix.os }}
-```
-
-This is standard practice (flowmark-rs already tests on ubuntu + macOS; adding Windows
-is trivial).
-
-#### Version Management
+### Version Management
 
 | Approach | Used By | Notes |
 | --- | --- | --- |
@@ -1127,10 +1189,11 @@ is trivial).
 | release-plz | mise | Rust-specific alternative to release-please |
 | Custom scripts | just, nushell | For specific needs |
 
-For a small project, manual tag push is sufficient. Add release-please or release-plz
-later if the release cadence increases.
+Manual tag push is the most common and simplest approach.
+release-please or release-plz add automation that becomes valuable as release cadence
+increases.
 
----
+* * *
 
 ## Summary Table
 
@@ -1144,18 +1207,19 @@ later if the release cadence increases.
 | starship | Custom GHA + release-please | @v6 | stable | cross (install-action) | 11 | SHA256 | Yes (3) |
 | zoxide | Custom GHA | @v6 | stable | cross (git SHA) | 11 | None | Yes (2) |
 | just | Custom GHA | @v6 | default | linker flags | 9 | SHA256 | Yes (2) |
-| jj | Custom GHA | SHA | stable | native runners | 6 | None | Yes (2) |
+| jj | Custom GHA | SHA | stable | native runners + macOS cross | 6 | None | Yes (2) |
 | typst | Custom GHA | SHA | 1.91.0 | cross (git SHA) | 8 | None | Yes (2) |
 | uv | cargo-dist 0.30.2 | SHA | — | maturin | 18 | SHA256 | Yes (3) |
 | ruff | cargo-dist 0.30.2 | SHA | — | maturin | 18 | SHA256 | Yes (3) |
 | mise | Custom GHA | SHA | default | cross (install-action) | 10 | minisign | Yes (2) |
-| nushell | Custom GHA | @v6 | default | native runners | 13 | SHA256 | Yes (2) |
+| nushell | Custom GHA | @v6 | default | cargo --target (no cross tool) | 13 | SHA256 | Yes (2) |
 
----
+* * *
 
 ## Sources
 
 ### Tool Repositories and Workflows
+
 - [ripgrep release.yml](https://github.com/BurntSushi/ripgrep/blob/master/.github/workflows/release.yml)
 - [bat CICD.yml](https://github.com/sharkdp/bat/blob/master/.github/workflows/CICD.yml)
 - [fd CICD.yml](https://github.com/sharkdp/fd/blob/master/.github/workflows/CICD.yml)
@@ -1173,14 +1237,21 @@ later if the release cadence increases.
 - [nushell release.yml](https://github.com/nushell/nushell/blob/main/.github/workflows/release.yml)
 
 ### cargo-dist
+
 - [cargo-dist documentation](https://axodotdev.github.io/cargo-dist/)
-- [cargo-dist GitHub releases](https://github.com/axodotdev/cargo-dist/releases) — latest stable: v0.30.3 (Dec 2025)
+- [cargo-dist GitHub releases](https://github.com/axodotdev/cargo-dist/releases) —
+  latest stable: v0.30.4 (Feb 2026)
 - [cargo-dist configuration reference](https://axodotdev.github.io/cargo-dist/book/reference/config.html)
 - [cargo-dist CHANGELOG](https://github.com/axodotdev/cargo-dist/blob/main/CHANGELOG.md)
+- [cargo-dist cross-compilation issue #74](https://github.com/axodotdev/cargo-dist/issues/74)
+  — open since Feb 2023
+- [cargo-dist Platforms wiki](https://github.com/axodotdev/cargo-dist/wiki/Platforms) —
+  last updated Mar 2023, partially outdated
 
 ### Background
+
 - [Ruff build and release process (DeepWiki)](https://deepwiki.com/astral-sh/ruff/8.4-release-process)
-- [Packaging Rust for npm (Orhun's blog)](https://blog.orhun.dev/packaging-rust-for-npm/)
+- [Packaging Rust for npm (Orhun’s blog)](https://blog.orhun.dev/packaging-rust-for-npm/)
 - [Release engineering blog post (axo.dev)](https://blog.axo.dev/2023/02/cargo-dist)
 - [cargo-binstall](https://github.com/cargo-bins/cargo-binstall)
 - [maturin documentation](https://www.maturin.rs/)
