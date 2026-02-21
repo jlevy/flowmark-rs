@@ -5,7 +5,9 @@
 //! fail if it is not available.
 //!
 //! All tryscript files are tested as part of the normal test suite.
+//! Skipped on Windows: tryscript tests use bash and Unix paths.
 #![cfg(feature = "cli")]
+#![cfg(not(windows))]
 #![allow(clippy::unwrap_used)]
 
 use std::path::PathBuf;
@@ -30,16 +32,6 @@ fn run_tryscript(file: &str) {
     let has_global =
         Command::new("tryscript").arg("--version").output().is_ok_and(|o| o.status.success());
 
-    // On Windows, npm global commands are .cmd scripts; Command::new("npx") may not
-    // find them. Try npx.cmd as a fallback.
-    let npx_cmd = if cfg!(windows) {
-        let has_npx =
-            Command::new("npx").arg("--version").output().is_ok_and(|o| o.status.success());
-        if has_npx { "npx" } else { "npx.cmd" }
-    } else {
-        "npx"
-    };
-
     let output = if has_global {
         Command::new("tryscript")
             .args(["run", script_path])
@@ -48,19 +40,12 @@ fn run_tryscript(file: &str) {
             .output()
             .expect("failed to execute tryscript")
     } else {
-        match Command::new(npx_cmd)
+        Command::new("npx")
             .args(["tryscript@latest", "run", script_path])
             .env("TRYSCRIPT_GIT_ROOT", &root)
             .current_dir(&root)
             .output()
-        {
-            Ok(o) => o,
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
-                eprintln!("SKIP {file}: npx not found — install Node.js to run tryscript tests");
-                return;
-            }
-            Err(e) => panic!("failed to execute npx tryscript: {e}"),
-        }
+            .expect("failed to execute npx tryscript — is Node.js installed?")
     };
 
     let stdout = String::from_utf8_lossy(&output.stdout);
