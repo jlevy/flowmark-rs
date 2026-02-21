@@ -4,8 +4,8 @@
 
 **Author:** Joshua Levy
 
-**Status:** Phases 1-4, 6 Complete — Phase 5 (binary releases) planned in detail, ready
-for implementation
+**Status:** Phases 1-4, 6 Complete — Phase 5 steps 5.1-5.3 implemented, 5.4 (test
+release cycle) pending manual verification
 
 **Epic bead:** fmr-8yos
 
@@ -316,7 +316,7 @@ publish.yml (existing OIDC workflow)
 
 #### 5F: Implementation Steps
 
-**Step 5.1: Create `.github/workflows/release.yml`**
+**Step 5.1: Create `.github/workflows/release.yml`** (fmr-eldq)
 
 Write the release workflow with three jobs, modeled on just’s release.yaml:
 
@@ -333,7 +333,7 @@ Key workflow details:
 - `softprops/action-gh-release@v2` for uploading archives and checksums
 - `actions/checkout@v6`, `Swatinem/rust-cache@v2` for caching
 
-**Step 5.2: Add Windows CI testing**
+**Step 5.2: Add Windows CI testing** (fmr-dqqo)
 
 Add `windows-latest` to the CI test matrix in `ci.yml` to catch platform-specific issues
 before release:
@@ -343,7 +343,7 @@ strategy:
     os: [ubuntu-latest, macos-latest, windows-latest]
 ```
 
-**Step 5.3: Update documentation**
+**Step 5.3: Update documentation** (fmr-rg6a)
 
 Update these files to reflect the new installation methods:
 
@@ -367,7 +367,7 @@ Update these files to reflect the new installation methods:
 2. **docs/publishing.md** — Add a section on the binary release flow and how the two
    workflows (release.yml and publish.yml) coordinate.
 
-**Step 5.4: Test the full release cycle**
+**Step 5.4: Test the full release cycle** (fmr-9dh1)
 
 1. Merge the release workflow PR to main
 2. Create a patch release (e.g., `v0.2.2`) to test the pipeline:

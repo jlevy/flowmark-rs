@@ -39,7 +39,15 @@ Install from [crates.io](https://crates.io/crates/flowmark):
 cargo install flowmark
 ```
 
-Or download a pre-built binary from
+Or install a pre-built binary with
+[cargo-binstall](https://github.com/cargo-bins/cargo-binstall):
+
+```bash
+cargo binstall flowmark
+```
+
+Pre-built binaries for Linux (x86_64, ARM64), macOS (x86_64, ARM64), and Windows
+(x86_64, ARM64) are available on
 [GitHub Releases](https://github.com/jlevy/flowmark-rs/releases).
 
 ## Usage

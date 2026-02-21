@@ -126,8 +126,11 @@ EOF
 )"
 ```
 
-The publish workflow (`.github/workflows/publish.yml`) triggers on release publication.
-It runs the full test suite and publishes to crates.io via OIDC trusted publishing.
+This triggers two workflows:
+- **`release.yml`** builds cross-platform binaries and uploads them to the release
+  (see [Binary Release Workflow](#binary-release-workflow) below).
+- **`publish.yml`** runs the test suite and publishes to crates.io via OIDC trusted
+  publishing.
 
 ## Step 5: Verify Publication
 
@@ -169,6 +172,39 @@ Description.
 ### Full Changelog
 
 https://github.com/jlevy/flowmark-rs/compare/vPREV...vX.Y.Z
+```
+
+## Binary Release Workflow
+
+The release process uses two workflows that chain together:
+
+1. **`release.yml`** — Triggered by tag push (`v*`).
+   Builds cross-platform binaries for 6 targets:
+
+   | Target | OS | Arch |
+   | --- | --- | --- |
+   | `x86_64-unknown-linux-musl` | Linux | x86_64 |
+   | `aarch64-unknown-linux-musl` | Linux | ARM64 |
+   | `x86_64-apple-darwin` | macOS | x86_64 |
+   | `aarch64-apple-darwin` | macOS | ARM64 |
+   | `x86_64-pc-windows-msvc` | Windows | x86_64 |
+   | `aarch64-pc-windows-msvc` | Windows | ARM64 |
+
+   Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`.
+   A unified `SHA256SUMS` file is generated after all builds complete.
+
+2. **`publish.yml`** — Triggered by the GitHub Release "published" event (fired by
+   `release.yml`).
+   Runs the full test suite and publishes to crates.io via OIDC trusted publishing.
+
+Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or
+`.zip` (Windows), which `cargo binstall` auto-detects.
+
+### Verifying checksums
+
+```bash
+# Download SHA256SUMS and an archive from the GitHub Release, then:
+shasum -a 256 -c SHA256SUMS --ignore-missing
 ```
 
 ## Trusted Publishing (OIDC)
