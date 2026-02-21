@@ -222,6 +222,10 @@ const REF_LABEL_START: char = '\u{F000}';
 /// COMRAK-WORKAROUND1: end/separator of reference label in PUA-encoded URL.
 const REF_LABEL_SEP: char = '\u{F001}';
 
+/// Minimum character length for an HTML block to be considered for text wrapping.
+/// Shorter blocks are passed through as-is to avoid breaking compact inline HTML.
+const HTML_BLOCK_WRAP_THRESHOLD: usize = 40;
+
 /// Regex for link reference definitions: `[label]: url` or `[label]: url "title"`
 /// Handles optional angle-bracket URLs and single/double-quoted or paren-quoted titles.
 static LINK_REF_DEF: LazyLock<Regex> = LazyLock::new(|| {
@@ -1528,7 +1532,7 @@ fn render_block<'a>(
                 && trimmed.contains(|c: char| c.is_alphabetic())
                 && trimmed.chars().filter(|&c| c == '<').count() > 0;
 
-            if has_text_content && trimmed.len() > 40 {
+            if has_text_content && trimmed.len() > HTML_BLOCK_WRAP_THRESHOLD {
                 // Collapse internal whitespace and wrap as text
                 // Join all lines into a single line first
                 let single_line: String =

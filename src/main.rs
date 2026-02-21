@@ -176,6 +176,7 @@ mod cli {
     fn resolve_files(
         files: &[String],
         list_files: bool,
+        include: Option<&Vec<String>>,
         extend_include: &[String],
         exclude: Option<&Vec<String>>,
         extend_exclude: &[String],
@@ -199,7 +200,7 @@ mod cli {
             files.iter().filter(|f| *f != "-").map(String::as_str).collect();
         let stdin_present = resolvable.len() < files.len();
 
-        let config = FileResolverConfig {
+        let mut config = FileResolverConfig {
             extend_include: extend_include.to_vec(),
             exclude: exclude.cloned(),
             extend_exclude: extend_exclude.to_vec(),
@@ -208,6 +209,10 @@ mod cli {
             files_max_size,
             ..FileResolverConfig::default()
         };
+        // Override base include patterns if the config file specified them.
+        if let Some(inc) = include {
+            config.include.clone_from(inc);
+        }
 
         let mut file_resolver = FileResolver::new(config);
         let found = match file_resolver.resolve(&resolvable) {
@@ -292,13 +297,22 @@ mod cli {
         // Derive respect_gitignore (inverted from --no-respect-gitignore)
         let mut respect_gitignore = !args.no_respect_gitignore;
 
+        // Config-only fields (no CLI flag — set only through config file merge).
+        let mut config_include: Option<Vec<String>> = None;
+
         // Load and merge config file settings
         if let Ok(cwd) = std::env::current_dir() {
             if let Some(config_path) = find_config_file(&cwd) {
                 let config = load_config(&config_path);
                 let explicit_refs: Vec<&str> = explicit_flags.clone();
                 merge_cli_with_config(Some(&config), is_auto, &explicit_refs, |name, value| {
-                    apply_config_field(&mut args, &mut respect_gitignore, name, value);
+                    apply_config_field(
+                        &mut args,
+                        &mut respect_gitignore,
+                        &mut config_include,
+                        name,
+                        value,
+                    );
                 });
             }
         }
@@ -307,6 +321,7 @@ mod cli {
         let resolved_files = resolve_files(
             &args.files,
             args.list_files,
+            config_include.as_ref(),
             &args.extend_include,
             args.exclude.as_ref(),
             &args.extend_exclude,
@@ -379,6 +394,7 @@ mod cli {
     fn apply_config_field(
         args: &mut Args,
         respect_gitignore: &mut bool,
+        config_include: &mut Option<Vec<String>>,
         name: &str,
         value: &ConfigValue,
     ) {
@@ -413,6 +429,11 @@ mod cli {
                     if let Ok(ls) = v.parse::<ListSpacing>() {
                         args.list_spacing = ls;
                     }
+                }
+            }
+            "include" => {
+                if let ConfigValue::StringList(v) = value {
+                    *config_include = Some(v.clone());
                 }
             }
             "extend_include" => {

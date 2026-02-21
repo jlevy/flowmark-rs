@@ -3,7 +3,7 @@
 /// Errors that can occur during flowmark operations.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[error("I/O error")]
+    #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 }
 

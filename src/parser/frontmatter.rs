@@ -44,7 +44,8 @@ pub fn split_frontmatter(text: &str) -> (String, String) {
 /// parsing the entire document.
 pub fn has_frontmatter(text: &str) -> bool {
     let first_content_line = text.lines().find(|l| !l.trim().is_empty());
-    if first_content_line != Some("---") {
+    // Trim to match split_frontmatter's behavior (which uses .trim() on delimiter lines).
+    if first_content_line.map(str::trim) != Some("---") {
         return false;
     }
     // Verify there's a closing `---` delimiter

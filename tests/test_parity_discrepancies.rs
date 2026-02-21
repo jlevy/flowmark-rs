@@ -6,6 +6,8 @@
 //!
 //! D11 tests invoke both the Python and Rust binaries and compare error output.
 //! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.6.4`).
+//! When running locally without Python flowmark, D11 tests are skipped automatically.
+//! On CI, Python flowmark is installed via `uv tool install` (see `.github/workflows/ci.yml`).
 //!
 //! See: docs/project/specs/active/plan-2026-02-18-parity-discrepancies.md
 #![allow(clippy::unwrap_used)]
@@ -329,6 +331,17 @@ fn test_d10_html_entity_in_paragraph() {
 // =============================================================================
 
 #[cfg(feature = "cli")]
+/// Check if the Python flowmark binary is available on the PATH.
+/// Returns false when running locally without Python flowmark installed.
+fn python_flowmark_available() -> bool {
+    std::process::Command::new("flowmark")
+        .arg("--version")
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+#[cfg(feature = "cli")]
 /// Run a CLI binary with args and capture stderr + exit code.
 fn run_cli(bin: &str, args: &[&str]) -> (String, i32) {
     let output = std::process::Command::new(bin)
@@ -371,6 +384,12 @@ fn rust_flowmark() -> String {
 #[test]
 #[cfg(feature = "cli")]
 fn test_d11_no_args_error_matches_python() {
+    if !python_flowmark_available() {
+        eprintln!(
+            "Skipping D11: Python flowmark not found (install with: uv tool install flowmark)"
+        );
+        return;
+    }
     let (py_err, py_code) = run_cli(python_flowmark(), &[]);
     let (rs_err, rs_code) = run_cli(&rust_flowmark(), &[]);
     assert_eq!(rs_err, py_err, "D11: No-args error message should match Python");
@@ -380,6 +399,12 @@ fn test_d11_no_args_error_matches_python() {
 #[test]
 #[cfg(feature = "cli")]
 fn test_d11_auto_no_args_error_matches_python() {
+    if !python_flowmark_available() {
+        eprintln!(
+            "Skipping D11: Python flowmark not found (install with: uv tool install flowmark)"
+        );
+        return;
+    }
     let (py_err, py_code) = run_cli(python_flowmark(), &["--auto"]);
     let (rs_err, rs_code) = run_cli(&rust_flowmark(), &["--auto"]);
     assert_eq!(rs_err, py_err, "D11: --auto no-args error should match Python");
@@ -389,6 +414,12 @@ fn test_d11_auto_no_args_error_matches_python() {
 #[test]
 #[cfg(feature = "cli")]
 fn test_d11_inplace_stdin_error_matches_python() {
+    if !python_flowmark_available() {
+        eprintln!(
+            "Skipping D11: Python flowmark not found (install with: uv tool install flowmark)"
+        );
+        return;
+    }
     let (py_err, py_code) = run_cli_stdin(python_flowmark(), &["--inplace", "-"], "hello\n");
     let (rs_err, rs_code) = run_cli_stdin(&rust_flowmark(), &["--inplace", "-"], "hello\n");
     assert_eq!(rs_err, py_err, "D11: --inplace stdin error should match Python");
@@ -398,6 +429,12 @@ fn test_d11_inplace_stdin_error_matches_python() {
 #[test]
 #[cfg(feature = "cli")]
 fn test_d11_output_multiple_files_error_matches_python() {
+    if !python_flowmark_available() {
+        eprintln!(
+            "Skipping D11: Python flowmark not found (install with: uv tool install flowmark)"
+        );
+        return;
+    }
     let (py_err, py_code) = run_cli(python_flowmark(), &["-o", "out.md", "/dev/null", "/dev/null"]);
     let (rs_err, rs_code) = run_cli(&rust_flowmark(), &["-o", "out.md", "/dev/null", "/dev/null"]);
     assert_eq!(rs_err, py_err, "D11: multi-file output error should match Python");
@@ -407,6 +444,12 @@ fn test_d11_output_multiple_files_error_matches_python() {
 #[test]
 #[cfg(feature = "cli")]
 fn test_d11_nonexistent_file_error_format() {
+    if !python_flowmark_available() {
+        eprintln!(
+            "Skipping D11: Python flowmark not found (install with: uv tool install flowmark)"
+        );
+        return;
+    }
     let (py_err, _py_code) = run_cli(python_flowmark(), &["nonexistent.md"]);
     let (rs_err, _rs_code) = run_cli(&rust_flowmark(), &["nonexistent.md"]);
     // Python: "Error: [Errno 2] No such file or directory: 'nonexistent.md'" (exit 2)

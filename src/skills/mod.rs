@@ -74,8 +74,8 @@ pub fn install_skill(agent_base: Option<&str>) -> Result<(), String> {
 
     eprintln!("Installed flowmark skill to {}", skill_path.display());
 
-    if agent_base.is_some() {
-        eprintln!("Tip: Commit .claude/skills/ to share with team");
+    if let Some(custom) = agent_base {
+        eprintln!("Tip: Commit {custom}/skills/ to share with team");
     }
 
     Ok(())

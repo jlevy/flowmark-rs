@@ -74,8 +74,9 @@ static MULTILINE_CLOSING_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
 pub fn normalize_adjacent_tags(text: &str) -> String {
     ADJACENT_TAGS_RE
         .replace_all(text, |caps: &regex::Captures<'_>| {
+            // caps.len() includes group 0, so explicit groups are 1..caps.len().
             let groups: Vec<Option<regex::Match<'_>>> =
-                (1..=caps.len()).map(|i| caps.get(i)).collect();
+                (1..caps.len()).map(|i| caps.get(i)).collect();
             for i in (0..groups.len()).step_by(2) {
                 if let (Some(a), Some(b)) =
                     (&groups.get(i).copied().flatten(), &groups.get(i + 1).copied().flatten())
@@ -92,8 +93,9 @@ pub fn normalize_adjacent_tags(text: &str) -> String {
 pub fn denormalize_adjacent_tags(text: &str) -> String {
     DENORMALIZE_TAGS_RE
         .replace_all(text, |caps: &regex::Captures<'_>| {
+            // caps.len() includes group 0, so explicit groups are 1..caps.len().
             let groups: Vec<Option<regex::Match<'_>>> =
-                (1..=caps.len()).map(|i| caps.get(i)).collect();
+                (1..caps.len()).map(|i| caps.get(i)).collect();
             for i in (0..groups.len()).step_by(2) {
                 if let (Some(a), Some(b)) =
                     (&groups.get(i).copied().flatten(), &groups.get(i + 1).copied().flatten())
