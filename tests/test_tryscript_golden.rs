@@ -33,7 +33,8 @@ fn run_tryscript(file: &str) {
     // On Windows, npm global commands are .cmd scripts; Command::new("npx") may not
     // find them. Try npx.cmd as a fallback.
     let npx_cmd = if cfg!(windows) {
-        let has_npx = Command::new("npx").arg("--version").output().is_ok_and(|o| o.status.success());
+        let has_npx =
+            Command::new("npx").arg("--version").output().is_ok_and(|o| o.status.success());
         if has_npx { "npx" } else { "npx.cmd" }
     } else {
         "npx"
