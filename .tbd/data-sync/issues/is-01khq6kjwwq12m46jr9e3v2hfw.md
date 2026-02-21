@@ -5,7 +5,7 @@ title: Build, CI hardening, and publishing improvements
 kind: epic
 status: open
 priority: 1
-version: 8
+version: 12
 labels: []
 dependencies:
   - type: blocks
@@ -22,6 +22,11 @@ dependencies:
     target: is-01khq6hvwjsdp6axqwd7n9d179
   - type: blocks
     target: is-01khq6hww2xan27t6qds6zxgwb
+child_order_hints:
+  - is-01khzgtceq57c9ca2xj4936yv6
+  - is-01khzgth6jh05613kan5ytp8xk
+  - is-01khzgtr5kqr3e8nk492nwssfn
+  - is-01khzgv06kkdjrwdtjny5tq9we
 created_at: 2026-02-18T01:42:33.115Z
-updated_at: 2026-02-18T01:47:17.383Z
+updated_at: 2026-02-21T07:15:17.330Z
 ---
