@@ -2,6 +2,12 @@ use flowmark::config::ListSpacing;
 use flowmark::fill_markdown;
 use std::path::Path;
 
+fn read_normalized(path: &Path) -> String {
+    std::fs::read_to_string(path)
+        .unwrap_or_else(|_| panic!("Failed to read: {}", path.display()))
+        .replace("\r\n", "\n")
+}
+
 #[allow(clippy::struct_excessive_bools)]
 struct TestCase {
     name: &'static str,
@@ -19,8 +25,7 @@ fn test_reference_doc_formats() {
 
     assert!(orig_path.exists(), "Original test document not found at {orig_path:?}");
 
-    let orig_content =
-        std::fs::read_to_string(&orig_path).expect("Failed to read original document");
+    let orig_content = read_normalized(&orig_path);
 
     let test_cases = [
         TestCase {
@@ -60,8 +65,7 @@ fn test_reference_doc_formats() {
     let mut all_pass = true;
     for case in &test_cases {
         let test_doc = testdoc_dir.join(case.filename);
-        let expected = std::fs::read_to_string(&test_doc)
-            .unwrap_or_else(|_| panic!("Failed to read expected document: {}", case.filename));
+        let expected = read_normalized(&test_doc);
 
         let actual = fill_markdown(
             &orig_content,

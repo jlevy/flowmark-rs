@@ -4,8 +4,8 @@
 
 **Author:** Joshua Levy
 
-**Status:** Phases 1-4, 6 Complete — Phase 5 (binary releases) planned in detail, ready
-for implementation
+**Status:** Phases 1-4, 6 Complete — Phase 5 steps 5.1-5.3 implemented, 5.4 (test
+release cycle) pending manual verification
 
 **Epic bead:** fmr-8yos
 
@@ -99,7 +99,7 @@ The CI pipeline is already well above average:
 Use a **custom GitHub Actions release workflow** modeled on
 [casey/just](https://github.com/casey/just)’s release workflow for binary distribution.
 This is the dominant approach among popular Rust CLI tools (12 of 14 surveyed in the
-[binary distribution research](../research/research-rust-cli-binary-distribution.md) use
+[binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md) use
 custom workflows). just is the closest comparable project: pure Rust, single maintainer,
 focused CLI utility with all-musl Linux targets and Windows support.
 
@@ -175,7 +175,7 @@ Set up automated cross-platform binary builds via a custom GitHub Actions releas
 workflow, modeled on
 [casey/just](https://github.com/casey/just/blob/master/.github/workflows/release.yaml).
 This is the dominant approach among popular Rust CLI tools — 12 of 14 tools surveyed in
-the [binary distribution research](../research/research-rust-cli-binary-distribution.md)
+the [binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md)
 use custom workflows.
 just is the closest comparable project (pure Rust, focused CLI, single maintainer,
 all-musl Linux, Windows support).
@@ -189,7 +189,7 @@ release workflows.
 Only Astral’s uv and ruff use cargo-dist, both in a heavily customized
 way for Python wheel builds.
 See the
-[binary distribution research](../research/research-rust-cli-binary-distribution.md) for
+[binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md) for
 the full survey and analysis.
 
 The custom workflow approach is preferred for flowmark-rs because:
@@ -316,7 +316,7 @@ publish.yml (existing OIDC workflow)
 
 #### 5F: Implementation Steps
 
-**Step 5.1: Create `.github/workflows/release.yml`**
+**Step 5.1: Create `.github/workflows/release.yml`** (fmr-eldq)
 
 Write the release workflow with three jobs, modeled on just’s release.yaml:
 
@@ -333,7 +333,7 @@ Key workflow details:
 - `softprops/action-gh-release@v2` for uploading archives and checksums
 - `actions/checkout@v6`, `Swatinem/rust-cache@v2` for caching
 
-**Step 5.2: Add Windows CI testing**
+**Step 5.2: Add Windows CI testing** (fmr-dqqo)
 
 Add `windows-latest` to the CI test matrix in `ci.yml` to catch platform-specific issues
 before release:
@@ -343,7 +343,7 @@ strategy:
     os: [ubuntu-latest, macos-latest, windows-latest]
 ```
 
-**Step 5.3: Update documentation**
+**Step 5.3: Update documentation** (fmr-rg6a)
 
 Update these files to reflect the new installation methods:
 
@@ -367,7 +367,7 @@ Update these files to reflect the new installation methods:
 2. **docs/publishing.md** — Add a section on the binary release flow and how the two
    workflows (release.yml and publish.yml) coordinate.
 
-**Step 5.4: Test the full release cycle**
+**Step 5.4: Test the full release cycle** (fmr-9dh1)
 
 1. Merge the release workflow PR to main
 2. Create a patch release (e.g., `v0.2.2`) to test the pipeline:
@@ -466,7 +466,7 @@ blockers.
    The custom approach provides full control, no version coupling, and supports all
    targets including `aarch64-pc-windows-msvc` (which cargo-dist does not).
    See Phase 5 and the
-   [binary distribution research](../research/research-rust-cli-binary-distribution.md)
+   [binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md)
    for full analysis.
 4. ~~**Shell completions scope**~~: **Deferred** — moved to future work (not blocking
    initial release).
@@ -579,7 +579,7 @@ Adapted from Python project’s `docs/publishing.md`:
 
 ## References
 
-- [Binary distribution research](../research/research-rust-cli-binary-distribution.md) —
+- [Binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md) —
   Survey of 14 Rust CLI tools’ release practices (the basis for the Phase 5 approach)
 - [just release.yaml](https://github.com/casey/just/blob/master/.github/workflows/release.yaml)
   — Primary template for the release workflow
