@@ -92,7 +92,7 @@ Use `--repo $REPO` on all `gh` commands below.
      --title "chore: release vX.Y.Z" --body "Version bump and changelog for vX.Y.Z."
    ```
 
-3. Wait for CI to pass (all 12 checks):
+3. Wait for CI to pass (all checks):
 
    ```bash
    gh pr checks <branch-name> --repo $REPO --watch 2>&1

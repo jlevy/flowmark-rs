@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.2] (parity: flowmark-py 0.6.4)
+
+Infrastructure release adding pre-built binaries for all major platforms.
+
+### Features
+
+- **Pre-built binaries** for 6 platforms via GitHub Releases: Linux (x86_64,
+  ARM64), macOS (x86_64, ARM64), Windows (x86_64, ARM64). Archives include
+  SHA256 checksums. `cargo binstall flowmark` now works automatically.
+- **Windows CI** added to the test matrix (ubuntu + macOS + Windows)
+
+### Fixes
+
+- Fixed CRLF line-ending handling in golden tests for Windows compatibility
+- Tryscript integration tests now correctly skip on Windows (bash-only)
+
 ## [0.2.1] (parity: flowmark-py 0.6.4)
 
 Patch release fixing four formatting parity bugs discovered by corpus-wide
@@ -74,7 +90,8 @@ Complete Rust port with full behavioral parity to Python flowmark v0.6.4.
 
 Early development release.
 
-[Unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/jlevy/flowmark-rs/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/jlevy/flowmark-rs/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jlevy/flowmark-rs/compare/v0.1.3...v0.2.0
 [0.1.3]: https://github.com/jlevy/flowmark-rs/releases/tag/v0.1.3

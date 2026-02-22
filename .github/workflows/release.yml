@@ -26,7 +26,7 @@ jobs:
       - name: Prerelease check
         id: prerelease
         run: |
-          if [[ ${{ github.ref_name }} =~ ^[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
+          if [[ ${{ github.ref_name }} =~ ^v?[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
             echo value=false >> $GITHUB_OUTPUT
           else
             echo value=true >> $GITHUB_OUTPUT
