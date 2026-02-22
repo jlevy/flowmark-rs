@@ -316,7 +316,7 @@
   rust_function: test_escape_in_list_item
   rust_functions:
   - test_escape_in_list_item_start_preserved
-  notes: 'Split into passing/ignored parts. Bug: fmr-2tll'
+  notes: Split into two Rust tests. Bug fmr-2tll fixed.
 - python_file: tests/test_escape_handling.py
   python_function: test_escape_in_paragraph_middle
   status: mapped
@@ -349,7 +349,7 @@
   status: mapped
   rust_file: tests/test_escape_handling.rs
   rust_function: test_mixed_escapes
-  notes: 'Ignored: known bug fmr-2tll (escape at list item start)'
+  notes: Bug fmr-2tll (escape at list item start) fixed.
 - python_file: tests/test_escape_handling.py
   python_function: test_mixed_escapes_comprehensive
   status: mapped
@@ -654,7 +654,7 @@
   status: mapped
   rust_file: tests/test_heading_spacing.rs
   rust_function: test_heading_with_hard_break_in_list
-  notes: 'Ignored: known bug fmr-4l1x'
+  notes: Bug fmr-4l1x fixed.
 - python_file: tests/test_list_spacing.py
   python_function: test_complex_content_with_loose_mode
   status: mapped
@@ -1067,7 +1067,7 @@
   status: mapped
   rust_file: tests/test_tag_formatting.rs
   rust_function: test_list_item_with_tag_on_continuation_line
-  notes: 'Ignored: known bug fmr-5ojk'
+  notes: Bug fmr-5ojk fixed.
 - python_file: tests/test_tag_formatting.py
   python_function: test_multiline_opening_tag_closing_on_own_line
   status: mapped
