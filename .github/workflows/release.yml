@@ -34,6 +34,7 @@ jobs:
 
   package:
     strategy:
+      fail-fast: false
       matrix:
         target:
           - aarch64-apple-darwin
@@ -90,6 +91,10 @@ jobs:
 
       - name: Add Rust target
         run: rustup target add ${{ matrix.target }}
+
+      - name: Set cross-compilation CC for musl targets
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: echo "CC_aarch64_unknown_linux_musl=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
       - name: Build
         run: |
