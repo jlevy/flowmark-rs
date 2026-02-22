@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.3] (parity: flowmark-py 0.6.4)
+
+Fixes release workflow for cross-compiled Linux ARM64 binaries.
+
+### Fixes
+
+- Fixed cross-compilation for `aarch64-unknown-linux-musl`: set `CC` env var
+  for `cc-rs` to find the cross-compiler
+- Release workflow now uses `fail-fast: false` so one target failure doesn't
+  cancel all other builds
+
 ## [0.2.2] (parity: flowmark-py 0.6.4)
 
 Infrastructure release adding pre-built binaries for all major platforms.
@@ -90,7 +101,8 @@ Complete Rust port with full behavioral parity to Python flowmark v0.6.4.
 
 Early development release.
 
-[Unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.3...HEAD
+[0.2.3]: https://github.com/jlevy/flowmark-rs/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/jlevy/flowmark-rs/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/jlevy/flowmark-rs/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/jlevy/flowmark-rs/compare/v0.1.3...v0.2.0
