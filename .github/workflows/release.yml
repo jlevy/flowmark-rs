@@ -1,0 +1,169 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+
+jobs:
+  prerelease:
+    runs-on: ubuntu-latest
+
+    outputs:
+      value: ${{ steps.prerelease.outputs.value }}
+
+    steps:
+      - name: Prerelease check
+        id: prerelease
+        run: |
+          if [[ ${{ github.ref_name }} =~ ^v?[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
+            echo value=false >> $GITHUB_OUTPUT
+          else
+            echo value=true >> $GITHUB_OUTPUT
+          fi
+
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - aarch64-apple-darwin
+          - aarch64-pc-windows-msvc
+          - aarch64-unknown-linux-musl
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
+          - x86_64-unknown-linux-musl
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            target_rustflags: ''
+          - target: aarch64-pc-windows-msvc
+            os: windows-latest
+            target_rustflags: ''
+          - target: aarch64-unknown-linux-musl
+            os: ubuntu-latest
+            target_rustflags: '--codegen linker=aarch64-linux-gnu-gcc'
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            target_rustflags: ''
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            target_rustflags: ''
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+            target_rustflags: ''
+
+    runs-on: ${{ matrix.os }}
+    needs: [prerelease]
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install target dependencies
+        run: |
+          case ${{ matrix.target }} in
+            aarch64-pc-windows-msvc)
+              rustup target add aarch64-pc-windows-msvc
+              ;;
+            aarch64-unknown-linux-musl)
+              sudo apt-get update
+              sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools
+              ;;
+            x86_64-unknown-linux-musl)
+              sudo apt-get update
+              sudo apt-get install -y musl-tools
+              ;;
+          esac
+
+      - name: Add Rust target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Set cross-compilation CC for musl targets
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: echo "CC_aarch64_unknown_linux_musl=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
+
+      - name: Build
+        run: |
+          RUSTFLAGS="--deny warnings --codegen target-feature=+crt-static ${{ matrix.target_rustflags }}" \
+            cargo build --bin flowmark --release --locked --target ${{ matrix.target }}
+
+      - name: Package
+        id: package
+        run: |
+          set -euxo pipefail
+          VERSION=${GITHUB_REF#refs/tags/}
+          BIN=flowmark
+          if [[ ${{ matrix.os }} == windows-latest ]]; then
+            BIN=$BIN.exe
+          fi
+
+          STAGING=flowmark-$VERSION-${{ matrix.target }}
+          mkdir "$STAGING"
+          cp target/${{ matrix.target }}/release/$BIN "$STAGING/"
+          cp LICENSE README.md "$STAGING/"
+
+          case ${{ matrix.os }} in
+            ubuntu-latest | macos-latest)
+              ARCHIVE=$STAGING.tar.gz
+              tar czf "$ARCHIVE" "$STAGING"
+              echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
+              ;;
+            windows-latest)
+              ARCHIVE=$STAGING.zip
+              7z a "$ARCHIVE" "$STAGING"
+              echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          files: ${{ steps.package.outputs.archive }}
+          prerelease: ${{ needs.prerelease.outputs.value }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  checksum:
+    runs-on: ubuntu-latest
+    needs: [package, prerelease]
+
+    steps:
+      - name: Download release archives
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >-
+          gh release download
+          --repo ${{ github.repository }}
+          --pattern '*.tar.gz'
+          --pattern '*.zip'
+          --dir release
+          ${{ github.ref_name }}
+
+      - name: Generate checksums
+        run: |
+          cd release
+          shasum -a 256 * > ../SHA256SUMS
+
+      - name: Upload checksums
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: false
+          files: SHA256SUMS
+          prerelease: ${{ needs.prerelease.outputs.value }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

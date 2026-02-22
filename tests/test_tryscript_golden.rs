@@ -5,7 +5,9 @@
 //! fail if it is not available.
 //!
 //! All tryscript files are tested as part of the normal test suite.
+//! Skipped on Windows: tryscript tests use bash and Unix paths.
 #![cfg(feature = "cli")]
+#![cfg(not(windows))]
 #![allow(clippy::unwrap_used)]
 
 use std::path::PathBuf;

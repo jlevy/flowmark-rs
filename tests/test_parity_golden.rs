@@ -25,12 +25,16 @@ struct GoldenTest {
     list_spacing: ListSpacing,
 }
 
+fn read_normalized(path: &Path) -> String {
+    std::fs::read_to_string(path)
+        .unwrap_or_else(|_| panic!("Failed to read: {}", path.display()))
+        .replace("\r\n", "\n")
+}
+
 fn run_parity_golden(t: &GoldenTest) {
     let parity_dir = Path::new("tests/parity");
-    let input = std::fs::read_to_string(parity_dir.join(t.input_file))
-        .unwrap_or_else(|_| panic!("Failed to read input: {}", t.input_file));
-    let expected = std::fs::read_to_string(parity_dir.join(t.expected_file))
-        .unwrap_or_else(|_| panic!("Failed to read expected: {}", t.expected_file));
+    let input = read_normalized(&parity_dir.join(t.input_file));
+    let expected = read_normalized(&parity_dir.join(t.expected_file));
 
     let actual = if t.plaintext {
         flowmark::fill_text(&input, flowmark::Wrap::Wrap, 88, "", "", 0, None)
