@@ -6,7 +6,7 @@
 #   "strif>=3.0.1",
 # ]
 # ///
-"""Generate the Rust README as a rendered superset of Python's canonical README."""
+"""Generate the Rust README from shared docs content and a Rust wrapper template."""
 
 from __future__ import annotations
 
@@ -18,18 +18,20 @@ import tomllib
 from jinja2 import Environment, StrictUndefined
 from strif import atomic_output_file
 
-PYTHON_DOCS_BASE_URL = "https://github.com/jlevy/flowmark/blob/main/docs/"
+UPSTREAM_DOCS_BASE_URL = "https://github.com/jlevy/flowmark/blob/main/docs/"
 
 
 def parse_args() -> tuple[Path, Path, Path]:
     """Parse command-line arguments and resolve default repo-relative paths."""
     repo_root = Path(__file__).resolve().parents[1]
-    parser = ArgumentParser(description="Generate README.md from Python README + Rust wrapper template.")
+    parser = ArgumentParser(description="Generate README.md from shared docs + Rust wrapper template.")
     parser.add_argument(
+        "--shared-docs",
         "--python-readme",
+        dest="shared_docs",
         type=Path,
         default=repo_root / "repos/flowmark/README.md",
-        help="Path to canonical Python README source.",
+        help="Path to canonical shared docs source (currently Python README).",
     )
     parser.add_argument(
         "--template",
@@ -44,7 +46,7 @@ def parse_args() -> tuple[Path, Path, Path]:
         help="Output README path.",
     )
     args = parser.parse_args()
-    return args.python_readme, args.template, args.output
+    return args.shared_docs, args.template, args.output
 
 
 def strip_first_h1(markdown: str) -> str:
@@ -56,17 +58,17 @@ def strip_first_h1(markdown: str) -> str:
     return f"{body}\n"
 
 
-def rewrite_python_local_docs_links(markdown: str) -> str:
-    """Rewrite Python-local docs links to canonical upstream URLs."""
+def rewrite_upstream_local_docs_links(markdown: str) -> str:
+    """Rewrite local docs links from the shared source to canonical upstream URLs."""
     return re.sub(
         r"\]\(docs/([^)]+)\)",
-        rf"]({PYTHON_DOCS_BASE_URL}\1)",
+        rf"]({UPSTREAM_DOCS_BASE_URL}\1)",
         markdown,
     )
 
 
 def strip_leading_badges(markdown: str) -> str:
-    """Drop the top badge block from the Python README body for Rust-specific wrappers."""
+    """Drop a leading badge block from the shared docs body for Rust wrappers."""
     badge_line = re.compile(r"^\[!\[[^]]+\]\([^)]+\)\]\([^)]+\)$")
     lines = markdown.splitlines()
 
@@ -99,15 +101,15 @@ def read_msrv(repo_root: Path) -> str:
     return msrv
 
 
-def render_readme(template_path: Path, python_readme_body: str, msrv: str) -> str:
-    """Render the README wrapper template with transformed Python README content."""
+def render_readme(template_path: Path, shared_docs_body: str, msrv: str) -> str:
+    """Render the README wrapper template with transformed shared docs content."""
     environment = Environment(
         autoescape=False,
         undefined=StrictUndefined,
         keep_trailing_newline=True,
     )
     template = environment.from_string(template_path.read_text(encoding="utf-8"))
-    rendered = template.render(python_readme_body=python_readme_body, msrv=msrv)
+    rendered = template.render(shared_docs_body=shared_docs_body, msrv=msrv)
     if not rendered.endswith("\n"):
         rendered += "\n"
     return rendered
@@ -121,21 +123,21 @@ def write_atomic(output_path: Path, content: str) -> None:
 
 def main() -> int:
     """Generate README.md from canonical sources."""
-    python_readme_path, template_path, output_path = parse_args()
+    shared_docs_path, template_path, output_path = parse_args()
     repo_root = Path(__file__).resolve().parents[1]
-    if not python_readme_path.exists():
-        raise FileNotFoundError(f"missing Python README at {python_readme_path}")
+    if not shared_docs_path.exists():
+        raise FileNotFoundError(f"missing shared docs source at {shared_docs_path}")
     if not template_path.exists():
         raise FileNotFoundError(f"missing wrapper template at {template_path}")
 
-    python_readme = python_readme_path.read_text(encoding="utf-8")
-    python_body = strip_first_h1(python_readme)
-    python_body = strip_leading_badges(python_body)
-    python_body = rewrite_python_local_docs_links(python_body)
-    rendered = render_readme(template_path, python_body, read_msrv(repo_root))
+    shared_docs = shared_docs_path.read_text(encoding="utf-8")
+    shared_docs_body = strip_first_h1(shared_docs)
+    shared_docs_body = strip_leading_badges(shared_docs_body)
+    shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
+    rendered = render_readme(template_path, shared_docs_body, read_msrv(repo_root))
     write_atomic(output_path, rendered)
 
-    print(f"Generated {output_path} from {python_readme_path} via {template_path}")
+    print(f"Generated {output_path} from {shared_docs_path} via {template_path}")
     return 0
 
 

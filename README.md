@@ -1,4 +1,4 @@
-<!-- Generated from repos/flowmark/README.md via scripts/generate-rust-readme.py. -->
+<!-- Generated from shared docs source (currently repos/flowmark/README.md) via scripts/generate-rust-readme.py. -->
 
 [![Follow @ojoshe on X](https://img.shields.io/badge/follow_%40ojoshe-black?logo=x&logoColor=white)](https://x.com/ojoshe)
 [![CI](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml)
@@ -26,7 +26,7 @@
 
 ---
 
-## Python Project Overview
+## Shared Documentation
 
 Flowmark is a Markdown auto-formatter, written
 [in Python](https://github.com/jlevy/flowmark) with an auto-synced
