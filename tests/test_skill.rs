@@ -30,6 +30,19 @@ fn test_skill_content_has_usage() {
     assert!(content.contains("flowmark --auto"), "should contain usage instructions");
 }
 
+#[test]
+fn test_skill_content_has_vscode_cursor_setup() {
+    let content = get_skill_content();
+    assert!(
+        content.contains("VS Code/Cursor"),
+        "skill should include VS Code/Cursor setup section"
+    );
+    assert!(
+        content.contains("emeraldwalk.runonsave"),
+        "skill should include run-on-save configuration"
+    );
+}
+
 // --- Docs content loading (2 tests) ---
 
 #[test]
@@ -41,10 +54,21 @@ fn test_docs_content_loads() {
 #[test]
 fn test_docs_content_has_flowmark_reference() {
     let content = get_docs_content();
-    // In test environment, README.md is not next to the test binary,
-    // so we get fallback content. Both real README and fallback reference flowmark.
     let lower = content.to_lowercase();
     assert!(lower.contains("flowmark"), "docs content should reference flowmark");
+}
+
+#[test]
+fn test_docs_content_has_vscode_cursor_setup() {
+    let content = get_docs_content();
+    assert!(
+        content.contains("VSCode/Cursor") || content.contains("VS Code/Cursor"),
+        "docs should include VS Code/Cursor section"
+    );
+    assert!(
+        content.contains("emeraldwalk.runonsave"),
+        "docs should include run-on-save settings snippet"
+    );
 }
 
 // --- Skill installation (4 tests) ---
