@@ -60,7 +60,7 @@ and Python sources.
 
 - Rust toolchain installed (`cargo`, matching project MSRV policy)
 - Node.js + `tryscript` available (`npx tryscript@latest` or global `tryscript`)
-- `uvx` available for Python parity checks
+- `uv`/`uvx` available for Python parity checks and README generation
 - Git submodules initialized (`repos/flowmark`, `repos/rust-porting-playbook`)
 - Working tree in a known state (clean or intentionally dirty, but understood)
 
@@ -105,6 +105,7 @@ git submodule status
 
 ```bash
 cargo --version
+uv --version
 uvx --version
 node --version
 npx tryscript@latest --version
@@ -117,6 +118,7 @@ npx tryscript@latest --version
 **Verify**:
 
 - [ ] Rust tooling available
+- [ ] `uv` available for script-based tooling
 - [ ] `uvx` available for Python parity checks
 - [ ] Node/tryscript available for golden tests
 
@@ -286,10 +288,14 @@ uvx "flowmark@${PARITY_VERSION}" --version
 - [ ] Cargo parity metadata points to a real Python release
 - [ ] `uvx` version check succeeds for that exact version
 
-### 4.2 Verify README/docs generation sync
+### 4.2 README/docs generation sync (manual fallback)
+
+> This is automatically enforced by GitHub Actions job
+> `readme-sync` in `.github/workflows/ci.yml`.
+> Run this manually only when validating outside CI.
 
 ```bash
-scripts/generate-rust-readme.sh
+scripts/generate-rust-readme.py
 git diff -- README.md
 ```
 
@@ -302,25 +308,6 @@ git diff -- README.md
 
 - [ ] README generation is reproducible
 - [ ] Rust README reflects Python canonical content + Rust preface
-
-### 4.2a Verify generated README doc-link routing (manual drift guard)
-
-```bash
-if rg -n '\]\(docs/' README.md; then
-  echo "FAIL: unresolved docs/ links still point to this repo"
-  exit 1
-fi
-echo "OK: no unresolved local docs/ links in generated README"
-```
-
-**Expected behavior**:
-
-- Generated README should not contain Python README local `docs/...` links that resolve
-  incorrectly in this repo.
-
-**Verify**:
-
-- [ ] No unresolved `](docs/...)` links remain in generated README
 
 ### 4.3 Verify runtime docs output (`--docs`) and help metadata
 
@@ -436,7 +423,7 @@ sed -n '1,220p' tests/tryscript/cli-golden.tryscript.md
 ### README generation drift
 
 ```bash
-scripts/generate-rust-readme.sh
+scripts/generate-rust-readme.py
 git diff -- README.md repos/flowmark/README.md
 ```
 
