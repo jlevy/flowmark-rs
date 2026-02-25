@@ -1,5 +1,3 @@
-# flowmark (Rust port)
-
 <!-- Generated from repos/flowmark/README.md via scripts/generate-rust-readme.py. -->
 
 [![Follow @ojoshe on X](https://img.shields.io/badge/follow_%40ojoshe-black?logo=x&logoColor=white)](https://x.com/ojoshe)
@@ -7,6 +5,10 @@
 [![crates.io](https://img.shields.io/crates/v/flowmark.svg)](https://crates.io/crates/flowmark)
 [![docs.rs](https://docs.rs/flowmark/badge.svg)](https://docs.rs/flowmark)
 ![MSRV](https://img.shields.io/badge/MSRV-{{ msrv }}-blue)
+
+# flowmark
+
+## Rust Port
 
 > [!INFO]
 >
@@ -23,5 +25,7 @@
 - Porting methodology: [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook)
 
 ---
+
+## Python Project Overview
 
 {{ python_readme_body }}
