@@ -14,6 +14,12 @@ and Python sources.
 
 **Estimated Time**: ~35-50 minutes
 
+> [!IMPORTANT]
+> Scope rule: This playbook should cover only checks that are **not already enforced**
+> by automated tests.
+> If a recurring issue can be automated, add or update an automated test first, then
+> remove or reduce the corresponding manual check here.
+
 > This is a manual validation playbook on top of automated tests.
 > Goals:
 > 
@@ -296,6 +302,25 @@ git diff -- README.md
 
 - [ ] README generation is reproducible
 - [ ] Rust README reflects Python canonical content + Rust preface
+
+### 4.2a Verify generated README doc-link routing (manual drift guard)
+
+```bash
+if rg -n '\]\(docs/' README.md; then
+  echo "FAIL: unresolved docs/ links still point to this repo"
+  exit 1
+fi
+echo "OK: no unresolved local docs/ links in generated README"
+```
+
+**Expected behavior**:
+
+- Generated README should not contain Python README local `docs/...` links that resolve
+  incorrectly in this repo.
+
+**Verify**:
+
+- [ ] No unresolved `](docs/...)` links remain in generated README
 
 ### 4.3 Verify runtime docs output (`--docs`) and help metadata
 
