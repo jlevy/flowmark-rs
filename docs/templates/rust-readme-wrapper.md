@@ -50,7 +50,4 @@ brew install flowmark
 Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
 
 ---
-
-## Shared Documentation
-
 {{ shared_docs_body }}

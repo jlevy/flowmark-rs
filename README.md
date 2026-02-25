@@ -50,9 +50,6 @@ brew install flowmark
 Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
 
 ---
-
-## Shared Documentation
-
 Flowmark is a Markdown auto-formatter, written
 [in Python](https://github.com/jlevy/flowmark) with an auto-synced
 [Rust port](https://github.com/jlevy/flowmark-rs), designed for **better LLM
