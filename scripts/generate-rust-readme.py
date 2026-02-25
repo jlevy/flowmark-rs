@@ -13,6 +13,7 @@ from __future__ import annotations
 from argparse import ArgumentParser
 from pathlib import Path
 import re
+import tomllib
 
 from jinja2 import Environment, StrictUndefined
 from strif import atomic_output_file
@@ -64,7 +65,41 @@ def rewrite_python_local_docs_links(markdown: str) -> str:
     )
 
 
-def render_readme(template_path: Path, python_readme_body: str) -> str:
+def strip_leading_badges(markdown: str) -> str:
+    """Drop the top badge block from the Python README body for Rust-specific wrappers."""
+    badge_line = re.compile(r"^\[!\[[^]]+\]\([^)]+\)\]\([^)]+\)$")
+    lines = markdown.splitlines()
+
+    index = 0
+    while index < len(lines) and not lines[index].strip():
+        index += 1
+
+    start = index
+    while index < len(lines) and badge_line.match(lines[index].strip()):
+        index += 1
+
+    if index == start:
+        return f"{markdown.rstrip()}\n"
+
+    while index < len(lines) and not lines[index].strip():
+        index += 1
+    return f"{'\n'.join(lines[index:]).rstrip()}\n"
+
+
+def read_msrv(repo_root: Path) -> str:
+    """Read rust-version from Cargo.toml for the MSRV badge."""
+    cargo_toml = repo_root / "Cargo.toml"
+    if not cargo_toml.exists():
+        raise FileNotFoundError(f"missing Cargo.toml at {cargo_toml}")
+    metadata = tomllib.loads(cargo_toml.read_text(encoding="utf-8"))
+    package = metadata.get("package", {})
+    msrv = package.get("rust-version")
+    if not isinstance(msrv, str) or not msrv:
+        raise ValueError(f"missing [package].rust-version in {cargo_toml}")
+    return msrv
+
+
+def render_readme(template_path: Path, python_readme_body: str, msrv: str) -> str:
     """Render the README wrapper template with transformed Python README content."""
     environment = Environment(
         autoescape=False,
@@ -72,7 +107,7 @@ def render_readme(template_path: Path, python_readme_body: str) -> str:
         keep_trailing_newline=True,
     )
     template = environment.from_string(template_path.read_text(encoding="utf-8"))
-    rendered = template.render(python_readme_body=python_readme_body)
+    rendered = template.render(python_readme_body=python_readme_body, msrv=msrv)
     if not rendered.endswith("\n"):
         rendered += "\n"
     return rendered
@@ -87,6 +122,7 @@ def write_atomic(output_path: Path, content: str) -> None:
 def main() -> int:
     """Generate README.md from canonical sources."""
     python_readme_path, template_path, output_path = parse_args()
+    repo_root = Path(__file__).resolve().parents[1]
     if not python_readme_path.exists():
         raise FileNotFoundError(f"missing Python README at {python_readme_path}")
     if not template_path.exists():
@@ -94,8 +130,9 @@ def main() -> int:
 
     python_readme = python_readme_path.read_text(encoding="utf-8")
     python_body = strip_first_h1(python_readme)
+    python_body = strip_leading_badges(python_body)
     python_body = rewrite_python_local_docs_links(python_body)
-    rendered = render_readme(template_path, python_body)
+    rendered = render_readme(template_path, python_body, read_msrv(repo_root))
     write_atomic(output_path, rendered)
 
     print(f"Generated {output_path} from {python_readme_path} via {template_path}")
