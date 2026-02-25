@@ -13,6 +13,10 @@ discrepancies.
 It establishes the methodology, links to the foundational principles, and describes the
 concrete procedures for keeping the Rust port aligned with Python flowmark.
 
+For a full manual validation run (automated tests + tryscript sanity review + docs/help
+equivalence checks), use:
+[tests/qa/rust-python-parity-e2e.qa.md](../tests/qa/rust-python-parity-e2e.qa.md).
+
 ## Background & Porting Methodology
 
 flowmark-rs was built using the
