@@ -147,8 +147,8 @@ description: Auto-format Markdown with semantic line breaks, smart quotes, and d
 ## Docs: print documentation
 
 ```console
-$ flowmark --docs | head -1
-# flowmark (Rust port)
+$ flowmark --docs | rg "^# flowmark$" -m1
+# flowmark
 ```
 
 ## Stdin: default formatting
