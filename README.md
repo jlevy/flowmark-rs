@@ -78,25 +78,6 @@ General philosophy:
   [`regex`](https://pypi.org/project/regex/), and
   [`strif`](https://github.com/jlevy/strif).
 
-## Installation
-
-The simplest way to use the tool is to use [uv](https://github.com/astral-sh/uv).
-
-Run with `uvx flowmark --help` or install it as a tool:
-
-```shell
-uv tool install --upgrade flowmark
-```
-
-Then
-
-```
-flowmark --help
-```
-
-For use in Python projects, add the [`flowmark`](https://pypi.org/project/flowmark/)
-package via uv, poetry, or pip.
-
 ## Use Cases
 
 The main ways to use Flowmark are:
@@ -427,10 +408,10 @@ enabling automatic Markdown formatting in agent workflows.
 
 ```bash
 # Install globally (available to all projects)
-uvx flowmark@latest --install-skill
+flowmark --install-skill
 
 # Or install to current project only
-uvx flowmark@latest --install-skill --agent-base ./.claude
+flowmark --install-skill --agent-base ./.claude
 ```
 
 After installation, Claude Code will automatically recognize when to use Flowmark for
@@ -451,13 +432,13 @@ If you prefer to use Flowmark manually within agent sessions:
 
 ```bash
 # Format with all auto-formatting options
-uvx flowmark@latest --auto README.md
+flowmark --auto README.md
 
 # Preview formatted output
-uvx flowmark@latest README.md
+flowmark README.md
 
 # Format LLM output (use '-' for stdin)
-echo "$llm_output" | uvx flowmark@latest --semantic -
+echo "$llm_output" | flowmark --semantic -
 ```
 
 ## Why Another Markdown Formatter?
@@ -493,8 +474,6 @@ features of Flowmark or seemed to have the “just works” CLI defaults and lib
 found most useful.
 
 ## Project Docs
-
-For how to install uv and Python, see [installation.md](https://github.com/jlevy/flowmark/blob/main/docs/installation.md).
 
 For development workflows, see [development.md](https://github.com/jlevy/flowmark/blob/main/docs/development.md).
 

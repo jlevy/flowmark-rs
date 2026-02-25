@@ -88,6 +88,29 @@ def strip_leading_badges(markdown: str) -> str:
     return f"{'\n'.join(lines[index:]).rstrip()}\n"
 
 
+def drop_section(markdown: str, heading: str) -> str:
+    """Drop the first level-2 heading section with the provided title."""
+    pattern = re.compile(rf"^## {re.escape(heading)}\n.*?(?=^## |\Z)", re.MULTILINE | re.DOTALL)
+    return re.sub(pattern, "", markdown, count=1)
+
+
+def normalize_shared_docs_for_rust(markdown: str) -> str:
+    """Apply Rust-specific cleanup to shared docs content."""
+    # Rust README has its own installation section above the shared docs content.
+    normalized = drop_section(markdown, "Installation")
+    # Replace Python runner-specific command examples with neutral CLI commands.
+    normalized = re.sub(r"\buvx\s+flowmark@latest\b", "flowmark", normalized)
+    normalized = re.sub(r"\buvx\s+flowmark\b", "flowmark", normalized)
+    # Remove Python runtime installation guidance from shared docs in Rust.
+    normalized = re.sub(
+        r"^For how to install uv and Python, see \[installation\.md\]\([^)]+\)\.\n\n",
+        "",
+        normalized,
+        flags=re.MULTILINE,
+    )
+    return f"{normalized.rstrip()}\n"
+
+
 def read_msrv(repo_root: Path) -> str:
     """Read rust-version from Cargo.toml for the MSRV badge."""
     cargo_toml = repo_root / "Cargo.toml"
@@ -134,6 +157,7 @@ def main() -> int:
     shared_docs_body = strip_first_h1(shared_docs)
     shared_docs_body = strip_leading_badges(shared_docs_body)
     shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
+    shared_docs_body = normalize_shared_docs_for_rust(shared_docs_body)
     rendered = render_readme(template_path, shared_docs_body, read_msrv(repo_root))
     write_atomic(output_path, rendered)
 
