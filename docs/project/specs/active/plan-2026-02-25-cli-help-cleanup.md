@@ -4,7 +4,7 @@
 
 **Author:** Codex (GPT-5)
 
-**Status:** Implemented (Rust side complete; Phase 3 Python sync pending)
+**Status:** Implemented (Phases 1-3 complete; Phase 4 remains TODO)
 
 ## Overview
 
@@ -171,6 +171,15 @@ Add Rust-side improvements that go beyond current Python behavior:
 
 Backport Phase 2 improvements from Rust into Python (where they are improvements over
 Python), keeping the two CLIs near-equivalent.
+
+**Implemented 2026-02-25** in Python submodule branch
+`codex/cli-help-sync-2026-02-25` (commit `9fda859`):
+
+1. Python `--help` epilog shortened to concise footer matching Rust intent
+2. Agent guidance callout (`flowmark --skill`) added in help footer
+3. Help regression tests added (`tests/test_cli_help.py`) and golden assertions updated
+4. VS Code/Cursor run-on-save setup added to Python skill content
+5. README description updated to link both Python origin and Rust port
 
 ### Phase 4 (TODO): Shared Canonical Docs Source
 
