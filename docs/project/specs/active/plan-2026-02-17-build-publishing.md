@@ -1,11 +1,11 @@
 # Feature: Build, CI Hardening, and Publishing Improvements
 
-**Date:** 2026-02-17 (last updated 2026-02-20)
+**Date:** 2026-02-17 (last updated 2026-02-25)
 
 **Author:** Joshua Levy
 
-**Status:** Phases 1-4, 6 Complete — Phase 5 steps 5.1-5.3 implemented, 5.4 (test
-release cycle) pending manual verification
+**Status:** Phases 1-6 Complete — Phase 5 step 5.4 complete (release cycle verified) —
+Phase 7 in progress (Homebrew tap published; automation/docs follow-ups pending)
 
 **Epic bead:** fmr-8yos
 
@@ -32,10 +32,12 @@ popular Rust CLI tools like ripgrep, bat, and fd.
 - Code coverage tracked and visible.
 - README and CONTRIBUTING docs ready for public consumption.
 
-**Future (not in scope for this plan):**
+**Future (not in scope for initial phases):**
 - Shell installer (`curl | sh`) and PowerShell installer.
-- One-line install via Homebrew (`brew install jlevy/tap/flowmark`).
 - Shell completions and man pages.
+
+**Shipped (Phase 7):**
+- Homebrew tap is live (`brew tap jlevy/flowmark && brew install flowmark`).
 
 ## Non-Goals
 
@@ -86,7 +88,7 @@ The CI pipeline is already well above average:
 
 - No release workflow (no binary builds, no GitHub Releases).
 - No crates.io publishing automation.
-- No Homebrew tap or formula.
+- ~~No Homebrew tap or formula.~~ **Done** (`jlevy/homebrew-flowmark`)
 - No root README.md.
 - ~~Missing `readme` and `documentation` fields in Cargo.toml.~~ **Done**
 - No CONTRIBUTING.md or CHANGELOG.md.
@@ -99,9 +101,10 @@ The CI pipeline is already well above average:
 Use a **custom GitHub Actions release workflow** modeled on
 [casey/just](https://github.com/casey/just)’s release workflow for binary distribution.
 This is the dominant approach among popular Rust CLI tools (12 of 14 surveyed in the
-[binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md) use
-custom workflows). just is the closest comparable project: pure Rust, single maintainer,
-focused CLI utility with all-musl Linux targets and Windows support.
+[binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md)
+use custom workflows).
+just is the closest comparable project: pure Rust, single maintainer, focused CLI
+utility with all-musl Linux targets and Windows support.
 
 For crates.io publishing, start with manual `cargo publish` for the first release, then
 set up trusted publishing (OIDC) for subsequent releases.
@@ -175,7 +178,8 @@ Set up automated cross-platform binary builds via a custom GitHub Actions releas
 workflow, modeled on
 [casey/just](https://github.com/casey/just/blob/master/.github/workflows/release.yaml).
 This is the dominant approach among popular Rust CLI tools — 12 of 14 tools surveyed in
-the [binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md)
+the
+[binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md)
 use custom workflows.
 just is the closest comparable project (pure Rust, focused CLI, single maintainer,
 all-musl Linux, Windows support).
@@ -189,8 +193,8 @@ release workflows.
 Only Astral’s uv and ruff use cargo-dist, both in a heavily customized
 way for Python wheel builds.
 See the
-[binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md) for
-the full survey and analysis.
+[binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md)
+for the full survey and analysis.
 
 The custom workflow approach is preferred for flowmark-rs because:
 - Battle-tested by ripgrep, bat, fd, just, typst, jj, and others
@@ -258,7 +262,9 @@ All of this works for pure-Rust projects with no C dependencies.
 **Future (defer to later):**
 - Shell installer (`curl | sh`) — can copy from starship or just’s install scripts
 - PowerShell installer — for Windows users who don’t use `cargo install`
-- Homebrew tap — via `mislav/bump-homebrew-formula-action` (as starship does)
+
+**Shipped (Phase 7):**
+- Homebrew tap via `jlevy/homebrew-flowmark` is live — see Phase 7 below
 
 #### 5D: Release Artifact Contents
 
@@ -361,7 +367,6 @@ Update these files to reflect the new installation methods:
    [GitHub Releases](https://github.com/jlevy/flowmark-rs/releases).
 
    ```
-
    ```
 
 2. **docs/publishing.md** — Add a section on the binary release flow and how the two
@@ -411,8 +416,8 @@ The custom workflow has minimal ongoing maintenance:
 - **Updating Rust toolchain**: The workflow uses whatever stable toolchain is on the
   runner (just’s approach).
   No pinning needed unless reproducibility is a concern.
-- **Adding installers**: Shell/PowerShell installers and Homebrew tap can be added as
-  separate jobs or workflows when needed.
+- **Adding installers**: Shell/PowerShell installers can be added as separate workflows
+  when needed. Homebrew tap is now published; Phase 7 follow-ups are automation-oriented.
 
 ### Phase 6: Documentation and Community — DONE
 
@@ -433,11 +438,175 @@ Standard open source project documentation.
 - [x] **Verify `cargo doc` output** (fmr-ghvq) — Docs build cleanly with `-D warnings`.
   No broken links or missing documentation.
 
-### Future: Homebrew Tap — DEFERRED
+### Phase 7: Homebrew Tap — IN PROGRESS (PUBLISHED)
 
-Not part of this plan.
-Can be added later via `mislav/bump-homebrew-formula-action` (as starship does) or a
-manual formula in a `jlevy/homebrew-tap` repository.
+The Homebrew tap is now published, so macOS and Linux users can install via:
+
+```bash
+brew tap jlevy/flowmark
+brew install flowmark
+```
+
+#### Approach
+
+Use a **separate repository** (`jlevy/homebrew-flowmark`) following Homebrew’s naming
+convention. When a user runs `brew tap jlevy/flowmark`, Homebrew automatically looks for
+a repo named `jlevy/homebrew-flowmark`.
+
+The formula uses **pre-built binaries** from GitHub Releases (not building from source),
+so installs are fast and don’t require the Rust toolchain.
+
+The tap repository is tracked as a submodule at `repos/homebrew-flowmark` for
+convenience.
+
+#### Implementation Steps
+
+1. **Create `jlevy/homebrew-flowmark` repository** — **DONE** — with a single formula
+   file `Formula/flowmark.rb` that:
+   - Detects platform (macOS ARM64 vs x86_64, Linux ARM64 vs x86_64)
+   - Downloads the corresponding archive from GitHub Releases
+   - Verifies SHA256 checksums
+   - Installs the `flowmark` binary
+
+2. **Add as submodule** — **DONE** — tracked at `repos/homebrew-flowmark`.
+
+3. **Automate formula updates** — **Planned follow-up** — Add a `homebrew` job to
+   `release.yml` that runs after the `checksum` job and automatically bumps the formula
+   version and SHA256 values.
+
+   **Why not `mislav/bump-homebrew-formula-action`?** That action explicitly cannot
+   handle formulas with Ruby `if...else` conditionals for platform-specific downloads.
+   Our formula uses `on_macos`/`on_linux` with `Hardware::CPU.arm?` — exactly the
+   pattern it doesn’t support.
+
+   **Approach: Custom job in `release.yml`** that:
+   1. Downloads the `SHA256SUMS` file from the just-created release
+   2. Checks out `jlevy/homebrew-flowmark`
+   3. Runs a shell script to update `Formula/flowmark.rb`:
+      - Replaces the `version` string with the new tag
+      - Extracts each platform’s SHA256 from `SHA256SUMS` and replaces the corresponding
+        `sha256` line in the formula (matching by target triple in the URL on the
+        preceding line)
+   4. Commits and pushes to `jlevy/homebrew-flowmark` main
+
+   **Authentication:** Requires a GitHub token with push access to the
+   `homebrew-flowmark` repo.
+   Options:
+   - A fine-grained personal access token (PAT) stored as a repo secret (e.g.,
+     `HOMEBREW_TAP_TOKEN`) — simplest approach
+   - A GitHub App installation token — more secure but more setup
+
+   **Job definition (to add to `release.yml`):**
+
+   ```yaml
+   homebrew:
+     runs-on: ubuntu-latest
+     needs: [checksum, prerelease]
+     if: needs.prerelease.outputs.value == 'false'
+
+     steps:
+       - name: Download SHA256SUMS
+         env:
+           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         run: >-
+           gh release download ${{ github.ref_name }}
+           --repo ${{ github.repository }}
+           --pattern SHA256SUMS
+
+       - name: Checkout homebrew tap
+         uses: actions/checkout@v6
+         with:
+           repository: jlevy/homebrew-flowmark
+           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+
+       - name: Update formula
+         run: |
+           VERSION="${{ github.ref_name }}"
+           VERSION="${VERSION#v}"  # strip leading v
+           FORMULA="Formula/flowmark.rb"
+
+           # Update version
+           sed -i "s/version \".*\"/version \"$VERSION\"/" "$FORMULA"
+
+           # Update SHA256 for each target
+           for target in aarch64-apple-darwin x86_64-apple-darwin \
+                         aarch64-unknown-linux-musl x86_64-unknown-linux-musl; do
+             sha=$(grep "$target" SHA256SUMS | awk '{print $1}')
+             # Replace sha256 on the line after the URL containing this target
+             sed -i "/$target/{ n; s/sha256 \"[a-f0-9]*\"/sha256 \"$sha\"/; }" "$FORMULA"
+           done
+
+           cat "$FORMULA"  # debug output
+
+       - name: Commit and push
+         run: |
+           git config user.name "github-actions[bot]"
+           git config user.email "github-actions[bot]@users.noreply.github.com"
+           git add Formula/flowmark.rb
+           git commit -m "Update flowmark to ${{ github.ref_name }}"
+           git push
+   ```
+
+   **Setup required:**
+   - Create a fine-grained PAT with `Contents: Read and write` permission scoped to
+     `jlevy/homebrew-flowmark`
+   - Add it as a repository secret `HOMEBREW_TAP_TOKEN` in `jlevy/flowmark-rs`
+
+4. **Update README.md** — **Pending** — Add `brew install` instructions to the
+   Installation section.
+
+5. **Update `docs/publishing.md`** — **Pending** — Once automation is in place, simplify
+   Step 6 to just verify (no manual formula edits needed).
+
+6. **Publish and validate tap installation** — **DONE** — Homebrew formula is available
+   in `jlevy/homebrew-flowmark` and install flow works via:
+   `brew tap jlevy/flowmark && brew install flowmark`.
+
+#### Formula Structure
+
+```ruby
+class Flowmark < Formula
+  desc "Markdown auto-formatter for clean diffs and semantic line breaks"
+  homepage "https://github.com/jlevy/flowmark-rs"
+  version "X.Y.Z"
+
+  on_macos do
+    if Hardware::CPU.arm?
+      url "https://github.com/jlevy/flowmark-rs/releases/download/vX.Y.Z/flowmark-vX.Y.Z-aarch64-apple-darwin.tar.gz"
+      sha256 "..."
+    else
+      url "https://github.com/jlevy/flowmark-rs/releases/download/vX.Y.Z/flowmark-vX.Y.Z-x86_64-apple-darwin.tar.gz"
+      sha256 "..."
+    end
+  end
+
+  on_linux do
+    if Hardware::CPU.arm?
+      url "https://github.com/jlevy/flowmark-rs/releases/download/vX.Y.Z/flowmark-vX.Y.Z-aarch64-unknown-linux-musl.tar.gz"
+      sha256 "..."
+    else
+      url "https://github.com/jlevy/flowmark-rs/releases/download/vX.Y.Z/flowmark-vX.Y.Z-x86_64-unknown-linux-musl.tar.gz"
+      sha256 "..."
+    end
+  end
+
+  def install
+    bin.install "flowmark"
+  end
+
+  test do
+    system "#{bin}/flowmark", "--version"
+  end
+end
+```
+
+#### Future: homebrew-core Submission
+
+Once the project has sufficient traction (stars, downloads), the formula can be
+submitted to [homebrew-core](https://github.com/Homebrew/homebrew-core) for direct
+`brew install flowmark` without a tap.
+The formula would need to be adapted to build from source
+(`depends_on "rust" => :build`) per homebrew-core policy.
 
 ### Future: CLI Polish — DEFERRED
 
@@ -517,7 +686,7 @@ Do not duplicate feature documentation from the Python project.
 2. **Installation** — install methods:
    - `cargo install flowmark` (from crates.io)
    - Pre-built binaries from GitHub Releases
-   - Homebrew (future)
+   - Homebrew via tap (`brew tap jlevy/flowmark && brew install flowmark`)
 3. **Performance** — brief comparison table (Rust vs Python wall-clock times on
    reference doc, measured with `hyperfine`). See exact-parity spec fmr-aq8o for
    benchmark methodology.
@@ -579,8 +748,8 @@ Adapted from Python project’s `docs/publishing.md`:
 
 ## References
 
-- [Binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md) —
-  Survey of 14 Rust CLI tools’ release practices (the basis for the Phase 5 approach)
+- [Binary distribution research](https://github.com/jlevy/rust-porting-playbook/blob/main/docs/project/research/research-rust-cli-binary-distribution.md)
+  — Survey of 14 Rust CLI tools’ release practices (the basis for the Phase 5 approach)
 - [just release.yaml](https://github.com/casey/just/blob/master/.github/workflows/release.yaml)
   — Primary template for the release workflow
 - [just bin/package](https://github.com/casey/just/blob/master/bin/package) — just’s
