@@ -8,21 +8,46 @@
 
 # flowmark
 
-## Rust Port
+## Rust Port of Python Flowmark
 
-> [!INFO]
->
-> This repository (`flowmark-rs`) is an auto-synced Rust port of the original
-> [Python flowmark](https://github.com/jlevy/flowmark). It is
-> feature-equivalent and fastest for CLI use.
+This is an auto-synced Rust port of the
+[Python version](https://github.com/jlevy/flowmark). The original Python version is
+well tested and this port aims for identical CLI usage and formatting behavior. It is a
+fast binary and best for CLI usage.
 
-## Installing Flowmark (Rust Binary)
+Last sync: **2026-02-19** against **Python v0.6.4**
 
-- Install Rust CLI (source): `cargo install flowmark`
-- Install Rust CLI (binary): `cargo binstall flowmark`
-- Primary command: `flowmark` (`flowmark-rs` is also available in this repo)
 - Port sync process: [`docs/port-sync-playbook.md`](docs/port-sync-playbook.md)
 - Porting methodology: [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook)
+
+## Why the Rust version?
+
+- **Single binary**: install via Cargo, Cargo binstall, or Homebrew.
+- **Fast CLI**: good for large repos and CI pipelines.
+- **Library crate**: embed in Rust tooling via [docs.rs/flowmark](https://docs.rs/flowmark).
+
+## Installing Flowmark (Rust CLI)
+
+### Cargo (source build)
+
+```bash
+cargo install flowmark
+```
+
+### Cargo binstall (prebuilt binary)
+
+```bash
+cargo binstall flowmark
+```
+
+### Homebrew (macOS)
+
+```bash
+brew tap jlevy/flowmark
+brew install flowmark
+```
+
+Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
 
 ---
 

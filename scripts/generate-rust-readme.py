@@ -124,7 +124,38 @@ def read_msrv(repo_root: Path) -> str:
     return msrv
 
 
-def render_readme(template_path: Path, shared_docs_body: str, msrv: str) -> str:
+def read_parity_version(repo_root: Path) -> str:
+    """Read Python parity version from Cargo.toml metadata."""
+    cargo_toml = repo_root / "Cargo.toml"
+    if not cargo_toml.exists():
+        raise FileNotFoundError(f"missing Cargo.toml at {cargo_toml}")
+    metadata = tomllib.loads(cargo_toml.read_text(encoding="utf-8"))
+    package = metadata.get("package", {})
+    parity = package.get("metadata", {}).get("parity", {}).get("version")
+    if not isinstance(parity, str) or not parity:
+        raise ValueError(f"missing [package.metadata.parity].version in {cargo_toml}")
+    return parity
+
+
+def read_last_sync_date(repo_root: Path) -> str:
+    """Read the port last-updated date from docs/port-status.md."""
+    port_status = repo_root / "docs/port-status.md"
+    if not port_status.exists():
+        raise FileNotFoundError(f"missing port status file at {port_status}")
+    text = port_status.read_text(encoding="utf-8")
+    match = re.search(r"^\*\*Last updated:\*\*\s+([0-9]{4}-[0-9]{2}-[0-9]{2})$", text, re.MULTILINE)
+    if not match:
+        raise ValueError(f"missing '**Last updated:** YYYY-MM-DD' in {port_status}")
+    return match.group(1)
+
+
+def render_readme(
+    template_path: Path,
+    shared_docs_body: str,
+    msrv: str,
+    parity_version: str,
+    last_sync_date: str,
+) -> str:
     """Render the README wrapper template with transformed shared docs content."""
     environment = Environment(
         autoescape=False,
@@ -132,7 +163,12 @@ def render_readme(template_path: Path, shared_docs_body: str, msrv: str) -> str:
         keep_trailing_newline=True,
     )
     template = environment.from_string(template_path.read_text(encoding="utf-8"))
-    rendered = template.render(shared_docs_body=shared_docs_body, msrv=msrv)
+    rendered = template.render(
+        shared_docs_body=shared_docs_body,
+        msrv=msrv,
+        parity_version=parity_version,
+        last_sync_date=last_sync_date,
+    )
     if not rendered.endswith("\n"):
         rendered += "\n"
     return rendered
@@ -158,7 +194,13 @@ def main() -> int:
     shared_docs_body = strip_leading_badges(shared_docs_body)
     shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
     shared_docs_body = normalize_shared_docs_for_rust(shared_docs_body)
-    rendered = render_readme(template_path, shared_docs_body, read_msrv(repo_root))
+    rendered = render_readme(
+        template_path,
+        shared_docs_body,
+        read_msrv(repo_root),
+        read_parity_version(repo_root),
+        read_last_sync_date(repo_root),
+    )
     write_atomic(output_path, rendered)
 
     print(f"Generated {output_path} from {shared_docs_path} via {template_path}")
