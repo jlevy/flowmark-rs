@@ -30,6 +30,9 @@ jobs:
       - name: Pre-install tryscript
         run: npm install -g tryscript@latest
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
       - name: Install Python flowmark for parity tests
         run: uv tool install flowmark==${{ env.FLOWMARK_PY_VERSION }}
       - name: Build flowmark binary for tests
