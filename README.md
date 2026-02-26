@@ -13,11 +13,12 @@ scripts/generate-rust-readme.py.
 
 ## Rust Port of Python Flowmark
 
-This is an auto-synced Rust port of the
-[Python version](https://github.com/jlevy/flowmark).
-The original Python version is well tested and this port aims for identical CLI usage
-and formatting behavior.
-It is a fast binary and best for CLI usage.
+> [!TIP]
+> This is an auto-synced Rust port of the
+> [Python version](https://github.com/jlevy/flowmark).
+> The original Python version is the reference implementation.
+> But this port aims for identical CLI usage and formatting behavior.
+> It is a fast binary and best for CLI and IDE usage.
 
 Last sync: **2026-02-19** against **Python v0.6.4**
 
