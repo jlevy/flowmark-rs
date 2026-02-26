@@ -14,11 +14,11 @@ fn main() {
     }
 
     // Canonical docs source for runtime `--docs`: Rust README.
-    // The Rust README is generated as a superset from Python README + Rust preface.
-    // Fallback directly to Python README if README is unavailable.
+    // The Rust README is generated from a shared docs body + Rust wrapper preface.
+    // Fallback to shared docs source if README is unavailable.
     let rust_readme = std::path::Path::new("README.md");
-    let canonical_python_readme = std::path::Path::new("repos/flowmark/README.md");
-    let docs_source = if rust_readme.exists() { rust_readme } else { canonical_python_readme };
+    let shared_docs = std::path::Path::new("repos/flowmark/docs/shared/flowmark-readme-shared.md");
+    let docs_source = if rust_readme.exists() { rust_readme } else { shared_docs };
     let docs_content = std::fs::read_to_string(docs_source)
         .unwrap_or_else(|e| panic!("Failed to read docs source {}: {e}", docs_source.display()));
     let out_dir = std::env::var_os("OUT_DIR").expect("OUT_DIR not set");
@@ -29,5 +29,5 @@ fn main() {
 
     println!("cargo::rerun-if-changed=Cargo.toml");
     println!("cargo::rerun-if-changed=README.md");
-    println!("cargo::rerun-if-changed=repos/flowmark/README.md");
+    println!("cargo::rerun-if-changed=repos/flowmark/docs/shared/flowmark-readme-shared.md");
 }

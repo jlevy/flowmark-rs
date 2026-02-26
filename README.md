@@ -1,4 +1,6 @@
-<!-- Generated from shared docs source (currently repos/flowmark/README.md) via scripts/generate-rust-readme.py. -->
+<!-- Generated from shared docs source (repos/flowmark/docs/shared/flowmark-readme-shared.md) via
+scripts/generate-rust-readme.py.
+-->
 
 [![Follow @ojoshe on X](https://img.shields.io/badge/follow_%40ojoshe-black?logo=x&logoColor=white)](https://x.com/ojoshe)
 [![CI](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml)
@@ -11,20 +13,23 @@
 ## Rust Port of Python Flowmark
 
 This is an auto-synced Rust port of the
-[Python version](https://github.com/jlevy/flowmark). The original Python version is
-well tested and this port aims for identical CLI usage and formatting behavior. It is a
-fast binary and best for CLI usage.
+[Python version](https://github.com/jlevy/flowmark).
+The original Python version is well tested and this port aims for identical CLI usage
+and formatting behavior.
+It is a fast binary and best for CLI usage.
 
 Last sync: **2026-02-19** against **Python v0.6.4**
 
 - Port sync process: [`docs/port-sync-playbook.md`](docs/port-sync-playbook.md)
-- Porting methodology: [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook)
+- Porting methodology:
+  [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook)
 
 ## Why the Rust version?
 
 - **Single binary**: install via Cargo, Cargo binstall, or Homebrew.
 - **Fast CLI**: good for large repos and CI pipelines.
-- **Library crate**: embed in Rust tooling via [docs.rs/flowmark](https://docs.rs/flowmark).
+- **Library crate**: embed in Rust tooling via
+  [docs.rs/flowmark](https://docs.rs/flowmark).
 
 ## Installing Flowmark (Rust CLI)
 
@@ -49,7 +54,10 @@ brew install flowmark
 
 Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
 
----
+* * *
+
+## Why Use Flowmark?
+
 Flowmark is a Markdown auto-formatter, written
 [in Python](https://github.com/jlevy/flowmark) with an auto-synced
 [Rust port](https://github.com/jlevy/flowmark-rs), designed for **better LLM
@@ -63,7 +71,9 @@ workflows, especially when committing documents to git repositories.
 
 You can use Flowmark as a CLI, as an autoformatter in your IDE, or as a Python library.
 
-It supports both [CommonMark](https://spec.commonmark.org/0.31.2/) and
+## Comparison With Other Formatters
+
+Flowmark supports both [CommonMark](https://spec.commonmark.org/0.31.2/) and
 [GitHub-Flavored Markdown (GFM)](https://github.github.com/gfm/) via
 [Marko](https://github.com/frostming/marko).
 
@@ -129,7 +139,6 @@ The main ways to use Flowmark are:
 ## Semantic Line Breaks
 
 > [!TIP]
-> 
 > For an example of what an auto-formatted Markdown doc looks with semantic line breaks
 > looks like, see
 > [the Markdown source](https://github.com/jlevy/flowmark/blob/main/README.md?plain=1)
@@ -138,9 +147,9 @@ The main ways to use Flowmark are:
 Some Markdown auto-formatters never wrap lines, while others wrap at a fixed width.
 Flowmark supports both, via the `--width` option.
 
-Default line wrapping behavior is **88 columns**. The “[90-ish
-columns](https://youtu.be/esZLCuWs_2Y?si=lUj055ROI--6tVU8&t=1288)” compromise was
-popularized by Black and also works well for Markdown.
+Default line wrapping behavior is **88 columns**. The
+“[90-ish columns](https://youtu.be/esZLCuWs_2Y?si=lUj055ROI--6tVU8&t=1288)” compromise
+was popularized by Black and also works well for Markdown.
 
 However, in addition, unlike traditional formatters, Flowmark also offers the option to
 use a heuristic that prefers line breaks at sentence boundaries.
@@ -206,7 +215,6 @@ between `---` delimiters at the front of a file) is always preserved exactly.
 YAML is not normalized.
 
 > [!TIP]
-> 
 > See the [frontmatter format](https://github.com/jlevy/frontmatter-format) repo for
 > more discussion of YAML frontmatter and its benefits.
 
@@ -256,7 +264,7 @@ find . -name "*.md" -exec flowmark --auto {} \;
 The main flags:
 
 | Flag | Description |
-|------|-------------|
+| --- | --- |
 | `-o, --output FILE` | Output file (use `-` for stdout) |
 | `-w, --width WIDTH` | Line width (default: 88, 0 = disable wrapping) |
 | `-p, --plaintext` | Process as plaintext (no Markdown parsing) |
@@ -272,8 +280,8 @@ The main flags:
 File discovery flags:
 
 | Flag | Description |
-|------|-------------|
-| `--list-files` | Print resolved file paths, don't format |
+| --- | --- |
+| `--list-files` | Print resolved file paths, don’t format |
 | `--extend-include PATTERN` | Additional file patterns (e.g., `*.mdx`) |
 | `--exclude PATTERN` | Replace all default exclusions |
 | `--extend-exclude PATTERN` | Add to default exclusions (e.g., `drafts/`) |
@@ -335,7 +343,7 @@ flowmark --auto docs/**/*.md
 
 Without quoting, the shell may expand `**` as a single `*` (matching only one directory
 level) or pass nothing if there are no matches.
-Flowmark uses Python's `pathlib.Path.glob()` internally, which always supports `**` for
+Flowmark uses Python’s `pathlib.Path.glob()` internally, which always supports `**` for
 recursive matching regardless of shell settings.
 
 Note: The `--extend-include` and `--extend-exclude` flags use gitignore-style patterns
@@ -390,11 +398,11 @@ extend-exclude = ["drafts/"]
 ### Config vs `--auto`
 
 The `--auto` flag is a fixed formatting preset that always enables `--semantic`,
-`--cleanups`, `--smartquotes`, and `--ellipses`.
-It ignores formatting settings from config files.
+`--cleanups`, `--smartquotes`, and `--ellipses`. It ignores formatting settings from
+config files.
 
-However, `width` and file discovery settings (excludes, max size, etc.) are always
-read from config regardless of `--auto`.
+However, `width` and file discovery settings (excludes, max size, etc.)
+are always read from config regardless of `--auto`.
 
 When not using `--auto`, all formatting settings can be configured via the config file
 and overridden by explicit CLI flags.
@@ -442,7 +450,7 @@ Markdown formatting tasks.
 ### Agent Skill Options
 
 | Flag | Description |
-|------|-------------|
+| --- | --- |
 | `--skill` | Print skill instructions (SKILL.md content) |
 | `--install-skill` | Install Claude Code skill for flowmark |
 | `--agent-base DIR` | Agent config directory (default: ~/.claude) |
@@ -498,11 +506,4 @@ found most useful.
 ## Project Docs
 
 For development workflows, see [development.md](https://github.com/jlevy/flowmark/blob/main/docs/development.md).
-
-For instructions on publishing to PyPI, see [publishing.md](https://github.com/jlevy/flowmark/blob/main/docs/publishing.md).
-
-* * *
-
-*This project was built from
-[simple-modern-uv](https://github.com/jlevy/simple-modern-uv).*
 
