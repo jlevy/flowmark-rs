@@ -242,8 +242,10 @@ https://github.com/jlevy/flowmark-rs/compare/vPREV...vX.Y.Z
 
 The release process uses two workflows that chain together:
 
-1. **`release.yml`** — Triggered by tag push (`v*`). Builds cross-platform binaries for
-   6 targets:
+1. **`release.yml`** — Triggered by tag push (`*`). Builds cross-platform binaries for
+   6 targets.
+   Stable tags should follow `vX.Y.Z`; non-semver tags are treated as prereleases by
+   the workflow:
 
 | Target | OS | Arch |
 | --- | --- | --- |
@@ -257,9 +259,9 @@ The release process uses two workflows that chain together:
 Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`. A unified
 `SHA256SUMS` file is generated after all builds complete.
 
-2. **`publish.yml`** — Triggered by the GitHub Release “published” event (fired by
-   `release.yml`). Runs the full test suite and publishes to crates.io via OIDC trusted
-   publishing.
+2. **`publish.yml`** — Triggered by the GitHub Release `published` event (typically from
+   `gh release create ...`). Runs the full test suite and publishes to crates.io via
+   OIDC trusted publishing.
 
 Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or `.zip`
 (Windows), which `cargo binstall` auto-detects.
