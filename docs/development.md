@@ -11,6 +11,8 @@ Reusable synchronization methodology lives in the `rust-porting-playbook` submod
   [`repos/rust-porting-playbook/playbooks/port-checklist-update-template.md`](../repos/rust-porting-playbook/playbooks/port-checklist-update-template.md)
 - Agent sync prompt template:
   [`repos/rust-porting-playbook/playbooks/auto-sync-agent-prompt-template.md`](../repos/rust-porting-playbook/playbooks/auto-sync-agent-prompt-template.md)
+- flowmark-rs adapted Mode B runbook:
+  [`docs/port-sync-playbook.md#sync-process-mode-b-upstream-baseline-change`](port-sync-playbook.md#sync-process-mode-b-upstream-baseline-change)
 
 ## Two Release Modes
 

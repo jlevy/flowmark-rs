@@ -105,75 +105,126 @@ After cloning, initialize submodules:
 git submodule update --init --recursive
 ```
 
-## Sync Process
+## Sync Process (Mode B: Upstream baseline change)
 
-When a new Python flowmark version is released:
+Use this section when updating from one published Python release to a newer one (for
+example, `v0.6.4 -> v0.6.5`).
 
-### 1. Update the submodule
+### Canonical checklist translation for flowmark-rs
 
-```bash
-cd repos/flowmark
-git fetch --tags
-git checkout v0.X.Y
-cd ../..
-```
+The reusable playbook checklist uses generic names.
+For this repo, use these concrete equivalents:
 
-### 2. Copy test fixtures
-
-```bash
-cp repos/flowmark/tests/testdocs/testdoc.orig.md tests/testdocs/
-cp repos/flowmark/tests/testdocs/testdoc.expected.*.md tests/testdocs/
-```
-
-### 3. Run tests
-
-```bash
-cargo test --all-features
-```
-
-If tests fail, review the diffs between `testdoc.actual.*.md` and
-`testdoc.expected.*.md` in `tests/testdocs/`. Categorize each difference:
-
-| Category | Action |
+| Canonical checklist item | flowmark-rs equivalent |
 | --- | --- |
-| **Porting bug** | Fix in Rust code |
-| **Library difference** | Add workaround or accept and document |
-| **Python bug fix** | Update Rust to match |
-| **New Python feature** | Port to Rust |
+| `scripts/sync-from-python.sh` | Update `repos/flowmark` submodule tag + copy `tests/testdocs` fixtures |
+| `scripts/validate-parity.sh` | `cargo test --all-features`, `FLOWMARK_PARITY_PYTHON=1 cargo test --test test_parity_cross_binary`, `scripts/corpus-parity-check.sh` |
+| `[package.metadata.python_source]` | `[package.metadata.parity]` in `Cargo.toml` |
+| `docs/version-history.md` / `docs/python-sync-log.md` | `docs/sync-artifacts/*.md`, `README.md` “Last sync”, `docs/port-status.md` |
+| `test-fixtures/` | `tests/testdocs/` and `tests/parity/` |
 
-### 4. Update test mapping
+### End-to-end runbook
 
-Re-discover Python tests, re-discover Rust tests, and check mapping completeness (see
-the [Test Mapping and Parity Verification](#test-mapping-and-parity-verification)
-section below for full details):
+1. **Declare baseline and target**
 
-```bash
-cd python
-uv run flowmark-dev discover-python --local-path ../repos/flowmark
-uv run flowmark-dev discover-rust
-uv run flowmark-dev check-mapping
-cd ..
-```
+   ```bash
+   BASELINE=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
+   TARGET="0.X.Y"
+   echo "Syncing Python baseline v${BASELINE} -> v${TARGET}"
+   ```
 
-The `check-mapping` command will fail if any new Python tests lack a mapping entry.
-For each new test, add an entry to `admin/port-coverage-mapping/test-mapping.yaml` with
-the appropriate Rust counterpart or `status: missing` until ported.
+2. **Create a diff artifact (required before coding)**
 
-### 5. Update version correspondence
+   ```bash
+   mkdir -p docs/sync-artifacts
+   ARTIFACT="docs/sync-artifacts/$(date +%F)-sync-v${BASELINE}-to-v${TARGET}.md"
+   ```
 
-In `Cargo.toml`:
+3. **Update Python submodule and summarize upstream changes**
 
-```toml
-[package.metadata.parity]
-version = "0.X.Y"
-```
+   ```bash
+   cd repos/flowmark
+   git fetch --tags
+   git checkout "v${TARGET}"
+   git log --oneline "v${BASELINE}..v${TARGET}"
+   git diff --name-status "v${BASELINE}..v${TARGET}"
+   cd ../..
+   ```
 
-### 6. Commit everything
+4. **Sync fixtures and generated README inputs**
 
-```bash
-git add repos/flowmark Cargo.toml tests/testdocs/ python/ admin/port-coverage-mapping/
-git commit -m "sync: update Python source to v0.X.Y"
-```
+   ```bash
+   cp repos/flowmark/tests/testdocs/testdoc.orig.md tests/testdocs/
+   cp repos/flowmark/tests/testdocs/testdoc.expected.*.md tests/testdocs/
+   ./scripts/generate-rust-readme.py
+   ```
+
+5. **Triage mapping gaps early (temp manifest)**
+
+   ```bash
+   cd python
+   TMP_PYTHON=$(mktemp)
+   uv run flowmark-dev discover-python --local-path ../repos/flowmark --output "$TMP_PYTHON"
+   uv run flowmark-dev check-mapping \
+     --python-yaml "$TMP_PYTHON" \
+     --rust-yaml ../admin/port-coverage-mapping/rust-tests.yaml \
+     --mapping-yaml ../admin/port-coverage-mapping/test-mapping.yaml || true
+   cd ..
+   ```
+
+   This gives an immediate list of new/changed upstream tests to port or classify.
+
+6. **Port behavior and tests, then refresh checked-in mapping files**
+
+   ```bash
+   cd python
+   uv run flowmark-dev discover-python --local-path ../repos/flowmark
+   uv run flowmark-dev discover-rust
+   uv run flowmark-dev init-mapping
+   uv run flowmark-dev check-mapping
+   cd ..
+   ```
+
+   For each `missing` mapping entry:
+   - add/update Rust tests and set `status: mapped`, or
+   - set `status: excluded` with explicit `notes:` rationale.
+
+7. **Update all parity version references**
+
+   - `Cargo.toml` `[package.metadata.parity].version`
+   - `.github/workflows/ci.yml` `FLOWMARK_PY_VERSION`
+   - `python/src/flowmark_dev_tools/cli.py` `DEFAULT_REF`
+   - `README.md` last sync line
+   - `docs/port-status.md` parity target/status text
+   - `python/tests/test_smoke.py` expected discovery counts when they change
+
+8. **Run full validation gates**
+
+   ```bash
+   cargo fmt --all -- --check
+   cargo build --locked --all-features
+   cargo clippy --locked --all-targets --all-features -- -D warnings
+   cargo test --locked --all-features
+   FLOWMARK_PARITY_PYTHON=1 cargo test --locked --test test_parity_cross_binary
+
+   cd python
+   uv run pytest tests/test_smoke.py -q
+   uv run flowmark-dev check-mapping
+   cd ..
+
+   ./scripts/generate-parity-golden.sh
+   cargo build --release
+   ./scripts/corpus-parity-check.sh
+   ```
+
+9. **Commit and release**
+
+   ```bash
+   git add repos/flowmark Cargo.toml .github/workflows/ci.yml README.md docs/port-status.md tests/testdocs/ tests/parity/ python/ admin/port-coverage-mapping/
+   git commit -m "sync: update Python source to v${TARGET}"
+   ```
+
+   Then follow [`docs/publishing.md`](publishing.md) to cut the Rust release.
 
 ## Test Mapping and Parity Verification
 
@@ -295,7 +346,9 @@ All docs are auto-formatted with flowmark.
 Run locally:
 
 ```bash
-uvx flowmark@latest --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" .
+FLOWMARK_PY_VERSION=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
+uvx "flowmark@${FLOWMARK_PY_VERSION}" --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" .
+git checkout -- README.md
 ```
 
 This also runs in CI as a non-blocking check.
