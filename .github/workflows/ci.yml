@@ -156,6 +156,8 @@ jobs:
           enable-cache: true
       - name: Format markdown with flowmark
         run: uvx flowmark@${{ env.FLOWMARK_PY_VERSION }} --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" --extend-exclude "README.md" .
+      - name: Exclude generated README from markdown drift check
+        run: git checkout -- README.md
       - name: Check for formatting changes
         run: |
           if git diff --exit-code -- '*.md'; then
