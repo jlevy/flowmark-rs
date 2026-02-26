@@ -13,6 +13,13 @@ discrepancies.
 It establishes the methodology, links to the foundational principles, and describes the
 concrete procedures for keeping the Rust port aligned with Python flowmark.
 
+This document is **flowmark-rs-specific** (fixtures, mapping files, local scripts).
+For reusable process, use the canonical playbook docs first:
+
+- [`../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md`](../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md)
+- [`../repos/rust-porting-playbook/playbooks/port-checklist-update-template.md`](../repos/rust-porting-playbook/playbooks/port-checklist-update-template.md)
+- [`../repos/rust-porting-playbook/playbooks/auto-sync-agent-prompt-template.md`](../repos/rust-porting-playbook/playbooks/auto-sync-agent-prompt-template.md)
+
 For a full manual validation run (automated tests + tryscript sanity review + docs/help
 equivalence checks), use:
 [tests/qa/rust-python-parity-e2e.qa.md](../tests/qa/rust-python-parity-e2e.qa.md).
@@ -44,10 +51,11 @@ For deeper context on the porting methodology and decision history:
 
 | Document | What it covers |
 | --- | --- |
-| [8-Phase Playbook](../repos/rust-porting-playbook/reference/python-to-rust-playbook.md) | The complete porting process from assessment through ongoing sync |
-| [Code Review Checklist](../repos/rust-porting-playbook/reference/rust-code-review-checklist.md) | Rust code review checklist for ports |
-| [Mapping Reference](../repos/rust-porting-playbook/reference/python-to-rust-mapping-reference.md) | Comprehensive type/project/dependency mapping tables |
-| [Test Coverage Playbook](../repos/rust-porting-playbook/reference/python-to-rust-test-coverage-playbook.md) | Pre-port test coverage strategy and tooling |
+| [Python-to-Rust Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-playbook.md) | The complete porting process from assessment through ongoing sync |
+| [Sync Release Workflow](../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md) | Two-stage release refresh: Rust-only stabilization, then upstream sync |
+| [Code Review Checklist](../repos/rust-porting-playbook/playbooks/rust-code-review-checklist.md) | Rust code review checklist for ports |
+| [Mapping Reference](../repos/rust-porting-playbook/playbooks/python-to-rust-mapping-reference.md) | Comprehensive type/project/dependency mapping tables |
+| [Test Coverage Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-test-coverage-playbook.md) | Pre-port test coverage strategy and tooling |
 
 ### Flowmark case study
 
