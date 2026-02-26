@@ -1,14 +1,15 @@
-<!-- Generated from shared docs source (repos/flowmark/docs/shared/flowmark-readme-shared.md) via
+<!-- Generated from shared docs source
+(repos/flowmark/docs/shared/flowmark-readme-shared.md) via
 scripts/generate-rust-readme.py.
 -->
+
+# flowmark
 
 [![Follow @ojoshe on X](https://img.shields.io/badge/follow_%40ojoshe-black?logo=x&logoColor=white)](https://x.com/ojoshe)
 [![CI](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/flowmark.svg)](https://crates.io/crates/flowmark)
 [![docs.rs](https://docs.rs/flowmark/badge.svg)](https://docs.rs/flowmark)
 ![MSRV](https://img.shields.io/badge/MSRV-{{ msrv }}-blue)
-
-# flowmark
 
 ## Rust Port of Python Flowmark
 
@@ -31,7 +32,7 @@ Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
 - **Library crate**: embed in Rust tooling via
   [docs.rs/flowmark](https://docs.rs/flowmark).
 
-## Installing Flowmark (Rust CLI)
+## Installing Rust Flowmark CLI
 
 ### Cargo (source build)
 
