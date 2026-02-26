@@ -51,8 +51,9 @@ def parse_args() -> tuple[Path, Path, Path]:
 
 def rewrite_upstream_local_docs_links(markdown: str) -> str:
     """Rewrite local docs links from the shared source to canonical upstream URLs."""
+    # Keep the Rust repo's development workflow link local.
     return re.sub(
-        r"\]\(docs/([^)]+)\)",
+        r"\]\(docs/(?!development\.md)([^)]+)\)",
         rf"]({UPSTREAM_DOCS_BASE_URL}\1)",
         markdown,
     )

@@ -282,8 +282,9 @@ at `repos/rust-porting-playbook/` with these key documents:
 | [Porting Principles](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md) | 8 non-negotiable principles for agent-driven porting |
 | [Porting Rules](../repos/rust-porting-playbook/guidelines/python-to-rust-porting-rules.md) | Type mappings, patterns, and acceptance criteria |
 | [Test Coverage](../repos/rust-porting-playbook/guidelines/test-coverage-for-porting.md) | Test strategy, coverage targets, cross-validation |
-| [8-Phase Playbook](../repos/rust-porting-playbook/reference/python-to-rust-playbook.md) | Step-by-step porting process |
-| [Code Review Checklist](../repos/rust-porting-playbook/reference/rust-code-review-checklist.md) | Rust code review checklist for ports |
+| [Python-to-Rust Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-playbook.md) | Step-by-step porting process |
+| [Sync Release Workflow](../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md) | Two-stage release refresh process for existing ports |
+| [Code Review Checklist](../repos/rust-porting-playbook/playbooks/rust-code-review-checklist.md) | Rust code review checklist for ports |
 
 ## Porting Methodology
 
