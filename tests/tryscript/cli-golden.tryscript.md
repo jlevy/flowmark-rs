@@ -147,7 +147,7 @@ description: Auto-format Markdown with semantic line breaks, smart quotes, and d
 ## Docs: print documentation
 
 ```console
-$ flowmark --docs | rg "^# flowmark$" -m1
+$ flowmark --docs | grep "^# flowmark$" | head -1
 # flowmark
 ```
 
