@@ -18,8 +18,8 @@ No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
 
 ### CI and release process
 
-- Expanded publishing playbook with explicit release workflow sequencing and verification
-  steps
+- Expanded publishing playbook with explicit release workflow sequencing and
+  verification steps
 - Added Homebrew tap update workflow details and validation commands
 - Applied repository-wide Markdown formatting to keep release/process docs consistent
 
