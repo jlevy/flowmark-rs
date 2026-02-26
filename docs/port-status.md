@@ -129,7 +129,7 @@ All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` label
 | --- | --- | --- | --- |
 | **First publish** | P0 | fmr-bfam | Tag `v0.2.0`, create GitHub Release → triggers publish workflow |
 | **Binary release workflow** | P2 | fmr-q3pu | Pre-built binaries via cargo-dist — deferred |
-| **Homebrew tap** | P3 | — | `brew install jlevy/tap/flowmark` — future work |
+| **Homebrew tap** | Complete | — | Live via `brew tap jlevy/flowmark && brew install jlevy/flowmark/flowmark` |
 | **Shell completions** | P3 | — | bash/zsh/fish via `clap_complete` — future work |
 
 ### Release Checklist

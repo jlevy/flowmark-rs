@@ -206,9 +206,13 @@ formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
    brew upgrade flowmark
    # Or for a fresh install:
    brew tap jlevy/flowmark
-   brew install flowmark
-   flowmark --version
+   brew install jlevy/flowmark/flowmark
+   "$(brew --prefix)/bin/flowmark" --version
    ```
+
+   If `flowmark --version` still reports Python `v0.6.4`, your PATH is picking the
+   Python binary first.
+   Check with `type -a flowmark`.
 
 ## Release Notes Format
 

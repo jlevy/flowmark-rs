@@ -51,8 +51,12 @@ cargo binstall flowmark
 
 ```bash
 brew tap jlevy/flowmark
-brew install flowmark
+brew install jlevy/flowmark/flowmark
+"$(brew --prefix)/bin/flowmark" --version
 ```
+
+If `flowmark --version` shows Python `v0.6.4`, your PATH is resolving Python first.
+Use `type -a flowmark` to inspect precedence.
 
 Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
 
@@ -508,4 +512,3 @@ found most useful.
 ## Project Docs
 
 For development workflows, see [development.md](docs/development.md).
-
