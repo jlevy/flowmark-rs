@@ -155,13 +155,13 @@ jobs:
           python-version: "3.14"
           enable-cache: true
       - name: Format markdown with flowmark
-        run: uvx flowmark@${{ env.FLOWMARK_PY_VERSION }} --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" .
+        run: uvx flowmark@${{ env.FLOWMARK_PY_VERSION }} --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" --extend-exclude "README.md" .
       - name: Check for formatting changes
         run: |
           if git diff --exit-code -- '*.md'; then
             echo "All markdown files are properly formatted"
           else
-            echo "::warning::Some markdown files need formatting. Run: uvx flowmark@${FLOWMARK_PY_VERSION} --auto --extend-exclude tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude python/ ."
+            echo "::warning::Some markdown files need formatting. Run: uvx flowmark@${FLOWMARK_PY_VERSION} --auto --extend-exclude tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude python/ --extend-exclude README.md ."
           fi
 
   readme-sync:
