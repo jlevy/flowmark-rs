@@ -251,7 +251,7 @@ All 3 bugs fixed, all 4 previously ignored tests un-ignored and passing.
 ### Phase 4: Code Quality & Cleanup — DONE
 
 - [x] **test_other_escaped_chars**: Added `\$`, `\_`, `\[`/`\]`, `\`` assertions.
-  Updated `test-mapping.yaml` status from `partial` to `mapped`.
+  Updated `test-mapping.yaml`status from`partial`to`mapped`.
 - [x] **Clippy warnings**: Fixed all 70 clippy warnings.
   Zero warnings now.
 
@@ -1440,8 +1440,8 @@ the rendered output.
 **Behavior difference:**
 - **Input:** `` `throw new CLIError(\`${msg}: ${error.message}\`)` `` in table cell
 - **Python output:** Both ``` escapes preserved
-- **Rust output:** Trailing `\`` stripped → `` `throw new CLIError(\`${msg}:
-  ${error.message}`)` ``
+- **Rust output:** Trailing `\`` stripped → `` `throw new
+  CLIError(\`${msg}: ${error.message}`)` ``
 
 **Demonstrated diff (1 instance):**
 

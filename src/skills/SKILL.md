@@ -7,7 +7,8 @@ allowed-tools: Bash(flowmark:*), Read, Write
 
 > **Full documentation: Run `flowmark --docs` for all options and usage.**
 
-Auto-format Markdown with semantic line breaks for clean git diffs and consistent output.
+Auto-format Markdown with semantic line breaks for clean git diffs and consistent
+output.
 
 ## Quick Start
 
@@ -30,7 +31,7 @@ flowmark README.md
 - Converting straight quotes to typographic quotes
 - Consistent Markdown styling across a project
 
-**Don't use flowmark for:**
+**Don’t use flowmark for:**
 - Syntax highlighting or rendering (use a Markdown viewer)
 - Converting between formats (use pandoc)
 - Linting without auto-fix (use markdownlint)
@@ -38,7 +39,7 @@ flowmark README.md
 ## Key Options
 
 | Flag | Purpose |
-|------|---------|
+| --- | --- |
 | `--auto` | Format in-place with all improvements (semantic, smartquotes, ellipses). Requires file/directory args (use `.` for current directory) |
 | `--inplace`, `-i` | Edit file in place |
 | `--semantic`, `-s` | Use semantic (sentence-based) line breaks |
@@ -47,7 +48,7 @@ flowmark README.md
 | `--width WIDTH` | Line width (default: 88, use 0 to disable wrapping) |
 | `--plaintext`, `-p` | Process as plain text instead of Markdown |
 | `--list-spacing` | Control list spacing: preserve, loose, or tight |
-| `--list-files` | Print resolved file paths, don't format (useful for debugging) |
+| `--list-files` | Print resolved file paths, don’t format (useful for debugging) |
 | `--extend-include PAT` | Additional file patterns (e.g., `*.mdx`) |
 | `--extend-exclude PAT` | Add to default exclusions (e.g., `drafts/`) |
 | `--files-max-size BYTES` | Skip files larger than this (default: 1 MiB, 0 = no limit) |
@@ -103,8 +104,8 @@ If your binary name is `flowmark`, use `flowmark --auto ${file}` instead.
 
 ## Semantic Line Breaks
 
-Flowmark's `--semantic` option breaks lines at sentence boundaries instead of at fixed
-widths. This produces cleaner git diffs because editing one sentence doesn't cause
+Flowmark’s `--semantic` option breaks lines at sentence boundaries instead of at fixed
+widths. This produces cleaner git diffs because editing one sentence doesn’t cause
 cascading line changes throughout a paragraph.
 
 Example transformation:

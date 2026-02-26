@@ -26,31 +26,33 @@ between every Python test and its Rust counterpart:
 | `rust-tests.yaml` | 408 Rust test entries (unit + integration) | `flowmark-dev discover-rust` |
 | `test-mapping.yaml` | Hand-maintained 1:1 and 1:N Python→Rust mapping | Manual / agent edits |
 
-**Status:** 292/292 Python tests mapped. CI-enforced.
+**Status:** 292/292 Python tests mapped.
+CI-enforced.
 
 ### How it works
 
-1. **Python discovery** — AST-parses the Python flowmark repo at a pinned release
-   tag, extracts every test function, writes `python-tests.yaml`.
+1. **Python discovery** — AST-parses the Python flowmark repo at a pinned release tag,
+   extracts every test function, writes `python-tests.yaml`.
 
-2. **Rust discovery** — runs `cargo test --list`, writes `rust-tests.yaml`.
-   Idempotent: hand-added entries are preserved on re-generation.
+2. **Rust discovery** — runs `cargo test --list`, writes `rust-tests.yaml`. Idempotent:
+   hand-added entries are preserved on re-generation.
 
-3. **Mapping** — `test-mapping.yaml` maps each Python test to one or more Rust
-   tests. Each entry has a status (`mapped`, `excluded`, `partial`, `missing`).
-   `1:N` mappings are used where a single Python test was split into multiple
-   Rust tests (e.g., `test_ellipses` → 10 Rust functions).
+3. **Mapping** — `test-mapping.yaml` maps each Python test to one or more Rust tests.
+   Each entry has a status (`mapped`, `excluded`, `partial`, `missing`). `1:N` mappings
+   are used where a single Python test was split into multiple Rust tests (e.g.,
+   `test_ellipses` → 10 Rust functions).
 
 4. **CI check** — the `check-mapping` job in `.github/workflows/ci.yml` runs
-   `flowmark-dev check-mapping` after all Rust tests pass. Fails the build if
-   any Python test lacks a mapping entry.
+   `flowmark-dev check-mapping` after all Rust tests pass.
+   Fails the build if any Python test lacks a mapping entry.
 
 ### Extra Rust tests
 
-Rust tests that have no Python counterpart (unit tests for comrak workarounds,
-edge cases, tryscript golden tests, etc.) are logged as INFO, not failures.
-These are legitimate Rust-only tests — the mapping tracks Python→Rust coverage,
-not the other direction.
+Rust tests that have no Python counterpart (unit tests for comrak workarounds, edge
+cases, tryscript golden tests, etc.)
+are logged as INFO, not failures.
+These are legitimate Rust-only tests — the mapping tracks Python→Rust coverage, not the
+other direction.
 
 ### Updating after a Python upstream release
 
@@ -66,8 +68,8 @@ uv run flowmark-dev discover-rust
 uv run flowmark-dev check-mapping
 ```
 
-See [docs/port-sync-playbook.md](../docs/port-sync-playbook.md) for the full
-sync process.
+See [docs/port-sync-playbook.md](../docs/port-sync-playbook.md) for the full sync
+process.
 
 ## Full spec
 

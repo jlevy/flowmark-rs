@@ -242,10 +242,9 @@ https://github.com/jlevy/flowmark-rs/compare/vPREV...vX.Y.Z
 
 The release process uses two workflows that chain together:
 
-1. **`release.yml`** — Triggered by tag push (`*`). Builds cross-platform binaries for
-   6 targets.
-   Stable tags should follow `vX.Y.Z`; non-semver tags are treated as prereleases by
-   the workflow:
+1. **`release.yml`** — Triggered by tag push (`*`). Builds cross-platform binaries for 6
+   targets. Stable tags should follow `vX.Y.Z`; non-semver tags are treated as
+   prereleases by the workflow:
 
 | Target | OS | Arch |
 | --- | --- | --- |

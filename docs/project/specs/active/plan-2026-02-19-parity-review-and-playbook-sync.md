@@ -9,15 +9,16 @@
 ## Overview
 
 This spec consolidates all remaining work to achieve full CLI/feature parity with Python
-flowmark v0.6.4 and to reconcile the project's documentation with the
+flowmark v0.6.4 and to reconcile the project’s documentation with the
 rust-porting-playbook.
 
 It covers two work streams:
 
 1. **Part A: CLI & Feature Parity** — All core features (file resolver, config loading,
-   CLI flags, skill system) have been ported. Tryscript golden tests have been established.
-   Remaining work: housekeeping (stale YAMLs, mapping notes), upstream contributions, and
-   formal acceptance validation.
+   CLI flags, skill system) have been ported.
+   Tryscript golden tests have been established.
+   Remaining work: housekeeping (stale YAMLs, mapping notes), upstream contributions,
+   and formal acceptance validation.
 2. **Part B: Playbook Review & Sync** — Update the porting playbook case study with
    current metrics, integrate lessons learned, fix stale documentation, and backfill 13
    pending observations.
@@ -53,7 +54,7 @@ It covers two work streams:
 | Phase 4: Skill System | **COMPLETE** | `src/skills/mod.rs` (82 LOC), 11 tests passing |
 | Phase 5: Tryscript Golden Tests | **COMPLETE** | 11 tryscript files, 12 Rust test wrappers, CI job |
 | Phase 6: Test Mapping & CI | **MOSTLY COMPLETE** | 292/292 mapped, CI with check-mapping; YAML stale |
-| Phase 7: Upstream Contributions | **NOT STARTED** | Tryscript tests not yet PR'd to Python repo |
+| Phase 7: Upstream Contributions | **NOT STARTED** | Tryscript tests not yet PR’d to Python repo |
 | Phase 8: Playbook Review & Sync | **NOT STARTED** | All playbook docs still stale |
 | Phase 9: Final Acceptance | **MOSTLY MET** | See checklist below |
 
@@ -156,25 +157,30 @@ These are ALL known remaining gaps between Python v0.6.4 and Rust, with nothing 
 - **Python**: `Error: [Errno 2] No such file or directory: 'nonexistent.md'` with exit
   code 2
 - **Rust**: `Error: Path not found: nonexistent.md` with exit code 1
-- **Reason**: `[Errno 2]` is a Python-ism that cannot be meaningfully replicated in Rust.
-  Both messages start with `Error:` and include the filename.
+- **Reason**: `[Errno 2]` is a Python-ism that cannot be meaningfully replicated in
+  Rust. Both messages start with `Error:` and include the filename.
 - **Impact**: Low. Tools parsing stderr would need adjustment, but no user would notice.
-- **Decision**: Accepted difference. Documented in `test_d11_nonexistent_file_error_format`.
+- **Decision**: Accepted difference.
+  Documented in `test_d11_nonexistent_file_error_format`.
 
 #### Gap 2: Version Output Format (Accepted)
 
 - **Python**: `flowmark 0.6.4`
 - **Rust**: `flowmark 0.7.0 (parity: flowmark-py 0.6.4)`
-- **Reason**: Rust version is a different release line. Parity annotation aids debugging.
-- **Impact**: None for typical usage. Only affects `--version` output parsing.
-- **Decision**: Accepted difference. Intentional.
+- **Reason**: Rust version is a different release line.
+  Parity annotation aids debugging.
+- **Impact**: None for typical usage.
+  Only affects `--version` output parsing.
+- **Decision**: Accepted difference.
+  Intentional.
 
 #### Gap 3: D11 Parity Tests Require Both Binaries (Infrastructure)
 
-Five tests in `tests/test_parity_discrepancies.rs` (D11 group) compare Rust binary output
-against Python binary output at runtime. They **pass in CI** (where Python flowmark is
-installed via `uv tool install flowmark==0.6.4`) but **fail locally** when `flowmark`
-(Python) is not in PATH.
+Five tests in `tests/test_parity_discrepancies.rs` (D11 group) compare Rust binary
+output against Python binary output at runtime.
+They **pass in CI** (where Python flowmark is installed via
+`uv tool install flowmark==0.6.4`) but **fail locally** when `flowmark` (Python) is not
+in PATH.
 
 - `test_d11_no_args_error_matches_python`
 - `test_d11_auto_no_args_error_matches_python`
@@ -187,13 +193,13 @@ This is a test infrastructure requirement, not a feature gap.
 #### Gap 4: Stale Rust Test YAML (Housekeeping)
 
 `admin/port-coverage-mapping/rust-tests.yaml` records 408 tests, but `cargo test --list`
-finds 442 tests. 34 tests have been added since the YAML was last regenerated. The YAML
-needs regeneration via `flowmark-dev discover-rust`, and the smoke test assertion in
-`python/tests/test_smoke.py` needs updating from 408 to the new count.
+finds 442 tests. 34 tests have been added since the YAML was last regenerated.
+The YAML needs regeneration via `flowmark-dev discover-rust`, and the smoke test
+assertion in `python/tests/test_smoke.py` needs updating from 408 to the new count.
 
 #### Gap 5: Stale Mapping Notes (Housekeeping)
 
-Three mapping entries reference bugs as "Ignored: known bug" but the bugs are FIXED:
+Three mapping entries reference bugs as “Ignored: known bug” but the bugs are FIXED:
 
 | Bug ID | Test | Actual Status |
 | --- | --- | --- |
@@ -201,20 +207,21 @@ Three mapping entries reference bugs as "Ignored: known bug" but the bugs are FI
 | fmr-4l1x | `test_heading_with_hard_break_in_list` | FIXED |
 | fmr-5ojk | `test_list_item_with_tag_on_continuation_line` | FIXED |
 
-The mapping notes should be updated to remove the "Ignored" language and note the fix.
+The mapping notes should be updated to remove the “Ignored” language and note the fix.
 
 #### Gap 6: Python Source Not Available Locally (Setup)
 
-The original spec references `attic/flowmark/` for Python source, but this directory does
-not exist. Python source lives at `repos/flowmark/` which is populated on demand by
-`flowmark-dev discover-python` (clones from GitHub). Local manual comparison of Python vs
-Rust source requires running `flowmark-dev discover-python --local-path <path>` or
-cloning the Python repo separately.
+The original spec references `attic/flowmark/` for Python source, but this directory
+does not exist. Python source lives at `repos/flowmark/` which is populated on demand by
+`flowmark-dev discover-python` (clones from GitHub).
+Local manual comparison of Python vs Rust source requires running
+`flowmark-dev discover-python --local-path <path>` or cloning the Python repo
+separately.
 
 #### Gap 7: 102 Unmapped Rust Tests (By Design)
 
-`check-mapping` reports 102 Rust tests not referenced in the mapping. These are Rust-only
-additions that have no Python equivalent:
+`check-mapping` reports 102 Rust tests not referenced in the mapping.
+These are Rust-only additions that have no Python equivalent:
 
 - 46 unit tests in `src/` (Comrak workaround tests, PUA encoding, regex tests)
 - 25 edge case tests (`tests/test_edge_cases.rs`)
@@ -246,7 +253,7 @@ This is not a gap. These are extra coverage in Rust beyond what Python has.
 
 - Performance benchmarking (tracked separately as fmr-aq8o)
 - Adding features beyond Python v0.6.4
-- Restructuring the playbook's 8-phase methodology
+- Restructuring the playbook’s 8-phase methodology
 - Adding entirely new playbook documents (only updating existing ones)
 
 ## Background
@@ -282,8 +289,8 @@ The **current** flowmark-rs (this repo) is a fresh reimplementation that achieve
 - 100% of Python tests passing, 0 partial mappings
 - Rust/Python code lines ratio: ~1.00x
 
-The playbook case study docs still describe the **old** port. This spec addresses that
-gap.
+The playbook case study docs still describe the **old** port.
+This spec addresses that gap.
 
 ### Key Discrepancies Found
 
@@ -297,7 +304,7 @@ The playbook README and case study docs describe the **old** flowmark-rs-1 port:
 | Python test mapping | Not tracked | 292 mapped, 0 excluded, 0 missing |
 | Rust/Python LOC ratio (app) | ~1.7x | ~1.0x |
 | Cross-validation | ~95% match | 100% of mapped tests |
-| Workarounds | "14 fixable, 3 unfixable" | Different set (new implementation) |
+| Workarounds | “14 fixable, 3 unfixable” | Different set (new implementation) |
 
 #### D2: Workaround Count Inconsistencies
 
@@ -307,7 +314,7 @@ The current port has a different set of workarounds than the old port.
 #### D3: `porting-checklist.md` is a Stale Duplicate
 
 `docs/project/specs/active/porting-checklist.md` in this repo is a copy of the
-playbook's `reference/python-to-rust-playbook.md`. It may be out of sync.
+playbook’s `reference/python-to-rust-playbook.md`. It may be out of sync.
 
 #### D5: Phase 7C Observations Not Integrated
 
@@ -325,7 +332,7 @@ not yet integrated into the playbook.
 | P1: Dead dependencies | Playbook has no guidance on dependency pruning |
 | P1: Dead error variants | Playbook has no dead-code-detection guidance |
 | P2: Code duplication (fence tracking) | Code review checklist has nothing on duplication |
-| P2: Unnecessary allocations | Code review checklist covers "hot path allocation" |
+| P2: Unnecessary allocations | Code review checklist covers “hot path allocation” |
 | P2: Boolean parameter overload | Playbook recommends options structs |
 | P3: Stale comments ("Same as Black") | Playbook has no Python-reference-cleanup guidance |
 
@@ -340,20 +347,21 @@ not yet integrated into the playbook.
 ### Comprehensive Retrospective → Playbook Action Map
 
 A full retrospective of the porting log (L1-L11), code review (P0-P3), spec analysis,
-and new methodology developed during this port. Every finding is mapped to a specific
-playbook action, target document, and work item (WI-N).
+and new methodology developed during this port.
+Every finding is mapped to a specific playbook action, target document, and work item
+(WI-N).
 
 #### Lessons Learned (L1-L11) → Playbook Principles & Guidelines
 
 | # | Finding | Action | Target Document(s) | WI |
 | --- | --- | --- | --- | --- |
-| F1 | L1: Always verify source language's actual byte output | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
+| F1 | L1: Always verify source language’s actual byte output | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
 | F2 | L2: Use `assert_eq!` with exact output, not weak assertions | ADD technique | `porting-principles-and-antipatterns.md`, `test-coverage-for-porting.md` | WI-5 |
 | F3 | L3: Test edge cases, not just happy path | ADD technique | `test-coverage-for-porting.md` | WI-5 |
 | F4 | L4: Comrak loose/tight classification is recurring bug source | ADD to case study | `flowmark-port-analysis.md` | WI-7 |
 | F5 | L5: Post-merge corpus validation essential | ADD as Principle 9 candidate | `porting-principles-and-antipatterns.md` | WI-5 |
 | F6 | L6: Smart quote context depends on surrounding chars | ADD to case study | `flowmark-port-analysis.md` | WI-7 |
-| F7 | L7: Don't trust CI alone — read the diff | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
+| F7 | L7: Don’t trust CI alone — read the diff | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
 | F8 | L8: Error parity is first-class surface | ADD technique | `python-to-rust-cli-porting.md` | WI-5, WI-9 |
 | F9 | L9: Extract corner-cases from corpus into regression corpus | ADD as Principle 9 candidate | `porting-principles-and-antipatterns.md` | WI-5 |
 | F10 | L10: Red/green discipline for parity fixes | ADD technique | `porting-principles-and-antipatterns.md` | WI-5 |
@@ -409,7 +417,7 @@ playbook action, target document, and work item (WI-N).
 | F40 | Internal cross-reference links may be stale | VERIFY | All playbook docs | WI-11 |
 | F41 | `rust-tests.yaml` stale (408 vs 442) | REGENERATE | `admin/port-coverage-mapping/rust-tests.yaml` | WI-3 |
 | F42 | Smoke test assertions stale | UPDATE | `python/tests/test_smoke.py` | WI-3 |
-| F43 | Mapping notes reference fixed bugs as "Ignored" | CLEAN UP | `admin/port-coverage-mapping/test-mapping.yaml` | WI-3 |
+| F43 | Mapping notes reference fixed bugs as “Ignored” | CLEAN UP | `admin/port-coverage-mapping/test-mapping.yaml` | WI-3 |
 | F44 | `porting-checklist.md` is stale duplicate | REMOVE | `docs/porting-checklist.md` | WI-2 |
 
 ### Document Inventory
@@ -419,7 +427,7 @@ playbook action, target document, and work item (WI-N).
 | Document | Lines | Current Status | Notes |
 | --- | --- | --- | --- |
 | `project/specs/done/porting-plan.md` | 137 | Complete | Updated and moved to specs/done |
-| `porting-checklist.md` | 643 | Duplicate | Copy of playbook's `python-to-rust-playbook.md` |
+| `porting-checklist.md` | 643 | Duplicate | Copy of playbook’s `python-to-rust-playbook.md` |
 | `code-review-2026-02-17.md` | 471 | Current | Fresh review with P0-P3 issues |
 | `specs/active/plan-2026-02-17-exact-parity.md` | 751 | Complete | Comprehensive parity spec |
 | `specs/active/plan-2026-02-17-test-mapping-meta-test.md` | 482 | Implemented | Test mapping infrastructure |
@@ -470,10 +478,10 @@ playbook action, target document, and work item (WI-N).
 
 ### Approach
 
-Part A (CLI parity) is complete. The methodology matched the exact parity spec: port
-each Python module, write tests that match the Python test suite, validate via
-cross-language test mapping, enforce in CI. Remaining Part A work is housekeeping and
-upstream contributions.
+Part A (CLI parity) is complete.
+The methodology matched the exact parity spec: port each Python module, write tests that
+match the Python test suite, validate via cross-language test mapping, enforce in CI.
+Remaining Part A work is housekeeping and upstream contributions.
 
 Part B (playbook sync) is a documentation reconciliation: inventory every document,
 verify against current state, fix discrepancies, backfill lessons.
@@ -496,8 +504,8 @@ All four feature-porting phases have been implemented:
   `--skill`, `--install-skill`, `--agent-base`, `--docs`. Explicit-flag tracking via
   clap `ValueSource`. 21 Rust tests passing (`tests/test_cli_file_discovery.rs`)
 - **Phase 4: Skill System** — `src/skills/mod.rs`, 82 LOC, with `get_skill_content()`,
-  `get_docs_content()`, `install_skill()`. SKILL.md embedded via `include_str!()`.
-  11 Rust tests passing (`tests/test_skill.rs`)
+  `get_docs_content()`, `install_skill()`. SKILL.md embedded via `include_str!()`. 11
+  Rust tests passing (`tests/test_skill.rs`)
 
 ### Phase 5: Tryscript CLI Golden Tests (COMPLETE)
 
@@ -550,8 +558,9 @@ PR tryscript tests and any needed end-to-end tests to the Python flowmark repo
 ### Phase 8: Playbook Review & Sync (NOT STARTED)
 
 Systematically reconcile all documentation in the flowmark-rs project against the
-rust-porting-playbook. This is bidirectional: flowmark-rs docs inform playbook
-improvements, and playbook best practices inform remaining flowmark-rs cleanup.
+rust-porting-playbook.
+This is bidirectional: flowmark-rs docs inform playbook improvements, and playbook best
+practices inform remaining flowmark-rs cleanup.
 
 #### 8.1: Verify Playbook Fix Status
 
@@ -570,21 +579,21 @@ Before making new changes, verify what has already been done.
 
 #### 8.2: Review flowmark-rs Docs Against Current State
 
-Ensure this project's own docs are accurate.
+Ensure this project’s own docs are accurate.
 
-- [x] **`porting-plan.md`**: Updated with "Status: Complete" header, checked acceptance
+- [x] **`porting-plan.md`**: Updated with “Status: Complete” header, checked acceptance
   criteria, verified module mapping against actual `src/` layout, moved to
   `docs/project/specs/done/porting-plan.md`.
-- [ ] **`porting-checklist.md`**: Determine if this should be removed (it's a duplicate
+- [ ] **`porting-checklist.md`**: Determine if this should be removed (it’s a duplicate
   of the playbook). If kept, verify it matches the current playbook version.
   Decision: remove or convert to a project-specific checklist with checked items.
 - [ ] **`code-review-2026-02-17.md`**: Cross-reference all findings against playbook
   best practices. For each finding, note whether the playbook covers it, and if not, flag
   as a playbook gap (ADD).
-- [ ] **Exact parity spec**: Verify "Complete" status is accurate. Check all appendices
-  for correctness.
-- [ ] **Test mapping spec**: Verify "Implemented" status. Check that workflow descriptions
-  match actual `flowmark-dev` CLI behavior.
+- [ ] **Exact parity spec**: Verify “Complete” status is accurate.
+  Check all appendices for correctness.
+- [ ] **Test mapping spec**: Verify “Implemented” status.
+  Check that workflow descriptions match actual `flowmark-dev` CLI behavior.
 - [ ] Check for any `XXX:` comments in flowmark-rs source code that should be
   `HACK:`/`FIXME:` per updated playbook convention
 - [ ] Verify `HACK:` and `FIXME:` comments exist where playbook says they should (all
@@ -595,39 +604,42 @@ Ensure this project's own docs are accurate.
 Update all 7 case study documents to reflect the current port.
 
 - [ ] **`flowmark-port-analysis.md`**: Update metrics (LOC, test counts, ratios).
-  Update "what's automatable" assessment based on this port's experience.
+  Update “what’s automatable” assessment based on this port’s experience.
   Note that the new port used a cross-language test mapping system not in the original.
 
 - [ ] **`flowmark-port-library-choices.md`**: Verify library choices match current
-  `Cargo.toml`. Update comrak version references. Note any new library decisions.
+  `Cargo.toml`. Update comrak version references.
+  Note any new library decisions.
 
 - [ ] **`flowmark-port-decision-log.md`**: Update or add entries for decisions made in
   the new port (e.g., test mapping infrastructure, CI hardening, lint configuration).
   Fix the D7 wrapping solution contradiction identified in plan-2026-02-08.
 
 - [ ] **`flowmark-port-migration-plan.md`**: This is the longest doc (3,339 lines).
-  Decide: update in place, add a "v2 port" appendix, or create a separate doc for the
-  new port's migration narrative.
+  Decide: update in place, add a “v2 port” appendix, or create a separate doc for the
+  new port’s migration narrative.
 
 - [ ] **`flowmark-port-cross-validation.md`**: Update with current cross-validation
-  results (100% mapped tests passing, 0 ignored). Update escape handling table.
+  results (100% mapped tests passing, 0 ignored).
+  Update escape handling table.
 
-- [ ] **`flowmark-port-comrak-bug.md`**: Verify still relevant. Check if any comrak bugs
-  were fixed upstream since the original doc.
+- [ ] **`flowmark-port-comrak-bug.md`**: Verify still relevant.
+  Check if any comrak bugs were fixed upstream since the original doc.
 
 - [ ] **`flowmark-port-wrapping-solution.md`**: Update with current wrapping approach.
   The doc describes two approaches — verify which one the current port uses and update.
 
-- [ ] **Reconcile workaround counts** across all 7 case study docs. Establish a single
-  authoritative count for the current port by grepping `HACK:` comments in source.
+- [ ] **Reconcile workaround counts** across all 7 case study docs.
+  Establish a single authoritative count for the current port by grepping `HACK:`
+  comments in source.
 
 #### 8.4: Review Playbook Reference Docs
 
-Review each reference doc against this port's experience.
+Review each reference doc against this port’s experience.
 
 - [ ] **`python-to-rust-playbook.md`** (core playbook):
   - [ ] Verify effort allocation table sums to 100% (identified as 105% in review)
-  - [ ] Update "Key insight" with data from both ports
+  - [ ] Update “Key insight” with data from both ports
   - [ ] Check Phase 4.3 (submodule setup) — the current port uses `repos/` clones
     instead of submodules; document both approaches
   - [ ] Check Phase 4.6 (version tracking) — verify recommendation matches practice
@@ -648,7 +660,7 @@ Review each reference doc against this port's experience.
   - [ ] Verify `build.rs` code examples compile
   - [ ] Check version tracking recommendations against actual practice
   - [ ] Validate cross-validation script template
-  - [ ] Check 9 critical pitfalls against this port's experience
+  - [ ] Check 9 critical pitfalls against this port’s experience
 
 - [ ] **`rust-cli-best-practices.md`**:
   - [ ] Verify recommended crate versions are current
@@ -675,7 +687,7 @@ Review each reference doc against this port's experience.
 
 #### 8.5: Review Playbook Guidelines
 
-Review each guideline against this port's experience.
+Review each guideline against this port’s experience.
 
 - [ ] **`python-to-rust-porting-rules.md`**:
   - [ ] Check Pitfall #6 (identical wrong/correct examples — identified in review)
@@ -726,15 +738,16 @@ Complete the pending meta-playbook Phase C work.
 #### 8.7: Update Playbook README and Cross-References
 
 - [ ] Update README.md case study metrics table with current port data
-- [ ] Update the "Case studies completed" table
+- [ ] Update the “Case studies completed” table
 - [ ] Verify all cross-references between docs are correct
 - [ ] Check all internal links resolve
-- [ ] Update "validated by N case studies" if applicable
+- [ ] Update “validated by N case studies” if applicable
 
 #### 8.8: Consolidated Work Items
 
 All findings from Phases 8.1-8.7 and the retrospective mapping (F1-F44) have been
-consolidated into 12 discrete work items. Each is bead-sized and has a clear scope.
+consolidated into 12 discrete work items.
+Each is bead-sized and has a clear scope.
 
 **Priority P1 — Prerequisites and Critical Fixes:**
 
@@ -757,7 +770,7 @@ consolidated into 12 discrete work items. Each is bead-sized and has a clear sco
 - Bead: fmr-hasj | Scope: Phase 6 remaining | Repo: flowmark-rs
 - Regenerate `rust-tests.yaml` via `flowmark-dev discover-rust` (F41)
 - Update `python/tests/test_smoke.py` Rust test count assertion (F42)
-- Clean mapping notes for fmr-2tll, fmr-4l1x, fmr-5ojk — remove "Ignored" (F43)
+- Clean mapping notes for fmr-2tll, fmr-4l1x, fmr-5ojk — remove “Ignored” (F43)
 
 **WI-4: Playbook critical factual fixes**
 - Bead: fmr-mzel | Scope: Phase 8.4/8.5 critical items | Repo: playbook
@@ -812,7 +825,7 @@ consolidated into 12 discrete work items. Each is bead-sized and has a clear sco
 - Depends on: WI-1
 - Findings: F4, F6, F34, F36, F37
 - Update all 7 `case-studies/flowmark/*.md` docs with current metrics
-- Add "v2 port" sections with 442 tests, 292 mapped, ~1.0x LOC ratio
+- Add “v2 port” sections with 442 tests, 292 mapped, ~1.0x LOC ratio
 - Reconcile workaround counts across all docs
 - Add PUA placeholder pattern, comrak loose/tight analysis, smart quote analysis
 
@@ -850,9 +863,9 @@ consolidated into 12 discrete work items. Each is bead-sized and has a clear sco
 - Depends on: WI-7
 - Findings: F39, F40
 - Update README.md case study metrics table with current port data
-- Update "Case studies completed" table
+- Update “Case studies completed” table
 - Verify all cross-references and internal links
-- Update "validated by N case studies" text
+- Update “validated by N case studies” text
 
 #### Work Item Dependencies
 
@@ -923,32 +936,33 @@ WI-12 (independent — upstream)
 
 ## Testing Strategy
 
-- **Part A**: Each feature area has tests ported from the corresponding Python test file.
-  Total: 292 mapped Python tests, 442 Rust tests. CI enforces via `check-mapping`
-  (292 mapped, 0 excluded). Tryscript golden tests provide end-to-end CLI validation.
-- **Part B**: Each phase produces a deliverable document or set of changes. Validation by
-  grep/search of playbook files, verification against current `cargo test`,
-  `cargo clippy`, CI status.
+- **Part A**: Each feature area has tests ported from the corresponding Python test
+  file. Total: 292 mapped Python tests, 442 Rust tests.
+  CI enforces via `check-mapping` (292 mapped, 0 excluded).
+  Tryscript golden tests provide end-to-end CLI validation.
+- **Part B**: Each phase produces a deliverable document or set of changes.
+  Validation by grep/search of playbook files, verification against current
+  `cargo test`, `cargo clippy`, CI status.
 
 ## Decisions Made
 
-1. **`porting-checklist.md`: Remove.** It's a stale duplicate of the playbook's
+1. **`porting-checklist.md`: Remove.** It’s a stale duplicate of the playbook’s
    `python-to-rust-playbook.md`. No backward compatibility needed for docs.
 
-2. **Case study versioning: Add "v2 port" sections.** Keep old port data and add v2
+2. **Case study versioning: Add “v2 port” sections.** Keep old port data and add v2
    sections to each case study doc.
 
 3. **Test mapping system: New reference doc.** Create a new reference doc in the
    playbook (e.g., `reference/cross-language-test-mapping.md`) and link from the
-   playbook's Phase 5, the test coverage playbook, and the README.
+   playbook’s Phase 5, the test coverage playbook, and the README.
 
 4. **`porting-plan.md`: Updated and moved to `specs/done/`.** Updated with accurate
-   module layout, checked acceptance criteria, current metrics, and "Status: Complete"
+   module layout, checked acceptance criteria, current metrics, and “Status: Complete”
    header.
 
 5. **Migration plan: Renamed v1, created v2.** Renamed the existing 3,339-line migration
    plan to `flowmark-port-migration-plan-v1.md` with a note pointing to v2. Created new
-   `flowmark-port-migration-plan-v2.md` documenting the current port's architecture.
+   `flowmark-port-migration-plan-v2.md` documenting the current port’s architecture.
 
 ## Open Questions
 
@@ -977,8 +991,7 @@ None remaining. All decisions resolved.
 - Port sync playbook: `docs/port-sync-playbook.md`
 - Playbook repo: `repos/rust-porting-playbook/`
 - Playbook README: `repos/rust-porting-playbook/README.md`
-- Meta-playbook:
-  `repos/rust-porting-playbook/reference/meta-improving-this-playbook.md`
+- Meta-playbook: `repos/rust-porting-playbook/reference/meta-improving-this-playbook.md`
 - Playbook review fixes spec:
   `repos/rust-porting-playbook/docs/project/specs/active/plan-2026-02-08-playbook-review-fixes.md`
 - Comprehensive review spec:

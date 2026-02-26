@@ -122,8 +122,8 @@ in `Usage:`.
 3. `/Users/levy/wrk/github/flowmark-rs/tests/test_tryscript_golden.rs`
    - Register the new tryscript file
 
-4. `/Users/levy/wrk/github/flowmark-rs/repos/flowmark/src/flowmark/cli.py` (Python
-   Phase 3 sync target; separate repo commit)
+4. `/Users/levy/wrk/github/flowmark-rs/repos/flowmark/src/flowmark/cli.py` (Python Phase
+   3 sync target; separate repo commit)
    - Keep Python help aligned with Rust intent and wording where practical
    - Shorten Python epilog/footer overview to match the agreed brief version
 
@@ -145,7 +145,7 @@ in `Usage:`.
    - Generate embedded docs payload at build time (`OUT_DIR/flowmark_docs.md`)
 
 10. `/Users/levy/wrk/github/flowmark-rs/scripts/generate-rust-readme.py`
-   - Generate Rust README as a superset of Python README with a Rust-specific preface
+- Generate Rust README as a superset of Python README with a Rust-specific preface
 
 ## Three-Phase Delivery Plan
 
@@ -172,8 +172,8 @@ Add Rust-side improvements that go beyond current Python behavior:
 Backport Phase 2 improvements from Rust into Python (where they are improvements over
 Python), keeping the two CLIs near-equivalent.
 
-**Implemented 2026-02-25** in Python submodule branch
-`codex/cli-help-sync-2026-02-25` (commit `9fda859`):
+**Implemented 2026-02-25** in Python submodule branch `codex/cli-help-sync-2026-02-25`
+(commit `9fda859`):
 
 1. Python `--help` epilog shortened to concise footer matching Rust intent
 2. Agent guidance callout (`flowmark --skill`) added in help footer

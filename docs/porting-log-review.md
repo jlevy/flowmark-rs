@@ -34,24 +34,24 @@ full mapping.
 
 These are the most important recurring patterns.
 Numbered for cross-reference from individual bug entries.
-Organized from most general (applicable to any project) to most specific (comrak/flowmark
-domain knowledge).
+Organized from most general (applicable to any project) to most specific
+(comrak/flowmark domain knowledge).
 
 ### General engineering and testing
 
 These apply to any software project.
 
-**L7. Don't trust CI alone --- read the diff.** PR #17 passed all 430 tests and all 12
+**L7. Don’t trust CI alone --- read the diff.** PR #17 passed all 430 tests and all 12
 CI checks. The tests themselves were wrong (asserting incorrect behavior).
 CI verifies that tests pass, not that tests are correct.
 
 **L2. Use `assert_eq!` with exact expected output, not
 `assert!(result.contains(...))`.** Weak assertions mask bugs.
-PR #17's D13 test only checked `!result.contains("\n\n>")` and missed that indentation
-was wrong. PR #17's D15 test asserted Python does NOT convert apostrophes after code ---
+PR #17’s D13 test only checked `!result.contains("\n\n>")` and missed that indentation
+was wrong. PR #17’s D15 test asserted Python does NOT convert apostrophes after code ---
 Python actually DOES in some cases.
 
-**L3. Test the edge case, not just the happy path.** PR #17's D12/P6 tests covered
+**L3. Test the edge case, not just the happy path.** PR #17’s D12/P6 tests covered
 standalone paragraph-to-code-fence but not mixed loose/tight lists (D12b). A single test
 with a simple case is not sufficient for features that interact with parser-level
 classification differences.
@@ -60,58 +60,56 @@ classification differences.
 
 These apply when porting any codebase from one language to another.
 
-**L1. Always verify the source language's actual byte output.** Never assume what the
+**L1. Always verify the source language’s actual byte output.** Never assume what the
 source implementation does.
 Run the original binary at the **pinned version** (currently `uvx flowmark@0.6.4`),
-capture output, and compare byte-by-byte with `diff` or `xxd`.
-Never use `@latest` --- the reference version must be fixed so results are reproducible.
-PR #17 claimed "exact parity" but 4 bugs slipped through because tests asserted assumed
+capture output, and compare byte-by-byte with `diff` or `xxd`. Never use `@latest` ---
+the reference version must be fixed so results are reproducible.
+PR #17 claimed “exact parity” but 4 bugs slipped through because tests asserted assumed
 behavior, not verified behavior.
 
 **L5. Post-merge corpus validation is essential.** Unit tests are necessary but
 insufficient. A real-world corpus (here: 623 files in `attic/test-docs/`) catches bugs
 that targeted tests miss.
-Run `diff -rq` between the two implementations' output on the full corpus before claiming
-parity.
+Run `diff -rq` between the two implementations’ output on the full corpus before
+claiming parity.
 
-**L9. Extract corner-case inputs from corpus diffs into a checked-in regression corpus.**
-The full corpus may be too large to commit, but every corpus diff reveals a minimal
-reproducer.
-Extract those files into a small checked-in corpus (e.g., `tests/corpus-regressions/`)
-with a test that runs both implementations and asserts byte-for-byte match.
+**L9. Extract corner-case inputs from corpus diffs into a checked-in regression
+corpus.** The full corpus may be too large to commit, but every corpus diff reveals a
+minimal reproducer. Extract those files into a small checked-in corpus (e.g.,
+`tests/corpus-regressions/`) with a test that runs both implementations and asserts
+byte-for-byte match.
 This turns ephemeral one-off validation into a permanent regression gate.
 
 **L10. Use red/green discipline for parity fixes.** Before writing any fix, first add
 tests (or corpus entries) that **fail** against the current code, confirming the bug is
 real and reproducible.
 Only then write the fix and verify all tests go green.
-This prevents the PR #17 failure mode where tests were written to pass from the start ---
-they never actually validated anything because they asserted the wrong expected output.
-Red-first ensures the test can distinguish broken from fixed.
+This prevents the PR #17 failure mode where tests were written to pass from the start
+--- they never actually validated anything because they asserted the wrong expected
+output. Red-first ensures the test can distinguish broken from fixed.
 
 **L11. Parity tests should be dynamic assertions that two programs behave identically,
 not static assertions about a single expected behavior.** What makes a parity test
-"dynamic" is that it ensures exact matching of two pieces of code, not matching of code
+“dynamic” is that it ensures exact matching of two pieces of code, not matching of code
 against a test assertion.
 A static assertion compares output against a hand-copied string literal --- the copying
-process itself introduces errors (see PR #17 D15).
-A dynamic assertion ensures the two implementations produce identical results, with three
-equally strong variations:
+process itself introduces errors (see PR #17 D15). A dynamic assertion ensures the two
+implementations produce identical results, with three equally strong variations:
 
 1. **Run both and assert equivalent:** Execute both implementations on the same input in
    the test harness and assert `rs_output == py_output` directly.
    The D11 CLI tests do this.
 2. **Run both and auto-compare saved results:** Execute both implementations separately,
    save their outputs, and have an automatic process (e.g., `diff -rq`) assert they are
-   identical.
-   This is how corpus validation works (L5).
+   identical. This is how corpus validation works (L5).
 3. **Shared golden test script:** Maintain a shared input corpus and a test script that
    runs on both codebases, so the same test definition validates both implementations.
 
 All three forms are fundamentally stronger than static assertions because the parity
 gate is code-to-code, not code-to-copied-value.
-Static assertions are still useful as supplementary documentation, but the primary parity
-gate should be one of these dynamic forms wherever practical.
+Static assertions are still useful as supplementary documentation, but the primary
+parity gate should be one of these dynamic forms wherever practical.
 When none is practical (e.g., library-level tests without CLI invocation), capture the
 expected output by running the original program and saving to a fixture file, not by
 guessing.
@@ -124,8 +122,8 @@ Golden-test wildcards (`[..]`) can mask error message bugs.
 
 These are specific to porting from Python/marko to Rust/comrak.
 
-**L4. Comrak's loose/tight classification is a recurring source of bugs.** Comrak marks
-an entire list as "loose" when *any* sibling pair has a blank line.
+**L4. Comrak’s loose/tight classification is a recurring source of bugs.** Comrak marks
+an entire list as “loose” when *any* sibling pair has a blank line.
 Python/marko does per-item classification.
 This has caused D4, D12, D12b, and the tight mode rewrite.
 Always use source positions to verify original intent.
@@ -323,18 +321,18 @@ The lessons in this log relate to them as follows:
 ### Lessons that reinforce existing principles
 
 These lessons are concrete techniques or instances of existing principles.
-They don't need to become new principles --- they're already covered --- but they add
+They don’t need to become new principles --- they’re already covered --- but they add
 project-specific detail.
 
 | Lesson | Reinforces Principle | How |
 | --- | --- | --- |
 | **L2** (use `assert_eq!`, not `contains`) | **P4** (tests must never hide failures) | Specific technique: weak assertions are a form of hidden failure |
 | **L3** (test edge cases) | **P8** (investigate the class, not the instance) | P8 says to enumerate all instances in a category; L3 is the same insight |
-| **L7** (don't trust CI alone) | **P4** (tests must never hide failures) | Tests can be wrong even when CI is green; P4's anti-patterns cover this |
+| **L7** (don’t trust CI alone) | **P4** (tests must never hide failures) | Tests can be wrong even when CI is green; P4’s anti-patterns cover this |
 | **L10** (red/green discipline) | **P8** (disparities must be tested before fixed) | L10 is P8 restated as a workflow: red first, then green |
-| **L1** (verify source byte output) | **P8** (test before fix) + **P4** (don't hide) | Specific technique: use pinned version, byte-by-byte diff |
+| **L1** (verify source byte output) | **P8** (test before fix) + **P4** (don’t hide) | Specific technique: use pinned version, byte-by-byte diff |
 | **L8** (error parity is first-class) | **P1** (parity must be defined crisply) | Error messages/exit codes are a parity surface; P1 says enumerate every dimension |
-| **L11** (dynamic code-to-code assertion) | **P8** (test before fix) + **P4** (don't hide) | Parity gate should be code-to-code, not code-to-copied-value (3 variations) |
+| **L11** (dynamic code-to-code assertion) | **P8** (test before fix) + **P4** (don’t hide) | Parity gate should be code-to-code, not code-to-copied-value (3 variations) |
 
 ### Lessons that should be graduated into principles
 
@@ -351,8 +349,8 @@ They have two gaps:
    This is a fundamentally different validation method that catches bugs targeted tests
    miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
 
-2. **Static vs dynamic assertions.** P8 says "expected output comes from the Python
-   reference" but does not distinguish between a static hand-copied string literal and a
+2. **Static vs dynamic assertions.** P8 says “expected output comes from the Python
+   reference” but does not distinguish between a static hand-copied string literal and a
    dynamic assertion that runs both programs.
    A static assertion tests one expected behavior; a dynamic assertion tests that two
    programs behave identically.
@@ -362,21 +360,17 @@ They have two gaps:
 A candidate Principle 9 would be:
 
 > **Parity gates must be dynamic code-to-code assertions, not static
-> code-to-copied-value assertions.**
-> What makes a parity test "dynamic" is that it ensures two pieces of code produce
-> identical results, rather than comparing one piece of code against a hand-copied
-> expected value.
-> Three equally strong forms:
-> (1) run both implementations in the test harness and assert equivalent output,
-> (2) run both implementations separately, save outputs, and auto-compare
-> (e.g., `diff -rq`),
-> (3) maintain a shared golden test corpus and run the same test script on both
-> codebases.
+> code-to-copied-value assertions.** What makes a parity test “dynamic” is that it
+> ensures two pieces of code produce identical results, rather than comparing one piece
+> of code against a hand-copied expected value.
+> Three equally strong forms: (1) run both implementations in the test harness and
+> assert equivalent output, (2) run both implementations separately, save outputs, and
+> auto-compare (e.g., `diff -rq`), (3) maintain a shared golden test corpus and run the
+> same test script on both codebases.
 > Static assertions (comparing against string literals) are useful as supplementary
 > documentation, but not as the primary parity gate, because the copying process itself
-> introduces errors.
-> Before claiming parity, run both implementations on a large, diverse corpus and diff
-> the output.
+> introduces errors. Before claiming parity, run both implementations on a large, diverse
+> corpus and diff the output.
 > When the corpus reveals a difference, extract the minimal input into a checked-in
 > regression corpus (e.g., `tests/corpus-regressions/`) so the bug can never recur
 > silently.
@@ -385,15 +379,15 @@ A candidate Principle 9 would be:
 
 **L4** (comrak loose/tight classification) and **L6** (smart quote context) are specific
 to the comrak/marko parser difference.
-They belong in this project's log, not in the general porting playbook.
+They belong in this project’s log, not in the general porting playbook.
 
 ## How to Add New Entries
 
 When fixing a parity bug, follow the red/green process (**L10**):
 
-1. **Red:** Extract a minimal reproducer from the corpus diff. Add it to
-   `tests/corpus-regressions/` (**L9**) and/or as a test case. Confirm the test **fails**
-   against current code.
+1. **Red:** Extract a minimal reproducer from the corpus diff.
+   Add it to `tests/corpus-regressions/` (**L9**) and/or as a test case.
+   Confirm the test **fails** against current code.
 2. **Fix:** Implement the fix.
 3. **Green:** Confirm the new test passes, all existing tests still pass, and the full
    corpus diff is clean (`uvx flowmark@0.6.4`, not `@latest` --- **L1**).

@@ -225,8 +225,8 @@ Rust:       "" (0 bytes)
 
 **Severity:** Medium **Files:** `src/formatter/filling.rs` (comrak rendering)
 
-Comrak's AST construction decodes HTML entities (`&amp;` → `&`, `&lt;` → `<`, etc.).
-Python's marko preserves them as-is.
+Comrak’s AST construction decodes HTML entities (`&amp;` → `&`, `&lt;` → `<`, etc.).
+Python’s marko preserves them as-is.
 
 **Reproduction:**
 ```
@@ -245,22 +245,22 @@ error paths. Three code bugs were fixed and five cross-binary parity tests were 
 
 #### Bugs fixed
 
-1. **Duplicate error message in I/O errors** — `Error::Io` used `#[error("I/O error:
-   {0}")]` which included the inner error in Display, then anyhow's `{:#}` chain
-   appended the source again, producing: `"I/O error: No such file or directory (os
-   error 2): No such file or directory (os error 2)"`. Fixed by changing to
-   `#[error("I/O error")]`.
+1. **Duplicate error message in I/O errors** — `Error::Io` used
+   `#[error("I/O error: {0}")]` which included the inner error in Display, then anyhow’s
+   `{:#}` chain appended the source again, producing:
+   `"I/O error: No such file or directory (os error 2): No such file or directory (os error 2)"`.
+   Fixed by changing to `#[error("I/O error")]`.
 
 2. **Missing `--inplace` + stdin validation** — Python rejects `flowmark --inplace -`
    with `"Error: Cannot use 'inplace' with stdin"` (exit 1). Rust silently ignored the
-   flag and processed stdin normally. Fixed by adding validation before the processing
-   loop.
+   flag and processed stdin normally.
+   Fixed by adding validation before the processing loop.
 
 3. **Nonexistent file error format** — Rust produced
    `error: failed to format X: I/O error: No such file or directory (os error 2)` with
-   lowercase prefix and anyhow chain wrapping. Fixed by validating file existence early
-   in `resolve_files()` (matching Python's file_resolver) and producing
-   `Error: Path not found: X`.
+   lowercase prefix and anyhow chain wrapping.
+   Fixed by validating file existence early in `resolve_files()` (matching Python’s
+   file_resolver) and producing `Error: Path not found: X`.
 
 #### Remaining discrepancy (accepted)
 
@@ -274,8 +274,9 @@ error paths. Three code bugs were fixed and five cross-binary parity tests were 
 | Nonexistent file | `Error: [Errno 2] No such file or directory: 'X'` (exit 2) | `Error: Path not found: X` (exit 1) | Semantic only |
 
 The nonexistent file case cannot be byte-for-byte identical because `[Errno 2]` is a
-Python runtime artifact. Both use the `Error:` prefix and include the filename. Exit
-code difference (2 vs 1) is acceptable.
+Python runtime artifact.
+Both use the `Error:` prefix and include the filename.
+Exit code difference (2 vs 1) is acceptable.
 
 #### Parity tests added
 
@@ -294,14 +295,16 @@ with identical arguments and compare stderr output + exit codes:
    messages**, not use wildcards.
 
 2. `TRYSCRIPT_GIT_ROOT` is a tryscript built-in variable (auto-detects nearest `.git`)
-   that cannot be overridden via environment. Attempting to run tryscript against the
-   Python binary by setting `TRYSCRIPT_GIT_ROOT=/nonexistent` silently used the Rust
-   binary anyway. **Cross-binary parity tests must invoke both binaries by explicit
-   path**, not rely on tryscript PATH manipulation.
+   that cannot be overridden via environment.
+   Attempting to run tryscript against the Python binary by setting
+   `TRYSCRIPT_GIT_ROOT=/nonexistent` silently used the Rust binary anyway.
+   **Cross-binary parity tests must invoke both binaries by explicit path**, not rely on
+   tryscript PATH manipulation.
 
 3. Error parity testing was entirely absent from the original parity review (D1-D10
-   focused only on formatting output). CLI error messages are a first-class parity
-   surface that must be tested with the same rigor as formatting output.
+   focused only on formatting output).
+   CLI error messages are a first-class parity surface that must be tested with the same
+   rigor as formatting output.
 
 ## Implementation Plan — COMPLETED
 
@@ -320,7 +323,8 @@ with identical arguments and compare stderr output + exit codes:
 ### Phase 3: Wrapping, plaintext, and normalization (D1, D2, D3, D5, D9, D10) — DONE
 
 - [x] Fix plaintext mode to preserve code fence structure (D1)
-- [x] Fix plaintext word splitting heuristic for "St." (D2)
+- [x] Fix plaintext word splitting heuristic for “St.”
+  (D2)
 - [x] Fix narrow-width `<sup>` tag word splitting (D3)
 - [x] Fix loose list spacing for footnote embedded lists (D5)
 - [x] Fix empty/whitespace input to output trailing newline (D9)

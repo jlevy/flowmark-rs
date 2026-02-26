@@ -282,17 +282,17 @@ Every CLI flag mapped to the tryscript test file(s) that exercise it:
 
 Tests organized into **10 separate tryscript files** by feature area.
 This multi-file organization has several benefits:
-- **Easier to write and review**: Each file focuses on one feature area, making it easier
-  to understand and modify.
+- **Easier to write and review**: Each file focuses on one feature area, making it
+  easier to understand and modify.
 - **Parallel development**: Different files can be worked on independently.
 - **Faster iteration**: Run a single file during development instead of the full suite
   (`npx tryscript run tests/tryscript/formatting.tryscript.md`).
-- **Better failure isolation**: A failing test in one area doesn't block progress in
+- **Better failure isolation**: A failing test in one area doesn’t block progress in
   others.
-- **Clearer organization**: The file name immediately signals what's being tested.
+- **Clearer organization**: The file name immediately signals what’s being tested.
 
-The 10-file split keeps each file manageable (4-14 scenarios each), while the total suite
-is comprehensive:
+The 10-file split keeps each file manageable (4-14 scenarios each), while the total
+suite is comprehensive:
 
 | # | Test File | Scenarios | Description |
 | --- | --- | --- | --- |
@@ -310,8 +310,7 @@ is comprehensive:
 **Total: ~82 scenarios** across 10 files (vs 31 in current single-file suite).
 
 **File naming convention:** All files use `.tryscript.md` extension and live in
-`tests/tryscript/`.
-Feature-area prefix makes alphabetical listing logical.
+`tests/tryscript/`. Feature-area prefix makes alphabetical listing logical.
 
 ### Detailed Test Scenarios
 
@@ -525,8 +524,8 @@ Paragraphs with clear sentence boundaries:
 The tryscript files must work identically for both Rust and Python binaries.
 This imposes the following constraints on test authoring:
 
-1. **Binary selection via PATH only.** The test files never reference `cargo`, `target/`,
-   `uvx`, `pip`, or any build system.
+1. **Binary selection via PATH only.** The test files never reference `cargo`,
+   `target/`, `uvx`, `pip`, or any build system.
    The `path:` frontmatter points to wherever the built binary lives — this is the ONLY
    thing that differs between Rust and Python invocations.
 
@@ -549,9 +548,8 @@ This imposes the following constraints on test authoring:
 
 5. **SKILL.md content divergence is accepted.** The `--skill` output differs between
    Python (`uvx flowmark@latest`) and Rust (`cargo install flowmark`) install
-   instructions.
-   Skill content tests use `[..]` for install-method-specific lines but assert on
-   shared structural elements (frontmatter keys, section headings).
+   instructions. Skill content tests use `[..]` for install-method-specific lines but
+   assert on shared structural elements (frontmatter keys, section headings).
 
 6. **`--docs` content divergence is accepted.** Documentation may differ between repos.
    Tests assert on the presence of key sections, not exact content.
@@ -602,7 +600,7 @@ Key configuration choices:
 - **`NO_COLOR: "1"`**: Disable color output for deterministic matching.
 - **`path`**: `$FLOWMARK_BIN_DIR` adds the correct binary to PATH regardless of
   language.
-- **`before`**: Copy fixtures into the sandbox so file modifications don't affect the
+- **`before`**: Copy fixtures into the sandbox so file modifications don’t affect the
   source tree.
 - **`[VERSION]`**: Pattern to match version strings (avoids asserting on specific
   version numbers that differ between repos).
@@ -623,10 +621,9 @@ Key configuration choices:
 
 ### Phase 2: Tryscript Test Files (Written Against Python)
 
-Write all tryscript files and **validate against the Python binary first.**
-Python flowmark v0.6.4 is the reference implementation — its output defines the golden
-baseline.
-This approach has two benefits:
+Write all tryscript files and **validate against the Python binary first.** Python
+flowmark v0.6.4 is the reference implementation — its output defines the golden
+baseline. This approach has two benefits:
 1. Python validates the test design: if a test fails against Python, the test itself is
    likely wrong (not a bug).
 2. The golden output captured from Python becomes the authoritative expected output that
@@ -661,17 +658,24 @@ This approach has two benefits:
 
 Run the same tryscript files (now validated against Python) against the Rust binary.
 Every failure is either:
+
 - A **Rust bug** to fix (Rust output differs from Python golden baseline), or
-- A **Python bug** discovered by the more thorough test suite (rare, but possible —
-  file an issue in the Python repo)
+
+- A **Python bug** discovered by the more thorough test suite (rare, but possible — file
+  an issue in the Python repo)
 
 - [ ] Run all tryscript tests against the Rust binary
+
 - [ ] Catalogue every failure: Rust bug vs Python bug vs test issue
+
 - [ ] Fix Rust bugs that cause test failures
+
 - [ ] File issues for any Python bugs discovered
+
 - [ ] Verify all tests pass on both macOS and Linux
-- [ ] **All tests pass against Rust.** Both binaries produce identical output on all
-  82 scenarios.
+
+- [ ] **All tests pass against Rust.** Both binaries produce identical output on all 82
+  scenarios.
 
 ### Phase 4: CI Integration (Rust repo)
 
@@ -683,9 +687,9 @@ Every failure is either:
 
 ### Phase 5: Backfill to Python Repo
 
-The tryscript test files and fixtures are designed to be **identical** across both repos.
-This phase copies the entire test suite to the Python `flowmark` repo and integrates it
-into that repo's CI pipeline.
+The tryscript test files and fixtures are designed to be **identical** across both
+repos. This phase copies the entire test suite to the Python `flowmark` repo and
+integrates it into that repo’s CI pipeline.
 Since the tryscript files are binary-agnostic, they should work without modification —
 the only difference is which binary is on `PATH`.
 
@@ -715,7 +719,7 @@ cp -r tests/tryscript/fixtures/ "$PYTHON_REPO/tests/tryscript/fixtures/"
 ```
 
 Files that need `.gitignore` handling in the Python repo (same as Rust repo):
-- `tests/tryscript/fixtures/project/skip/ignored.md` — caught by the fixture's own
+- `tests/tryscript/fixtures/project/skip/ignored.md` — caught by the fixture’s own
   `.gitignore`; must be force-added with `git add -f`
 - `tests/tryscript/fixtures/project/nested/generated/output.md` — caught by the nested
   `.gitignore`; must be force-added with `git add -f`
@@ -723,17 +727,17 @@ Files that need `.gitignore` handling in the Python repo (same as Rust repo):
 #### 5.2: Adapt Tryscript Frontmatter for Python
 
 The tryscript files use a `path:` frontmatter field to locate the binary.
-In the Rust repo, this points to `$TRYSCRIPT_GIT_ROOT/target/debug`.
-For the Python repo, this must point to wherever the `flowmark` binary is installed.
+In the Rust repo, this points to `$TRYSCRIPT_GIT_ROOT/target/debug`. For the Python
+repo, this must point to wherever the `flowmark` binary is installed.
 
 **Option A: Use the system PATH (simplest)**
 
-If `flowmark` is already installed in the Python repo's CI environment (via
+If `flowmark` is already installed in the Python repo’s CI environment (via
 `pip install -e .` or `uv pip install -e .`), it will be on PATH by default.
-In this case, the `path:` frontmatter can either be removed or set to the virtualenv
-bin directory.
+In this case, the `path:` frontmatter can either be removed or set to the virtualenv bin
+directory.
 
-Update each tryscript file's frontmatter from:
+Update each tryscript file’s frontmatter from:
 
 ```yaml
 path:
@@ -759,12 +763,12 @@ path:
   - $FLOWMARK_BIN_DIR
 ```
 
-This is the most portable approach and matches the design in the "Tryscript
-Configuration" section above.
+This is the most portable approach and matches the design in the “Tryscript
+Configuration” section above.
 
 #### 5.3: Add CI Job to Python Repo
 
-Add a tryscript job to the Python repo's CI workflow (e.g., `.github/workflows/ci.yml`
+Add a tryscript job to the Python repo’s CI workflow (e.g., `.github/workflows/ci.yml`
 or equivalent):
 
 ```yaml
@@ -795,7 +799,7 @@ tryscript:
 - Node.js is required for `npx tryscript@latest`
 - The Python binary must be installed and on PATH before tryscript runs
 - `NO_COLOR=1` is set in the tryscript frontmatter, so no CI-level env override needed
-- Force-adding gitignored fixtures may not be needed if they're committed with `-f`
+- Force-adding gitignored fixtures may not be needed if they’re committed with `-f`
   during the initial copy
 
 #### 5.4: Validate All Tests Pass in Python CI
@@ -807,8 +811,8 @@ tryscript:
   npx tryscript@latest run tests/tryscript/
   ```
 - [ ] Verify all 79 scenarios pass (same count as the Rust repo)
-- [ ] Push and confirm the CI job passes in the Python repo's CI pipeline
-- [ ] If any tests fail, investigate whether it's a frontmatter/path issue or a real
+- [ ] Push and confirm the CI job passes in the Python repo’s CI pipeline
+- [ ] If any tests fail, investigate whether it’s a frontmatter/path issue or a real
   parity difference
 
 #### 5.5: Establish Sync Protocol
@@ -820,8 +824,8 @@ Since the test files are identical across repos, changes must be synced:
   All new test scenarios, fixture changes, and golden output updates originate here.
 - **Sync trigger**: After any tryscript change merges to `main` in `flowmark-rs`, the
   same change should be copied to the Python repo.
-- **Sync verification**: After copying, run the tryscript suite against the Python binary
-  to confirm parity.
+- **Sync verification**: After copying, run the tryscript suite against the Python
+  binary to confirm parity.
 - **Divergence handling**: If a test must differ between repos (e.g., due to an accepted
   parity gap), document the divergence in both repos and use `[..]` or `...` patterns to
   accommodate both outputs.
@@ -839,7 +843,7 @@ One entry per tryscript file is sufficient since the files are identical.
 - [ ] Copy all fixture directories to Python repo
 - [ ] Force-add any gitignored fixture files
 - [ ] Adapt `path:` frontmatter for Python binary location
-- [ ] Add tryscript CI job to Python repo's workflow
+- [ ] Add tryscript CI job to Python repo’s workflow
 - [ ] Validate all 79 scenarios pass against the Python binary locally
 - [ ] Validate CI passes in the Python repo
 - [ ] Document the sync protocol in both repos
@@ -854,16 +858,15 @@ One entry per tryscript file is sufficient since the files are identical.
 ## Testing Strategy
 
 The tryscript golden tests ARE the testing strategy — they validate end-to-end CLI
-behavior.
-The process is:
+behavior. The process is:
 
 1. **Python first**: Write tests and validate against the Python reference binary.
    Python output defines the golden baseline.
    If a test fails against Python, the test is probably wrong.
 2. **Rust second**: Run the same tests against Rust.
    Every failure is a parity bug to fix.
-3. **CI enforced**: Both repos run the same tests in CI.
-   A test failure in either repo blocks merge.
+3. **CI enforced**: Both repos run the same tests in CI. A test failure in either repo
+   blocks merge.
 
 **Verification checklist for each test file:**
 1. All scenarios pass against Python with `npx tryscript run <file>`
@@ -875,9 +878,8 @@ The process is:
 ## Cross-Binary Validation Walkthrough
 
 This section describes the concrete process for running the tryscript suite against both
-binaries.
-Since the Python flowmark is already checked out at `attic/flowmark/`, validation is
-straightforward.
+binaries. Since the Python flowmark is already checked out at `attic/flowmark/`,
+validation is straightforward.
 
 ### Setting Up the Python Binary
 
@@ -907,7 +909,7 @@ npx tryscript run tests/tryscript/formatting.tryscript.md
 
 When a test fails against Python, there are two possibilities:
 1. **The test is wrong** (most likely during initial development) — fix the test.
-2. **Python has a bug** — see "Handling Python Bugs" below.
+2. **Python has a bug** — see “Handling Python Bugs” below.
 
 ### Running Against Rust (Phase 3)
 
@@ -959,7 +961,7 @@ formatting, inconsistent behavior), these are recorded separately:
    (not the buggy Python behavior).
 
 3. **Decide on golden output**: For each Python bug, choose one of:
-   - **Python is wrong, Rust is right**: Use Rust's output as golden.
+   - **Python is wrong, Rust is right**: Use Rust’s output as golden.
      Add `[..]` or adjust test to pass for Python until fixed.
      Mark the test with a comment noting the Python bug.
    - **Both are wrong**: Fix Rust first, then use the corrected output as golden.
