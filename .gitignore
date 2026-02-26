@@ -27,6 +27,12 @@ tests/parity/*.actual.*.md
 tests/parity/*.python.*.md
 tests/parity/*.rust.*.md
 
+# Benchmark corpus (generated, ~1000 files)
+benches/corpus/
+
+# Callgrind profiling output
+callgrind-*.out
+
 
 # Added by cargo
 
