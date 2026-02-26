@@ -113,3 +113,8 @@ fn tryscript_formatting() {
 fn tryscript_typography_tests() {
     run_tryscript("typography-tests.tryscript.md");
 }
+
+#[test]
+fn tryscript_help() {
+    run_tryscript("help.tryscript.md");
+}

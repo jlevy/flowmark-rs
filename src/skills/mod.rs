@@ -6,6 +6,8 @@ use std::path::PathBuf;
 
 /// The embedded SKILL.md content.
 pub const SKILL_CONTENT: &str = include_str!("SKILL.md");
+/// Embedded documentation content generated at build time.
+pub const DOCS_CONTENT: &str = include_str!(concat!(env!("OUT_DIR"), "/flowmark_docs.md"));
 
 /// Get the skill (SKILL.md) content.
 pub fn get_skill_content() -> &'static str {
@@ -13,7 +15,7 @@ pub fn get_skill_content() -> &'static str {
 }
 
 /// Get documentation content. Tries to find README.md relative to the
-/// executable, falling back to basic help text.
+/// executable, falling back to embedded README content.
 pub fn get_docs_content() -> String {
     // Try to find README.md relative to the executable
     if let Ok(exe) = std::env::current_exe() {
@@ -33,11 +35,8 @@ pub fn get_docs_content() -> String {
         }
     }
 
-    // Fallback: basic help text
-    "Flowmark: Markdown auto-formatter for clean diffs and semantic line breaks.\n\
-     \n\
-     For full documentation, visit: https://github.com/jlevy/flowmark-rs\n"
-        .to_string()
+    // Fallback: embedded docs content.
+    DOCS_CONTENT.to_string()
 }
 
 /// Install the flowmark skill to the agent configuration directory.

@@ -4,3 +4,6 @@
 [submodule "repos/rust-porting-playbook"]
 	path = repos/rust-porting-playbook
 	url = https://github.com/jlevy/rust-porting-playbook.git
+[submodule "repos/homebrew-flowmark"]
+	path = repos/homebrew-flowmark
+	url = https://github.com/jlevy/homebrew-flowmark.git

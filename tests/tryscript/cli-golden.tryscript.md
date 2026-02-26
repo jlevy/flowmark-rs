@@ -147,8 +147,8 @@ description: Auto-format Markdown with semantic line breaks, smart quotes, and d
 ## Docs: print documentation
 
 ```console
-$ flowmark --docs | head -1
-Flowmark: Markdown auto-formatter for clean diffs and semantic line breaks.
+$ flowmark --docs | grep "^# flowmark$" | head -1
+# flowmark
 ```
 
 ## Stdin: default formatting

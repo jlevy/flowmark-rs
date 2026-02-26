@@ -83,6 +83,24 @@ flowmark --list-files .
 cat document.md | flowmark --semantic > formatted.md
 ```
 
+### VS Code/Cursor (Run on Save)
+
+Install the `emeraldwalk.runonsave` extension and add this to `settings.json`:
+
+```json
+"emeraldwalk.runonsave": {
+  "autoClearConsole": false,
+  "commands": [
+    {
+      "match": "(\\.md|\\.md\\.jinja|\\.mdc)$",
+      "cmd": "flowmark-rs --auto ${file}"
+    }
+  ]
+}
+```
+
+If your binary name is `flowmark`, use `flowmark --auto ${file}` instead.
+
 ## Semantic Line Breaks
 
 Flowmark's `--semantic` option breaks lines at sentence boundaries instead of at fixed

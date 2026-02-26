@@ -21,52 +21,66 @@ mod cli {
     #[command(
         name = "flowmark",
         version,
+        disable_help_flag = true,
         long_version = concat!(
             env!("CARGO_PKG_VERSION"),
             " (parity: flowmark-py ",
             env!("PARITY_VERSION"),
             ")"
         ),
-        about = "Markdown auto-formatter for clean diffs"
+        about = "Flowmark: Better auto-formatting for Markdown and plaintext",
+        next_line_help = false,
+        after_help = "Common usage:
+  flowmark --auto README.md
+  flowmark --auto docs/
+  flowmark --auto .
+  flowmark --list-files .
+
+Agent usage:
+  flowmark --skill
+  Agents should run `flowmark --skill` for full Flowmark usage guidance.
+
+Use `flowmark --docs` for full documentation.
+"
     )]
     #[allow(clippy::struct_excessive_bools)]
     pub struct Args {
-        /// Input files or directories; use `-` for stdin, `.` for current directory
+        /// Input files or directories (required; use `-` for stdin, `.` for current directory)
         pub files: Vec<String>,
 
-        /// Output file (- for stdout)
+        /// Output file (use `-` for stdout)
         #[arg(short, long, default_value = "-")]
         pub output: String,
 
-        /// Line width (0 to disable wrapping)
+        /// Line width to wrap to, or 0 to disable line wrapping
         #[arg(short, long, default_value_t = DEFAULT_WRAP_WIDTH)]
         pub width: usize,
 
-        /// Plaintext mode (no Markdown parsing)
+        /// Process as plaintext (no Markdown parsing)
         #[arg(short, long)]
         pub plaintext: bool,
 
-        /// Semantic (sentence-based) line breaks
+        /// Enable semantic (sentence-based) line breaks (Markdown mode only)
         #[arg(short, long)]
         pub semantic: bool,
 
-        /// Safe cleanups (e.g., unbold headings)
+        /// Enable safe cleanups for common issues (Markdown mode only)
         #[arg(short, long)]
         pub cleanups: bool,
 
-        /// Convert straight quotes to curly quotes
+        /// Convert straight quotes to typographic (curly) quotes (Markdown mode only)
         #[arg(long)]
         pub smartquotes: bool,
 
-        /// Convert ... to ellipsis character
+        /// Convert three dots (...) to ellipsis character (…) (Markdown mode only)
         #[arg(long)]
         pub ellipses: bool,
 
-        /// Control list item spacing
+        /// Control list spacing
         #[arg(long, value_enum, default_value_t = ListSpacing::Preserve)]
         pub list_spacing: ListSpacing,
 
-        /// Edit files in place
+        /// Edit files in place (ignores --output)
         #[arg(short, long)]
         pub inplace: bool,
 
@@ -74,7 +88,7 @@ mod cli {
         #[arg(long)]
         pub nobackup: bool,
 
-        /// Shortcut for --inplace --nobackup --semantic --cleanups --smartquotes --ellipses
+        /// Convenience preset for full auto-formatting; requires at least one file or directory argument
         #[arg(long)]
         pub auto: bool,
 
@@ -82,50 +96,63 @@ mod cli {
         #[arg(short, long)]
         pub verbose: bool,
 
+        /// Print help
+        #[arg(
+            short = 'h',
+            long = "help",
+            action = clap::ArgAction::HelpShort
+        )]
+        pub help: Option<bool>,
+
         // --- File discovery options ---
         /// Additional file patterns to include (e.g., '*.mdx'). Can be repeated
-        #[arg(long, value_name = "PATTERN")]
+        #[arg(long, value_name = "PATTERN", help_heading = "File Discovery Options")]
         pub extend_include: Vec<String>,
 
         /// Replace all default exclusion patterns. Can be repeated
-        #[arg(long, value_name = "PATTERN")]
+        #[arg(long, value_name = "PATTERN", help_heading = "File Discovery Options")]
         pub exclude: Option<Vec<String>>,
 
         /// Add to default exclusion patterns (e.g., 'drafts/'). Can be repeated
-        #[arg(long, value_name = "PATTERN")]
+        #[arg(long, value_name = "PATTERN", help_heading = "File Discovery Options")]
         pub extend_exclude: Vec<String>,
 
         /// Disable .gitignore integration
-        #[arg(long)]
+        #[arg(long, help_heading = "File Discovery Options")]
         pub no_respect_gitignore: bool,
 
         /// Apply exclusion patterns even to files named explicitly on the command line
-        #[arg(long)]
+        #[arg(long, help_heading = "File Discovery Options")]
         pub force_exclude: bool,
 
-        /// Print resolved file paths without formatting
-        #[arg(long)]
+        /// Print resolved file paths without formatting; requires at least one file or directory argument
+        #[arg(long, help_heading = "File Discovery Options")]
         pub list_files: bool,
 
         /// Skip files larger than this size in bytes (0 = no limit)
-        #[arg(long, default_value_t = 1_048_576, value_name = "BYTES")]
+        #[arg(
+            long,
+            default_value_t = 1_048_576,
+            value_name = "BYTES",
+            help_heading = "File Discovery Options"
+        )]
         pub files_max_size: u64,
 
         // --- Agent skill options ---
         /// Print skill instructions (SKILL.md content) for Claude Code
-        #[arg(long)]
+        #[arg(long, help_heading = "Agent Options")]
         pub skill: bool,
 
         /// Install Claude Code skill for flowmark
-        #[arg(long)]
+        #[arg(long, help_heading = "Agent Options")]
         pub install_skill: bool,
 
         /// Agent config directory for skill installation (default: ~/.claude)
-        #[arg(long, value_name = "DIR")]
+        #[arg(long, value_name = "DIR", help_heading = "Agent Options")]
         pub agent_base: Option<String>,
 
         /// Print full documentation
-        #[arg(long)]
+        #[arg(long, help_heading = "Agent Options")]
         pub docs: bool,
     }
 

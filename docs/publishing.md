@@ -8,26 +8,25 @@ This is the end-to-end process, from version bump through crates.io publication.
 
 ### GitHub CLI (`gh`)
 
-The `gh` CLI is required for creating releases and monitoring CI.
-Verify it is installed and authenticated:
+The `gh` CLI is required for creating releases and monitoring CI. Verify it is installed
+and authenticated:
 
 ```bash
 gh auth status
 ```
 
-Expected: "Logged in to github.com" with your account.
+Expected: “Logged in to github.com” with your account.
 Required token scopes: `repo`, `workflow`.
 
 If `gh` is not set up, install it from https://cli.github.com/ and authenticate with
 `gh auth login` or by setting the `GH_TOKEN` environment variable.
 
 **Agent note:** In Claude Code Cloud sessions, `gh` is auto-installed by the
-SessionStart hook.
-If it isn't working, run `tbd shortcut setup-github-cli`.
+SessionStart hook. If it isn’t working, run `tbd shortcut setup-github-cli`.
 
 ### Repo variable
 
-Many `gh` commands need `--repo` when the git remote URL doesn't point directly at
+Many `gh` commands need `--repo` when the git remote URL doesn’t point directly at
 GitHub (e.g., in Claude Code Cloud sessions using a local proxy).
 Set it once:
 
@@ -66,7 +65,7 @@ Use `--repo $REPO` on all `gh` commands below.
 
 2. Update `CHANGELOG.md`:
    - Move items from `[Unreleased]` into a new version section
-   - Add the new version's comparison link at the bottom
+   - Add the new version’s comparison link at the bottom
    - Follow the release notes guidelines (`tbd guidelines release-notes-guidelines`)
 
 3. Verify the crate packages correctly:
@@ -127,26 +126,87 @@ EOF
 ```
 
 This triggers two workflows:
-- **`release.yml`** builds cross-platform binaries and uploads them to the release
-  (see [Binary Release Workflow](#binary-release-workflow) below).
+- **`release.yml`** builds cross-platform binaries and uploads them to the release (see
+  [Binary Release Workflow](#binary-release-workflow) below).
 - **`publish.yml`** runs the test suite and publishes to crates.io via OIDC trusted
   publishing.
 
 ## Step 5: Verify Publication
 
-1. Watch the publish workflow:
+1. Watch both workflows:
 
    ```bash
+   # Binary release workflow (builds archives + SHA256SUMS)
+   gh run list --repo $REPO --workflow=release.yml --limit 1
+   gh run watch --repo $REPO <run-id>
+
+   # Publish workflow (crates.io)
    gh run list --repo $REPO --workflow=publish.yml --limit 1
    gh run watch --repo $REPO <run-id>
    ```
 
-2. Verify on crates.io: https://crates.io/crates/flowmark
+2. Verify release artifacts (6 archives + SHA256SUMS):
 
-3. Test installation:
+   ```bash
+   gh release view vX.Y.Z --repo $REPO --json assets --jq '.assets[].name'
+   ```
+
+3. Verify on crates.io: https://crates.io/crates/flowmark
+
+4. Test installation methods:
 
    ```bash
    cargo install flowmark
+   flowmark --version
+
+   # If cargo-binstall is installed:
+   cargo binstall flowmark --force
+   flowmark --version
+   ```
+
+## Step 6: Update Homebrew Tap
+
+After the release workflow completes and all binaries are uploaded, update the Homebrew
+formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
+(tracked as a submodule at `repos/homebrew-flowmark`).
+
+1. Download the SHA256SUMS from the new release:
+
+   ```bash
+   gh release download vX.Y.Z --repo $REPO --pattern SHA256SUMS --dir /tmp
+   cat /tmp/SHA256SUMS
+   ```
+
+2. Update `repos/homebrew-flowmark/Formula/flowmark.rb`:
+   - Update `version` to the new version
+   - Update each `sha256` with the corresponding value from SHA256SUMS
+
+3. Commit and push:
+
+   ```bash
+   cd repos/homebrew-flowmark
+   git add Formula/flowmark.rb
+   git commit -m "Update flowmark to vX.Y.Z"
+   git push origin main
+   cd ../..
+   ```
+
+4. Update the submodule reference in flowmark-rs (optional — can be batched with the
+   next commit):
+
+   ```bash
+   git add repos/homebrew-flowmark
+   git commit -m "chore: update homebrew-flowmark submodule"
+   ```
+
+5. Test the tap:
+
+   ```bash
+   brew update
+   brew upgrade flowmark
+   # Or for a fresh install:
+   brew tap jlevy/flowmark
+   brew install flowmark
    flowmark --version
    ```
 
@@ -178,27 +238,27 @@ https://github.com/jlevy/flowmark-rs/compare/vPREV...vX.Y.Z
 
 The release process uses two workflows that chain together:
 
-1. **`release.yml`** — Triggered by tag push (`v*`).
-   Builds cross-platform binaries for 6 targets:
+1. **`release.yml`** — Triggered by tag push (`v*`). Builds cross-platform binaries for
+   6 targets:
 
-   | Target | OS | Arch |
-   | --- | --- | --- |
-   | `x86_64-unknown-linux-musl` | Linux | x86_64 |
-   | `aarch64-unknown-linux-musl` | Linux | ARM64 |
-   | `x86_64-apple-darwin` | macOS | x86_64 |
-   | `aarch64-apple-darwin` | macOS | ARM64 |
-   | `x86_64-pc-windows-msvc` | Windows | x86_64 |
-   | `aarch64-pc-windows-msvc` | Windows | ARM64 |
+| Target | OS | Arch |
+| --- | --- | --- |
+| `x86_64-unknown-linux-musl` | Linux | x86_64 |
+| `aarch64-unknown-linux-musl` | Linux | ARM64 |
+| `x86_64-apple-darwin` | macOS | x86_64 |
+| `aarch64-apple-darwin` | macOS | ARM64 |
+| `x86_64-pc-windows-msvc` | Windows | x86_64 |
+| `aarch64-pc-windows-msvc` | Windows | ARM64 |
 
-   Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`.
-   A unified `SHA256SUMS` file is generated after all builds complete.
+Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`. A unified
+`SHA256SUMS` file is generated after all builds complete.
 
-2. **`publish.yml`** — Triggered by the GitHub Release "published" event (fired by
-   `release.yml`).
-   Runs the full test suite and publishes to crates.io via OIDC trusted publishing.
+2. **`publish.yml`** — Triggered by the GitHub Release “published” event (fired by
+   `release.yml`). Runs the full test suite and publishes to crates.io via OIDC trusted
+   publishing.
 
-Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or
-`.zip` (Windows), which `cargo binstall` auto-detects.
+Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or `.zip`
+(Windows), which `cargo binstall` auto-detects.
 
 ### Verifying checksums
 
@@ -210,8 +270,7 @@ shasum -a 256 -c SHA256SUMS --ignore-missing
 ## Trusted Publishing (OIDC)
 
 The publish workflow uses OpenID Connect (OIDC) trusted publishing to authenticate with
-crates.io.
-This means no `CARGO_REGISTRY_TOKEN` secret is needed in the repository.
+crates.io. This means no `CARGO_REGISTRY_TOKEN` secret is needed in the repository.
 
 To set this up (one-time):
 
@@ -223,17 +282,17 @@ To set this up (one-time):
 
 ## Troubleshooting
 
-**`gh` commands fail with "none of the git remotes configured...":**
-Use `--repo jlevy/flowmark-rs` on all `gh` commands.
+**`gh` commands fail with “none of the git remotes configured...”:** Use
+`--repo jlevy/flowmark-rs` on all `gh` commands.
 This is required when the git remote uses a proxy URL (e.g., Claude Code Cloud).
 
-**Publish fails with authentication error:**
-Verify trusted publishing is configured on crates.io (see above).
+**Publish fails with authentication error:** Verify trusted publishing is configured on
+crates.io (see above).
 
-**Publish fails with "crate already exists":**
-The version in `Cargo.toml` must be higher than the latest published version.
+**Publish fails with “crate already exists”:** The version in `Cargo.toml` must be
+higher than the latest published version.
 Check: https://crates.io/crates/flowmark/versions
 
-**Tests fail in publish workflow:**
-The publish workflow runs `cargo test --locked --all-features` before publishing.
+**Tests fail in publish workflow:** The publish workflow runs
+`cargo test --locked --all-features` before publishing.
 Fix the failing tests, push to main, and create a new release.

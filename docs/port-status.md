@@ -244,6 +244,7 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 | --- | --- |
 | [docs/publishing.md](publishing.md) | Release process, crates.io, trusted publishing |
 | [docs/port-sync-playbook.md](port-sync-playbook.md) | Sync with Python upstream, porting methodology, test mapping procedures |
+| [tests/qa/rust-python-parity-e2e.qa.md](../tests/qa/rust-python-parity-e2e.qa.md) | Manual end-to-end QA playbook for parity, tryscript sanity, and docs/version alignment |
 | [admin/](../admin/) | Port administration: test mapping data, dev tools overview |
 
 ### Specifications (Active)

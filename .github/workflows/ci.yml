@@ -50,6 +50,9 @@ jobs:
       - name: Pre-install tryscript
         run: npm install -g tryscript@latest
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
       - name: Install Python flowmark for parity tests
         run: uv tool install flowmark==${{ env.FLOWMARK_PY_VERSION }}
       - name: Build flowmark binary for tryscript tests
@@ -109,6 +112,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
       - name: Install Python flowmark for parity tests
         run: uv tool install flowmark==${{ env.FLOWMARK_PY_VERSION }}
       - name: Build flowmark binary for parity tests
@@ -145,6 +151,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
       - name: Format markdown with flowmark
         run: uvx flowmark@latest --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" .
       - name: Check for formatting changes
@@ -155,6 +164,22 @@ jobs:
             echo "::warning::Some markdown files need formatting. Run: uvx flowmark@latest --auto --extend-exclude tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude python/ ."
           fi
 
+  readme-sync:
+    name: README generation sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
+      - name: Regenerate README
+        run: ./scripts/generate-rust-readme.py
+      - name: Verify README is in sync
+        run: git diff --exit-code -- README.md
+
   check-mapping:
     name: Test mapping check
     runs-on: ubuntu-latest
@@ -162,6 +187,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
       - name: Install Python dev tools
         working-directory: python
         run: uv sync --group dev
