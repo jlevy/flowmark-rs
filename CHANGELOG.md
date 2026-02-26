@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased][unreleased]
 
+## [0.2.4] (parity: flowmark-py 0.6.4)
+
+Release process and documentation hardening release.
+No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
+
+### Improvements
+
+- Clarified and standardized Homebrew installation guidance across README and publishing
+  docs
+- Tightened CLI help text and usage footer for clearer command-line guidance
+- Added and documented README generation sync checks so generated docs stay in lockstep
+
+### CI and release process
+
+- Expanded publishing playbook with explicit release workflow sequencing and verification
+  steps
+- Added Homebrew tap update workflow details and validation commands
+- Applied repository-wide Markdown formatting to keep release/process docs consistent
+
+### Dependencies
+
+- Bumped `clap` to `4.5.60`
+- Bumped `tempfile` to `3.26.0`
+- Bumped `anyhow` to `1.0.102`
+
 ## [0.2.3] (parity: flowmark-py 0.6.4)
 
 Fixes release workflow for cross-compiled Linux ARM64 binaries.
@@ -100,7 +125,8 @@ Complete Rust port with full behavioral parity to Python flowmark v0.6.4.
 
 Early development release.
 
-[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.3...HEAD
+[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.4...HEAD
+[0.2.4]: https://github.com/jlevy/flowmark-rs/compare/v0.2.3...v0.2.4
 [0.2.3]: https://github.com/jlevy/flowmark-rs/compare/v0.2.2...v0.2.3
 [0.2.2]: https://github.com/jlevy/flowmark-rs/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/jlevy/flowmark-rs/compare/v0.2.0...v0.2.1
