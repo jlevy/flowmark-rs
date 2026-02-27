@@ -35,19 +35,18 @@ Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
 
 ### Performance
 
-Latest local cross-formatter validation on a 928-file corpus (23 MB, macOS arm64):
+Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB):
 
-| Formatter | Workload | Mean |
-| --- | --- | --- |
-| dprint (`--incremental=false`) | fresh format | 0.48 s |
-| **flowmark-rs** (`--auto`) | fresh format | **0.76 s** |
-| dprint (`--incremental=false`) | re-format | 0.36 s |
-| **flowmark-rs** (`--auto`) | re-format | **0.67 s** |
-| dprint (incremental default) | re-format | 0.03 s |
+| Rank | Formatter | Mean (fresh) | Relative |
+| --- | --- | --- | --- |
+| 1 | dprint | 0.37 s | 1.0x |
+| 2 | **flowmark-rs** | **0.73 s** | **2.0x** |
+| 3 | markdownfmt | 0.95 s | 2.6x |
+| 4 | prettier | 38.0 s | 103x |
+| 5 | flowmark-py | ~48 s | ~130x |
+| 6 | mdformat | 72.9 s | 197x |
 
-The remaining fresh/re-format gap is now mostly in per-file formatting cost plus
-incremental caching behavior. dprint's warm incremental cache remains significantly
-faster on unchanged re-runs.
+flowmark-rs is currently the #2 fastest formatter in this comparison set.
 
 The Rust port is **10–17x faster** than the Python reference implementation:
 
