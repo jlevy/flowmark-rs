@@ -16,6 +16,26 @@
 
 Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_comparison.sh`.
 
+### Local Re-Validation Snapshot (2026-02-27, macOS arm64)
+
+After updating the benchmark harness to generate an exact-size corpus and avoid filename
+collisions, a local rerun on 928 markdown files (23 MB) produced:
+
+| Formatter | Workload | Mean |
+| --- | --- | --- |
+| dprint (`--incremental=false`) | fresh format | 0.48 s |
+| **flowmark-rs** (`--auto`) | fresh format | **0.76 s** |
+| dprint (`--incremental=false`) | re-format | 0.36 s |
+| **flowmark-rs** (`--auto`) | re-format | **0.67 s** |
+| dprint (incremental default) | re-format | 0.03 s |
+
+Interpretation:
+
+- Fresh formatting remains in the same order of magnitude, with dprint ahead on this corpus.
+- Re-format throughput is still dominated by incremental caching behavior.
+- Flowmark currently re-processes unchanged files; dprint skips almost all work when its
+  incremental cache is warm.
+
 ### Results: 928-File Batch Formatting
 
 Updated with v0.3.0 parallel results. All formatters run on the same corpus of 928

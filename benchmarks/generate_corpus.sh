@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Generate a benchmark corpus of ~1,000 Markdown files in a deep directory tree.
-# Uses all .md files from the repo (tests, docs, README) as source material.
+# Generate a benchmark corpus of markdown files in a deep directory tree.
+# Uses repository .md files as source material and produces exactly target_count files.
 #
 # Usage: ./benchmarks/generate_corpus.sh [target_count]
-#   target_count: approximate number of files to generate (default: 1000)
+#   target_count: number of files to generate (default: 1000)
 
 set -euo pipefail
 
@@ -11,6 +11,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CORPUS_DIR="$SCRIPT_DIR/corpus"
 TARGET_COUNT="${1:-1000}"
+
+if ! [[ "$TARGET_COUNT" =~ ^[0-9]+$ ]] || [ "$TARGET_COUNT" -le 0 ]; then
+    echo "ERROR: target_count must be a positive integer (got: $TARGET_COUNT)" >&2
+    exit 1
+fi
 
 echo "=== Generating benchmark corpus ==="
 echo "Target: ~$TARGET_COUNT files"
@@ -41,51 +46,49 @@ if [ "$SOURCE_COUNT" -eq 0 ]; then
     exit 1
 fi
 
-# Calculate how many full sets we need
-# Each "set" is one copy of all source files
-SETS_NEEDED=$(( (TARGET_COUNT + SOURCE_COUNT - 1) / SOURCE_COUNT ))
-FILES_PER_BATCH="$SOURCE_COUNT"
-# Organize into batches of 5 sets each, nested 3 levels deep
-SETS_PER_BATCH=5
-BATCHES_NEEDED=$(( (SETS_NEEDED + SETS_PER_BATCH - 1) / SETS_PER_BATCH ))
+SET_SIZE=100
+TOTAL_SETS=$(( (TARGET_COUNT + SET_SIZE - 1) / SET_SIZE ))
+echo "Plan: $TARGET_COUNT files across $TOTAL_SETS sets (set size: $SET_SIZE)"
 
-echo "Plan: $SETS_NEEDED sets of $SOURCE_COUNT files across $BATCHES_NEEDED batches"
+for i in $(seq 0 $((TARGET_COUNT - 1))); do
+    src_index=$((i % SOURCE_COUNT))
+    src_file="${SOURCE_FILES[$src_index]}"
 
-total_files=0
-set_idx=0
+    set_idx=$((i / SET_SIZE))
+    batch_idx=$((set_idx / 5))
+    set_in_batch=$((set_idx % 5))
 
-for batch in $(seq 0 $((BATCHES_NEEDED - 1))); do
-    batch_dir=$(printf "$CORPUS_DIR/batch_%03d" "$batch")
-    for set_in_batch in $(seq 0 $((SETS_PER_BATCH - 1))); do
-        if [ "$set_idx" -ge "$SETS_NEEDED" ]; then
-            break 2
-        fi
-        set_dir=$(printf "$batch_dir/set_%02d" "$set_in_batch")
-        # Add a subdirectory level for depth
-        sub_idx=$((set_idx % 4))
-        case $sub_idx in
-            0) sub_path="docs" ;;
-            1) sub_path="content/deep" ;;
-            2) sub_path="notes/archive" ;;
-            3) sub_path="pages" ;;
-        esac
-        dest_dir="$set_dir/$sub_path"
-        mkdir -p "$dest_dir"
+    batch_dir=$(printf "$CORPUS_DIR/batch_%03d" "$batch_idx")
+    set_dir=$(printf "$batch_dir/set_%02d" "$set_in_batch")
 
-        for src_file in "${SOURCE_FILES[@]}"; do
-            # Preserve original filename but prefix with set index to avoid collisions
-            basename_file="$(basename "$src_file")"
-            cp "$src_file" "$dest_dir/$basename_file"
-            total_files=$((total_files + 1))
-        done
+    # Add a subdirectory level for depth
+    sub_idx=$((i % 4))
+    case $sub_idx in
+        0) sub_path="docs" ;;
+        1) sub_path="content/deep" ;;
+        2) sub_path="notes/archive" ;;
+        3) sub_path="pages" ;;
+    esac
+    dest_dir="$set_dir/$sub_path"
+    mkdir -p "$dest_dir"
 
-        set_idx=$((set_idx + 1))
-    done
+    # Prefix with generated index to guarantee uniqueness even with duplicate basenames.
+    base_name="$(basename "$src_file")"
+    dest_name="$(printf "%05d_%s" "$i" "$base_name")"
+    cp "$src_file" "$dest_dir/$dest_name"
 done
+
+# Create a dprint config in the corpus root so dprint benchmarks are reproducible.
+cat > "$CORPUS_DIR/dprint.json" <<'JSON'
+{
+  "includes": ["**/*.md"],
+  "plugins": ["https://plugins.dprint.dev/markdown-0.21.1.wasm"]
+}
+JSON
 
 echo ""
 echo "=== Corpus generated ==="
-echo "Total files: $total_files"
+echo "Total files: $(find "$CORPUS_DIR" -name '*.md' | wc -l)"
 echo "Directory tree depth: 4-5 levels"
 echo "Location: $CORPUS_DIR"
 

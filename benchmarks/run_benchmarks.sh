@@ -11,13 +11,26 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CORPUS_DIR="$SCRIPT_DIR/corpus"
 RESULTS_DIR="$SCRIPT_DIR/results"
 RUST_BIN="$REPO_ROOT/target/release/flowmark"
-PYTHON_BIN="$(which flowmark)"
+PYTHON_BIN="$(command -v flowmark || true)"
 
 mkdir -p "$RESULTS_DIR"
 
 echo "=== Performance Comparison: Python vs Rust flowmark ==="
 echo ""
-echo "Python: $PYTHON_BIN ($(flowmark --version 2>&1))"
+if [ -z "$PYTHON_BIN" ]; then
+    echo "ERROR: Python flowmark not found in PATH" >&2
+    echo "Install with: uv tool install flowmark==0.6.4" >&2
+    exit 1
+fi
+
+PYTHON_VERSION="$($PYTHON_BIN --version 2>&1 || true)"
+if echo "$PYTHON_VERSION" | grep -q "parity: flowmark-py"; then
+    echo "ERROR: 'flowmark' in PATH points to Rust flowmark, not Python flowmark." >&2
+    echo "Use a Python environment/tool install so this script can compare both." >&2
+    exit 1
+fi
+
+echo "Python: $PYTHON_BIN ($PYTHON_VERSION)"
 echo "Rust:   $RUST_BIN ($($RUST_BIN --version 2>&1))"
 echo "Corpus: $CORPUS_DIR"
 echo "Files:  $(find "$CORPUS_DIR" -name '*.md' | wc -l) .md files"
@@ -48,7 +61,7 @@ echo "=========================================="
 echo "Benchmark 1: Full batch --auto formatting"
 echo "=========================================="
 echo ""
-echo "This formats all 1000+ files in-place with --auto flag."
+echo "This formats all corpus files in-place with --auto flag."
 echo "(Each run re-formats already-formatted files, measuring steady-state.)"
 echo ""
 

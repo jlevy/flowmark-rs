@@ -1,96 +1,184 @@
 #!/usr/bin/env bash
-# Run performance comparison across 6 markdown formatters.
-# Each formatter is run 3 times on the full corpus (~924 files, 10 MB).
-# The corpus is restored to pristine state before each formatter's runs.
+# Run performance comparison across available markdown formatters.
 #
-# Usage: ./benchmarks/run_comparison.sh
+# Usage: ./benchmarks/run_comparison.sh [mode] [num_runs]
+#   mode: fresh|steady (default: fresh)
+#   num_runs: timed runs per formatter (default: 3)
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 CORPUS_DIR="$SCRIPT_DIR/corpus"
-PRISTINE_DIR="/tmp/corpus_pristine"
+PRISTINE_DIR="/tmp/flowmark_bench_corpus_pristine"
+WORK_DIR="/tmp/flowmark_bench_corpus_work"
 RESULTS_FILE="$SCRIPT_DIR/results/comparison_results.txt"
 
-RUST_BIN="$REPO_ROOT/target/release/flowmark"
-PYTHON_BIN="$(command -v flowmark)"
-PRETTIER_BIN="$(command -v prettier)"
-DPRINT_BIN="$HOME/.dprint/bin/dprint"
-MDFORMAT_BIN="$(command -v mdformat)"
-MARKDOWNFMT_BIN="$HOME/go/bin/markdownfmt"
+MODE="${1:-fresh}"
+NUM_RUNS="${2:-3}"
+INCLUDE_OPTIONAL_FORMATTERS="${INCLUDE_OPTIONAL_FORMATTERS:-0}"
 
-export PATH="$HOME/.dprint/bin:$HOME/go/bin:$PATH"
-
-NUM_RUNS=3
-NUM_FILES=$(find "$CORPUS_DIR" -name '*.md' | wc -l)
+if [[ "$MODE" != "fresh" && "$MODE" != "steady" ]]; then
+    echo "ERROR: mode must be 'fresh' or 'steady' (got: $MODE)" >&2
+    exit 1
+fi
+if ! [[ "$NUM_RUNS" =~ ^[0-9]+$ ]] || [ "$NUM_RUNS" -le 0 ]; then
+    echo "ERROR: num_runs must be a positive integer (got: $NUM_RUNS)" >&2
+    exit 1
+fi
 
 mkdir -p "$SCRIPT_DIR/results"
 
+if [ ! -d "$CORPUS_DIR" ]; then
+    echo "ERROR: Benchmark corpus missing at $CORPUS_DIR" >&2
+    echo "Run: ./benchmarks/generate_corpus.sh" >&2
+    exit 1
+fi
+
+# Always refresh pristine corpus from current benchmark corpus so reruns stay current.
+rm -rf "$PRISTINE_DIR"
+cp -R "$CORPUS_DIR" "$PRISTINE_DIR"
+
 restore_corpus() {
-    rm -rf "$CORPUS_DIR"
-    cp -r "$PRISTINE_DIR" "$CORPUS_DIR"
+    rm -rf "$WORK_DIR"
+    cp -R "$PRISTINE_DIR" "$WORK_DIR"
 }
 
-# Run a command and output wall-clock seconds (with millisecond precision)
 time_cmd() {
     local start end elapsed
     start=$(date +%s%N)
     eval "$@" > /dev/null 2>&1
     local exit_code=$?
     end=$(date +%s%N)
-    elapsed=$(( (end - start) ))
-    # Convert nanoseconds to seconds with 3 decimal places
+    elapsed=$((end - start))
     echo "scale=3; $elapsed / 1000000000" | bc
     return $exit_code
 }
+
+find_dprint_bin() {
+    if command -v dprint >/dev/null 2>&1; then
+        command -v dprint
+        return 0
+    fi
+    if [ -x "$HOME/.dprint/bin/dprint" ]; then
+        echo "$HOME/.dprint/bin/dprint"
+        return 0
+    fi
+    if [ -x "$REPO_ROOT/attic/dprint/target/release/dprint" ]; then
+        echo "$REPO_ROOT/attic/dprint/target/release/dprint"
+        return 0
+    fi
+    return 1
+}
+
+BENCHMARKS=()
+
+# shellcheck disable=SC2317
+add_benchmark() {
+    local name="$1"
+    local cmd="$2"
+    BENCHMARKS+=("$name|$cmd")
+}
+
+RUST_BIN="$REPO_ROOT/target/release/flowmark"
+if [ ! -x "$RUST_BIN" ]; then
+    echo "ERROR: Rust binary not found at $RUST_BIN" >&2
+    echo "Run: cargo build --release" >&2
+    exit 1
+fi
+
+DPRINT_BIN=""
+if DPRINT_BIN="$(find_dprint_bin)"; then
+    :
+fi
+
+PRETTIER_BIN=""
+if command -v prettier >/dev/null 2>&1; then
+    PRETTIER_BIN="$(command -v prettier)"
+fi
+
+MDFORMAT_BIN=""
+if command -v mdformat >/dev/null 2>&1; then
+    MDFORMAT_BIN="$(command -v mdformat)"
+fi
+
+MARKDOWNFMT_BIN=""
+if [ -x "$HOME/go/bin/markdownfmt" ]; then
+    MARKDOWNFMT_BIN="$HOME/go/bin/markdownfmt"
+elif command -v markdownfmt >/dev/null 2>&1; then
+    MARKDOWNFMT_BIN="$(command -v markdownfmt)"
+fi
+
+PYTHON_FLOWMARK_BIN=""
+if command -v flowmark >/dev/null 2>&1; then
+    CANDIDATE="$(command -v flowmark)"
+    VERSION_OUT="$($CANDIDATE --version 2>&1 || true)"
+    # Rust binary includes "parity: flowmark-py" in version output.
+    if ! echo "$VERSION_OUT" | grep -q "parity: flowmark-py"; then
+        PYTHON_FLOWMARK_BIN="$CANDIDATE"
+    fi
+fi
+
+# Ensure dprint config exists in corpus root
+if [ ! -f "$CORPUS_DIR/dprint.json" ]; then
+    cat > "$CORPUS_DIR/dprint.json" <<'JSON'
+{
+  "includes": ["**/*.md"],
+  "plugins": ["https://plugins.dprint.dev/markdown-0.21.1.wasm"]
+}
+JSON
+fi
+
+# Register benchmarks
+add_benchmark "flowmark-rs ($("$RUST_BIN" --version 2>&1))" "\"$RUST_BIN\" --auto \"$WORK_DIR\""
+if [ -n "$DPRINT_BIN" ]; then
+    add_benchmark "dprint ($($DPRINT_BIN --version 2>&1))" "cd \"$WORK_DIR\" && \"$DPRINT_BIN\" fmt --config dprint.json --incremental=false --log-level silent ."
+fi
+
+if [ "$INCLUDE_OPTIONAL_FORMATTERS" = "1" ]; then
+    if [ -n "$MARKDOWNFMT_BIN" ]; then
+        add_benchmark "markdownfmt" "find \"$WORK_DIR\" -name '*.md' -exec \"$MARKDOWNFMT_BIN\" -w {} +"
+    fi
+    if [ -n "$PRETTIER_BIN" ]; then
+        add_benchmark "prettier ($($PRETTIER_BIN --version 2>&1))" "\"$PRETTIER_BIN\" --write \"$WORK_DIR/**/*.md\" --ignore-path /dev/null --log-level silent"
+    fi
+    if [ -n "$MDFORMAT_BIN" ]; then
+        add_benchmark "mdformat ($($MDFORMAT_BIN --version 2>&1))" "\"$MDFORMAT_BIN\" \"$WORK_DIR\""
+    fi
+    if [ -n "$PYTHON_FLOWMARK_BIN" ]; then
+        add_benchmark "flowmark-py ($($PYTHON_FLOWMARK_BIN --version 2>&1))" "\"$PYTHON_FLOWMARK_BIN\" --auto \"$WORK_DIR\""
+    fi
+else
+    echo "Note: optional formatters disabled (set INCLUDE_OPTIONAL_FORMATTERS=1 to include prettier/mdformat/markdownfmt/flowmark-py)."
+    echo ""
+fi
+
+NUM_FILES=$(find "$CORPUS_DIR" -name '*.md' | wc -l)
 
 echo "=== Markdown Formatter Comparison Benchmark ==="
 echo ""
 echo "Date: $(date -u '+%Y-%m-%d %H:%M UTC')"
 echo "Platform: $(uname -srm)"
+echo "Mode: $MODE"
 echo "Corpus: $NUM_FILES Markdown files ($(du -sh "$CORPUS_DIR" | cut -f1))"
+echo "Work dir: $WORK_DIR"
 echo "Runs per formatter: $NUM_RUNS"
 echo ""
-echo "Formatters:"
-echo "  flowmark (Python): $($PYTHON_BIN --version 2>&1)"
-echo "  flowmark (Rust):   $($RUST_BIN --version 2>&1)"
-echo "  prettier:          $(prettier --version 2>&1)"
-echo "  dprint:            $(dprint --version 2>&1)"
-echo "  mdformat:          $(mdformat --version 2>&1)"
-echo "  markdownfmt:       (Go, latest)"
+
+echo "Formatters to run:"
+for entry in "${BENCHMARKS[@]}"; do
+    IFS='|' read -r name _cmd <<< "$entry"
+    echo "  - $name"
+done
 echo ""
 
-# ---- Define formatter commands ----
-# Each formats all .md files in the corpus in-place.
+echo "=========================================="
+echo "Running benchmarks..."
+echo "=========================================="
+echo ""
 
-fmt_flowmark_py() {
-    "$PYTHON_BIN" --auto "$CORPUS_DIR"
-}
+> "$RESULTS_FILE"
 
-fmt_flowmark_rs() {
-    "$RUST_BIN" --auto "$CORPUS_DIR"
-}
-
-fmt_prettier() {
-    # --ignore-path /dev/null: disable .gitignore so gitignored corpus files are included
-    prettier --write "$CORPUS_DIR/**/*.md" --ignore-path /dev/null --log-level silent
-}
-
-fmt_dprint() {
-    # --incremental=false: disable caching so every file is re-read and re-formatted
-    cd "$CORPUS_DIR" && dprint fmt --config dprint.json --incremental=false --log-level silent 2>/dev/null; cd "$REPO_ROOT"
-}
-
-fmt_mdformat() {
-    mdformat "$CORPUS_DIR"
-}
-
-fmt_markdownfmt() {
-    find "$CORPUS_DIR" -name '*.md' -exec "$MARKDOWNFMT_BIN" -w {} +
-}
-
-# ---- Benchmark runner ----
 run_benchmark() {
     local name="$1"
     local cmd="$2"
@@ -98,20 +186,24 @@ run_benchmark() {
 
     echo "--- $name ---"
 
-    # Restore corpus and do warmup
     restore_corpus
     echo "  Warmup..."
-    eval "$cmd" > /dev/null 2>&1 || true
+    eval "$cmd" > /dev/null 2>&1 || {
+        echo "  Skipping (warmup failed)"
+        echo ""
+        return
+    }
 
-    # Timed runs (on already-formatted files = steady state)
-    for i in $(seq 1 $NUM_RUNS); do
+    for i in $(seq 1 "$NUM_RUNS"); do
+        if [ "$MODE" = "fresh" ]; then
+            restore_corpus
+        fi
         local t
         t=$(time_cmd "$cmd")
         times+=("$t")
         echo "  Run $i: ${t}s"
     done
 
-    # Compute mean and stddev
     local sum=0
     for t in "${times[@]}"; do
         sum=$(echo "$sum + $t" | bc)
@@ -146,24 +238,13 @@ run_benchmark() {
     echo "  Mean: ${mean}s ± ${stddev}s (CV: ${cv}%, range: ${min}–${max}s)"
     echo ""
 
-    # Store results for summary table
-    echo "$name|$mean|$stddev|$cv|$min|$max|${times[0]}|${times[1]}|${times[2]}" >> "$RESULTS_FILE"
+    echo "$name|$mean|$stddev|$cv|$min|$max" >> "$RESULTS_FILE"
 }
 
-# Clear previous results
-> "$RESULTS_FILE"
-
-echo "=========================================="
-echo "Running benchmarks..."
-echo "=========================================="
-echo ""
-
-run_benchmark "flowmark (Rust) v0.2.4"      "fmt_flowmark_rs"
-run_benchmark "dprint v0.52.0"               "fmt_dprint"
-run_benchmark "prettier v3.8.1"              "fmt_prettier"
-run_benchmark "markdownfmt (Go)"             "fmt_markdownfmt"
-run_benchmark "mdformat v1.0.0"              "fmt_mdformat"
-run_benchmark "flowmark (Python) v0.6.4"     "fmt_flowmark_py"
+for entry in "${BENCHMARKS[@]}"; do
+    IFS='|' read -r name cmd <<< "$entry"
+    run_benchmark "$name" "$cmd"
+done
 
 echo "=========================================="
 echo "All benchmarks complete!"
@@ -172,11 +253,10 @@ echo ""
 echo "Results saved to: $RESULTS_FILE"
 echo ""
 
-# Print summary table
 echo "=== Summary Table ==="
 echo ""
-printf "%-30s %10s %10s %6s %10s %10s\n" "Formatter" "Mean (s)" "StdDev" "CV%" "Min (s)" "Max (s)"
-printf "%-30s %10s %10s %6s %10s %10s\n" "------------------------------" "----------" "----------" "------" "----------" "----------"
-while IFS='|' read -r name mean stddev cv min max r1 r2 r3; do
-    printf "%-30s %10s %10s %6s %10s %10s\n" "$name" "$mean" "$stddev" "$cv" "$min" "$max"
+printf "%-44s %10s %10s %6s %10s %10s\n" "Formatter" "Mean (s)" "StdDev" "CV%" "Min (s)" "Max (s)"
+printf "%-44s %10s %10s %6s %10s %10s\n" "--------------------------------------------" "----------" "----------" "------" "----------" "----------"
+while IFS='|' read -r name mean stddev cv min max; do
+    printf "%-44s %10s %10s %6s %10s %10s\n" "$name" "$mean" "$stddev" "$cv" "$min" "$max"
 done < "$RESULTS_FILE"

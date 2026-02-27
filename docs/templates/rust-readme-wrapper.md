@@ -35,6 +35,20 @@ Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
 
 ### Performance
 
+Latest local cross-formatter validation on a 928-file corpus (23 MB, macOS arm64):
+
+| Formatter | Workload | Mean |
+| --- | --- | --- |
+| dprint (`--incremental=false`) | fresh format | 0.48 s |
+| **flowmark-rs** (`--auto`) | fresh format | **0.76 s** |
+| dprint (`--incremental=false`) | re-format | 0.36 s |
+| **flowmark-rs** (`--auto`) | re-format | **0.67 s** |
+| dprint (incremental default) | re-format | 0.03 s |
+
+The remaining fresh/re-format gap is now mostly in per-file formatting cost plus
+incremental caching behavior. dprint's warm incremental cache remains significantly
+faster on unchanged re-runs.
+
 The Rust port is **10–17x faster** than the Python reference implementation:
 
 | Benchmark | Python | Rust | Speedup |

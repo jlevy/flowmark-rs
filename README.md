@@ -35,22 +35,19 @@ Last sync: **2026-02-19** against **Python v0.6.4**
 
 ### Performance
 
-Cross-formatter comparison on 928 Markdown files (8.8 MB), fresh corpus:
+Latest local cross-formatter validation on a 928-file corpus (23 MB, macOS arm64):
 
-| Formatter | Language | Parallel | Mean | Relative |
-| --- | --- | --- | --- | --- |
-| dprint | Rust (WASM plugin) | yes | 0.37 s | 1.0x |
-| **flowmark-rs** | **Rust** | **yes (rayon)** | **0.73 s** | **2.0x** |
-| markdownfmt | Go | no | 0.95 s | 2.6x |
-| flowmark-rs (sequential) | Rust | no | 2.42 s | 6.5x |
-| prettier | JavaScript | no | 38.0 s | 103x |
-| mdformat | Python | no | 72.9 s | 197x |
-| flowmark-py | Python | no | ~48 s | ~130x |
+| Formatter | Workload | Mean |
+| --- | --- | --- |
+| dprint (`--incremental=false`) | fresh format | 0.48 s |
+| **flowmark-rs** (`--auto`) | fresh format | **0.76 s** |
+| dprint (`--incremental=false`) | re-format | 0.36 s |
+| **flowmark-rs** (`--auto`) | re-format | **0.67 s** |
+| dprint (incremental default) | re-format | 0.03 s |
 
-flowmark-rs v0.3.0 uses rayon for parallel file processing with a `--threads` flag
-(default: all cores). It also skips writing files that are already correctly formatted.
-On re-formatting (all files already formatted), flowmark-rs achieves 0.38s — within 1.5x
-of dprint.
+The remaining fresh/re-format gap is now mostly in per-file formatting cost plus
+incremental caching behavior. dprint's warm incremental cache remains significantly
+faster on unchanged re-runs.
 
 The Rust port is **10–17x faster** than the Python reference implementation:
 
@@ -61,8 +58,8 @@ The Rust port is **10–17x faster** than the Python reference implementation:
 | Batch 1,080 files (`--semantic`) | 27.2 s | 2.5 s | **10.9x** |
 | File discovery (`--list-files`) | 1.31 s | 169 ms | **7.8x** |
 
-See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details,
-methodology, and thread scaling data.
+See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details
+and methodology.
 
 ## Installing Rust Flowmark CLI
 

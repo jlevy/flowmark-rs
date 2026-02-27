@@ -368,10 +368,7 @@ Use `flowmark --docs` for full documentation.
 
         // Configure rayon thread pool
         if args.threads > 0 {
-            rayon::ThreadPoolBuilder::new()
-                .num_threads(args.threads)
-                .build_global()
-                .ok();
+            rayon::ThreadPoolBuilder::new().num_threads(args.threads).build_global().ok();
         }
 
         // Validate: cannot use --inplace with stdin
@@ -420,11 +417,8 @@ Use `flowmark --docs` for full documentation.
             // Stdout or explicit output: must preserve file order
             for file in &regular_files {
                 let path = PathBuf::from(file);
-                let output_path = if has_explicit_output {
-                    Some(PathBuf::from(&args.output))
-                } else {
-                    None
-                };
+                let output_path =
+                    if has_explicit_output { Some(PathBuf::from(&args.output)) } else { None };
                 if args.verbose {
                     eprintln!("formatting {}", path.display());
                 }
