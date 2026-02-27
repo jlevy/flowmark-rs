@@ -294,10 +294,91 @@ Use `flowmark --docs` for full documentation.
         result
     }
 
+    #[derive(Debug, Default)]
+    struct IncrementalConfigOverrides {
+        incremental: Option<bool>,
+        incremental_cache_dir: Option<String>,
+    }
+
+    fn load_incremental_config_overrides(config_path: &Path) -> IncrementalConfigOverrides {
+        let Ok(text) = std::fs::read_to_string(config_path) else {
+            return IncrementalConfigOverrides::default();
+        };
+        let Ok(data) = toml::from_str::<toml::Value>(&text) else {
+            return IncrementalConfigOverrides::default();
+        };
+
+        let section = if config_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n == "pyproject.toml")
+        {
+            data.get("tool")
+                .and_then(|t| t.get("flowmark"))
+                .cloned()
+                .unwrap_or(toml::Value::Table(toml::map::Map::new()))
+        } else {
+            data
+        };
+
+        let Some(table) = section.as_table() else {
+            return IncrementalConfigOverrides::default();
+        };
+
+        let mut overrides = IncrementalConfigOverrides::default();
+
+        for (key, value) in table {
+            if let Some(sub_table) = value.as_table() {
+                for (sub_key, sub_value) in sub_table {
+                    apply_incremental_override(&mut overrides, sub_key, sub_value);
+                }
+            } else {
+                apply_incremental_override(&mut overrides, key, value);
+            }
+        }
+
+        overrides
+    }
+
+    fn apply_incremental_override(
+        overrides: &mut IncrementalConfigOverrides,
+        key: &str,
+        value: &toml::Value,
+    ) {
+        let key = key.replace('-', "_");
+        match key.as_str() {
+            "incremental" => overrides.incremental = value.as_bool(),
+            "incremental_cache_dir" => {
+                if let Some(v) = value.as_str() {
+                    overrides.incremental_cache_dir = Some(v.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
+    fn format_ns_as_ms(ns: u128) -> String {
+        let whole_ms = ns / 1_000_000;
+        let fractional_ms = (ns % 1_000_000) / 1_000;
+        format!("{whole_ms}.{fractional_ms:03}")
+    }
+
+    fn format_hit_rate_percent_tenths(cache_hits: usize, cache_total: usize) -> String {
+        if cache_total == 0 {
+            return "0.0".to_string();
+        }
+        let scaled_percent =
+            ((cache_hits as u128) * 1000 + (cache_total as u128 / 2)) / (cache_total as u128);
+        let whole = scaled_percent / 10;
+        let frac = scaled_percent % 10;
+        format!("{whole}.{frac}")
+    }
+
     fn default_cache_root() -> PathBuf {
-        dirs::cache_dir()
-            .map(|cache_dir| cache_dir.join(APP_CACHE_DIR))
-            .unwrap_or_else(|| PathBuf::from(FALLBACK_CACHE_DIR).join(APP_CACHE_DIR))
+        dirs::cache_dir().map_or_else(
+            || PathBuf::from(FALLBACK_CACHE_DIR).join(APP_CACHE_DIR),
+            |cache_dir| cache_dir.join(APP_CACHE_DIR),
+        )
     }
 
     fn open_incremental_cache(
@@ -311,7 +392,7 @@ Use `flowmark --docs` for full documentation.
         }
 
         let project_root = std::env::current_dir().ok()?;
-        let cache_root = cache_dir_override.map(PathBuf::from).unwrap_or_else(default_cache_root);
+        let cache_root = cache_dir_override.map_or_else(default_cache_root, PathBuf::from);
         let fingerprint =
             compute_formatter_fingerprint(opts, env!("CARGO_PKG_VERSION"), config_path);
 
@@ -440,14 +521,25 @@ Use `flowmark --docs` for full documentation.
 
         // Load and merge config file settings
         let mut resolved_config_path: Option<PathBuf> = None;
+        let explicit_refs: Vec<&str> = explicit_flags.clone();
         if let Ok(cwd) = std::env::current_dir() {
             if let Some(config_path) = find_config_file(&cwd) {
                 let config = load_config(&config_path);
+                let incremental_overrides = load_incremental_config_overrides(&config_path);
                 resolved_config_path = Some(config_path.clone());
-                let explicit_refs: Vec<&str> = explicit_flags.clone();
                 merge_cli_with_config(Some(&config), is_auto, &explicit_refs, |name, value| {
                     apply_config_field(&mut args, &mut respect_gitignore, name, value);
                 });
+                if !explicit_refs.contains(&"incremental") {
+                    if let Some(v) = incremental_overrides.incremental {
+                        args.incremental = v;
+                    }
+                }
+                if !explicit_refs.contains(&"incremental_cache_dir") {
+                    if let Some(v) = incremental_overrides.incremental_cache_dir {
+                        args.incremental_cache_dir = Some(v);
+                    }
+                }
             }
         }
 
@@ -581,27 +673,19 @@ Use `flowmark --docs` for full documentation.
             let cache_hits = cache_perf.hits.load(Ordering::Relaxed);
             let cache_misses = cache_perf.misses.load(Ordering::Relaxed);
             let cache_total = cache_hits + cache_misses;
-            let hit_rate = if cache_total == 0 {
-                0.0
-            } else {
-                (cache_hits as f64 / cache_total as f64) * 100.0
-            };
-            let ns_to_ms = |ns: u128| (ns as f64) / 1_000_000.0;
+            let hit_rate = format_hit_rate_percent_tenths(cache_hits, cache_total);
             eprintln!("perf-stats:");
             eprintln!(
-                "  fill_markdown files={} total={:.3}ms preprocess={:.3}ms parse={:.3}ms transforms={:.3}ms render={:.3}ms postprocess={:.3}ms",
+                "  fill_markdown files={} total={}ms preprocess={}ms parse={}ms transforms={}ms render={}ms postprocess={}ms",
                 stats.files,
-                ns_to_ms(stats.total_ns()),
-                ns_to_ms(stats.preprocess_ns),
-                ns_to_ms(stats.parse_ns),
-                ns_to_ms(stats.transforms_ns),
-                ns_to_ms(stats.render_ns),
-                ns_to_ms(stats.postprocess_ns),
+                format_ns_as_ms(stats.total_ns()),
+                format_ns_as_ms(stats.preprocess_ns),
+                format_ns_as_ms(stats.parse_ns),
+                format_ns_as_ms(stats.transforms_ns),
+                format_ns_as_ms(stats.render_ns),
+                format_ns_as_ms(stats.postprocess_ns),
             );
-            eprintln!(
-                "  incremental hits={} misses={} hit_rate={:.1}%",
-                cache_hits, cache_misses, hit_rate
-            );
+            eprintln!("  incremental hits={cache_hits} misses={cache_misses} hit_rate={hit_rate}%",);
         }
         set_fill_perf_stats_enabled(false);
 
