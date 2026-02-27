@@ -33,6 +33,20 @@ Last sync: **2026-02-19** against **Python v0.6.4**
 - **Library crate**: embed in Rust tooling via
   [docs.rs/flowmark](https://docs.rs/flowmark).
 
+### Performance
+
+The Rust port is **10–17x faster** than the Python reference implementation:
+
+| Benchmark | Python | Rust | Speedup |
+| --- | --- | --- | --- |
+| Single file (1,734 lines) | 471.7 ms | 27.3 ms | **17.3x** |
+| Batch 1,080 files (`--auto`) | 32.1 s | 2.69 s | **11.9x** |
+| Batch 1,080 files (`--semantic`) | 27.2 s | 2.5 s | **10.9x** |
+| File discovery (`--list-files`) | 1.31 s | 169 ms | **7.8x** |
+
+See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details
+and methodology.
+
 ## Installing Rust Flowmark CLI
 
 ### Cargo (source build)
