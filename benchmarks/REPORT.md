@@ -91,6 +91,73 @@ These formatters are **not interchangeable** — they have very different featur
 The speed differences partially reflect feature complexity: simpler formatters that do
 less per-file processing are naturally faster.
 
+### How dprint Achieves Its Speed
+
+Source analysis of [dprint/dprint](https://github.com/dprint/dprint) (cloned to
+`attic/dprint`). Key file: `crates/dprint/src/format.rs`.
+
+**Architecture:** Single-threaded tokio `current_thread` runtime for async
+orchestration, with all actual work (file I/O + formatting) dispatched to tokio's
+multi-threaded blocking pool via `spawn_blocking()`.
+
+**Parallelism model:**
+
+1. **Thread count = CPU cores.** Uses `std::thread::available_parallelism()`,
+   overridable via `DPRINT_MAX_THREADS`. Reserves 1 thread per process plugin + 1 for
+   the runtime.
+2. **Semaphore-controlled concurrency.** Files are grouped by plugin. Each group gets a
+   custom `Semaphore` with permits proportional to the thread count. A file can only
+   begin formatting when it acquires a permit, capping active concurrent formats at
+   ~core count.
+3. **`spawn_blocking()` for I/O and formatting.** Each file: read (blocking) -> format
+   (blocking or async depending on plugin type) -> write (blocking). The async event
+   loop just orchestrates.
+4. **Adaptive CPU throttling.** A background task monitors CPU usage every 2 seconds. If
+   CPU exceeds a threshold, it removes semaphore permits to reduce parallelism. When CPU
+   drops, it adds permits back. Disabled on CI.
+5. **Work stealing on completion.** When one plugin group finishes, its semaphore
+   permits are redistributed to remaining groups via `SemaphorePermitReleaser::drop`,
+   favoring groups with fewer permits.
+6. **Incremental caching.** Hash-based skip for unchanged files (explains the 0.13s with
+   caching vs 0.23s with `--incremental=false`).
+
+**Plugin system:** WASM plugins (compiled with Wasmer, run synchronously in-process) and
+process plugins (separate child processes communicating via stdin/stdout). The markdown
+formatter is a WASM plugin.
+
+### Opportunity: Parallel File Processing for flowmark-rs
+
+flowmark-rs currently processes files sequentially (`src/main.rs:379`):
+```rust
+for file in &resolved_files {
+    opts.reformat_file(&path, ...)?;
+}
+```
+
+Since `reformat_file` is a pure function per file (reads one file, formats, writes one
+file), this is **embarrassingly parallel** — no shared state between files.
+
+The simplest approach for flowmark-rs is `rayon`, which provides:
+- Thread pool sized to `available_parallelism()` (same as dprint)
+- Work-stealing scheduler for load balancing
+- Zero boilerplate — just swap `iter()` for `par_iter()`
+
+```rust
+use rayon::prelude::*;
+resolved_files.par_iter().try_for_each(|file| {
+    opts.reformat_file(&path, None, true, true)
+})?;
+```
+
+**Expected impact:** On an N-core machine, this should give close to Nx wall-clock
+speedup on batch workloads, potentially bringing flowmark-rs from ~2.7s down to
+~0.3–0.5s — competitive with dprint. (dprint's 0.23s wall-clock with 3.3s user CPU
+suggests ~14x parallelism on this machine.)
+
+The full dprint approach (tokio + semaphores + CPU throttling + incremental caching) is
+more sophisticated but unnecessary for flowmark-rs since we have no plugin
+infrastructure and rayon handles work distribution automatically.
+
 * * *
 
 ## Part 2: Flowmark Python vs Rust (Detailed)
