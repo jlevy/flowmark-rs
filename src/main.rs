@@ -7,16 +7,30 @@ mod cli {
     use rayon::prelude::*;
     use std::io::{BufWriter, Read, Write};
     use std::path::{Path, PathBuf};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use flowmark::config::{
         ConfigValue, DEFAULT_WRAP_WIDTH, FormatOptions, ListSpacing, find_config_file, load_config,
         merge_cli_with_config,
     };
     use flowmark::file_resolver::{FileResolver, FileResolverConfig};
+    use flowmark::formatter::filling::{
+        get_fill_perf_stats, reset_fill_perf_stats, set_fill_perf_stats_enabled,
+    };
+    use flowmark::incremental_cache::{IncrementalCache, compute_formatter_fingerprint};
     use flowmark::skills;
 
     /// Characters that indicate a path is a glob pattern.
     const GLOB_CHARS: &[char] = &['*', '?', '['];
+    const FALLBACK_CACHE_DIR: &str = ".flowmark-cache";
+    const APP_CACHE_DIR: &str = "flowmark";
+
+    #[derive(Default)]
+    struct CachePerfCounters {
+        hits: AtomicUsize,
+        misses: AtomicUsize,
+    }
 
     #[derive(Parser, Debug)]
     #[command(
@@ -160,6 +174,22 @@ Use `flowmark --docs` for full documentation.
         /// Number of parallel formatting threads (0 = all cores, default)
         #[arg(long, default_value_t = 0, value_name = "N", help_heading = "Performance Options")]
         pub threads: usize,
+
+        /// Enable incremental cache for unchanged-file fast paths (default: enabled)
+        #[arg(long, default_value_t = true, num_args = 0..=1, default_missing_value = "true", value_name = "BOOL", help_heading = "Performance Options")]
+        pub incremental: bool,
+
+        /// Disable incremental cache for this run
+        #[arg(long, help_heading = "Performance Options")]
+        pub no_incremental: bool,
+
+        /// Override incremental cache directory
+        #[arg(long, value_name = "DIR", help_heading = "Performance Options")]
+        pub incremental_cache_dir: Option<String>,
+
+        /// Print performance statistics summary
+        #[arg(long, help_heading = "Performance Options")]
+        pub perf_stats: bool,
     }
 
     /// Detect which flags the user explicitly passed on the command line.
@@ -177,6 +207,9 @@ Use `flowmark --docs` for full documentation.
             ("no_respect_gitignore", "respect_gitignore"),
             ("force_exclude", "force_exclude"),
             ("files_max_size", "files_max_size"),
+            ("incremental", "incremental"),
+            ("no_incremental", "incremental"),
+            ("incremental_cache_dir", "incremental_cache_dir"),
         ];
 
         let mut explicit = Vec::new();
@@ -261,6 +294,83 @@ Use `flowmark --docs` for full documentation.
         result
     }
 
+    fn default_cache_root() -> PathBuf {
+        dirs::cache_dir()
+            .map(|cache_dir| cache_dir.join(APP_CACHE_DIR))
+            .unwrap_or_else(|| PathBuf::from(FALLBACK_CACHE_DIR).join(APP_CACHE_DIR))
+    }
+
+    fn open_incremental_cache(
+        enabled: bool,
+        cache_dir_override: Option<&str>,
+        opts: &FormatOptions,
+        config_path: Option<&Path>,
+    ) -> Option<Arc<IncrementalCache>> {
+        if !enabled {
+            return None;
+        }
+
+        let project_root = std::env::current_dir().ok()?;
+        let cache_root = cache_dir_override.map(PathBuf::from).unwrap_or_else(default_cache_root);
+        let fingerprint =
+            compute_formatter_fingerprint(opts, env!("CARGO_PKG_VERSION"), config_path);
+
+        match IncrementalCache::open(&cache_root, &project_root, fingerprint) {
+            Ok(cache) => Some(Arc::new(cache)),
+            Err(error) => {
+                eprintln!(
+                    "Warning: failed to initialize incremental cache at {}: {error}",
+                    cache_root.display()
+                );
+                None
+            }
+        }
+    }
+
+    fn format_inplace_with_incremental_cache(
+        opts: &FormatOptions,
+        path: &Path,
+        nobackup: bool,
+        cache: &IncrementalCache,
+    ) -> Result<bool> {
+        let content = std::fs::read_to_string(path)?;
+        if cache.is_known_formatted(path, content.as_bytes()) {
+            return Ok(true);
+        }
+
+        let formatted = opts.reformat_text(&content);
+        if formatted == content {
+            cache.record_formatted(path, content.as_bytes());
+            return Ok(false);
+        }
+
+        if !nobackup {
+            let backup_path = path.with_extension("bak");
+            std::fs::copy(path, &backup_path)?;
+        }
+
+        atomic_write(path, &formatted)?;
+        cache.record_formatted(path, formatted.as_bytes());
+        Ok(false)
+    }
+
+    fn atomic_write(path: &Path, content: &str) -> Result<()> {
+        #[cfg(unix)]
+        let original_permissions = path.metadata().ok().map(|metadata| metadata.permissions());
+
+        let dir = path.parent().unwrap_or_else(|| Path::new("."));
+        let mut temp_file = tempfile::NamedTempFile::new_in(dir)?;
+        temp_file.write_all(content.as_bytes())?;
+        temp_file.persist(path).map_err(|error| error.error)?;
+
+        #[cfg(unix)]
+        if let Some(permissions) = original_permissions {
+            std::fs::set_permissions(path, permissions)?;
+        }
+
+        Ok(())
+    }
+
     pub fn run() -> Result<()> {
         // Parse args, keeping matches for explicit flag detection
         let matches = Args::command().get_matches();
@@ -276,6 +386,9 @@ Use `flowmark --docs` for full documentation.
             args.cleanups = true;
             args.smartquotes = true;
             args.ellipses = true;
+        }
+        if args.no_incremental {
+            args.incremental = false;
         }
 
         // Early exit: --install-skill
@@ -326,9 +439,11 @@ Use `flowmark --docs` for full documentation.
         let mut respect_gitignore = !args.no_respect_gitignore;
 
         // Load and merge config file settings
+        let mut resolved_config_path: Option<PathBuf> = None;
         if let Ok(cwd) = std::env::current_dir() {
             if let Some(config_path) = find_config_file(&cwd) {
                 let config = load_config(&config_path);
+                resolved_config_path = Some(config_path.clone());
                 let explicit_refs: Vec<&str> = explicit_flags.clone();
                 merge_cli_with_config(Some(&config), is_auto, &explicit_refs, |name, value| {
                     apply_config_field(&mut args, &mut respect_gitignore, name, value);
@@ -365,6 +480,18 @@ Use `flowmark --docs` for full documentation.
             ellipses: args.ellipses,
             list_spacing: args.list_spacing,
         };
+        let incremental_enabled = args.inplace && args.incremental;
+        let incremental_cache = open_incremental_cache(
+            incremental_enabled,
+            args.incremental_cache_dir.as_deref(),
+            &opts,
+            resolved_config_path.as_deref(),
+        );
+        set_fill_perf_stats_enabled(args.perf_stats);
+        if args.perf_stats {
+            reset_fill_perf_stats();
+        }
+        let cache_perf = Arc::new(CachePerfCounters::default());
 
         // Configure rayon thread pool
         if args.threads > 0 {
@@ -405,13 +532,32 @@ Use `flowmark --docs` for full documentation.
         // Format regular files: parallel when inplace, sequential for stdout output
         if args.inplace {
             // Inplace: parallelize across files (order doesn't matter)
+            let incremental_cache = incremental_cache.clone();
+            let cache_perf = cache_perf.clone();
             regular_files.par_iter().try_for_each(|file| {
                 let path = PathBuf::from(file);
                 if args.verbose {
                     eprintln!("formatting {}", path.display());
                 }
-                opts.reformat_file(&path, None, args.inplace, args.nobackup)
-                    .with_context(|| format!("failed to format {}", path.display()))
+                if let Some(cache) = &incremental_cache {
+                    let was_cache_hit =
+                        format_inplace_with_incremental_cache(&opts, &path, args.nobackup, cache)
+                            .with_context(|| format!("failed to format {}", path.display()))?;
+                    if args.perf_stats {
+                        if was_cache_hit {
+                            cache_perf.hits.fetch_add(1, Ordering::Relaxed);
+                        } else {
+                            cache_perf.misses.fetch_add(1, Ordering::Relaxed);
+                        }
+                    }
+                    Ok(())
+                } else {
+                    if args.perf_stats {
+                        cache_perf.misses.fetch_add(1, Ordering::Relaxed);
+                    }
+                    opts.reformat_file(&path, None, args.inplace, args.nobackup)
+                        .with_context(|| format!("failed to format {}", path.display()))
+                }
             })?;
         } else {
             // Stdout or explicit output: must preserve file order
@@ -426,6 +572,38 @@ Use `flowmark --docs` for full documentation.
                     .with_context(|| format!("failed to format {}", path.display()))?;
             }
         }
+
+        if let Some(cache) = &incremental_cache {
+            cache.flush().context("failed to persist incremental cache")?;
+        }
+        if args.perf_stats {
+            let stats = get_fill_perf_stats();
+            let cache_hits = cache_perf.hits.load(Ordering::Relaxed);
+            let cache_misses = cache_perf.misses.load(Ordering::Relaxed);
+            let cache_total = cache_hits + cache_misses;
+            let hit_rate = if cache_total == 0 {
+                0.0
+            } else {
+                (cache_hits as f64 / cache_total as f64) * 100.0
+            };
+            let ns_to_ms = |ns: u128| (ns as f64) / 1_000_000.0;
+            eprintln!("perf-stats:");
+            eprintln!(
+                "  fill_markdown files={} total={:.3}ms preprocess={:.3}ms parse={:.3}ms transforms={:.3}ms render={:.3}ms postprocess={:.3}ms",
+                stats.files,
+                ns_to_ms(stats.total_ns()),
+                ns_to_ms(stats.preprocess_ns),
+                ns_to_ms(stats.parse_ns),
+                ns_to_ms(stats.transforms_ns),
+                ns_to_ms(stats.render_ns),
+                ns_to_ms(stats.postprocess_ns),
+            );
+            eprintln!(
+                "  incremental hits={} misses={} hit_rate={:.1}%",
+                cache_hits, cache_misses, hit_rate
+            );
+        }
+        set_fill_perf_stats_enabled(false);
 
         Ok(())
     }
@@ -493,6 +671,16 @@ Use `flowmark --docs` for full documentation.
             "force_exclude" => {
                 if let ConfigValue::Bool(v) = value {
                     args.force_exclude = *v;
+                }
+            }
+            "incremental" => {
+                if let ConfigValue::Bool(v) = value {
+                    args.incremental = *v;
+                }
+            }
+            "incremental_cache_dir" => {
+                if let ConfigValue::String(v) = value {
+                    args.incremental_cache_dir = Some(v.clone());
                 }
             }
             "files_max_size" => {

@@ -56,3 +56,20 @@ $ flowmark --help | grep -F "Agents should run"
 $ flowmark --help | grep -F "flowmark --docs"
 Use `flowmark --docs` for full documentation.
 ```
+
+## H5: Performance flags are present
+
+```console
+$ flowmark --help | grep -F -- "--no-incremental"
+      --no-incremental               Disable incremental cache for this run
+```
+
+```console
+$ flowmark --help | grep -F -- "--incremental-cache-dir"
+      --incremental-cache-dir <DIR>  Override incremental cache directory
+```
+
+```console
+$ flowmark --help | grep -F -- "--perf-stats"
+      --perf-stats                   Print performance statistics summary
+```

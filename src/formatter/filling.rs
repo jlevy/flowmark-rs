@@ -197,7 +197,9 @@
 use regex::Regex;
 use std::collections::HashSet;
 use std::fmt::Write as _;
-use std::sync::LazyLock;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{LazyLock, Mutex};
+use std::time::{Duration, Instant};
 
 use comrak::nodes::{AstNode, ListType, NodeValue, TableAlignment};
 use comrak::{Arena, Options};
@@ -211,6 +213,87 @@ use crate::typography::quotes::smart_quotes;
 use crate::wrapping::LineWrapper;
 use crate::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
 use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
+
+/// Aggregated stage-level performance counters for `fill_markdown`.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct FillPerfStats {
+    /// Number of `fill_markdown` calls recorded.
+    pub files: u64,
+    /// Total preprocessing time.
+    pub preprocess_ns: u128,
+    /// Total comrak parse time.
+    pub parse_ns: u128,
+    /// Total AST transform time.
+    pub transforms_ns: u128,
+    /// Total render time.
+    pub render_ns: u128,
+    /// Total postprocess time.
+    pub postprocess_ns: u128,
+}
+
+impl FillPerfStats {
+    /// Total tracked nanoseconds across stages.
+    pub fn total_ns(self) -> u128 {
+        self.preprocess_ns
+            + self.parse_ns
+            + self.transforms_ns
+            + self.render_ns
+            + self.postprocess_ns
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct FillPerfSample {
+    preprocess: Duration,
+    parse: Duration,
+    transforms: Duration,
+    render: Duration,
+    postprocess: Duration,
+}
+
+impl FillPerfStats {
+    fn add_sample(&mut self, sample: FillPerfSample) {
+        self.files += 1;
+        self.preprocess_ns += sample.preprocess.as_nanos();
+        self.parse_ns += sample.parse.as_nanos();
+        self.transforms_ns += sample.transforms.as_nanos();
+        self.render_ns += sample.render.as_nanos();
+        self.postprocess_ns += sample.postprocess.as_nanos();
+    }
+}
+
+static PERF_STATS_ENABLED: AtomicBool = AtomicBool::new(false);
+static PERF_STATS: Mutex<FillPerfStats> = Mutex::new(FillPerfStats {
+    files: 0,
+    preprocess_ns: 0,
+    parse_ns: 0,
+    transforms_ns: 0,
+    render_ns: 0,
+    postprocess_ns: 0,
+});
+
+/// Enable or disable stage-level `fill_markdown` performance collection.
+pub fn set_fill_perf_stats_enabled(enabled: bool) {
+    PERF_STATS_ENABLED.store(enabled, Ordering::Relaxed);
+}
+
+/// Reset accumulated `fill_markdown` performance counters.
+pub fn reset_fill_perf_stats() {
+    if let Ok(mut stats) = PERF_STATS.lock() {
+        *stats = FillPerfStats::default();
+    }
+}
+
+/// Snapshot accumulated `fill_markdown` performance counters.
+pub fn get_fill_perf_stats() -> FillPerfStats {
+    if let Ok(stats) = PERF_STATS.lock() { *stats } else { FillPerfStats::default() }
+}
+
+fn record_fill_perf_sample(sample: FillPerfSample) {
+    if let Ok(mut stats) = PERF_STATS.lock() {
+        stats.add_sample(sample);
+    }
+}
 
 // ===== PUA (Private Use Area) markers =====
 //
@@ -261,11 +344,17 @@ fn normalize_blank_lines(text: &str) -> String {
 
 /// Remove space between code fence and language identifier.
 fn normalize_code_fences(text: &str) -> String {
+    if !text.contains("```") {
+        return text.to_string();
+    }
     CODE_FENCE_SPACE.replace_all(text, "$1$2").into_owned()
 }
 
 /// Fix numbered list items: convert two spaces to one space after period.
 fn normalize_numbered_lists(text: &str) -> String {
+    if !text.contains(".  ") {
+        return text.to_string();
+    }
     let mut result = String::new();
     for line in text.lines() {
         if let Some(caps) = NUMBERED_ITEM_TWO_SPACES.captures(line) {
@@ -817,6 +906,9 @@ fn restore_pua_escape_placeholders(text: &str) -> String {
 /// period escapes are unnecessary.
 /// Preserves content inside code spans (backtick-delimited) and fenced code blocks.
 fn postprocess_period_escapes(text: &str) -> String {
+    if !text.contains("\\.") {
+        return text.to_string();
+    }
     transform_outside_code_fences(text, |line| {
         let trimmed_start = line.trim_start();
 
@@ -2176,6 +2268,8 @@ pub fn fill_markdown(
             line_wrap_to_width(width, true)
         }
     });
+    let perf_enabled = PERF_STATS_ENABLED.load(Ordering::Relaxed);
+    let mut perf_sample = FillPerfSample::default();
 
     // Extract frontmatter before any processing
     let (frontmatter, content) = split_frontmatter(markdown_text);
@@ -2188,6 +2282,7 @@ pub fn fill_markdown(
 
     text = text.trim().to_string();
     text.push('\n');
+    let preprocess_start = perf_enabled.then(Instant::now);
 
     // === Pre-parse workarounds (see module-level COMRAK-WORKAROUND docs) ===
 
@@ -2221,13 +2316,21 @@ pub fn fill_markdown(
     // during line wrapping. Uses a single-pass scan per line instead of 32 sequential
     // `.replace()` calls.
     text = protect_escapes_outside_code(&text, ESCAPE_CHARS);
+    if let Some(start) = preprocess_start {
+        perf_sample.preprocess = start.elapsed();
+    }
 
     // === Parse with comrak ===
+    let parse_start = perf_enabled.then(Instant::now);
     let arena = Arena::new();
     let options = flowmark_comrak_options();
     let root = comrak::parse_document(&arena, &text, &options);
+    if let Some(start) = parse_start {
+        perf_sample.parse = start.elapsed();
+    }
 
     // === AST transforms (not comrak workarounds) ===
+    let transforms_start = perf_enabled.then(Instant::now);
     if cleanups {
         doc_cleanups(root);
     }
@@ -2237,13 +2340,21 @@ pub fn fill_markdown(
     if ellipses {
         apply_ellipses_to_ast(root);
     }
+    if let Some(start) = transforms_start {
+        perf_sample.transforms = start.elapsed();
+    }
 
     // === Render AST to markdown ===
     // COMRAK-WORKAROUND1/2/3/7/8/9/10 all apply during rendering (see render_block).
+    let render_start = perf_enabled.then(Instant::now);
     let mut in_heading = false;
     let result = render_block(root, &line_wrapper, list_spacing, "", "", &mut in_heading, &options);
+    if let Some(start) = render_start {
+        perf_sample.render = start.elapsed();
+    }
 
     // === Post-render workarounds ===
+    let postprocess_start = perf_enabled.then(Instant::now);
 
     // COMRAK-WORKAROUND4: Restore escaped characters from PUA placeholders.
     // Single-pass scan: any PUA char in range U+E000..U+E100 followed by U+E100 filler
@@ -2266,7 +2377,14 @@ pub fn fill_markdown(
     let result = if result.is_empty() { "\n".to_string() } else { result };
 
     // Reattach frontmatter if present
-    if frontmatter.is_empty() { result } else { format!("{frontmatter}{result}") }
+    let result = if frontmatter.is_empty() { result } else { format!("{frontmatter}{result}") };
+    if let Some(start) = postprocess_start {
+        perf_sample.postprocess = start.elapsed();
+    }
+    if perf_enabled {
+        record_fill_perf_sample(perf_sample);
+    }
+    result
 }
 
 /// Apply smart quotes to all text nodes in the AST.

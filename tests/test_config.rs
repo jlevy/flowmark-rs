@@ -139,6 +139,8 @@ extend-exclude = ["drafts/"]
 files-max-size = 2097152
 respect-gitignore = false
 force-exclude = true
+incremental = false
+incremental-cache-dir = "/tmp/fm-cache"
 "#,
     )
     .expect("write config");
@@ -150,6 +152,8 @@ force-exclude = true
     assert_eq!(config.files_max_size, Some(2_097_152));
     assert_eq!(config.respect_gitignore, Some(false));
     assert_eq!(config.force_exclude, Some(true));
+    assert_eq!(config.incremental, Some(false));
+    assert_eq!(config.incremental_cache_dir, Some("/tmp/fm-cache".to_string()));
 }
 
 #[test]
@@ -198,6 +202,8 @@ fn test_load_config_partial() {
     assert_eq!(config.files_max_size, None);
     assert_eq!(config.respect_gitignore, None);
     assert_eq!(config.force_exclude, None);
+    assert_eq!(config.incremental, None);
+    assert_eq!(config.incremental_cache_dir, None);
 }
 
 // --- Config merge (7) ---
@@ -288,6 +294,49 @@ fn test_merge_file_discovery_from_config() {
     });
     assert!(applied.contains(&("respect_gitignore".to_string(), false)));
     assert!(applied.contains(&("force_exclude".to_string(), true)));
+}
+
+#[test]
+fn test_merge_incremental_from_config() {
+    let config = FlowmarkConfig {
+        incremental: Some(false),
+        incremental_cache_dir: Some("/tmp/fm-cache".to_string()),
+        ..FlowmarkConfig::default()
+    };
+
+    let mut applied_incremental = None;
+    let mut applied_cache_dir = None;
+    merge_cli_with_config(Some(&config), false, &[], |name, value| {
+        if name == "incremental" {
+            if let ConfigValue::Bool(v) = value {
+                applied_incremental = Some(*v);
+            }
+        }
+        if name == "incremental_cache_dir" {
+            if let ConfigValue::String(v) = value {
+                applied_cache_dir = Some(v.clone());
+            }
+        }
+    });
+
+    assert_eq!(applied_incremental, Some(false));
+    assert_eq!(applied_cache_dir, Some("/tmp/fm-cache".to_string()));
+}
+
+#[test]
+fn test_merge_explicit_incremental_cli_overrides_config() {
+    let config = FlowmarkConfig { incremental: Some(false), ..FlowmarkConfig::default() };
+
+    let mut applied_incremental = None;
+    merge_cli_with_config(Some(&config), false, &["incremental"], |name, value| {
+        if name == "incremental" {
+            if let ConfigValue::Bool(v) = value {
+                applied_incremental = Some(*v);
+            }
+        }
+    });
+
+    assert!(applied_incremental.is_none(), "explicit incremental CLI should override config");
 }
 
 #[test]

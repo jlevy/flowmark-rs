@@ -1,5 +1,8 @@
 use flowmark::config::ListSpacing;
 use flowmark::fill_markdown;
+use flowmark::formatter::filling::{
+    get_fill_perf_stats, reset_fill_perf_stats, set_fill_perf_stats_enabled,
+};
 
 static ORIGINAL_DOC: &str = "\
 # This is a header
@@ -267,4 +270,30 @@ fn test_multi_paragraph_list_items() {
         fill_markdown(input_doc, true, 88, true, false, false, false, None, ListSpacing::Preserve);
 
     assert_eq!(normalized_doc, expected_doc);
+}
+
+#[test]
+fn test_fill_perf_stats_records_stage_times_when_enabled() {
+    reset_fill_perf_stats();
+    set_fill_perf_stats_enabled(true);
+
+    let _ = fill_markdown(
+        "# Perf\n\nSome content.\n",
+        true,
+        88,
+        true,
+        true,
+        true,
+        true,
+        None,
+        ListSpacing::Preserve,
+    );
+
+    set_fill_perf_stats_enabled(false);
+    let stats = get_fill_perf_stats();
+    assert_eq!(stats.files, 1);
+    assert!(stats.total_ns() > 0, "expected non-zero total measured time");
+    assert!(stats.parse_ns > 0, "expected non-zero parse stage");
+    assert!(stats.render_ns > 0, "expected non-zero render stage");
+    reset_fill_perf_stats();
 }

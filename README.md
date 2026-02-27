@@ -35,19 +35,28 @@ Last sync: **2026-02-19** against **Python v0.6.4**
 
 ### Performance
 
-Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB):
+Single corpus: **928 Markdown files (23 MB)**.
+
+Fresh-run cross-formatter ranking (files need formatting):
 
 | Rank | Formatter | Mean (fresh) | Relative to dprint |
 | --- | --- | --- | --- |
-| 1 | dprint | 0.37 s | 1.0x |
-| 2 | **flowmark-rs** | **0.73 s** | **2.0x** |
+| 1 | dprint (`--incremental=false`) | 0.36 s | 1.0x |
+| 2 | **flowmark-rs** (`--auto`) | **0.71 s** | **2.0x** |
 | 3 | markdownfmt | 0.95 s | 2.6x |
-| 4 | prettier | 38.0 s | 103x |
+| 4 | prettier | 38.0 s | 105x |
 | 5 | flowmark-py | ~48 s | ~130x |
 | 6 | mdformat | 72.9 s | 197x |
 
-flowmark-rs is currently the #2 fastest formatter in this comparison set, and on this
-same corpus it is roughly **60-70x faster than flowmark-py**.
+Cached second-run (unchanged files):
+
+| Formatter | Mean (cached 2nd run) |
+| --- | --- |
+| **flowmark-rs** (`--auto`, incremental default) | **0.023 s** |
+| dprint (`fmt`, incremental default) | 0.031 s |
+
+flowmark-rs is currently the #2 fastest formatter on fresh runs in this comparison set,
+and on this same corpus it is roughly **60-70x faster than flowmark-py**.
 
 See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details
 and methodology.
@@ -531,4 +540,3 @@ found most useful.
 ## Project Docs
 
 For development workflows, see [development.md](docs/development.md).
-

@@ -6,6 +6,7 @@ pub mod config;
 pub mod error;
 pub mod file_resolver;
 pub mod formatter;
+pub mod incremental_cache;
 pub mod parser;
 pub mod skills;
 pub mod transform;

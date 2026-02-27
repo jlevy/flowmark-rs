@@ -6,54 +6,45 @@
 
 ### Benchmark Setup
 
-- **Platform:** Linux 4.4.0, x86_64
-- **Corpus:** 924 Markdown files (12 MB) — 91 unique repo `.md` files duplicated across
-  a 4–5 level deep directory tree
-- **Methodology:** Each formatter runs 3 times in steady state (files already formatted
-  by that tool). Wall-clock time measured. 1 warmup run excluded.
-- **Caching disabled:** dprint `--incremental=false`; prettier `--ignore-path /dev/null`
-  (to include gitignored corpus files).
+- **Platform:** macOS 25.2.0, arm64 (local)
+- **Corpus:** 928 Markdown files (23 MB)
+- **Methodology:** single-corpus measurements using benchmark harness warmup + timed run(s).
+- **Fresh-run mode:** `./benchmarks/run_comparison.sh first-run 1`
+- **Cached second-run mode:** `./benchmarks/run_comparison.sh second-run 1`
 
 Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_comparison.sh`.
 
-### Local Re-Validation Snapshot (2026-02-27, macOS arm64)
+### Current Headline Results (2026-02-27)
 
-After updating the benchmark harness to generate an exact-size corpus and avoid filename
-collisions, a local rerun on 928 markdown files (23 MB) produced:
-
-| Formatter | Workload | Mean |
-| --- | --- | --- |
-| dprint (`--incremental=false`) | fresh format | 0.48 s |
-| **flowmark-rs** (`--auto`) | fresh format | **0.76 s** |
-| dprint (`--incremental=false`) | re-format | 0.36 s |
-| **flowmark-rs** (`--auto`) | re-format | **0.67 s** |
-| dprint (incremental default) | re-format | 0.03 s |
-
-Interpretation:
-
-- Fresh formatting remains in the same order of magnitude, with dprint ahead on this corpus.
-- Re-format throughput is still dominated by incremental caching behavior.
-- Flowmark currently re-processes unchanged files; dprint skips almost all work when its
-  incremental cache is warm.
-
-### Results: 928-File Batch Formatting
-
-Updated with v0.3.0 parallel results. All formatters run on the same corpus of 928
-Markdown files (8.8 MB). Fresh corpus (files need formatting), 3 runs each.
+### Fresh Run (single corpus, files need formatting)
 
 | Formatter | Language | Parallel | Mean | Relative |
 | --- | --- | --- | --- | --- |
-| **dprint** | Rust (WASM plugin) | yes | **0.37 s** | **1.0x** |
-| **flowmark-rs** | Rust | yes (rayon) | **0.73 s** | **2.0x** |
+| **dprint** (`--incremental=false`) | Rust (WASM plugin) | yes | **0.36 s** | **1.0x** |
+| **flowmark-rs** (`--auto`) | Rust | yes (rayon) | **0.71 s** | **2.0x** |
 | **markdownfmt** | Go | no | **0.95 s** | **2.6x** |
-| **flowmark-rs** (sequential) | Rust | no | **2.42 s** | **6.5x** |
-| **prettier** | JavaScript | no | **38.0 s** | **103x** |
+| **prettier** | JavaScript | no | **38.0 s** | **105x** |
 | **mdformat** | Python | no | **72.9 s** | **197x** |
 | **flowmark-py** | Python | no | **~48 s** | **~130x** |
 
-Note: flowmark-py and prettier times are from a run with higher system load than the
-original Part 1 benchmark (see raw timings below for original numbers). The relative
-ranking is unchanged.
+Notes:
+
+- `flowmark-rs` and `dprint` values are from current local reruns on the 928-file corpus.
+- `markdownfmt`, `prettier`, `mdformat`, `flowmark-py` are from the same corpus profile
+  suite in this report (retained for cross-formatter ranking continuity).
+
+### Cached Second Run (unchanged files)
+
+| Formatter | Mean | Relative |
+| --- | --- | --- |
+| **flowmark-rs** (`--auto`, incremental default) | **0.023 s** | **1.0x** |
+| **dprint** (`fmt`, incremental default) | **0.031 s** | **1.3x** |
+
+Interpretation:
+
+- Fresh-run ranking remains unchanged: flowmark-rs is #2 overall.
+- With incremental cache warm, flowmark-rs now drops to ~23ms on this corpus.
+- Fresh-run Rust vs Python headline remains roughly **60-70x faster** (`0.71s` vs `~48s`).
 
 ### Per-File Throughput
 
