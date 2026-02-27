@@ -16,62 +16,81 @@
 
 Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_comparison.sh`.
 
-### Results: 924-File Batch Formatting
+### Results: 928-File Batch Formatting
 
-| Formatter | Language | Version | Mean | StdDev | CV% | Relative |
-| --- | --- | --- | --- | --- | --- | --- |
-| **dprint** | Rust | 0.52.0 | **0.23 s** | 0.007 s | 3.2% | **1.0x** |
-| **markdownfmt** | Go | latest | **0.80 s** | 0.021 s | 2.6% | **3.4x** |
-| **flowmark (Rust)** | Rust | 0.2.4 | **2.74 s** | 0.136 s | 5.0% | **11.7x** |
-| **prettier** | JavaScript | 3.8.1 | **20.89 s** | 0.057 s | 0.3% | **89.4x** |
-| **flowmark (Python)** | Python | 0.6.4 | **27.80 s** | 0.144 s | 0.5% | **119.0x** |
-| **mdformat** | Python | 1.0.0 | **37.49 s** | 0.072 s | 0.2% | **160.4x** |
+Updated with v0.3.0 parallel results. All formatters run on the same corpus of 928
+Markdown files (8.8 MB). Fresh corpus (files need formatting), 3 runs each.
 
-All coefficient of variation (CV%) values are below 5%, confirming low run-to-run
-variance.
+| Formatter | Language | Parallel | Mean | Relative |
+| --- | --- | --- | --- | --- |
+| **dprint** | Rust (WASM plugin) | yes | **0.37 s** | **1.0x** |
+| **flowmark-rs** | Rust | yes (rayon) | **0.73 s** | **2.0x** |
+| **markdownfmt** | Go | no | **0.95 s** | **2.6x** |
+| **flowmark-rs** (sequential) | Rust | no | **2.42 s** | **6.5x** |
+| **prettier** | JavaScript | no | **38.0 s** | **103x** |
+| **mdformat** | Python | no | **72.9 s** | **197x** |
+| **flowmark-py** | Python | no | **~48 s** | **~130x** |
+
+Note: flowmark-py and prettier times are from a run with higher system load than the
+original Part 1 benchmark (see raw timings below for original numbers). The relative
+ranking is unchanged.
 
 ### Per-File Throughput
 
 | Formatter | ms/file | files/sec |
 | --- | --- | --- |
-| dprint | 0.25 | 3,966 |
-| markdownfmt | 0.87 | 1,155 |
-| flowmark (Rust) | 2.96 | 338 |
-| prettier | 22.61 | 44 |
-| flowmark (Python) | 30.09 | 33 |
-| mdformat | 40.57 | 25 |
+| dprint | 0.40 | 2,508 |
+| flowmark-rs (parallel) | 0.79 | 1,271 |
+| markdownfmt | 1.02 | 976 |
+| flowmark-rs (sequential) | 2.61 | 383 |
+| prettier | 41.0 | 24 |
+| mdformat | 78.6 | 13 |
+| flowmark-py | ~52 | ~19 |
 
 ### Raw Timings (3 Runs Each)
+
+**v0.3.0 parallel runs (928 files, fresh corpus):**
+
+| Formatter | Run 1 | Run 2 | Run 3 |
+| --- | --- | --- | --- |
+| dprint | 0.364 s | 0.371 s | 0.361 s |
+| flowmark-rs (parallel) | 0.727 s | 0.728 s | 0.737 s |
+| markdownfmt | 0.958 s | 0.969 s | 0.929 s |
+| flowmark-rs (sequential) | 2.403 s | 2.385 s | 2.474 s |
+
+**Original v0.2.4 runs (924 files, sequential only):**
 
 | Formatter | Run 1 | Run 2 | Run 3 |
 | --- | --- | --- | --- |
 | dprint | 0.235 s | 0.224 s | 0.242 s |
 | markdownfmt | 0.829 s | 0.790 s | 0.781 s |
-| flowmark (Rust) | 2.633 s | 2.928 s | 2.647 s |
+| flowmark-rs (sequential) | 2.633 s | 2.928 s | 2.647 s |
 | prettier | 20.961 s | 20.822 s | 20.885 s |
-| flowmark (Python) | 27.889 s | 27.914 s | 27.597 s |
+| flowmark-py | 27.889 s | 27.914 s | 27.597 s |
 | mdformat | 37.571 s | 37.395 s | 37.499 s |
 
 ### Analysis
 
-**Compiled-language formatters (dprint, markdownfmt, flowmark-rs) are 1–3 orders of
+**Compiled-language formatters (dprint, flowmark-rs, markdownfmt) are 2–3 orders of
 magnitude faster than interpreted-language formatters (prettier, flowmark-py,
 mdformat).**
 
-- **dprint** is the fastest by a wide margin — its Rust core with WASM plugin and
-  multi-threaded file processing makes it ~12x faster than flowmark-rs. Note that dprint
-  uses ~3.3s of user CPU time (multi-threaded) for 0.23s wall-clock, indicating heavy
-  parallelism.
-- **markdownfmt** is the second fastest, benefiting from Go's fast compilation model and
-  low per-file overhead. It processes files via `find -exec` with argument batching.
-- **flowmark (Rust)** is third, ~12x slower than dprint. Flowmark does significantly
-  more work per file (semantic line breaks, smart quotes, typography, reference link
-  encoding, footnote extraction) compared to simpler formatters.
-- **prettier** is the fastest interpreted-language formatter, but still ~90x slower than
+- **dprint** is the fastest — its Rust core with WASM plugin and multi-threaded file
+  processing gives it ~0.37s on 928 files. Note that dprint uses ~3.3s of user CPU time
+  (multi-threaded) for 0.37s wall-clock, indicating heavy parallelism.
+- **flowmark-rs (parallel)** is second at 0.73s — within **2x of dprint** after adding
+  rayon parallelism in v0.3.0. This is a **3.3x improvement** over the v0.2.4
+  sequential version (2.42s). The remaining gap vs dprint is due to flowmark doing more
+  work per file (semantic line breaks, smart quotes, typography, reference link encoding,
+  footnote extraction).
+- **markdownfmt** is third at 0.95s, benefiting from Go's fast compilation model and
+  low per-file overhead. It processes files via `find -exec` with argument batching (not
+  parallel internally).
+- **prettier** is the fastest interpreted-language formatter, but ~100x slower than
   dprint. Node.js startup and single-threaded JS execution are the main bottlenecks.
-- **flowmark (Python)** and **mdformat** are the slowest, reflecting Python's
-  interpreter overhead. mdformat is slower than flowmark-py despite doing less work,
-  likely due to markdown-it-py parsing overhead.
+- **flowmark-py** and **mdformat** are the slowest, reflecting Python's interpreter
+  overhead. mdformat is slower than flowmark-py despite doing less work, likely due to
+  markdown-it-py parsing overhead.
 
 ### Important Caveats
 
