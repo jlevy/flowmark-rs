@@ -9,7 +9,7 @@ author: Joshua Levy (github.com/jlevy) with LLM assistance
 
 **Author:** Joshua Levy with LLM assistance
 
-**Status:** Draft
+**Status:** Implemented
 
 ## Overview
 
