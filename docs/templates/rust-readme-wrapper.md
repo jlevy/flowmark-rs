@@ -37,7 +37,7 @@ Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
 
 Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB):
 
-| Rank | Formatter | Mean (fresh) | Relative |
+| Rank | Formatter | Mean (fresh) | Relative to dprint |
 | --- | --- | --- | --- |
 | 1 | dprint | 0.37 s | 1.0x |
 | 2 | **flowmark-rs** | **0.73 s** | **2.0x** |
@@ -46,24 +46,8 @@ Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB)
 | 5 | flowmark-py | ~48 s | ~130x |
 | 6 | mdformat | 72.9 s | 197x |
 
-flowmark-rs is currently the #2 fastest formatter in this comparison set.
-
-These are two different benchmark scopes:
-
-- Cross-formatter ranking above: 928-file corpus (8.8 MB), six tools.
-- Python vs Rust table below: separate 1,080-file flowmark-focused corpus.
-
-Because corpus sizes and workloads differ, compare numbers within each table.
-
-On the separate Python-vs-Rust corpus, the Rust port is **10–17x faster** than
-the Python reference implementation:
-
-| Benchmark | Python | Rust | Speedup |
-| --- | --- | --- | --- |
-| Single file (1,734 lines) | 471.7 ms | 27.3 ms | **17.3x** |
-| Batch 1,080 files (`--auto`) | 32.1 s | 2.69 s | **11.9x** |
-| Batch 1,080 files (`--semantic`) | 27.2 s | 2.5 s | **10.9x** |
-| File discovery (`--list-files`) | 1.31 s | 169 ms | **7.8x** |
+flowmark-rs is currently the #2 fastest formatter in this comparison set, and on this
+same corpus it is roughly **60-70x faster than flowmark-py**.
 
 See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details
 and methodology.
