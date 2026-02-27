@@ -734,24 +734,80 @@ fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipse
 /// non-fenced line, replacements are applied uniformly (including inside inline code
 /// spans) because Comrak can strip escapes even in code-span-like contexts such as GFM
 /// table cells (P8).
-fn protect_escapes_outside_code(text: &str, placeholders: &[(String, String)]) -> String {
+fn protect_escapes_outside_code(text: &str, escape_set: &[char]) -> String {
     transform_outside_code_fences(text, |line| {
-        let processed = replace_escapes_in_line(line, placeholders);
+        let processed = replace_escapes_in_line(line, escape_set);
         vec![processed]
     })
 }
 
-/// COMRAK-WORKAROUND4: Apply escape replacements to all text in a line, including
-/// inside inline code spans. Previously this only replaced outside code spans, but
-/// Comrak can strip backslash escapes even inside inline code in certain contexts
-/// (e.g., GFM table cells). PUA-protecting everywhere is safe because the round-trip
-/// is idempotent: the PUA placeholder survives Comrak parsing as literal content and
-/// is restored to the original `\x` escape in post-processing (P8).
-fn replace_escapes_in_line(line: &str, placeholders: &[(String, String)]) -> String {
-    let mut result = line.to_string();
-    for (escaped, placeholder) in placeholders {
-        result = result.replace(escaped.as_str(), placeholder.as_str());
+/// COMRAK-WORKAROUND4: Replace `\<char>` escape sequences with PUA placeholders in a
+/// single pass. For each `\<char>` where `<char>` is in `ESCAPE_CHARS`, emits the
+/// corresponding PUA placeholder (U+E000 + `char_value`, U+E100 filler).
+/// This replaces 32 sequential `.replace()` calls with one scan.
+fn replace_escapes_in_line(line: &str, escape_set: &[char]) -> String {
+    const PUA_FILLER: char = '\u{E100}';
+
+    // Fast path: no backslash means no escapes to replace.
+    if !line.contains('\\') {
+        return line.to_string();
     }
+
+    let mut result = String::with_capacity(line.len());
+    let mut chars = line.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            if let Some(&next) = chars.peek() {
+                if escape_set.contains(&next) {
+                    chars.next(); // consume the escaped char
+                    let pua = char::from_u32(0xE000 + next as u32).expect("valid PUA");
+                    result.push(pua);
+                    result.push(PUA_FILLER);
+                    continue;
+                }
+            }
+            result.push(ch);
+        } else {
+            result.push(ch);
+        }
+    }
+
+    result
+}
+
+/// COMRAK-WORKAROUND4 (post-processing): Restore PUA escape placeholders to original
+/// `\<char>` escapes in a single pass. Each placeholder is a 2-char sequence:
+/// PUA char (U+E000 + `original_ascii`) followed by filler U+E100.
+/// This replaces 32 sequential `.replace()` calls with one scan.
+fn restore_pua_escape_placeholders(text: &str) -> String {
+    const PUA_FILLER: char = '\u{E100}';
+
+    // Fast path: if no PUA chars present, return as-is.
+    if !text.contains(|c: char| ('\u{E000}'..='\u{E0FF}').contains(&c)) {
+        return text.to_string();
+    }
+
+    let mut result = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ('\u{E000}'..='\u{E0FF}').contains(&ch) {
+            if chars.peek() == Some(&PUA_FILLER) {
+                chars.next(); // consume filler
+                // Recover original ASCII char: pua_char = 0xE000 + ascii_value
+                let original = char::from_u32(ch as u32 - 0xE000).unwrap_or(ch);
+                result.push('\\');
+                result.push(original);
+            } else {
+                // PUA char without filler — pass through unchanged
+                result.push(ch);
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+
     result
 }
 
@@ -2162,16 +2218,9 @@ pub fn fill_markdown(
 
     // COMRAK-WORKAROUND4: Replace `\x` escape sequences with PUA placeholders.
     // Each `\x` is 2 chars, so use a 2-char PUA placeholder to preserve width
-    // during line wrapping.
-    let mut escape_placeholders: Vec<(String, String)> = Vec::new();
-    for &ch in ESCAPE_CHARS {
-        let escaped = format!("\\{ch}");
-        let pua_char = char::from_u32(0xE000 + ch as u32).expect("valid PUA code point");
-        // Use 2-char placeholder (PUA + filler) to match the 2-char `\x` width
-        let placeholder = format!("{pua_char}\u{E100}");
-        escape_placeholders.push((escaped, placeholder));
-    }
-    text = protect_escapes_outside_code(&text, &escape_placeholders);
+    // during line wrapping. Uses a single-pass scan per line instead of 32 sequential
+    // `.replace()` calls.
+    text = protect_escapes_outside_code(&text, ESCAPE_CHARS);
 
     // === Parse with comrak ===
     let arena = Arena::new();
@@ -2197,10 +2246,9 @@ pub fn fill_markdown(
     // === Post-render workarounds ===
 
     // COMRAK-WORKAROUND4: Restore escaped characters from PUA placeholders.
-    let mut result = result;
-    for (escaped, placeholder) in &escape_placeholders {
-        result = result.replace(placeholder.as_str(), escaped.as_str());
-    }
+    // Single-pass scan: any PUA char in range U+E000..U+E100 followed by U+E100 filler
+    // is restored to the original `\<char>` escape.
+    let result = restore_pua_escape_placeholders(&result);
 
     // COMRAK-WORKAROUND11: Remove unnecessary period escapes.
     let result = postprocess_period_escapes(&result);

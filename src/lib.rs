@@ -81,6 +81,11 @@ impl FormatOptions {
         let content = std::fs::read_to_string(path)?;
         let formatted = self.reformat_text(&content);
 
+        // Skip write if content is unchanged (preserves mtime, avoids I/O)
+        if inplace && formatted == content {
+            return Ok(());
+        }
+
         if inplace {
             if !nobackup {
                 let backup_path = path.with_extension("bak");
