@@ -48,7 +48,15 @@ Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB)
 
 flowmark-rs is currently the #2 fastest formatter in this comparison set.
 
-The Rust port is **10–17x faster** than the Python reference implementation:
+These are two different benchmark scopes:
+
+- Cross-formatter ranking above: 928-file corpus (8.8 MB), six tools.
+- Python vs Rust table below: separate 1,080-file flowmark-focused corpus.
+
+Because corpus sizes and workloads differ, compare numbers within each table.
+
+On the separate Python-vs-Rust corpus, the Rust port is **10–17x faster** than
+the Python reference implementation:
 
 | Benchmark | Python | Rust | Speedup |
 | --- | --- | --- | --- |
