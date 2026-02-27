@@ -14,4 +14,3 @@ updated_at: 2026-02-20T10:33:38.751Z
 closed_at: 2026-02-20T10:33:38.750Z
 close_reason: All 11 work items (WI-1 through WI-11) complete. 8 commits on playbook-sync-2026-02-20. WI-12 deferred to upstream.
 ---
-
