@@ -1,28 +1,118 @@
-# Flowmark Performance Report: Python vs Rust
+# Flowmark Performance Report
 
-**Date:** 2026-02-26
+**Date:** 2026-02-27
 
-## Benchmark Setup
+## Part 1: Cross-Formatter Comparison
+
+### Benchmark Setup
 
 - **Platform:** Linux 4.4.0, x86_64
-- **Python:** flowmark v0.6.4
-- **Rust:** flowmark v0.2.4 (release: `opt-level=3`, LTO, `codegen-units=1`, `panic=abort`)
-- **Corpus:** 1,080 Markdown files (11 MB) — 90 unique repo `.md` files duplicated 12x in
+- **Corpus:** 924 Markdown files (12 MB) — 91 unique repo `.md` files duplicated across
   a 4–5 level deep directory tree
+- **Methodology:** Each formatter runs 3 times in steady state (files already formatted
+  by that tool). Wall-clock time measured. 1 warmup run excluded.
+- **Caching disabled:** dprint `--incremental=false`; prettier `--ignore-path /dev/null`
+  (to include gitignored corpus files).
+
+Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_comparison.sh`.
+
+### Results: 924-File Batch Formatting
+
+| Formatter | Language | Version | Mean | StdDev | CV% | Relative |
+| --- | --- | --- | --- | --- | --- | --- |
+| **dprint** | Rust | 0.52.0 | **0.23 s** | 0.007 s | 3.2% | **1.0x** |
+| **markdownfmt** | Go | latest | **0.80 s** | 0.021 s | 2.6% | **3.4x** |
+| **flowmark (Rust)** | Rust | 0.2.4 | **2.74 s** | 0.136 s | 5.0% | **11.7x** |
+| **prettier** | JavaScript | 3.8.1 | **20.89 s** | 0.057 s | 0.3% | **89.4x** |
+| **flowmark (Python)** | Python | 0.6.4 | **27.80 s** | 0.144 s | 0.5% | **119.0x** |
+| **mdformat** | Python | 1.0.0 | **37.49 s** | 0.072 s | 0.2% | **160.4x** |
+
+All coefficient of variation (CV%) values are below 5%, confirming low run-to-run
+variance.
+
+### Per-File Throughput
+
+| Formatter | ms/file | files/sec |
+| --- | --- | --- |
+| dprint | 0.25 | 3,966 |
+| markdownfmt | 0.87 | 1,155 |
+| flowmark (Rust) | 2.96 | 338 |
+| prettier | 22.61 | 44 |
+| flowmark (Python) | 30.09 | 33 |
+| mdformat | 40.57 | 25 |
+
+### Raw Timings (3 Runs Each)
+
+| Formatter | Run 1 | Run 2 | Run 3 |
+| --- | --- | --- | --- |
+| dprint | 0.235 s | 0.224 s | 0.242 s |
+| markdownfmt | 0.829 s | 0.790 s | 0.781 s |
+| flowmark (Rust) | 2.633 s | 2.928 s | 2.647 s |
+| prettier | 20.961 s | 20.822 s | 20.885 s |
+| flowmark (Python) | 27.889 s | 27.914 s | 27.597 s |
+| mdformat | 37.571 s | 37.395 s | 37.499 s |
+
+### Analysis
+
+**Compiled-language formatters (dprint, markdownfmt, flowmark-rs) are 1–3 orders of
+magnitude faster than interpreted-language formatters (prettier, flowmark-py,
+mdformat).**
+
+- **dprint** is the fastest by a wide margin — its Rust core with WASM plugin and
+  multi-threaded file processing makes it ~12x faster than flowmark-rs. Note that dprint
+  uses ~3.3s of user CPU time (multi-threaded) for 0.23s wall-clock, indicating heavy
+  parallelism.
+- **markdownfmt** is the second fastest, benefiting from Go's fast compilation model and
+  low per-file overhead. It processes files via `find -exec` with argument batching.
+- **flowmark (Rust)** is third, ~12x slower than dprint. Flowmark does significantly
+  more work per file (semantic line breaks, smart quotes, typography, reference link
+  encoding, footnote extraction) compared to simpler formatters.
+- **prettier** is the fastest interpreted-language formatter, but still ~90x slower than
+  dprint. Node.js startup and single-threaded JS execution are the main bottlenecks.
+- **flowmark (Python)** and **mdformat** are the slowest, reflecting Python's
+  interpreter overhead. mdformat is slower than flowmark-py despite doing less work,
+  likely due to markdown-it-py parsing overhead.
+
+### Important Caveats
+
+These formatters are **not interchangeable** — they have very different feature sets:
+
+- **flowmark** (Python and Rust): Semantic line breaks, smart quotes, ellipsis
+  typography, reference link encoding, footnote extraction, configurable wrapping modes.
+  The most feature-rich formatter.
+- **prettier**: Opinionated reformatting with consistent style. Good ecosystem
+  integration. No semantic line breaks.
+- **dprint**: Fast, parallel, plugin-based. Basic markdown normalization. No typography
+  or semantic features.
+- **mdformat**: Extensible Python formatter with plugin system. CommonMark-focused.
+- **markdownfmt**: Minimal Go formatter. Normalizes headings, lists, and whitespace.
+  Limited configurability.
+
+The speed differences partially reflect feature complexity: simpler formatters that do
+less per-file processing are naturally faster.
+
+* * *
+
+## Part 2: Flowmark Python vs Rust (Detailed)
+
+### Benchmark Setup
+
+- **Python:** flowmark v0.6.4
+- **Rust:** flowmark v0.2.4 (release: `opt-level=3`, LTO, `codegen-units=1`,
+  `panic=abort`)
 - **Benchmarking tool:** hyperfine (with warmup, multiple runs)
 - **Profiling tool:** valgrind callgrind (instruction-level, single file and batch)
 
-Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_benchmarks.sh`,
-`benchmarks/profile_rust.sh`.
+Scripts to reproduce: `benchmarks/run_benchmarks.sh`, `benchmarks/profile_rust.sh`.
 
-## Headline Results
+### Headline Results
 
-Rust flowmark is **9–14x faster** than Python flowmark across all workloads.
+Rust flowmark is **10–17x faster** than Python flowmark across all workloads.
 
 | Benchmark | Python | Rust | Speedup |
 | --- | --- | --- | --- |
-| Single file (1,734 lines, stdout) | 471.7 ms | 34.7 ms | **13.6x** |
-| Batch `--auto` (1,080 files in-place) | 32.1 s | 3.7 s | **8.8x** |
+| Single file (1,734 lines, stdout) | 471.7 ms | 27.3 ms | **17.3x** |
+| Batch `--auto` (924 files in-place) | 27.8 s | 2.74 s | **10.1x** |
 | Batch `--semantic` (1,080 files in-place) | 27.2 s | 2.5 s | **10.9x** |
 | File discovery `--list-files` (1,080 files) | 1.31 s | 169 ms | **7.8x** |
 
@@ -30,13 +120,13 @@ Rust flowmark is **9–14x faster** than Python flowmark across all workloads.
 
 | Mode | Python | Rust |
 | --- | --- | --- |
-| `--auto` (batch) | 29.7 ms/file, 33 files/sec | 3.4 ms/file, 294 files/sec |
+| `--auto` (batch) | 30.1 ms/file, 33 files/sec | 2.96 ms/file, 338 files/sec |
 | `--semantic` (batch) | 25.2 ms/file, 39 files/sec | 2.3 ms/file, 432 files/sec |
 
 ### Notes
 
 - Python startup overhead (~300 ms) inflates single-file times; in batch mode this is
-  amortized and the per-file speedup drops to 9–11x.
+  amortized and the per-file speedup drops to ~10x.
 - Semantic mode is slightly faster than auto for both implementations (fewer line-wrap
   iterations).
 - File discovery (`--list-files`) shows 7.8x speedup, reflecting Rust `ignore` crate vs
@@ -45,8 +135,7 @@ Rust flowmark is **9–14x faster** than Python flowmark across all workloads.
 ## Profiling: Where Does Rust Spend Its Time?
 
 Profiled with `valgrind --tool=callgrind` on `tests/testdocs/testdoc.orig.md` (1,734
-lines).
-Total: 155.7M instructions.
+lines). Total: 155.7M instructions.
 
 ### Call Hierarchy (Inclusive Cost)
 
@@ -64,8 +153,8 @@ fill_markdown (entry)                           99.4%   (154.7M)
 ```
 
 The wrapping pipeline (word splitting → paragraph wrapping → line breaking) is the
-dominant cost at ~35% inclusive.
-Pre- and post-processing workarounds for comrak account for another ~30%.
+dominant cost at ~35% inclusive. Pre- and post-processing workarounds for comrak account
+for another ~30%.
 
 ### Self-Time Breakdown (Exclusive Cost)
 
@@ -82,9 +171,9 @@ Pre- and post-processing workarounds for comrak account for another ~30%.
 ### Key Finding
 
 **String pattern searching is the #1 bottleneck at ~30% of total instructions.** This is
-not from the comrak parser or regex — it's from Rust's `str::replace()`, `str::contains()`,
-and related methods that use `core::str::pattern::StrSearcher` (Two-Way string search
-algorithm).
+not from the comrak parser or regex — it's from Rust's `str::replace()`,
+`str::contains()`, and related methods that use `core::str::pattern::StrSearcher`
+(Two-Way string search algorithm).
 
 ## Root Causes
 
@@ -106,8 +195,8 @@ fn restore_atomic_constructs(tokens: &[String], constructs: &[String], placehold
 
 For each token, this scans the full string M times (once per placeholder). Each
 `.replace()` call invokes `StrSearcher::new` (builds a Two-Way searcher) and
-`TwoWaySearcher::next` (scans the string). With many tokens and many placeholders, this is
-expensive.
+`TwoWaySearcher::next` (scans the string). With many tokens and many placeholders, this
+is expensive.
 
 ### 2. 32× Sequential `.replace()` for Escape Placeholders
 
@@ -142,37 +231,35 @@ it visible at 0.5% self-time.
 
 ## Optimization Experiments
 
-Two optimizations were implemented and tested.
-All 430 tests pass after each change.
+Two optimizations were implemented and tested. All 430 tests pass after each change.
 
 ### Optimization 1: Single-pass `restore_atomic_constructs`
 
 **Change:** Replace the O(N×M) `.replace()` loop in `restore_atomic_constructs`
 (`src/wrapping/text_wrapping.rs`) with a fast-path check: if the token doesn't contain
-the placeholder prefix byte (`\x00`), skip entirely.
-If the entire token is a placeholder (common case), do a HashMap lookup instead of
-M sequential `.replace()` calls.
+the placeholder prefix byte (`\x00`), skip entirely. If the entire token is a
+placeholder (common case), do a HashMap lookup instead of M sequential `.replace()`
+calls.
 
 **Result (alone):** Within measurement noise — no significant improvement on test
-document.
-This makes sense: the testdoc has relatively few atomic constructs (HTML tags,
-code spans), so the placeholder restoration isn't the dominant contributor.
-The optimization would show more benefit on documents heavy with inline HTML/code.
+document. This makes sense: the testdoc has relatively few atomic constructs (HTML tags,
+code spans), so the placeholder restoration isn't the dominant contributor. The
+optimization would show more benefit on documents heavy with inline HTML/code.
 
 ### Optimization 2: Single-pass PUA Escape Processing
 
 **Change:** Replace two sets of 32× sequential `.replace()` calls:
 
 - **Pre-processing** (`replace_escapes_in_line`): Instead of calling
-  `.replace(escaped, placeholder)` for each of 32 escape chars, scan the line once
-  for `\` and check if the next char is in the escape set.
+  `.replace(escaped, placeholder)` for each of 32 escape chars, scan the line once for
+  `\` and check if the next char is in the escape set.
 - **Post-processing** (`restore_pua_escape_placeholders`): Instead of 32×
-  `.replace(placeholder, escaped)` over the full document, scan once for any char in
-  the PUA range `\u{E000}..=\u{E0FF}` followed by filler `\u{E100}` and emit the
-  original `\<char>`.
+  `.replace(placeholder, escaped)` over the full document, scan once for any char in the
+  PUA range `\u{E000}..=\u{E0FF}` followed by filler `\u{E100}` and emit the original
+  `\<char>`.
 
-Both directions now process the text in a single pass with O(N) time per call instead
-of O(32×N).
+Both directions now process the text in a single pass with O(N) time per call instead of
+O(32×N).
 
 ### Combined Results (Optimizations 1+2)
 
@@ -180,21 +267,21 @@ Benchmarked with `hyperfine` (warmup + 10 runs for single file, 5 for batch).
 
 **Single file (`testdoc.orig.md`, 1,734 lines):**
 
-| | Mean | Range |
+|  | Mean | Range |
 | --- | --- | --- |
 | Before | 31.5 ms +/- 2.2 ms | 28.4 – 39.6 ms |
 | After | 27.3 ms +/- 2.5 ms | 24.2 – 34.9 ms |
-| **Improvement** | **13.3% faster** | |
+| **Improvement** | **13.3% faster** |  |
 
 Verified across 3 independent runs: 27.0, 27.2, 27.4, 27.8 ms (consistent).
 
 **Batch `--auto` (1,080 files):**
 
-| | Mean | Range |
+|  | Mean | Range |
 | --- | --- | --- |
 | Before | 3.21 s +/- 0.11 s | 3.09 – 3.34 s |
 | After | 2.69 s +/- 0.15 s | 2.58 – 3.02 s |
-| **Improvement** | **16.2% faster** | |
+| **Improvement** | **16.2% faster** |  |
 
 Verified across 3 independent runs: 2.71, 2.73, 2.63 s (consistent).
 
@@ -211,9 +298,8 @@ Re-profiled with callgrind after optimizations:
 | Comrak parser | ~2.4% (3.7M) | ~2.6% (2.3M) | -37.8% |
 
 The string searching cost dropped from the dominant bottleneck (30%) to a minor
-contributor (7.4%).
-All other categories decreased in absolute terms by ~40%, reflecting the removal of
-the unnecessary work that string-search-heavy replace loops were causing.
+contributor (7.4%). All other categories decreased in absolute terms by ~40%, reflecting
+the removal of the unnecessary work that string-search-heavy replace loops were causing.
 
 ### What's Left After Optimization
 
@@ -221,10 +307,10 @@ Post-optimization, the remaining cost is spread across:
 
 1. **Memory allocation** (~19%) — inherent to string manipulation; would require
    `Cow<str>` or arena allocation (medium complexity)
-2. **String searching** (~7%) — remaining uses are necessary `.contains()` and
-   `.find()` calls
-3. **Regex** (~6%) — already well-optimized with `LazyLock`; hybrid DFA is the
-   regex crate's efficient path
+2. **String searching** (~7%) — remaining uses are necessary `.contains()` and `.find()`
+   calls
+3. **Regex** (~6%) — already well-optimized with `LazyLock`; hybrid DFA is the regex
+   crate's efficient path
 4. **Comrak parser** (~3%) — external dependency, not directly optimizable
 5. **memcpy/memset** (~7%) — inherent to string operations
 
@@ -233,11 +319,11 @@ Further optimization would yield diminishing returns for increasing complexity.
 ### Optimization 3: Allocation Reduction
 
 **Status:** Not implemented — the profiling after optimizations 1+2 shows that
-allocation cost dropped 41% in absolute terms (from 28.8M to 16.9M instructions)
-as a side effect of eliminating the string-replace churn.
-The remaining allocations are spread across many small sites in the wrapping
-pipeline, and reducing them would require introducing `Cow<str>` throughout the
-call chain — medium complexity for an estimated 3-5% further improvement.
+allocation cost dropped 41% in absolute terms (from 28.8M to 16.9M instructions) as a
+side effect of eliminating the string-replace churn. The remaining allocations are
+spread across many small sites in the wrapping pipeline, and reducing them would require
+introducing `Cow<str>` throughout the call chain — medium complexity for an estimated
+3-5% further improvement.
 
 ## Updated Headline Numbers (With Optimizations)
 
