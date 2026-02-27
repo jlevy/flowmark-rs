@@ -4,6 +4,7 @@
 mod cli {
     use anyhow::{Context, Result, bail};
     use clap::{ArgMatches, CommandFactory, FromArgMatches, Parser, parser::ValueSource};
+    use rayon::prelude::*;
     use std::io::{BufWriter, Read, Write};
     use std::path::{Path, PathBuf};
 
@@ -154,6 +155,11 @@ Use `flowmark --docs` for full documentation.
         /// Print full documentation
         #[arg(long, help_heading = "Agent Options")]
         pub docs: bool,
+
+        // --- Performance options ---
+        /// Number of parallel formatting threads (0 = all cores, default)
+        #[arg(long, default_value_t = 0, value_name = "N", help_heading = "Performance Options")]
+        pub threads: usize,
     }
 
     /// Detect which flags the user explicitly passed on the command line.
@@ -360,6 +366,14 @@ Use `flowmark --docs` for full documentation.
             list_spacing: args.list_spacing,
         };
 
+        // Configure rayon thread pool
+        if args.threads > 0 {
+            rayon::ThreadPoolBuilder::new()
+                .num_threads(args.threads)
+                .build_global()
+                .ok();
+        }
+
         // Validate: cannot use --inplace with stdin
         if args.inplace && resolved_files.iter().any(|f| f == "-") {
             eprintln!("Error: Cannot use `inplace` with stdin");
@@ -376,25 +390,45 @@ Use `flowmark --docs` for full documentation.
             std::process::exit(1);
         }
 
-        for file in &resolved_files {
-            if file == "-" {
-                let mut input = String::new();
-                std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
+        // Partition stdin from regular files (stdin must be handled sequentially)
+        let (stdin_files, regular_files): (Vec<&String>, Vec<&String>) =
+            resolved_files.iter().partition(|f| *f == "-");
 
-                let output = opts.reformat_text(&input);
-                let stdout = std::io::stdout().lock();
-                let mut writer = BufWriter::new(stdout);
-                writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
-            } else {
+        // Handle stdin sequentially
+        for _file in &stdin_files {
+            let mut input = String::new();
+            std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
+
+            let output = opts.reformat_text(&input);
+            let stdout = std::io::stdout().lock();
+            let mut writer = BufWriter::new(stdout);
+            writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
+        }
+
+        // Format regular files: parallel when inplace, sequential for stdout output
+        if args.inplace {
+            // Inplace: parallelize across files (order doesn't matter)
+            regular_files.par_iter().try_for_each(|file| {
                 let path = PathBuf::from(file);
-                let output_path =
-                    if args.output == "-" { None } else { Some(PathBuf::from(&args.output)) };
-
                 if args.verbose {
                     eprintln!("formatting {}", path.display());
                 }
-
-                opts.reformat_file(&path, output_path.as_deref(), args.inplace, args.nobackup)
+                opts.reformat_file(&path, None, args.inplace, args.nobackup)
+                    .with_context(|| format!("failed to format {}", path.display()))
+            })?;
+        } else {
+            // Stdout or explicit output: must preserve file order
+            for file in &regular_files {
+                let path = PathBuf::from(file);
+                let output_path = if has_explicit_output {
+                    Some(PathBuf::from(&args.output))
+                } else {
+                    None
+                };
+                if args.verbose {
+                    eprintln!("formatting {}", path.display());
+                }
+                opts.reformat_file(&path, output_path.as_deref(), false, args.nobackup)
                     .with_context(|| format!("failed to format {}", path.display()))?;
             }
         }
