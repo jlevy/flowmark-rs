@@ -3,9 +3,9 @@ type: is
 id: is-01kjgkdqrt9ya4ey5a1v723m0k
 title: "CLI/config wiring: incremental flags and merge precedence"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 3
+version: 4
 spec_path: docs/project/specs/active/plan-2026-02-27-incremental-cache-and-performance-roadmap.md
 labels: []
 dependencies:
@@ -15,6 +15,8 @@ dependencies:
     target: is-01kjf287g1fwtffhra2g7wqpaa
 parent_id: is-01kjf287ax0e8s1bqrcamkb2m0
 created_at: 2026-02-27T22:27:33.784Z
-updated_at: 2026-02-27T22:27:58.395Z
+updated_at: 2026-02-27T22:50:19.310Z
+closed_at: 2026-02-27T22:50:19.310Z
+close_reason: Added CLI/config incremental flags and merge precedence handling with tests.
 ---
 Update src/main.rs Args and src/config.rs FlowmarkConfig/merge_cli_with_config for --incremental, --no-incremental, --incremental-cache-dir, and --perf-stats with explicit CLI > config precedence.
