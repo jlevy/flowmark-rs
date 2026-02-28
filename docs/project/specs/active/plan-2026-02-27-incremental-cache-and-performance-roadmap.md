@@ -21,6 +21,7 @@ reruns when files are unchanged.
 ## Goals
 
 - Add persistent incremental cache for unchanged-file fast paths
+- Add cache lifecycle UX commands for visibility and cleanup
 - Preserve correctness by invalidating cache on options/version/behavior changes
 - Add low-overhead timing instrumentation to isolate remaining hot stages
 - Produce reproducible benchmark evidence against dprint and prior flowmark baselines
@@ -122,11 +123,17 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 
 2. `src/main.rs`
 - `Args`: add cache controls with explicit UX:
-  `--incremental`, `--no-cache`, `--cache-dir`, `--perf-stats`
+  `--incremental`, `--no-cache`, `--cache-dir`, `--show-cache`,
+  `--clear-cache`, `--perf-stats`
 - `run`: initialize cache once for command execution
 - `run`: replace `opts.reformat_file(...)` in file loop with cache-aware path:
   read -> cache check -> format -> write -> cache record
 - `run`: aggregate and print perf/cache summary when `--perf-stats`
+- `run`: support cache lifecycle operations:
+  - `--show-cache`: print resolved cache root, total cache file count, and
+    human-readable total cache size
+  - `--clear-cache`: delete resolved cache root recursively and report result
+  - both commands respect `--cache-dir` override
 
 3. `src/lib.rs`
 - Add a non-I/O formatting helper to avoid duplicated read/write logic in CLI path:
@@ -191,7 +198,8 @@ Child beads with file/function scope and blockers:
     `is_known_formatted`, `record_formatted`, `flush`, fingerprint/hash helpers)
   - Blocked by: none
 - `fmr-ynyg` - CLI/config wiring: incremental flags and merge precedence
-  - Files/functions: `src/main.rs` (`Args`, `run` flag handling), `src/config.rs`
+  - Files/functions: `src/main.rs` (`Args`, `run` flag handling, `--show-cache`,
+    `--clear-cache` command path), `src/config.rs`
     (`FlowmarkConfig`, `set_config_field`, `merge_cli_with_config`),
     `src/settings.rs` (`default_cache_root`, cache path constants)
   - Blocked by: `fmr-qb08`
@@ -205,7 +213,7 @@ Child beads with file/function scope and blockers:
   - Blocked by: `fmr-ynyg`
 - `fmr-2z00` - Validation: cache correctness, invalidation, and CLI coverage
   - Files/functions: `tests/test_config.rs`, new cache integration/unit tests,
-    `tests/tryscript/help.tryscript.md`
+    `tests/tryscript/help.tryscript.md`, cache lifecycle command coverage
   - Blocked by: `fmr-m4z9`, `fmr-8tpy`
 - `fmr-ysne` - Hotspot follow-up: optimize dominant `fill_markdown` stages
   - Files/functions: targeted optimizations in `src/formatter/filling.rs`
@@ -252,6 +260,8 @@ Child beads with file/function scope and blockers:
   - unchanged files skipped
   - changed files reformatted
   - `--no-cache` forces full path
+  - `--show-cache` reports path, file count, and size
+  - `--clear-cache` removes cache root and reports cleanly when cache is absent
 - Benchmark validation:
   - fresh run (cold cache)
   - second run (warm cache)
@@ -270,6 +280,7 @@ Child beads with file/function scope and blockers:
 - Hash choice tradeoff: speed vs collision margin
 - Whether to include file path in key (for safety) or only content hash (for max dedupe)
 - Whether `--perf-stats` should support machine-readable JSON output
+- Whether `--clear-cache` should require an explicit confirmation flag in non-interactive contexts
 
 ## References
 
