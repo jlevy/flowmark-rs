@@ -25,7 +25,7 @@ fn main() {
     let base_tag = git_base_tag(package_version);
     let commits_ahead = git_commits_ahead(&base_tag).unwrap_or_else(|| "unknown".to_string());
     let git_hash =
-        run_git(["rev-parse", "--short=10", "HEAD"]).unwrap_or_else(|| "unknown".to_string());
+        run_git(["rev-parse", "--short=7", "HEAD"]).unwrap_or_else(|| "unknown".to_string());
 
     println!("cargo::rustc-env=FLOWMARK_GIT_BASE_TAG={base_tag}");
     println!("cargo::rustc-env=FLOWMARK_GIT_COMMITS_AHEAD={commits_ahead}");
