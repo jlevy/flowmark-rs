@@ -46,8 +46,23 @@ Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB)
 | 5 | flowmark-py | ~48 s | ~130x |
 | 6 | mdformat | 72.9 s | 197x |
 
+Cached second run (unchanged files, warm cache):
+
+| Formatter | Mean (cached) | Relative |
+| --- | --- | --- |
+| **flowmark-rs** (`--auto`) | **0.023 s** | **1.0x** |
+| **dprint** (`fmt`) | **0.031 s** | **1.3x** |
+
 flowmark-rs is currently the #2 fastest formatter in this comparison set, and on this
 same corpus it is roughly **60-70x faster than flowmark-py**.
+
+Rust-only performance features (not in the Python CLI today):
+
+- incremental cache (`--no-cache`, `--cache-dir`, `--incremental`)
+- stage-level performance stats (`--perf-stats`)
+
+See [`docs/rust-only-features.md`](docs/rust-only-features.md) for a concise
+feature matrix and [`docs/cache.md`](docs/cache.md) for cache behavior details.
 
 See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details
 and methodology.
@@ -83,15 +98,8 @@ Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
 
 {{ shared_docs_body }}
 
-## Rust Cache Notes
+Rust-specific docs:
 
-The Rust CLI supports incremental caching for inplace/auto runs.
-
-- Use `--no-cache` to disable cache reads/writes for a run.
-- Use `--cache-dir <DIR>` to override the cache root directory.
-- Default cache root is the OS user cache directory under `flowmark`
-  (for example `~/Library/Caches/flowmark` on macOS, `~/.cache/flowmark` on Linux).
-- If no OS cache directory is available, Flowmark falls back to
-  `.flowmark-cache/flowmark` in the current working directory.
-
-See [`docs/cache.md`](docs/cache.md) for full cache behavior details.
+- [`docs/rust-only-features.md`](docs/rust-only-features.md)
+- [`docs/cache.md`](docs/cache.md)
+- [`docs/development.md`](docs/development.md)

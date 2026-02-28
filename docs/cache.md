@@ -1,47 +1,60 @@
-# Cache Settings and Behavior
+# Incremental Cache (Developer Notes)
 
 Flowmark uses a persistent incremental cache for unchanged-file fast paths when
 formatting in place (`--auto` or `--inplace`).
+This cache behavior is currently specific to the Rust CLI.
 
-## Default Cache Location
+## Cache Root Resolution
 
-Cache paths are defined centrally in [`src/settings.rs`](../src/settings.rs):
+Default cache root is a **shared user cache**. Resolution order is:
 
-- `FALLBACK_CACHE_DIR = ".flowmark-cache"`
-- `APP_CACHE_DIR = "flowmark"`
-- `INCREMENTAL_CACHE_SUBDIR = "incremental"`
+1. `dirs::cache_dir()/flowmark` (OS-native user cache dir)
+2. `dirs::home_dir()/.flowmark-cache/flowmark` (fallback, with warning)
+3. `std::env::temp_dir()/flowmark-cache/flowmark` (last resort, with warning)
 
-Effective default cache root:
+Flowmark no longer falls back to a cache directory under the current working
+directory by default.
 
-- OS cache dir + `/flowmark` when available
-  - macOS: `~/Library/Caches/flowmark`
-  - Linux: `~/.cache/flowmark`
-  - Windows: `%LOCALAPPDATA%\\flowmark`
-- Fallback when OS cache root is unavailable:
-  - `./.flowmark-cache/flowmark`
+### How the OS cache path is determined
 
-Incremental manifests are stored under:
+`dirs::cache_dir()` is used for the primary location:
+
+- macOS: typically `~/Library/Caches`
+- Linux: typically `$XDG_CACHE_HOME` or `~/.cache`
+- Windows: typically `%LOCALAPPDATA%`
+
+If this lookup returns `None` (for example, unusual runtime environments with
+missing user/home metadata), Flowmark falls back to the next resolution step
+and prints a warning.
+
+## Cache Layout
+
+Cache manifest files are stored under:
 
 - `<cache-root>/incremental/<project-hash>.toml`
 
-## CLI Settings
+The manifest stores:
+
+- cache format version
+- formatter fingerprint
+- formatted-content hashes
+
+## CLI Options
 
 - `--no-cache`
-  - disables cache for the current run
+  - disable cache reads/writes for this run
   - alias: `--no-incremental`
 - `--cache-dir <DIR>`
-  - overrides cache root directory
+  - override cache root directory
   - alias: `--incremental-cache-dir`
 - `--incremental[=true|false]`
   - explicit enable/disable form
   - visible alias: `--cache`
 
-## Config File Settings
+## Config File Keys
 
-Cache settings can be configured in `flowmark.toml`, `.flowmark.toml`, or
-`pyproject.toml` (`[tool.flowmark]`).
-
-Recommended keys:
+Supported in `flowmark.toml`, `.flowmark.toml`, or `pyproject.toml`
+(`tool.flowmark`):
 
 ```toml
 [performance]
@@ -49,30 +62,9 @@ cache = true
 cache-dir = "/absolute/path/to/cache-root"
 ```
 
-Backward-compatible keys are also supported:
+Also accepted:
 
 - `incremental = true|false`
 - `incremental-cache-dir = "..."`
 
-CLI explicit flags still take precedence over config values.
-
-## What the Cache Stores
-
-- A project-scoped manifest keyed by project root hash.
-- Hashes of formatted file content for the current formatter fingerprint.
-- Formatter fingerprint includes:
-  - binary version
-  - formatting options
-  - config file path and contents (when present)
-
-## When Cache Helps
-
-Cache hits do not depend on duplicate files. They help when the same files are
-seen again unchanged (for example a second run in a repo with no Markdown edits).
-On cache hit, flowmark skips parse/render/write for that file.
-
-## Disabling and Troubleshooting
-
-- Use `--no-cache` for a forced full run.
-- Use `--cache-dir` to isolate cache state per benchmark or CI job.
-- Corrupt manifests are ignored and rebuilt automatically on successful runs.
+Explicit CLI flags take precedence over config values.

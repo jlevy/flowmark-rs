@@ -19,7 +19,7 @@ mod cli {
         get_fill_perf_stats, reset_fill_perf_stats, set_fill_perf_stats_enabled,
     };
     use flowmark::incremental_cache::{IncrementalCache, compute_formatter_fingerprint};
-    use flowmark::settings::default_cache_root;
+    use flowmark::settings::{CacheRootSource, resolve_default_cache_root};
     use flowmark::skills;
 
     /// Characters that indicate a path is a glob pattern.
@@ -391,7 +391,27 @@ Use `flowmark --docs` for full documentation.
         }
 
         let project_root = std::env::current_dir().ok()?;
-        let cache_root = cache_dir_override.map_or_else(default_cache_root, PathBuf::from);
+        let cache_root = if let Some(cache_dir) = cache_dir_override {
+            PathBuf::from(cache_dir)
+        } else {
+            let resolved = resolve_default_cache_root();
+            match resolved.source {
+                CacheRootSource::OsCacheDir => {}
+                CacheRootSource::HomeFallback => {
+                    eprintln!(
+                        "Warning: OS cache directory unavailable; using home fallback at {}",
+                        resolved.path.display()
+                    );
+                }
+                CacheRootSource::TempFallback => {
+                    eprintln!(
+                        "Warning: OS and home cache directories unavailable; using temp fallback at {}",
+                        resolved.path.display()
+                    );
+                }
+            }
+            resolved.path
+        };
         let fingerprint =
             compute_formatter_fingerprint(opts, env!("CARGO_PKG_VERSION"), config_path);
 
