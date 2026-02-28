@@ -124,11 +124,6 @@ pub struct FlowmarkConfig {
     pub respect_gitignore: Option<bool>,
     /// Whether to apply exclusions to explicit files.
     pub force_exclude: Option<bool>,
-    // Performance/cache
-    /// Whether incremental cache is enabled.
-    pub incremental: Option<bool>,
-    /// Override incremental cache directory.
-    pub incremental_cache_dir: Option<String>,
 }
 
 /// Config file search order (first match wins within each directory level).
@@ -164,6 +159,8 @@ const VALID_FIELDS: &[&str] = &[
     "files_max_size",
     "respect_gitignore",
     "force_exclude",
+    // CLI-only keys accepted here to avoid "unknown key" warnings.
+    // They are parsed and applied in `src/main.rs` to preserve public API semver.
     "incremental",
     "incremental_cache_dir",
 ];
@@ -278,6 +275,12 @@ fn parse_config_data(data: &toml::Value) -> FlowmarkConfig {
             continue;
         }
 
+        // Cache keys are handled in CLI wiring (`src/main.rs`) to avoid
+        // semver changes in the public `FlowmarkConfig` struct.
+        if matches!(effective_key, "incremental" | "incremental_cache_dir") {
+            continue;
+        }
+
         set_config_field(&mut config, effective_key, value);
     }
 
@@ -313,12 +316,6 @@ fn set_config_field(config: &mut FlowmarkConfig, key: &str, value: &toml::Value)
         }
         "respect_gitignore" => config.respect_gitignore = value.as_bool(),
         "force_exclude" => config.force_exclude = value.as_bool(),
-        "incremental" => config.incremental = value.as_bool(),
-        "incremental_cache_dir" => {
-            if let Some(v) = value.as_str() {
-                config.incremental_cache_dir = Some(v.to_string());
-            }
-        }
         _ => {}
     }
 }
@@ -364,8 +361,6 @@ pub fn merge_cli_with_config<F>(
         ("files_max_size", config.files_max_size.map(ConfigValue::U64)),
         ("respect_gitignore", config.respect_gitignore.map(ConfigValue::Bool)),
         ("force_exclude", config.force_exclude.map(ConfigValue::Bool)),
-        ("incremental", config.incremental.map(ConfigValue::Bool)),
-        ("incremental_cache_dir", config.incremental_cache_dir.clone().map(ConfigValue::String)),
     ];
 
     for (name, value) in fields {

@@ -302,6 +302,67 @@ Use `flowmark --docs` for full documentation.
         result
     }
 
+    #[derive(Debug, Default)]
+    struct IncrementalConfigOverrides {
+        incremental: Option<bool>,
+        incremental_cache_dir: Option<String>,
+    }
+
+    fn load_incremental_config_overrides(config_path: &Path) -> IncrementalConfigOverrides {
+        let Ok(text) = std::fs::read_to_string(config_path) else {
+            return IncrementalConfigOverrides::default();
+        };
+        let Ok(data) = toml::from_str::<toml::Value>(&text) else {
+            return IncrementalConfigOverrides::default();
+        };
+
+        let section = if config_path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .is_some_and(|n| n == "pyproject.toml")
+        {
+            data.get("tool")
+                .and_then(|t| t.get("flowmark"))
+                .cloned()
+                .unwrap_or(toml::Value::Table(toml::map::Map::new()))
+        } else {
+            data
+        };
+
+        let Some(table) = section.as_table() else {
+            return IncrementalConfigOverrides::default();
+        };
+
+        let mut overrides = IncrementalConfigOverrides::default();
+        for (key, value) in table {
+            if let Some(sub_table) = value.as_table() {
+                for (sub_key, sub_value) in sub_table {
+                    apply_incremental_override(&mut overrides, sub_key, sub_value);
+                }
+            } else {
+                apply_incremental_override(&mut overrides, key, value);
+            }
+        }
+        overrides
+    }
+
+    fn apply_incremental_override(
+        overrides: &mut IncrementalConfigOverrides,
+        key: &str,
+        value: &toml::Value,
+    ) {
+        let normalized = key.replace('-', "_");
+        match normalized.as_str() {
+            "incremental" | "cache" => overrides.incremental = value.as_bool(),
+            "incremental_cache_dir" | "cache_dir" => {
+                if let Some(v) = value.as_str() {
+                    overrides.incremental_cache_dir = Some(v.to_string());
+                }
+            }
+            _ => {}
+        }
+    }
+
     fn format_ns_as_ms(ns: u128) -> String {
         let whole_ms = ns / 1_000_000;
         let fractional_ms = (ns % 1_000_000) / 1_000;
@@ -463,10 +524,21 @@ Use `flowmark --docs` for full documentation.
         if let Ok(cwd) = std::env::current_dir() {
             if let Some(config_path) = find_config_file(&cwd) {
                 let config = load_config(&config_path);
+                let incremental_overrides = load_incremental_config_overrides(&config_path);
                 resolved_config_path = Some(config_path.clone());
                 merge_cli_with_config(Some(&config), is_auto, &explicit_refs, |name, value| {
                     apply_config_field(&mut args, &mut respect_gitignore, name, value);
                 });
+                if !explicit_refs.contains(&"incremental") {
+                    if let Some(v) = incremental_overrides.incremental {
+                        args.incremental = v;
+                    }
+                }
+                if !explicit_refs.contains(&"incremental_cache_dir") {
+                    if let Some(v) = incremental_overrides.incremental_cache_dir {
+                        args.incremental_cache_dir = Some(v);
+                    }
+                }
             }
         }
 
@@ -682,16 +754,6 @@ Use `flowmark --docs` for full documentation.
             "force_exclude" => {
                 if let ConfigValue::Bool(v) = value {
                     args.force_exclude = *v;
-                }
-            }
-            "incremental" => {
-                if let ConfigValue::Bool(v) = value {
-                    args.incremental = *v;
-                }
-            }
-            "incremental_cache_dir" => {
-                if let ConfigValue::String(v) = value {
-                    args.incremental_cache_dir = Some(v.clone());
                 }
             }
             "files_max_size" => {

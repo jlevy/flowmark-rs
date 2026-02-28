@@ -82,3 +82,16 @@ Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
 * * *
 
 {{ shared_docs_body }}
+
+## Rust Cache Notes
+
+The Rust CLI supports incremental caching for inplace/auto runs.
+
+- Use `--no-cache` to disable cache reads/writes for a run.
+- Use `--cache-dir <DIR>` to override the cache root directory.
+- Default cache root is the OS user cache directory under `flowmark`
+  (for example `~/Library/Caches/flowmark` on macOS, `~/.cache/flowmark` on Linux).
+- If no OS cache directory is available, Flowmark falls back to
+  `.flowmark-cache/flowmark` in the current working directory.
+
+See [`docs/cache.md`](docs/cache.md) for full cache behavior details.
