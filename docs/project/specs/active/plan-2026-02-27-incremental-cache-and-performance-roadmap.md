@@ -122,8 +122,7 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 
 2. `src/main.rs`
 - `Args`: add cache controls with explicit UX:
-  `--incremental`/`--cache`, `--no-cache` (alias `--no-incremental`),
-  `--cache-dir` (alias `--incremental-cache-dir`), `--perf-stats`
+  `--incremental`, `--no-cache`, `--cache-dir`, `--perf-stats`
 - `run`: initialize cache once for command execution
 - `run`: replace `opts.reformat_file(...)` in file loop with cache-aware path:
   read -> cache check -> format -> write -> cache record
@@ -137,7 +136,7 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 4. `src/config.rs`
 - `FlowmarkConfig`: add optional incremental controls
 - `VALID_FIELDS` and `set_config_field`: parse both canonical and friendly keys:
-  `incremental`/`cache`, `incremental-cache-dir`/`cache-dir`
+  `incremental`, `cache`, `cache-dir`, `incremental-cache-dir`
 - `merge_cli_with_config`: merge incremental settings with explicit CLI precedence
 
 5. `src/settings.rs` (new)
@@ -252,7 +251,7 @@ Child beads with file/function scope and blockers:
 - Integration tests:
   - unchanged files skipped
   - changed files reformatted
-  - `--no-cache` (or alias `--no-incremental`) forces full path
+  - `--no-cache` forces full path
 - Benchmark validation:
   - fresh run (cold cache)
   - second run (warm cache)

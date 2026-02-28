@@ -43,13 +43,10 @@ The manifest stores:
 
 - `--no-cache`
   - disable cache reads/writes for this run
-  - alias: `--no-incremental`
 - `--cache-dir <DIR>`
   - override cache root directory
-  - alias: `--incremental-cache-dir`
 - `--incremental[=true|false]`
   - explicit enable/disable form
-  - visible alias: `--cache`
 
 ## Config File Keys
 

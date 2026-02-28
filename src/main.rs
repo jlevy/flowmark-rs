@@ -175,24 +175,22 @@ Use `flowmark --docs` for full documentation.
         pub threads: usize,
 
         /// Enable incremental cache for unchanged-file fast paths (default: enabled)
-        #[arg(long, visible_alias = "cache", default_value_t = true, num_args = 0..=1, default_missing_value = "true", value_name = "BOOL", help_heading = "Performance Options")]
+        #[arg(
+            long,
+            default_value_t = true,
+            num_args = 0..=1,
+            default_missing_value = "true",
+            value_name = "BOOL",
+            help_heading = "Performance Options"
+        )]
         pub incremental: bool,
 
         /// Disable incremental cache for this run
-        #[arg(
-            long = "no-cache",
-            visible_alias = "no-incremental",
-            help_heading = "Performance Options"
-        )]
+        #[arg(long = "no-cache", help_heading = "Performance Options")]
         pub no_incremental: bool,
 
         /// Override incremental cache directory
-        #[arg(
-            long = "cache-dir",
-            visible_alias = "incremental-cache-dir",
-            value_name = "DIR",
-            help_heading = "Performance Options"
-        )]
+        #[arg(long = "cache-dir", value_name = "DIR", help_heading = "Performance Options")]
         pub incremental_cache_dir: Option<String>,
 
         /// Print performance statistics summary

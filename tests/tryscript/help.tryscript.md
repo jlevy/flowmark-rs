@@ -61,12 +61,12 @@ Use `flowmark --docs` for full documentation.
 
 ```console
 $ flowmark --help | grep -F -- "--no-cache"
-      --no-cache              Disable incremental cache for this run [aliases: --no-incremental]
+      --no-cache              Disable incremental cache for this run
 ```
 
 ```console
 $ flowmark --help | grep -F -- "--cache-dir"
-      --cache-dir <DIR>       Override incremental cache directory [aliases:
+      --cache-dir <DIR>       Override incremental cache directory
 ```
 
 ```console
