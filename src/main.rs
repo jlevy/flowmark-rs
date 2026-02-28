@@ -421,16 +421,20 @@ Use `flowmark --docs` for full documentation.
 
     fn format_bytes_human(bytes: u64) -> String {
         const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
-        let mut value = bytes as f64;
+        let mut value = bytes;
+        let mut scale = 1u64;
         let mut unit_index = 0usize;
-        while value >= 1024.0 && unit_index + 1 < UNITS.len() {
-            value /= 1024.0;
+        while value >= 1024 && unit_index + 1 < UNITS.len() {
+            value /= 1024;
+            scale *= 1024;
             unit_index += 1;
         }
         if unit_index == 0 {
             format!("{bytes} {}", UNITS[unit_index])
         } else {
-            format!("{value:.1} {}", UNITS[unit_index])
+            let whole = bytes / scale;
+            let tenths = ((bytes % scale) * 10) / scale;
+            format!("{whole}.{tenths} {}", UNITS[unit_index])
         }
     }
 
