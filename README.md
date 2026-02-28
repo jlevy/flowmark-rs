@@ -48,7 +48,7 @@ But because it was pure Python, it was never highly performant.
 
 Now flowmark-rs has identical functionality and in a rough benchmark is the #1 fastest
 Markdown formatter for repeated runs of large numbers of documents, the #2 fastest on
-new documents, and >100X faster than prettier.
+new documents, and ~100X or more faster than other TypeScript or Python formatters.
 
 Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB):
 
