@@ -34,6 +34,7 @@ at the CLI level — identical flags, identical output, identical file discovery
 identical error behavior.**
 
 **Tolerated variations** (closed list):
+
 - Nonexistent file error format: Python uses `[Errno 2]` (a Python runtime artifact),
   Rust uses `Path not found:`. Both include `Error:` prefix and filename.
 - `--help` layout: minor formatting differences between clap (Rust) and argparse
@@ -55,6 +56,7 @@ Everything not on this list is required to be identical.
 All 430 tests run in CI on every commit.
 No test file is orphaned.
 The CI test job installs all required external tools:
+
 - Python flowmark v0.6.4 (via `uv tool install`)
 - tryscript (via `npm install -g`)
 
@@ -75,6 +77,7 @@ The CI test job installs all required external tools:
 ### Environment Dependencies Explicit and Enforced (Principle 6)
 
 **Required test dependencies** (all installed in CI):
+
 - Python flowmark v0.6.4 (`uv tool install flowmark==0.6.4`)
 - tryscript (`npm install -g tryscript@latest`)
 - Node.js 22+ (for tryscript)
@@ -90,11 +93,12 @@ Zero ignored tests. No technical debt from silenced failures.
 ### Disparities Tested Before Fixed (Principle 8)
 
 Every discrepancy followed the test-before-fix protocol:
+
 1. Write test against Python’s behavior (expected output from Python)
-2. Confirm test fails against Rust
-3. Investigate the class of behavior (e.g., D4 tight list spacing led to investigating
+1. Confirm test fails against Rust
+1. Investigate the class of behavior (e.g., D4 tight list spacing led to investigating
    all list spacing modes)
-4. Fix, verify test goes green
+1. Fix, verify test goes green
 
 All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` labels in
 `src/formatter/filling.rs` with rationale for each.
@@ -185,6 +189,7 @@ Compliance verified 2026-02-19:
 ### Test Dependencies
 
 Tests require the following external tools (all installed in CI):
+
 - **Python flowmark v0.6.4** — for D11 cross-binary parity tests
   (`uv tool install flowmark==0.6.4`)
 - **tryscript** — for golden CLI tests (`npm install -g tryscript@latest`)
@@ -293,13 +298,13 @@ This port was built using the
 8-phase methodology:
 
 1. **Analysis** — Understand Python source structure and dependencies
-2. **Scaffolding** — Set up Rust project with matching module structure
-3. **Core porting** — Translate Python logic to idiomatic Rust
-4. **Test porting** — Map all Python tests to Rust equivalents
-5. **Parity verification** — Golden test comparison across all modes
-6. **CI hardening** — 12-check pipeline with coverage and semver checks
-7. **Documentation** — Specs, playbooks, and operational guides
-8. **Publishing** — crates.io metadata, trusted publishing, release workflow
+1. **Scaffolding** — Set up Rust project with matching module structure
+1. **Core porting** — Translate Python logic to idiomatic Rust
+1. **Test porting** — Map all Python tests to Rust equivalents
+1. **Parity verification** — Golden test comparison across all modes
+1. **CI hardening** — 12-check pipeline with coverage and semver checks
+1. **Documentation** — Specs, playbooks, and operational guides
+1. **Publishing** — crates.io metadata, trusted publishing, release workflow
 
 ### Key Metrics
 

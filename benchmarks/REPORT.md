@@ -135,20 +135,20 @@ multi-threaded blocking pool via `spawn_blocking()`.
 1. **Thread count = CPU cores.** Uses `std::thread::available_parallelism()`,
    overridable via `DPRINT_MAX_THREADS`. Reserves 1 thread per process plugin + 1 for
    the runtime.
-2. **Semaphore-controlled concurrency.** Files are grouped by plugin. Each group gets a
+1. **Semaphore-controlled concurrency.** Files are grouped by plugin. Each group gets a
    custom `Semaphore` with permits proportional to the thread count. A file can only
    begin formatting when it acquires a permit, capping active concurrent formats at
    ~core count.
-3. **`spawn_blocking()` for I/O and formatting.** Each file: read (blocking) -> format
+1. **`spawn_blocking()` for I/O and formatting.** Each file: read (blocking) -> format
    (blocking or async depending on plugin type) -> write (blocking). The async event
    loop just orchestrates.
-4. **Adaptive CPU throttling.** A background task monitors CPU usage every 2 seconds. If
+1. **Adaptive CPU throttling.** A background task monitors CPU usage every 2 seconds. If
    CPU exceeds a threshold, it removes semaphore permits to reduce parallelism. When CPU
    drops, it adds permits back. Disabled on CI.
-5. **Work stealing on completion.** When one plugin group finishes, its semaphore
+1. **Work stealing on completion.** When one plugin group finishes, its semaphore
    permits are redistributed to remaining groups via `SemaphorePermitReleaser::drop`,
    favoring groups with fewer permits.
-6. **Incremental caching.** Hash-based skip for unchanged files (explains the 0.13s with
+1. **Incremental caching.** Hash-based skip for unchanged files (explains the 0.13s with
    caching vs 0.23s with `--incremental=false`).
 
 **Plugin system:** WASM plugins (compiled with Wasmer, run synchronously in-process) and
@@ -165,7 +165,7 @@ achieving a **3.8x wall-clock speedup** on batch workloads and bringing flowmark
 The rayon approach proved simpler and equally effective as dprint's more complex tokio +
 semaphore architecture, since flowmark-rs has no plugin infrastructure.
 
-* * *
+______________________________________________________________________
 
 ## Part 2: Flowmark Python vs Rust (Detailed)
 
@@ -341,21 +341,21 @@ Benchmarked with `hyperfine` (warmup + 10 runs for single file, 5 for batch).
 
 **Single file (`testdoc.orig.md`, 1,734 lines):**
 
-|  | Mean | Range |
+| | Mean | Range |
 | --- | --- | --- |
 | Before | 31.5 ms +/- 2.2 ms | 28.4 – 39.6 ms |
 | After | 27.3 ms +/- 2.5 ms | 24.2 – 34.9 ms |
-| **Improvement** | **13.3% faster** |  |
+| **Improvement** | **13.3% faster** | |
 
 Verified across 3 independent runs: 27.0, 27.2, 27.4, 27.8 ms (consistent).
 
 **Batch `--auto` (1,080 files):**
 
-|  | Mean | Range |
+| | Mean | Range |
 | --- | --- | --- |
 | Before | 3.21 s +/- 0.11 s | 3.09 – 3.34 s |
 | After | 2.69 s +/- 0.15 s | 2.58 – 3.02 s |
-| **Improvement** | **16.2% faster** |  |
+| **Improvement** | **16.2% faster** | |
 
 Verified across 3 independent runs: 2.71, 2.73, 2.63 s (consistent).
 
@@ -381,12 +381,12 @@ Post-optimization, the remaining cost is spread across:
 
 1. **Memory allocation** (~19%) — inherent to string manipulation; would require
    `Cow<str>` or arena allocation (medium complexity)
-2. **String searching** (~7%) — remaining uses are necessary `.contains()` and `.find()`
+1. **String searching** (~7%) — remaining uses are necessary `.contains()` and `.find()`
    calls
-3. **Regex** (~6%) — already well-optimized with `LazyLock`; hybrid DFA is the regex
+1. **Regex** (~6%) — already well-optimized with `LazyLock`; hybrid DFA is the regex
    crate's efficient path
-4. **Comrak parser** (~3%) — external dependency, not directly optimizable
-5. **memcpy/memset** (~7%) — inherent to string operations
+1. **Comrak parser** (~3%) — external dependency, not directly optimizable
+1. **memcpy/memset** (~7%) — inherent to string operations
 
 Further optimization would yield diminishing returns for increasing complexity.
 
@@ -410,7 +410,7 @@ After applying optimizations 1+2:
 
 Per-file throughput after optimization: **401 files/sec** in `--auto` mode (was 294).
 
-* * *
+______________________________________________________________________
 
 ## Part 3: Parallel File Processing (v0.3.0)
 
@@ -424,7 +424,7 @@ Two complementary improvements implemented in v0.3.0:
    allows overriding (0 = all cores, default). Stdout output remains sequential to
    preserve file ordering.
 
-2. **Skip-unchanged optimization.** After formatting, if the output matches the input
+1. **Skip-unchanged optimization.** After formatting, if the output matches the input
    exactly, the file write is skipped entirely. This preserves file modification times
    (important for build tools that use mtime) and eliminates I/O for already-formatted
    files.

@@ -72,13 +72,13 @@ document defines 8 non-negotiable rules.
 Each was learned from an actual mistake during agent-driven porting:
 
 1. **Parity definition must be crisp** — never redefine scope without approval
-2. **Agents must actively pursue parity** — every gap is a blocker, not a note
-3. **Tests must always run in CI** — no orphaned test files
-4. **Tests must never hide failures** — no massaging, truncating, or weakening
-5. **Fix the process, not the test** — when tests fail, fix the code or CI
-6. **Environment dependencies must be explicit** — CI installs everything
-7. **Ignored tests must be tracked** — every `#[ignore]` needs a reason and issue
-8. **Disparities must be tested before fixed** — write failing test first, then fix
+1. **Agents must actively pursue parity** — every gap is a blocker, not a note
+1. **Tests must always run in CI** — no orphaned test files
+1. **Tests must never hide failures** — no massaging, truncating, or weakening
+1. **Fix the process, not the test** — when tests fail, fix the code or CI
+1. **Environment dependencies must be explicit** — CI installs everything
+1. **Ignored tests must be tracked** — every `#[ignore]` needs a reason and issue
+1. **Disparities must be tested before fixed** — write failing test first, then fix
 
 ## Repository Layout
 
@@ -198,6 +198,7 @@ Three YAML files form the mapping system:
 ### Discovery procedure
 
 **Python test discovery** (`flowmark-dev discover-python`):
+
 - AST-parses the Python flowmark repo at the pinned release tag
 - Extracts every `test_*` function, classifies by type (unit, integration, golden,
   infrastructure)
@@ -205,6 +206,7 @@ Three YAML files form the mapping system:
   re-generation
 
 **Rust test discovery** (`flowmark-dev discover-rust`):
+
 - Runs `cargo test -- --list --format terse` (compiler-authoritative)
 - Resolves file paths and line numbers
 - Writes `rust-tests.yaml` with idempotent merge
@@ -231,11 +233,11 @@ It:
 
 1. Runs 13 smoke tests (`pytest tests/test_smoke.py`) that verify YAML round-trip
    stability, deterministic ordering, discovery counts, and mapping completeness
-2. Runs `flowmark-dev check-mapping` which validates:
+1. Runs `flowmark-dev check-mapping` which validates:
    - Every Python test has a mapping entry
    - Every mapped Rust function exists in `rust-tests.yaml`
    - No entries have `status: missing`
-3. **Fails the build** if any check fails
+1. **Fails the build** if any check fails
 
 ### Updating after a Python upstream release
 
@@ -261,6 +263,7 @@ cd ..
 ```
 
 For each new `missing` entry, either:
+
 - Port the corresponding test to Rust and set `status: mapped`
 - Set `status: excluded` with a `notes:` field explaining why
 
