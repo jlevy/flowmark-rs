@@ -14,7 +14,7 @@ scripts/generate-rust-readme.py.
 ## Rust Port of Python Flowmark
 
 > [!TIP]
-> This is an agent-synced Rust port of
+> This is a 100% agent-written, auto-synced Rust port of
 > [**Python Flowmark](https://github.com/jlevy/flowmark), the original reference
 > implementation.
 > 
