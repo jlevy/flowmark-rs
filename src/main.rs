@@ -153,7 +153,7 @@ Use `flowmark --docs` for full documentation.
         pub files_max_size: u64,
 
         // --- Agent skill options ---
-        /// Print skill instructions (SKILL.md content) for Claude Code
+        /// Print skill instructions for coding agents (same as Claude Code SKILL.md)
         #[arg(long, help_heading = "Agent Options")]
         pub skill: bool,
 
