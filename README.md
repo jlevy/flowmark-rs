@@ -37,7 +37,7 @@ Last sync: **2026-02-19** against **Python v0.6.4**
 
 Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB):
 
-| Rank | Formatter | Mean (fresh) | Relative to dprint |
+| Rank | Formatter | Mean (fresh) | Relative speed |
 | --- | --- | --- | --- |
 | 1 | dprint | 0.37 s | 1.0x |
 | 2 | **flowmark-rs** | **0.73 s** | **2.0x** |
@@ -48,7 +48,7 @@ Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB)
 
 Cached second run (unchanged files, warm cache):
 
-| Formatter | Mean (cached) | Relative |
+| Formatter | Mean (cached) | Relative speed |
 | --- | --- | --- |
 | **flowmark-rs** (`--auto`) | **0.023 s** | **1.0x** |
 | **dprint** (`fmt`) | **0.031 s** | **1.3x** |

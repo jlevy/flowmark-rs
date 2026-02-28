@@ -18,7 +18,7 @@ Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_compariso
 
 ### Fresh Run (single corpus, files need formatting)
 
-| Formatter | Language | Parallel | Mean | Relative |
+| Formatter | Language | Parallel | Mean | Relative speed |
 | --- | --- | --- | --- | --- |
 | **dprint** (`--incremental=false`) | Rust (WASM plugin) | yes | **0.36 s** | **1.0x** |
 | **flowmark-rs** (`--auto`) | Rust | yes (rayon) | **0.71 s** | **2.0x** |
@@ -35,7 +35,7 @@ Notes:
 
 ### Cached Second Run (unchanged files)
 
-| Formatter | Mean | Relative |
+| Formatter | Mean | Relative speed |
 | --- | --- | --- |
 | **flowmark-rs** (`--auto`, incremental default) | **0.023 s** | **1.0x** |
 | **dprint** (`fmt`, incremental default) | **0.031 s** | **1.3x** |
@@ -435,7 +435,7 @@ Corpus: 928 Markdown files across a 4–5 level deep directory tree. 3 runs each
 
 #### Fresh Corpus (Files Need Formatting)
 
-| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative |
+| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative speed |
 | --- | --- | --- | --- | --- | --- |
 | **dprint** | 0.364 s | 0.371 s | 0.361 s | **0.37 s** | **1.0x** |
 | **flowmark-rs (parallel)** | 0.727 s | 0.728 s | 0.737 s | **0.73 s** | **2.0x** |
@@ -444,7 +444,7 @@ Corpus: 928 Markdown files across a 4–5 level deep directory tree. 3 runs each
 
 #### Already-Formatted Corpus (Re-format, Skip-Unchanged)
 
-| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative |
+| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative speed |
 | --- | --- | --- | --- | --- | --- |
 | **dprint** | 0.247 s | 0.248 s | 0.247 s | **0.25 s** | **1.0x** |
 | **flowmark-rs (parallel)** | 0.396 s | 0.367 s | 0.370 s | **0.38 s** | **1.5x** |
