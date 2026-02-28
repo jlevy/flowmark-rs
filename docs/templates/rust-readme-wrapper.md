@@ -14,11 +14,13 @@ scripts/generate-rust-readme.py.
 ## Rust Port of Python Flowmark
 
 > [!TIP]
-> This is an auto-synced Rust port of the
-> [Python version](https://github.com/jlevy/flowmark).
-> The original Python version is the reference implementation.
-> But this port aims for identical CLI usage and formatting behavior.
-> It is a fast binary and best for CLI and IDE usage.
+> This is an agent-synced Rust port of
+> [**Python Flowmark](https://github.com/jlevy/flowmark), the original reference
+> implementation.
+> 
+> This Rust port has carefully tested identical CLI usage and formatting behavior, while
+> giving 60-70x faster performance processing large numbers of files.
+> So it is now the recommended version for CLI and IDE usage.
 
 Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
 
@@ -26,7 +28,7 @@ Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
 - Porting methodology:
   [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook)
 
-## Why the Rust version?
+## Why the Rust Version?
 
 - **Single binary**: install via Cargo, Cargo binstall, or Homebrew.
 - **Fast CLI**: good for large repos and CI pipelines.
@@ -34,6 +36,19 @@ Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
   [docs.rs/flowmark](https://docs.rs/flowmark).
 
 ### Performance
+
+TLDR:
+- If you use it for auto-save in your IDE, it feels instant.
+- If you run it on 1000 documents over and over in your build system, it only takes
+  milliseconds.
+
+Flowmark is now arguably the most sophisticated Markdown autoformatter, given its
+advanced wrapping and typographic rules.
+But because it was pure Python, it was never highly performant.
+
+Now flowmark-rs has identical functionality and in a rough benchmark is the #1 fastest
+Markdown formatter for repeated runs of large numbers of documents, the #2 fastest on
+new documents, and >100X faster than prettier.
 
 Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB):
 
@@ -53,21 +68,23 @@ Cached second run (unchanged files, warm cache):
 | **flowmark-rs** (`--auto`) | **0.023 s** | **1.0x** |
 | **dprint** (`fmt`) | **0.031 s** | **1.3x** |
 
-flowmark-rs is currently the #2 fastest formatter in this comparison set, and on this
-same corpus it is roughly **60-70x faster than flowmark-py**.
+So on the same corpus flowmark-rs is roughly **60-70x faster than flowmark-py**.
 
-Rust-only performance features (not in the Python CLI today):
+### Rust-Only Features
+
+The only exception to the exact parity of the port of Python Flowmark are these
+Rust-only performance features:
 
 - incremental cache (`--no-cache`, `--cache-dir`, `--incremental`)
 - stage-level performance stats (`--perf-stats`)
 
-See [`docs/rust-only-features.md`](docs/rust-only-features.md) for a concise
-feature matrix and [`docs/cache.md`](docs/cache.md) for cache behavior details.
+See [`docs/rust-only-features.md`](docs/rust-only-features.md) for a concise feature
+matrix and [`docs/cache.md`](docs/cache.md) for cache behavior details.
 
-See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details
-and methodology.
+See [`benchmarks/REPORT.md`](benchmarks/REPORT.md) for full profiling details and
+methodology.
 
-## Installing Rust Flowmark CLI
+## Installing Rust Flowmark
 
 ### Cargo (source build)
 
