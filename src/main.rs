@@ -38,7 +38,7 @@ mod cli {
         disable_help_flag = true,
         long_version = concat!(
             env!("CARGO_PKG_VERSION"),
-            " (parity: flowmark-py ",
+            " (Rust port of flowmark-py ",
             env!("PARITY_VERSION"),
             ")"
         ),
