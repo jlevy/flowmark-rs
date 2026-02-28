@@ -22,6 +22,7 @@ Reusable synchronization methodology lives in the `rust-porting-playbook` submod
 ## flowmark-rs Local Docs
 
 - Publishing steps: [`docs/publishing.md`](publishing.md)
+- Cache settings and behavior: [`docs/cache.md`](cache.md)
 - flowmark-specific sync details (fixtures, mapping files, local scripts):
   [`docs/port-sync-playbook.md`](port-sync-playbook.md)
 - Coverage mapping system: [`admin/README.md`](../admin/README.md)

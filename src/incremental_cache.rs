@@ -1,13 +1,13 @@
 //! Persistent incremental cache for unchanged-file fast paths.
 
 use crate::config::FormatOptions;
+use crate::settings::INCREMENTAL_CACHE_SUBDIR;
 use std::collections::HashSet;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-const INCREMENTAL_DIR_NAME: &str = "incremental";
 const MANIFEST_FORMAT_VERSION: i64 = 1;
 const TOML_KEY_VERSION: &str = "version";
 const TOML_KEY_FINGERPRINT: &str = "fingerprint";
@@ -43,7 +43,7 @@ impl IncrementalCache {
         project_root: &Path,
         formatter_fingerprint: u64,
     ) -> std::io::Result<Self> {
-        let incremental_dir = cache_dir.join(INCREMENTAL_DIR_NAME);
+        let incremental_dir = cache_dir.join(INCREMENTAL_CACHE_SUBDIR);
         fs::create_dir_all(&incremental_dir)?;
 
         let canonical_project_root =

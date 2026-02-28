@@ -314,6 +314,20 @@ File discovery flags:
 | `--force-exclude` | Apply exclusions to explicitly-named files |
 | `--files-max-size BYTES` | Skip files larger than this (default: 1 MiB) |
 
+Performance/cache flags:
+
+| Flag | Description |
+| --- | --- |
+| `--no-cache` | Disable incremental cache for this run (alias: `--no-incremental`) |
+| `--cache-dir DIR` | Override cache root directory (alias: `--incremental-cache-dir`) |
+| `--perf-stats` | Print stage timing and cache hit-rate summary |
+
+Cache location defaults to the OS user cache directory under `flowmark`
+(for example `~/Library/Caches/flowmark` on macOS, `~/.cache/flowmark` on Linux).
+If no OS cache directory is available, Flowmark falls back to
+`.flowmark-cache/flowmark` in the current working directory.
+See [`docs/cache.md`](docs/cache.md) for full cache behavior details.
+
 ## File Discovery
 
 When you pass a directory to Flowmark (e.g., `flowmark --auto .`), it recursively
@@ -409,6 +423,10 @@ list-spacing = "preserve"
 extend-include = ["*.mdx", "*.markdown"]
 extend-exclude = ["drafts/", "archive/"]
 files-max-size = 2097152  # 2 MiB
+
+[performance]
+cache = true
+cache-dir = "/tmp/flowmark-cache"
 ```
 
 Or in `pyproject.toml`:
@@ -531,4 +549,3 @@ found most useful.
 ## Project Docs
 
 For development workflows, see [development.md](docs/development.md).
-

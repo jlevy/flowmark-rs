@@ -45,7 +45,7 @@ fn test_incremental_cache_writes_manifest_when_enabled() {
         .current_dir(project_dir.path())
         .args([
             "--auto",
-            "--incremental-cache-dir",
+            "--cache-dir",
             cache_dir.path().to_str().expect("cache path to str"),
             "doc.md",
         ])
@@ -77,8 +77,8 @@ fn test_no_incremental_disables_cache_manifest_creation() {
         .current_dir(project_dir.path())
         .args([
             "--auto",
-            "--no-incremental",
-            "--incremental-cache-dir",
+            "--no-cache",
+            "--cache-dir",
             cache_dir.path().to_str().expect("cache path to str"),
             "doc.md",
         ])
@@ -93,7 +93,7 @@ fn test_no_incremental_disables_cache_manifest_creation() {
     assert_eq!(
         cache_manifest_count(cache_dir.path()),
         0,
-        "no incremental cache file should be created when --no-incremental is set"
+        "no incremental cache file should be created when --no-cache is set"
     );
 }
 

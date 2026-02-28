@@ -198,6 +198,27 @@ fn test_load_config_partial() {
     assert_eq!(config.files_max_size, None);
     assert_eq!(config.respect_gitignore, None);
     assert_eq!(config.force_exclude, None);
+    assert_eq!(config.incremental, None);
+    assert_eq!(config.incremental_cache_dir, None);
+}
+
+#[test]
+fn test_load_config_performance_section_cache_settings() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let config_path = dir.path().join("flowmark.toml");
+    fs::write(
+        &config_path,
+        r#"
+[performance]
+cache = false
+cache-dir = "/tmp/flowmark-cache-test"
+"#,
+    )
+    .expect("write config");
+
+    let config = load_config(&config_path);
+    assert_eq!(config.incremental, Some(false));
+    assert_eq!(config.incremental_cache_dir, Some("/tmp/flowmark-cache-test".to_string()));
 }
 
 // --- Config merge (7) ---
@@ -306,6 +327,25 @@ fn test_merge_extend_include_from_config() {
         }
     });
     assert_eq!(applied_extend, Some(vec!["*.mdx".to_string()]));
+}
+
+#[test]
+fn test_merge_incremental_settings_from_config() {
+    let config = FlowmarkConfig {
+        incremental: Some(false),
+        incremental_cache_dir: Some("/tmp/flowmark-cache-test".to_string()),
+        ..FlowmarkConfig::default()
+    };
+
+    let mut applied_incremental = None;
+    let mut applied_cache_dir = None;
+    merge_cli_with_config(Some(&config), false, &[], |name, value| match (name, value) {
+        ("incremental", ConfigValue::Bool(v)) => applied_incremental = Some(*v),
+        ("incremental_cache_dir", ConfigValue::String(v)) => applied_cache_dir = Some(v.clone()),
+        _ => {}
+    });
+    assert_eq!(applied_incremental, Some(false));
+    assert_eq!(applied_cache_dir, Some("/tmp/flowmark-cache-test".to_string()));
 }
 
 // --- Error handling (2) ---

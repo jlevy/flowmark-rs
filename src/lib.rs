@@ -8,6 +8,7 @@ pub mod file_resolver;
 pub mod formatter;
 pub mod incremental_cache;
 pub mod parser;
+pub mod settings;
 pub mod skills;
 pub mod transform;
 pub mod typography;

@@ -17,6 +17,8 @@ RESULTS_FILE="$SCRIPT_DIR/results/comparison_results.txt"
 MODE="${1:-fresh}"
 NUM_RUNS="${2:-3}"
 INCLUDE_OPTIONAL_FORMATTERS="${INCLUDE_OPTIONAL_FORMATTERS:-0}"
+SKIP_MARKDOWNFMT="${SKIP_MARKDOWNFMT:-0}"
+MARKDOWNFMT_BATCH_SIZE="${MARKDOWNFMT_BATCH_SIZE:-200}"
 
 CANON_MODE="$MODE"
 if [ "$MODE" = "first-run" ]; then
@@ -137,18 +139,24 @@ JSON
 fi
 
 # Register benchmarks
-add_benchmark "flowmark-rs ($("$RUST_BIN" --version 2>&1))" "\"$RUST_BIN\" --auto \"$WORK_DIR\""
+FLOWMARK_CACHE_ARG="--no-cache"
+if [ "$CANON_MODE" = "steady" ]; then
+    FLOWMARK_CACHE_ARG=""
+fi
+add_benchmark "flowmark-rs ($("$RUST_BIN" --version 2>&1))" "\"$RUST_BIN\" --auto $FLOWMARK_CACHE_ARG \"$WORK_DIR\""
 if [ -n "$DPRINT_BIN" ]; then
     DPRINT_INCREMENTAL_ARG="--incremental=false"
     if [ "$CANON_MODE" = "steady" ]; then
         DPRINT_INCREMENTAL_ARG=""
     fi
-    add_benchmark "dprint ($($DPRINT_BIN --version 2>&1))" "cd \"$WORK_DIR\" && \"$DPRINT_BIN\" fmt --config dprint.json $DPRINT_INCREMENTAL_ARG --log-level silent ."
+    add_benchmark "dprint ($($DPRINT_BIN --version 2>&1))" "(cd \"$WORK_DIR\" && \"$DPRINT_BIN\" fmt --config dprint.json $DPRINT_INCREMENTAL_ARG --log-level silent .)"
 fi
 
 if [ "$INCLUDE_OPTIONAL_FORMATTERS" = "1" ]; then
-    if [ -n "$MARKDOWNFMT_BIN" ]; then
-        add_benchmark "markdownfmt" "find \"$WORK_DIR\" -name '*.md' -exec \"$MARKDOWNFMT_BIN\" -w {} +"
+    if [ -n "$MARKDOWNFMT_BIN" ] && [ "$SKIP_MARKDOWNFMT" != "1" ]; then
+        add_benchmark "markdownfmt" "find \"$WORK_DIR\" -name '*.md' -print0 | xargs -0 -n \"$MARKDOWNFMT_BATCH_SIZE\" \"$MARKDOWNFMT_BIN\" -w"
+    elif [ -n "$MARKDOWNFMT_BIN" ] && [ "$SKIP_MARKDOWNFMT" = "1" ]; then
+        echo "Note: markdownfmt skipped (SKIP_MARKDOWNFMT=1)."
     fi
     if [ -n "$PRETTIER_BIN" ]; then
         add_benchmark "prettier ($($PRETTIER_BIN --version 2>&1))" "\"$PRETTIER_BIN\" --write \"$WORK_DIR/**/*.md\" --ignore-path /dev/null --log-level silent"

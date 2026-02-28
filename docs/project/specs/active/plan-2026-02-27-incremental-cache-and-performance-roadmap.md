@@ -121,7 +121,9 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 - `load_manifest` / `save_manifest_atomic`
 
 2. `src/main.rs`
-- `Args`: add `--incremental`, `--no-incremental`, `--incremental-cache-dir`, `--perf-stats`
+- `Args`: add cache controls with explicit UX:
+  `--incremental`/`--cache`, `--no-cache` (alias `--no-incremental`),
+  `--cache-dir` (alias `--incremental-cache-dir`), `--perf-stats`
 - `run`: initialize cache once for command execution
 - `run`: replace `opts.reformat_file(...)` in file loop with cache-aware path:
   read -> cache check -> format -> write -> cache record
@@ -134,10 +136,16 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 
 4. `src/config.rs`
 - `FlowmarkConfig`: add optional incremental controls
-- `VALID_FIELDS` and `set_config_field`: parse new keys
+- `VALID_FIELDS` and `set_config_field`: parse both canonical and friendly keys:
+  `incremental`/`cache`, `incremental-cache-dir`/`cache-dir`
 - `merge_cli_with_config`: merge incremental settings with explicit CLI precedence
 
-5. `src/formatter/filling.rs`
+5. `src/settings.rs` (new)
+- Centralize cache path constants:
+  `FALLBACK_CACHE_DIR`, `APP_CACHE_DIR`, `INCREMENTAL_CACHE_SUBDIR`
+- `default_cache_root()` for consistent path resolution
+
+6. `src/formatter/filling.rs`
 - Introduce timing hooks around:
   - preprocess block
   - comrak parse
@@ -147,17 +155,19 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 - Keep `fill_markdown(...) -> String` stable
 - Add internal timed variant used only when perf stats enabled
 
-6. Tests
+7. Tests
 - `tests/test_config.rs`: new config merge coverage for incremental flags
 - `tests/test_cli_file_discovery.rs` or new `tests/test_incremental_cache.rs`:
   unchanged file skip, changed file miss, disabled incremental behavior
 - `tests/tryscript/help.tryscript.md`: help text snapshots for new flags
+  (including `--no-cache`, `--cache-dir`)
 - corruption reset / invalid fingerprint unit tests for cache manifest
 
-7. Benchmark/Docs
+8. Benchmark/Docs
 - `benchmarks/run_comparison.sh`: add explicit first-run and second-run modes
 - `benchmarks/REPORT.md`: add cached rerun section after implementation
 - `README.md`: concise first-run + second-run summary using same corpus
+- `docs/cache.md`: full cache settings and location documentation
 
 ### Cache Key and Invalidation
 
@@ -183,7 +193,8 @@ Child beads with file/function scope and blockers:
   - Blocked by: none
 - `fmr-ynyg` - CLI/config wiring: incremental flags and merge precedence
   - Files/functions: `src/main.rs` (`Args`, `run` flag handling), `src/config.rs`
-    (`FlowmarkConfig`, `set_config_field`, `merge_cli_with_config`)
+    (`FlowmarkConfig`, `set_config_field`, `merge_cli_with_config`),
+    `src/settings.rs` (`default_cache_root`, cache path constants)
   - Blocked by: `fmr-qb08`
 - `fmr-m4z9` - Integrate cache-aware file processing path in formatter loop
   - Files/functions: `src/main.rs` (`run` per-file pipeline), `src/lib.rs`
@@ -241,7 +252,7 @@ Child beads with file/function scope and blockers:
 - Integration tests:
   - unchanged files skipped
   - changed files reformatted
-  - `--no-incremental` forces full path
+  - `--no-cache` (or alias `--no-incremental`) forces full path
 - Benchmark validation:
   - fresh run (cold cache)
   - second run (warm cache)

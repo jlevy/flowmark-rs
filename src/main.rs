@@ -19,12 +19,11 @@ mod cli {
         get_fill_perf_stats, reset_fill_perf_stats, set_fill_perf_stats_enabled,
     };
     use flowmark::incremental_cache::{IncrementalCache, compute_formatter_fingerprint};
+    use flowmark::settings::default_cache_root;
     use flowmark::skills;
 
     /// Characters that indicate a path is a glob pattern.
     const GLOB_CHARS: &[char] = &['*', '?', '['];
-    const FALLBACK_CACHE_DIR: &str = ".flowmark-cache";
-    const APP_CACHE_DIR: &str = "flowmark";
 
     #[derive(Default)]
     struct CachePerfCounters {
@@ -176,15 +175,24 @@ Use `flowmark --docs` for full documentation.
         pub threads: usize,
 
         /// Enable incremental cache for unchanged-file fast paths (default: enabled)
-        #[arg(long, default_value_t = true, num_args = 0..=1, default_missing_value = "true", value_name = "BOOL", help_heading = "Performance Options")]
+        #[arg(long, visible_alias = "cache", default_value_t = true, num_args = 0..=1, default_missing_value = "true", value_name = "BOOL", help_heading = "Performance Options")]
         pub incremental: bool,
 
         /// Disable incremental cache for this run
-        #[arg(long, help_heading = "Performance Options")]
+        #[arg(
+            long = "no-cache",
+            visible_alias = "no-incremental",
+            help_heading = "Performance Options"
+        )]
         pub no_incremental: bool,
 
         /// Override incremental cache directory
-        #[arg(long, value_name = "DIR", help_heading = "Performance Options")]
+        #[arg(
+            long = "cache-dir",
+            visible_alias = "incremental-cache-dir",
+            value_name = "DIR",
+            help_heading = "Performance Options"
+        )]
         pub incremental_cache_dir: Option<String>,
 
         /// Print performance statistics summary
@@ -294,69 +302,6 @@ Use `flowmark --docs` for full documentation.
         result
     }
 
-    #[derive(Debug, Default)]
-    struct IncrementalConfigOverrides {
-        incremental: Option<bool>,
-        incremental_cache_dir: Option<String>,
-    }
-
-    fn load_incremental_config_overrides(config_path: &Path) -> IncrementalConfigOverrides {
-        let Ok(text) = std::fs::read_to_string(config_path) else {
-            return IncrementalConfigOverrides::default();
-        };
-        let Ok(data) = toml::from_str::<toml::Value>(&text) else {
-            return IncrementalConfigOverrides::default();
-        };
-
-        let section = if config_path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .is_some_and(|n| n == "pyproject.toml")
-        {
-            data.get("tool")
-                .and_then(|t| t.get("flowmark"))
-                .cloned()
-                .unwrap_or(toml::Value::Table(toml::map::Map::new()))
-        } else {
-            data
-        };
-
-        let Some(table) = section.as_table() else {
-            return IncrementalConfigOverrides::default();
-        };
-
-        let mut overrides = IncrementalConfigOverrides::default();
-
-        for (key, value) in table {
-            if let Some(sub_table) = value.as_table() {
-                for (sub_key, sub_value) in sub_table {
-                    apply_incremental_override(&mut overrides, sub_key, sub_value);
-                }
-            } else {
-                apply_incremental_override(&mut overrides, key, value);
-            }
-        }
-
-        overrides
-    }
-
-    fn apply_incremental_override(
-        overrides: &mut IncrementalConfigOverrides,
-        key: &str,
-        value: &toml::Value,
-    ) {
-        let key = key.replace('-', "_");
-        match key.as_str() {
-            "incremental" => overrides.incremental = value.as_bool(),
-            "incremental_cache_dir" => {
-                if let Some(v) = value.as_str() {
-                    overrides.incremental_cache_dir = Some(v.to_string());
-                }
-            }
-            _ => {}
-        }
-    }
-
     fn format_ns_as_ms(ns: u128) -> String {
         let whole_ms = ns / 1_000_000;
         let fractional_ms = (ns % 1_000_000) / 1_000;
@@ -372,13 +317,6 @@ Use `flowmark --docs` for full documentation.
         let whole = scaled_percent / 10;
         let frac = scaled_percent % 10;
         format!("{whole}.{frac}")
-    }
-
-    fn default_cache_root() -> PathBuf {
-        dirs::cache_dir().map_or_else(
-            || PathBuf::from(FALLBACK_CACHE_DIR).join(APP_CACHE_DIR),
-            |cache_dir| cache_dir.join(APP_CACHE_DIR),
-        )
     }
 
     fn open_incremental_cache(
@@ -525,21 +463,10 @@ Use `flowmark --docs` for full documentation.
         if let Ok(cwd) = std::env::current_dir() {
             if let Some(config_path) = find_config_file(&cwd) {
                 let config = load_config(&config_path);
-                let incremental_overrides = load_incremental_config_overrides(&config_path);
                 resolved_config_path = Some(config_path.clone());
                 merge_cli_with_config(Some(&config), is_auto, &explicit_refs, |name, value| {
                     apply_config_field(&mut args, &mut respect_gitignore, name, value);
                 });
-                if !explicit_refs.contains(&"incremental") {
-                    if let Some(v) = incremental_overrides.incremental {
-                        args.incremental = v;
-                    }
-                }
-                if !explicit_refs.contains(&"incremental_cache_dir") {
-                    if let Some(v) = incremental_overrides.incremental_cache_dir {
-                        args.incremental_cache_dir = Some(v);
-                    }
-                }
             }
         }
 
