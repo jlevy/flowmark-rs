@@ -8,7 +8,7 @@ This page tracks CLI behavior that is currently specific to `flowmark-rs`
 | Feature | Rust CLI | Python CLI |
 | --- | --- | --- |
 | Incremental cache | Yes | No |
-| Cache controls (`--no-cache`, `--cache-dir`, `--incremental`) | Yes | No |
+| Cache controls (`--no-cache`, `--cache-dir`, `--incremental`, `--show-cache`, `--clear-cache`) | Yes | No |
 | Stage-level perf stats (`--perf-stats`) | Yes | No |
 | Parallel file processing (`--threads`) | Yes | No |
 

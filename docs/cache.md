@@ -47,6 +47,10 @@ The manifest stores:
   - override cache root directory
 - `--incremental[=true|false]`
   - explicit enable/disable form
+- `--show-cache`
+  - print resolved cache directory, file count, and total size
+- `--clear-cache`
+  - non-interactively delete the resolved cache directory (idempotent)
 
 ## Config File Keys
 

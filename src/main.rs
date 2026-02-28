@@ -5,6 +5,7 @@ mod cli {
     use anyhow::{Context, Result, bail};
     use clap::{ArgMatches, CommandFactory, FromArgMatches, Parser, parser::ValueSource};
     use rayon::prelude::*;
+    use std::fs;
     use std::io::{BufWriter, Read, Write};
     use std::path::{Path, PathBuf};
     use std::sync::Arc;
@@ -199,6 +200,14 @@ Use `flowmark --docs` for full documentation.
         #[arg(long = "cache-dir", value_name = "DIR", help_heading = "Performance Options")]
         pub incremental_cache_dir: Option<String>,
 
+        /// Show cache directory, file count, and total size
+        #[arg(long, help_heading = "Performance Options")]
+        pub show_cache: bool,
+
+        /// Delete the entire cache directory (non-interactive)
+        #[arg(long, help_heading = "Performance Options")]
+        pub clear_cache: bool,
+
         /// Print performance statistics summary
         #[arg(long, help_heading = "Performance Options")]
         pub perf_stats: bool,
@@ -384,21 +393,13 @@ Use `flowmark --docs` for full documentation.
         format!("{whole}.{frac}")
     }
 
-    fn open_incremental_cache(
-        enabled: bool,
-        cache_dir_override: Option<&str>,
-        opts: &FormatOptions,
-        config_path: Option<&Path>,
-    ) -> Option<Arc<IncrementalCache>> {
-        if !enabled {
-            return None;
+    fn resolve_cache_root(cache_dir_override: Option<&str>, warn_on_fallback: bool) -> PathBuf {
+        if let Some(cache_dir) = cache_dir_override {
+            return PathBuf::from(cache_dir);
         }
 
-        let project_root = std::env::current_dir().ok()?;
-        let cache_root = if let Some(cache_dir) = cache_dir_override {
-            PathBuf::from(cache_dir)
-        } else {
-            let resolved = resolve_default_cache_root();
+        let resolved = resolve_default_cache_root();
+        if warn_on_fallback {
             match resolved.source {
                 CacheRootSource::OsCacheDir => {}
                 CacheRootSource::HomeFallback => {
@@ -414,8 +415,85 @@ Use `flowmark --docs` for full documentation.
                     );
                 }
             }
-            resolved.path
-        };
+        }
+        resolved.path
+    }
+
+    fn format_bytes_human(bytes: u64) -> String {
+        const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
+        let mut value = bytes as f64;
+        let mut unit_index = 0usize;
+        while value >= 1024.0 && unit_index + 1 < UNITS.len() {
+            value /= 1024.0;
+            unit_index += 1;
+        }
+        if unit_index == 0 {
+            format!("{bytes} {}", UNITS[unit_index])
+        } else {
+            format!("{value:.1} {}", UNITS[unit_index])
+        }
+    }
+
+    fn cache_usage(cache_root: &Path) -> Result<(usize, u64)> {
+        if !cache_root.exists() {
+            return Ok((0, 0));
+        }
+
+        let mut file_count = 0usize;
+        let mut total_bytes = 0u64;
+        let mut stack = vec![cache_root.to_path_buf()];
+
+        while let Some(dir) = stack.pop() {
+            for entry in
+                fs::read_dir(&dir).with_context(|| format!("failed to read {}", dir.display()))?
+            {
+                let entry = entry?;
+                let path = entry.path();
+                let file_type = entry.file_type()?;
+                if file_type.is_dir() {
+                    stack.push(path);
+                } else if file_type.is_file() {
+                    file_count += 1;
+                    total_bytes += entry.metadata()?.len();
+                }
+            }
+        }
+
+        Ok((file_count, total_bytes))
+    }
+
+    fn run_show_cache(cache_root: &Path) -> Result<()> {
+        let (file_count, total_bytes) = cache_usage(cache_root)?;
+        println!("Cache directory: {}", cache_root.display());
+        println!("Cache files: {file_count}");
+        println!("Cache size: {}", format_bytes_human(total_bytes));
+        Ok(())
+    }
+
+    fn run_clear_cache(cache_root: &Path) -> Result<()> {
+        println!("Cache directory: {}", cache_root.display());
+        if cache_root.exists() {
+            fs::remove_dir_all(cache_root)
+                .with_context(|| format!("failed to remove cache at {}", cache_root.display()))?;
+            println!("Cache cleared.");
+        } else {
+            println!("Cache already empty.");
+        }
+        Ok(())
+    }
+
+    fn open_incremental_cache(
+        enabled: bool,
+        cache_dir_override: Option<&str>,
+        opts: &FormatOptions,
+        config_path: Option<&Path>,
+    ) -> Option<Arc<IncrementalCache>> {
+        if !enabled {
+            return None;
+        }
+
+        let project_root = std::env::current_dir().ok()?;
+        let cache_root = resolve_cache_root(cache_dir_override, true);
         let fingerprint =
             compute_formatter_fingerprint(opts, env!("CARGO_PKG_VERSION"), config_path);
 
@@ -515,30 +593,6 @@ Use `flowmark --docs` for full documentation.
             return Ok(());
         }
 
-        // Validate: files required
-        if args.files.is_empty() {
-            if is_auto {
-                eprintln!(
-                    "Error: --auto requires at least one file or directory argument \
-                     (use '.' for current directory, --help for more options)"
-                );
-                std::process::exit(1);
-            }
-            if args.list_files {
-                eprintln!(
-                    "Error: --list-files requires at least one file or directory argument \
-                     (use '.' for current directory, --help for more options)"
-                );
-                std::process::exit(1);
-            }
-            eprintln!(
-                "Error: No input specified. Provide files, directories \
-                 (use '.' for current directory), or '-' for stdin. \
-                 Use --help for more options."
-            );
-            std::process::exit(1);
-        }
-
         // Derive respect_gitignore (inverted from --no-respect-gitignore)
         let mut respect_gitignore = !args.no_respect_gitignore;
 
@@ -564,6 +618,42 @@ Use `flowmark --docs` for full documentation.
                     }
                 }
             }
+        }
+
+        // Cache lifecycle operations (non-interactive).
+        if args.clear_cache || args.show_cache {
+            let cache_root = resolve_cache_root(args.incremental_cache_dir.as_deref(), true);
+            if args.clear_cache {
+                run_clear_cache(&cache_root)?;
+            }
+            if args.show_cache {
+                run_show_cache(&cache_root)?;
+            }
+            return Ok(());
+        }
+
+        // Validate: files required
+        if args.files.is_empty() {
+            if is_auto {
+                eprintln!(
+                    "Error: --auto requires at least one file or directory argument \
+                     (use '.' for current directory, --help for more options)"
+                );
+                std::process::exit(1);
+            }
+            if args.list_files {
+                eprintln!(
+                    "Error: --list-files requires at least one file or directory argument \
+                     (use '.' for current directory, --help for more options)"
+                );
+                std::process::exit(1);
+            }
+            eprintln!(
+                "Error: No input specified. Provide files, directories \
+                 (use '.' for current directory), or '-' for stdin. \
+                 Use --help for more options."
+            );
+            std::process::exit(1);
         }
 
         // Resolve files

@@ -75,7 +75,7 @@ So on the same corpus flowmark-rs is roughly **60-70x faster than flowmark-py**.
 The only exception to the exact parity of the port of Python Flowmark are these
 Rust-only performance features:
 
-- incremental cache (`--no-cache`, `--cache-dir`, `--incremental`)
+- incremental cache (`--no-cache`, `--cache-dir`, `--incremental`, `--show-cache`, `--clear-cache`)
 - stage-level performance stats (`--perf-stats`)
 
 See [`docs/rust-only-features.md`](docs/rust-only-features.md) for a concise feature

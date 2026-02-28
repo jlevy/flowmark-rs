@@ -3,7 +3,7 @@
 
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Output};
 
 fn flowmark_bin() -> PathBuf {
     let mut path = std::env::current_exe().expect("current exe");
@@ -31,6 +31,10 @@ fn toml_string_literal(path: &std::path::Path) -> String {
     format!("{:?}", path.to_string_lossy())
 }
 
+fn run_flowmark(current_dir: &std::path::Path, args: &[&str]) -> Output {
+    Command::new(flowmark_bin()).current_dir(current_dir).args(args).output().expect("run flowmark")
+}
+
 #[test]
 fn test_incremental_cache_writes_manifest_when_enabled() {
     let project_dir = tempfile::tempdir().expect("create project dir");
@@ -41,16 +45,10 @@ fn test_incremental_cache_writes_manifest_when_enabled() {
     )
     .expect("write doc.md");
 
-    let output = Command::new(flowmark_bin())
-        .current_dir(project_dir.path())
-        .args([
-            "--auto",
-            "--cache-dir",
-            cache_dir.path().to_str().expect("cache path to str"),
-            "doc.md",
-        ])
-        .output()
-        .expect("run flowmark");
+    let output = run_flowmark(
+        project_dir.path(),
+        &["--auto", "--cache-dir", cache_dir.path().to_str().expect("cache path to str"), "doc.md"],
+    );
 
     assert!(
         output.status.success(),
@@ -73,17 +71,16 @@ fn test_no_incremental_disables_cache_manifest_creation() {
     )
     .expect("write doc.md");
 
-    let output = Command::new(flowmark_bin())
-        .current_dir(project_dir.path())
-        .args([
+    let output = run_flowmark(
+        project_dir.path(),
+        &[
             "--auto",
             "--no-cache",
             "--cache-dir",
             cache_dir.path().to_str().expect("cache path to str"),
             "doc.md",
-        ])
-        .output()
-        .expect("run flowmark");
+        ],
+    );
 
     assert!(
         output.status.success(),
@@ -115,11 +112,7 @@ fn test_config_incremental_false_disables_cache_manifest_creation() {
     )
     .expect("write doc.md");
 
-    let output = Command::new(flowmark_bin())
-        .current_dir(project_dir.path())
-        .args(["--auto", "doc.md"])
-        .output()
-        .expect("run flowmark");
+    let output = run_flowmark(project_dir.path(), &["--auto", "doc.md"]);
 
     assert!(
         output.status.success(),
@@ -148,11 +141,7 @@ fn test_config_incremental_cache_dir_is_applied() {
     )
     .expect("write doc.md");
 
-    let output = Command::new(flowmark_bin())
-        .current_dir(project_dir.path())
-        .args(["--auto", "doc.md"])
-        .output()
-        .expect("run flowmark");
+    let output = run_flowmark(project_dir.path(), &["--auto", "doc.md"]);
 
     assert!(
         output.status.success(),
@@ -162,5 +151,90 @@ fn test_config_incremental_cache_dir_is_applied() {
     assert!(
         cache_manifest_count(cache_dir.path()) > 0,
         "expected incremental manifest in cache dir configured by flowmark.toml"
+    );
+}
+
+#[test]
+fn test_show_cache_reports_usage_without_files() {
+    let project_dir = tempfile::tempdir().expect("create project dir");
+    let cache_parent = tempfile::tempdir().expect("create cache parent dir");
+    let cache_root = cache_parent.path().join("cache-root");
+    fs::write(
+        project_dir.path().join("doc.md"),
+        "# Title\n\nA short paragraph that will stay unchanged.\n",
+    )
+    .expect("write doc.md");
+
+    let seed = run_flowmark(
+        project_dir.path(),
+        &["--auto", "--cache-dir", cache_root.to_str().expect("cache path to str"), "doc.md"],
+    );
+    assert!(
+        seed.status.success(),
+        "seed run should succeed, stderr: {}",
+        String::from_utf8_lossy(&seed.stderr)
+    );
+
+    let output = run_flowmark(
+        project_dir.path(),
+        &["--show-cache", "--cache-dir", cache_root.to_str().expect("cache path to str")],
+    );
+    assert!(
+        output.status.success(),
+        "--show-cache should succeed, stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains(&format!("Cache directory: {}", cache_root.display())),
+        "show-cache output should include resolved cache directory, got: {stdout}"
+    );
+    assert!(stdout.contains("Cache files: "), "show-cache output should include file count");
+    assert!(stdout.contains("Cache size: "), "show-cache output should include total size");
+}
+
+#[test]
+fn test_clear_cache_deletes_cache_without_confirmation() {
+    let project_dir = tempfile::tempdir().expect("create project dir");
+    let cache_parent = tempfile::tempdir().expect("create cache parent dir");
+    let cache_root = cache_parent.path().join("cache-root");
+    fs::write(
+        project_dir.path().join("doc.md"),
+        "# Title\n\nA short paragraph that will stay unchanged.\n",
+    )
+    .expect("write doc.md");
+
+    let seed = run_flowmark(
+        project_dir.path(),
+        &["--auto", "--cache-dir", cache_root.to_str().expect("cache path to str"), "doc.md"],
+    );
+    assert!(
+        seed.status.success(),
+        "seed run should succeed, stderr: {}",
+        String::from_utf8_lossy(&seed.stderr)
+    );
+    assert!(cache_root.exists(), "seed run should create cache root");
+
+    let clear = run_flowmark(
+        project_dir.path(),
+        &["--clear-cache", "--cache-dir", cache_root.to_str().expect("cache path to str")],
+    );
+    assert!(
+        clear.status.success(),
+        "--clear-cache should succeed, stderr: {}",
+        String::from_utf8_lossy(&clear.stderr)
+    );
+    assert!(!cache_root.exists(), "clear-cache should remove cache root");
+
+    let clear_again = run_flowmark(
+        project_dir.path(),
+        &["--clear-cache", "--cache-dir", cache_root.to_str().expect("cache path to str")],
+    );
+    assert!(clear_again.status.success(), "second --clear-cache should be idempotent");
+    let stdout = String::from_utf8_lossy(&clear_again.stdout);
+    assert!(
+        stdout.contains("Cache already empty."),
+        "second clear should report already empty, got: {stdout}"
     );
 }

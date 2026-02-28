@@ -8,6 +8,8 @@ path:
 patterns:
   PROJECT_MANIFEST: '[0-9a-f]{16}\.toml'
   MS: '\d+\.\d{3}'
+  CACHE_FILES: '\d+'
+  CACHE_SIZE: '\d+(?:\.\d)? (?:B|KiB|MiB|GiB|TiB)'
 ---
 
 # Incremental Cache Behavior
@@ -85,4 +87,37 @@ no-cache manifest unchanged
 perf-stats:
   fill_markdown files=2 total=[MS]ms preprocess=[MS]ms parse=[MS]ms transforms=[MS]ms render=[MS]ms postprocess=[MS]ms
   incremental hits=0 misses=2 hit_rate=0.0%
+```
+
+## CB8: `--show-cache` reports directory, file count, and total size
+
+```console
+$ flowmark --show-cache --cache-dir cache-session/cache
+Cache directory: cache-session/cache
+Cache files: [CACHE_FILES]
+Cache size: [CACHE_SIZE]
+```
+
+## CB9: `--clear-cache` removes the cache directory immediately
+
+```console
+$ flowmark --clear-cache --cache-dir cache-session/cache && find cache-session -maxdepth 3 -print | sort
+Cache directory: cache-session/cache
+Cache cleared.
+cache-session
+cache-session/manifest-before.toml
+cache-session/perf-delta.log
+cache-session/perf-nocache.log
+cache-session/perf-steady.log
+cache-session/repo
+cache-session/repo/one.md
+cache-session/repo/two.md
+```
+
+## CB10: `--clear-cache` is idempotent when cache is already empty
+
+```console
+$ flowmark --clear-cache --cache-dir cache-session/cache
+Cache directory: cache-session/cache
+Cache already empty.
 ```

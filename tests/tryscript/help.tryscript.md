@@ -70,6 +70,16 @@ $ flowmark --help | grep -F -- "--cache-dir"
 ```
 
 ```console
+$ flowmark --help | grep -F -- "--show-cache"
+      --show-cache            Show cache directory, file count, and total size
+```
+
+```console
+$ flowmark --help | grep -F -- "--clear-cache"
+      --clear-cache           Delete the entire cache directory (non-interactive)
+```
+
+```console
 $ flowmark --help | grep -F -- "--perf-stats"
       --perf-stats            Print performance statistics summary
 ```

@@ -133,6 +133,7 @@ high-leverage win is to skip parse/render entirely on unchanged files.
   - `--show-cache`: print resolved cache root, total cache file count, and
     human-readable total cache size
   - `--clear-cache`: delete resolved cache root recursively and report result
+    without interactive confirmation
   - both commands respect `--cache-dir` override
 
 3. `src/lib.rs`
@@ -280,7 +281,6 @@ Child beads with file/function scope and blockers:
 - Hash choice tradeoff: speed vs collision margin
 - Whether to include file path in key (for safety) or only content hash (for max dedupe)
 - Whether `--perf-stats` should support machine-readable JSON output
-- Whether `--clear-cache` should require an explicit confirmation flag in non-interactive contexts
 
 ## References
 
