@@ -38,8 +38,14 @@ mod cli {
         disable_help_flag = true,
         long_version = concat!(
             env!("CARGO_PKG_VERSION"),
+            "-dev.",
+            env!("FLOWMARK_GIT_COMMITS_AHEAD"),
+            "+g",
+            env!("FLOWMARK_GIT_HASH"),
             " (Rust port of flowmark-py ",
             env!("PARITY_VERSION"),
+            "; base ",
+            env!("FLOWMARK_GIT_BASE_TAG"),
             ")"
         ),
         about = "Flowmark: Better auto-formatting for Markdown and plaintext",

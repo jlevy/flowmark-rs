@@ -39,8 +39,8 @@ identical error behavior.**
   Rust uses `Path not found:`. Both include `Error:` prefix and filename.
 - `--help` layout: minor formatting differences between clap (Rust) and argparse
   (Python)
-- `--version` output: Rust appends parity info
-  (`flowmark 0.2.0 (parity: flowmark-py 0.6.4)`)
+- `--version` output: Rust includes explicit port/version provenance metadata
+  (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.0)`)
 
 Everything not on this list is required to be identical.
 
@@ -340,9 +340,10 @@ This port was built using the
 
 ## Version Convention
 
-Each release documents which Python version it targets:
+Each release documents which Python version it targets, and dev builds include
+commits-ahead and git hash metadata:
 
-> flowmark v0.2.0 (parity: flowmark-py v0.6.4)
+> flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.0)
 
 The Rust version follows its own semver independently.
-The parity note indicates which Python version’s behavior is fully covered.
+The port note indicates which Python version's behavior is fully covered.

@@ -221,7 +221,7 @@ formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
 ## Release Notes Format
 
 ```markdown
-## flowmark vX.Y.Z (parity: flowmark-py vA.B.C)
+## flowmark X.Y.Z-dev.N+g<hash> (Rust port of flowmark-py A.B.C; base vX.Y.Z)
 
 ### What's Changed
 
