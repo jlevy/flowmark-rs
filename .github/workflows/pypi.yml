@@ -1,0 +1,147 @@
+name: Publish to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ── Build: Linux x86_64 (glibc) ────────────────────────────────
+  build-linux-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: x86_64-unknown-linux-gnu
+          manylinux: "2_17"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-x86_64
+          path: dist/*.whl
+
+  # ── Build: Linux aarch64 (glibc, cross-compiled) ───────────────
+  build-linux-aarch64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: aarch64-unknown-linux-gnu
+          manylinux: "2_17"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-aarch64
+          path: dist/*.whl
+
+  # ── Build: macOS x86_64 ────────────────────────────────────────
+  build-macos-x86_64:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: x86_64-apple-darwin
+      - name: Smoke test
+        run: |
+          pip install --find-links dist flowmark-rs --force-reinstall
+          flowmark-rs --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-x86_64
+          path: dist/*.whl
+
+  # ── Build: macOS aarch64 (Apple Silicon) ───────────────────────
+  build-macos-aarch64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: aarch64-apple-darwin
+      - name: Smoke test
+        run: |
+          pip install --find-links dist flowmark-rs --force-reinstall
+          flowmark-rs --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-aarch64
+          path: dist/*.whl
+
+  # ── Build: Windows x86_64 ──────────────────────────────────────
+  build-windows-x86_64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: x86_64-pc-windows-msvc
+      - name: Smoke test
+        run: |
+          pip install --find-links dist flowmark-rs --force-reinstall
+          flowmark-rs --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-x86_64
+          path: dist/*.whl
+
+  # ── Build: source distribution ─────────────────────────────────
+  build-sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist/*.tar.gz
+
+  # ── Publish to PyPI ────────────────────────────────────────────
+  publish:
+    needs:
+      - build-linux-x86_64
+      - build-linux-aarch64
+      - build-macos-x86_64
+      - build-macos-aarch64
+      - build-windows-x86_64
+      - build-sdist
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: wheels/
+      - name: List wheels
+        run: ls -la wheels/
+      - name: Publish to PyPI
+        run: uv publish --trusted-publishing always wheels/*
