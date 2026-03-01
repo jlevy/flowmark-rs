@@ -10,7 +10,7 @@ repository = "https://github.com/jlevy/flowmark-rs"
 documentation = "https://docs.rs/flowmark"
 keywords = ["markdown", "formatter", "cli", "semantic-linebreaks"]
 categories = ["command-line-utilities", "text-processing"]
-exclude = [".claude/", ".tbd/", ".github/", "docs/", "python/", "tests/tryscript/", "repos/", "admin/", "attic/"]
+exclude = [".claude/", ".tbd/", ".github/", "docs/", "python/", "tests/tryscript/", "repos/", "admin/", "attic/", "pyproject.toml"]
 
 [lib]
 name = "flowmark"

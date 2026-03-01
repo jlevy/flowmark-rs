@@ -31,6 +31,9 @@ tests/parity/*.rust.*.md
 benchmarks/corpus/
 benchmarks/results/
 
+# Maturin build artifacts
+*.whl
+
 # Added by cargo
 
 /target
