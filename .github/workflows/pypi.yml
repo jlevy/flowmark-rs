@@ -131,7 +131,6 @@ jobs:
       - build-windows-x86_64
       - build-sdist
     runs-on: ubuntu-latest
-    environment: release
     permissions:
       id-token: write
     steps:
