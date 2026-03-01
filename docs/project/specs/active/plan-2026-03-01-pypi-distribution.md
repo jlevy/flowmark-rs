@@ -393,7 +393,7 @@ publishing to PyPI.
             target: x86_64-apple-darwin
         - name: Smoke test
           run: |
-            pip install --find-links dist flowmark-rs --force-reinstall
+            python -m pip install --no-index --find-links dist flowmark-rs --force-reinstall
             flowmark-rs --version
         - uses: actions/upload-artifact@v4
           with:
@@ -413,7 +413,7 @@ publishing to PyPI.
             target: aarch64-apple-darwin
         - name: Smoke test
           run: |
-            pip install --find-links dist flowmark-rs --force-reinstall
+            python -m pip install --no-index --find-links dist flowmark-rs --force-reinstall
             flowmark-rs --version
         - uses: actions/upload-artifact@v4
           with:
@@ -433,7 +433,7 @@ publishing to PyPI.
             target: x86_64-pc-windows-msvc
         - name: Smoke test
           run: |
-            pip install --find-links dist flowmark-rs --force-reinstall
+            python -m pip install --no-index --find-links dist flowmark-rs --force-reinstall
             flowmark-rs --version
         - uses: actions/upload-artifact@v4
           with:
@@ -457,6 +457,7 @@ publishing to PyPI.
 
     # ── Publish to PyPI ────────────────────────────────────────────
     publish:
+      if: github.event_name == 'release'
       needs:
         - build-linux-x86_64
         - build-linux-aarch64
@@ -487,7 +488,10 @@ publishing to PyPI.
   - `macos-13` for x86_64, `macos-14` for ARM64 — matches ruff/uv runner selection
   - Smoke tests on native platforms only (macOS, Windows) — Linux aarch64 is
     cross-compiled so cannot be tested on the runner
+  - Smoke tests use `--no-index --find-links dist` so they validate built wheels only,
+    never PyPI
   - No explicit GitHub environment — keep setup simple for this single-maintainer repo
+  - Publish job runs only for `release` events; on `workflow_dispatch` it is skipped
   - `uv publish --trusted-publishing always` — explicitly requires OIDC (fails rather
     than falling back to tokens)
 
@@ -500,8 +504,8 @@ publishing to PyPI.
   gh run watch --repo jlevy/flowmark-rs <run-id>
   ```
 
-  The publish step will fail (no PyPI project yet), but all 5 build jobs + sdist should
-  produce wheel artifacts.
+  The publish job is skipped in `workflow_dispatch` mode by design.
+  All 5 build jobs + sdist should produce wheel artifacts.
   Download and inspect them:
 
   ```bash

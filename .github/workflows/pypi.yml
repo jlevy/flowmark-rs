@@ -59,7 +59,7 @@ jobs:
           target: x86_64-apple-darwin
       - name: Smoke test
         run: |
-          pip install --find-links dist flowmark-rs --force-reinstall
+          python -m pip install --no-index --find-links dist flowmark-rs --force-reinstall
           flowmark-rs --version
       - uses: actions/upload-artifact@v4
         with:
@@ -79,7 +79,7 @@ jobs:
           target: aarch64-apple-darwin
       - name: Smoke test
         run: |
-          pip install --find-links dist flowmark-rs --force-reinstall
+          python -m pip install --no-index --find-links dist flowmark-rs --force-reinstall
           flowmark-rs --version
       - uses: actions/upload-artifact@v4
         with:
@@ -99,7 +99,7 @@ jobs:
           target: x86_64-pc-windows-msvc
       - name: Smoke test
         run: |
-          pip install --find-links dist flowmark-rs --force-reinstall
+          python -m pip install --no-index --find-links dist flowmark-rs --force-reinstall
           flowmark-rs --version
       - uses: actions/upload-artifact@v4
         with:
@@ -123,6 +123,7 @@ jobs:
 
   # ── Publish to PyPI ────────────────────────────────────────────
   publish:
+    if: github.event_name == 'release'
     needs:
       - build-linux-x86_64
       - build-linux-aarch64

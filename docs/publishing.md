@@ -130,7 +130,7 @@ EOF
 This triggers three workflows:
 
 - **`release.yml`** builds cross-platform binaries and uploads them to the release (see
-  [Binary Release Workflow](#binary-release-workflow) below).
+  [Release Workflows](#release-workflows) below).
 - **`publish.yml`** runs the test suite and publishes to crates.io via OIDC trusted
   publishing.
 - **`pypi.yml`** builds platform-specific Python wheels and publishes to PyPI via OIDC
