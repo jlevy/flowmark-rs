@@ -5,7 +5,7 @@ title: Distribute flowmark-rs on PyPI via maturin
 kind: epic
 status: open
 priority: 1
-version: 23
+version: 25
 spec_path: docs/project/specs/active/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies: []
@@ -32,9 +32,25 @@ child_order_hints:
   - is-01kjky0z1x73jj3gfj1374bpfw
   - is-01kjky0zgvdr0t91c2pn13jdfa
 created_at: 2026-03-01T05:29:51.166Z
-updated_at: 2026-03-01T19:20:32.144Z
+updated_at: 2026-03-01T19:39:39.490Z
 ---
+## Notes
+
+Snapshot 2026-03-01: 13/22 tasks closed, 9 open.
+
+Validation on branch `claude/research-rust-cli-packaging-h4oT3` at commit `4e46fd0`:
+- `maturin build --release --locked` succeeded (macOS arm64 wheel)
+- `maturin sdist` succeeded
+- local `pip install --no-index --find-links ... flowmark-rs` succeeded
+- both `flowmark` and `flowmark-rs` commands run after install
+- `twine check` passed for wheel and sdist
+
+Operational blockers remain:
+- `pypi.yml` is not yet on the default branch
+- first real PyPI publish via GitHub Release is still pending
+
+Configuration decision retained: no explicit GitHub environment is required for trusted publishing.
 
 ## Notes
 
-Snapshot 2026-03-01: 12/22 tasks closed. pypi.yml is not on default branch yet; flowmark-rs is not published on PyPI (404).
+Snapshot 2026-03-01: 13/22 tasks closed. pypi.yml is not on default branch yet; flowmark-rs is not published on PyPI (404). No explicit GitHub environment is required for trusted publishing.
