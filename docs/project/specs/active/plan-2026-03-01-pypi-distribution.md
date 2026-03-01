@@ -4,7 +4,7 @@
 
 **Author:** Claude (agent)
 
-**Status:** Draft
+**Status:** Phases 1-2 complete, Phase 4-5 complete — Phase 3 requires manual PyPI setup
 
 **Related issue:**
 [#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
