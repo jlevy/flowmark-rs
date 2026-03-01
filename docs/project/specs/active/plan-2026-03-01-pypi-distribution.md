@@ -4,9 +4,9 @@
 
 **Author:** Claude (agent)
 
-**Status:** Phase 1 complete; Phase 2 partial (2.1 done, 2.2 pending); Phase 3 partial
-(3.2 done, 3.1/3.4/3.5 pending manual setup); Phase 4 partial (4.1-4.3 done, 4.4-4.6
-open); Phase 5 complete
+**Status:** Phase 1 complete; Phase 2 partial (2.1 done, 2.2 blocked pending merge to
+`main`); Phase 3 partial (3.2 done, 3.1/3.4/3.5 pending manual setup); Phase 4 partial
+(4.1-4.3 done, 4.4-4.6 open); Phase 5 complete
 
 **Related issue:**
 [#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
@@ -20,6 +20,9 @@ open); Phase 5 complete
 - PyPI package `flowmark-rs`: **not yet published** (PyPI JSON API returns 404)
 - GitHub Actions workflow `pypi.yml` on `main`: **not yet present** (Actions API lookup
   returns 404 for that workflow path on default branch)
+- Local verification (2026-03-01): `maturin build`, `maturin sdist`, local
+  `pip install --no-index`, and `twine check` all pass for `0.2.5`; both `flowmark` and
+  `flowmark-rs` commands are available from the built wheel
 
 ## Overview
 
@@ -255,7 +258,7 @@ Set up the maturin configuration and verify it works locally.
   **Key settings explained:**
   - `name = "flowmark-rs"` — PyPI package name (distinct from `flowmark` Python package)
   - `dynamic = ["version"]` — maturin reads version from `Cargo.toml` line 3
-    (`version = "0.2.4"`)
+    (`version = "0.2.5"`)
   - `bindings = "bin"` — standalone binary, not a Python extension module
   - `strip = true` — strip debug symbols (redundant with `Cargo.toml` line 75
     `strip = true` in `[profile.release]`, but explicit is good)
@@ -296,7 +299,7 @@ Set up the maturin configuration and verify it works locally.
   uv tool install maturin
   maturin build --release
   ls target/wheels/
-  # Expected: flowmark_rs-0.2.4-cp38-abi3-{platform}.whl or similar
+  # Expected: flowmark_rs-0.2.5-py3-none-{platform}.whl (or similar)
   # Verify wheel contents:
   python -m zipfile -l target/wheels/flowmark_rs-*.whl
   # Should show both flowmark and flowmark-rs in the scripts directory
@@ -312,7 +315,7 @@ Set up the maturin configuration and verify it works locally.
   ```bash
   maturin develop --release
   flowmark-rs --version
-  # Expected: flowmark 0.2.4 (parity: flowmark-py 0.6.4)
+  # Expected: flowmark 0.2.5... (includes dev metadata on non-tag builds)
   flowmark --version
   # Expected: same output
   flowmark-rs --help
@@ -358,6 +361,10 @@ publishing to PyPI.
             args: --release --locked --out dist
             target: x86_64-unknown-linux-gnu
             manylinux: "2_17"
+        - name: Smoke test
+          run: |
+            python -m pip install --no-index --find-links dist flowmark-rs --force-reinstall
+            flowmark-rs --version
         - uses: actions/upload-artifact@v4
           with:
             name: wheels-linux-x86_64
@@ -486,7 +493,7 @@ publishing to PyPI.
   - `maturin-version: v1.12.5` — pinned to latest stable (Feb 28, 2026)
   - `manylinux: "2_17"` — minimum for Rust glibc builds; matches ruff/uv
   - `macos-13` for x86_64, `macos-14` for ARM64 — matches ruff/uv runner selection
-  - Smoke tests on native platforms only (macOS, Windows) — Linux aarch64 is
+  - Smoke tests on native platforms (Linux x86_64, macOS, Windows); Linux aarch64 is
     cross-compiled so cannot be tested on the runner
   - Smoke tests use `--no-index --find-links dist` so they validate built wheels only,
     never PyPI
@@ -694,10 +701,9 @@ Map all learnings from this research and implementation into the
 
 ### Build Verification
 
-- Each build job in the CI workflow runs a smoke test: install the wheel in a clean
-  virtualenv and run `flowmark-rs --version`
-- Cross-compiled builds (Linux aarch64) cannot be smoke-tested on the runner but the
-  wheel structure is verified
+- Native build jobs (Linux x86_64, macOS x86_64/aarch64, and Windows x86_64) run smoke
+  tests: install from local `dist` artifacts and execute `flowmark-rs --version`
+- Linux aarch64 is cross-compiled and cannot be smoke-tested on the runner
 
 ### Installation Verification
 
@@ -752,10 +758,9 @@ This should be documented in:
    with/replacing the Python package)?
    **Recommendation:** Use `flowmark-rs` to keep them distinct.
 
-2. **Both binaries in wheel:** Maturin packages all `[[bin]]` targets from Cargo.toml.
-   Verify that both `flowmark` and `flowmark-rs` are included in the wheel.
-   If maturin only includes one, we may need to configure which binary to include or
-   adjust the Cargo.toml.
+2. **Both binaries in wheel:** Verified locally on 2026-03-01.
+   Maturin packages both `flowmark` and `flowmark-rs`, and both commands execute after
+   local wheel install.
 
 3. **Existing `python/pyproject.toml` interaction:** Verify that having a root-level
    `pyproject.toml` (maturin) and a `python/pyproject.toml` (hatchling) causes no

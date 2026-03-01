@@ -306,7 +306,7 @@ Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`. A unifi
 
 3. **`pypi.yml`** — Triggered by the same `published` event. Builds Python wheels for 5
    platforms using maturin, then publishes to PyPI via `uv publish` with OIDC trusted
-   publishing. Includes smoke tests on native platforms (macOS, Windows).
+   publishing. Includes smoke tests on native platforms (Linux x86_64, macOS, Windows).
 
 Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or `.zip`
 (Windows), which `cargo binstall` auto-detects.
