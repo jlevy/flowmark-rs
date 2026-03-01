@@ -19,8 +19,12 @@ mod cli {
     use flowmark::formatter::filling::{
         get_fill_perf_stats, reset_fill_perf_stats, set_fill_perf_stats_enabled,
     };
-    use flowmark::incremental_cache::{IncrementalCache, compute_formatter_fingerprint};
-    use flowmark::settings::{CacheRootSource, resolve_default_cache_root};
+    use flowmark::incremental_cache::{
+        IncrementalCache, compute_formatter_fingerprint, manifest_hash_count, project_manifest_path,
+    };
+    use flowmark::settings::{
+        CacheRootSource, INCREMENTAL_CACHE_SUBDIR, resolve_default_cache_root,
+    };
     use flowmark::skills;
 
     /// Characters that indicate a path is a glob pattern.
@@ -419,6 +423,10 @@ Use `flowmark --docs` for full documentation.
         resolved.path
     }
 
+    fn should_resolve_project_root_for_cache_ops(show_cache: bool) -> bool {
+        show_cache
+    }
+
     fn format_bytes_human(bytes: u64) -> String {
         const UNITS: [&str; 5] = ["B", "KiB", "MiB", "GiB", "TiB"];
         let mut value = bytes;
@@ -466,11 +474,36 @@ Use `flowmark --docs` for full documentation.
         Ok((file_count, total_bytes))
     }
 
-    fn run_show_cache(cache_root: &Path) -> Result<()> {
+    fn cache_manifest_count(cache_root: &Path) -> Result<usize> {
+        let incremental_dir = cache_root.join(INCREMENTAL_CACHE_SUBDIR);
+        if !incremental_dir.exists() {
+            return Ok(0);
+        }
+
+        let mut manifest_count = 0usize;
+        for entry in fs::read_dir(&incremental_dir)
+            .with_context(|| format!("failed to read {}", incremental_dir.display()))?
+        {
+            let entry = entry?;
+            if entry.file_type()?.is_file() {
+                manifest_count += 1;
+            }
+        }
+        Ok(manifest_count)
+    }
+
+    fn run_show_cache(cache_root: &Path, project_root: &Path) -> Result<()> {
         let (file_count, total_bytes) = cache_usage(cache_root)?;
+        let manifest_count = cache_manifest_count(cache_root)?;
+        let project_manifest = project_manifest_path(cache_root, project_root);
+        let project_entry_count = manifest_hash_count(&project_manifest).unwrap_or(0);
+
         println!("Cache directory: {}", cache_root.display());
         println!("Cache files: {file_count}");
         println!("Cache size: {}", format_bytes_human(total_bytes));
+        println!("Cache manifests: {manifest_count}");
+        println!("Current project manifest: {}", project_manifest.display());
+        println!("Current project entries: {project_entry_count}");
         Ok(())
     }
 
@@ -627,11 +660,22 @@ Use `flowmark --docs` for full documentation.
         // Cache lifecycle operations (non-interactive).
         if args.clear_cache || args.show_cache {
             let cache_root = resolve_cache_root(args.incremental_cache_dir.as_deref(), true);
+            let project_root = if should_resolve_project_root_for_cache_ops(args.show_cache) {
+                Some(
+                    std::env::current_dir()
+                        .context("failed to resolve current working directory")?,
+                )
+            } else {
+                None
+            };
             if args.clear_cache {
                 run_clear_cache(&cache_root)?;
             }
             if args.show_cache {
-                run_show_cache(&cache_root)?;
+                let project_root = project_root
+                    .as_deref()
+                    .context("failed to resolve project root for --show-cache")?;
+                run_show_cache(&cache_root, project_root)?;
             }
             return Ok(());
         }
@@ -880,6 +924,27 @@ Use `flowmark --docs` for full documentation.
                 }
             }
             _ => {}
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::should_resolve_project_root_for_cache_ops;
+
+        #[test]
+        fn clear_cache_does_not_require_project_root() {
+            assert!(
+                !should_resolve_project_root_for_cache_ops(false),
+                "--clear-cache should not require project root resolution"
+            );
+        }
+
+        #[test]
+        fn show_cache_requires_project_root() {
+            assert!(
+                should_resolve_project_root_for_cache_ops(true),
+                "--show-cache should require project root resolution"
+            );
         }
     }
 }

@@ -10,6 +10,8 @@ patterns:
   MS: '\d+\.\d{3}'
   CACHE_FILES: '\d+'
   CACHE_SIZE: '\d+(?:\.\d)? (?:B|KiB|MiB|GiB|TiB)'
+  CACHE_MANIFESTS: '\d+'
+  CACHE_ENTRIES: '\d+'
 ---
 
 # Incremental Cache Behavior
@@ -96,6 +98,9 @@ $ flowmark --show-cache --cache-dir cache-session/cache
 Cache directory: cache-session/cache
 Cache files: [CACHE_FILES]
 Cache size: [CACHE_SIZE]
+Cache manifests: [CACHE_MANIFESTS]
+Current project manifest: cache-session/cache/incremental/[PROJECT_MANIFEST]
+Current project entries: [CACHE_ENTRIES]
 ```
 
 ## CB9: `--clear-cache` removes the cache directory immediately
