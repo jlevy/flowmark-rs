@@ -118,3 +118,8 @@ fn tryscript_typography_tests() {
 fn tryscript_help() {
     run_tryscript("help.tryscript.md");
 }
+
+#[test]
+fn tryscript_cache_behavior() {
+    run_tryscript("cache-behavior.tryscript.md");
+}

@@ -22,9 +22,17 @@ Reusable synchronization methodology lives in the `rust-porting-playbook` submod
 ## flowmark-rs Local Docs
 
 - Publishing steps: [`docs/publishing.md`](publishing.md)
+- Rust-only CLI features: [`docs/rust-only-features.md`](rust-only-features.md)
+- Incremental cache (developer reference): [`docs/cache.md`](cache.md)
 - flowmark-specific sync details (fixtures, mapping files, local scripts):
   [`docs/port-sync-playbook.md`](port-sync-playbook.md)
 - Coverage mapping system: [`admin/README.md`](../admin/README.md)
+
+Cache docs are kept concise and include:
+
+- default cache path resolution order
+- fallback and warning behavior
+- manifest layout and CLI/config knobs
 
 ## Project-Specific Baseline Field
 

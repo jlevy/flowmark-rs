@@ -46,7 +46,7 @@ Use `--repo $REPO` on all `gh` commands below.
    gh release list --repo $REPO --limit 1
    ```
 
-2. Run linting and tests locally:
+1. Run linting and tests locally:
 
    ```bash
    cargo build --all-features && cargo fmt --check && cargo clippy --all-targets --all-features && cargo test --all-features
@@ -60,15 +60,17 @@ Use `--repo $REPO` on all `gh` commands below.
 ## Step 2: Version Bump
 
 1. Update `Cargo.toml`:
+
    - Bump the `version` field
    - Update `[package.metadata.parity]` version if Python parity has changed
 
-2. Update `CHANGELOG.md`:
+1. Update `CHANGELOG.md`:
+
    - Move items from `[Unreleased]` into a new version section
    - Add the new version’s comparison link at the bottom
    - Follow the release notes guidelines (`tbd guidelines release-notes-guidelines`)
 
-3. Verify the crate packages correctly:
+1. Verify the crate packages correctly:
 
    ```bash
    cargo publish --dry-run
@@ -83,7 +85,7 @@ Use `--repo $REPO` on all `gh` commands below.
    git commit -m "chore: bump version to X.Y.Z for release"
    ```
 
-2. Push and create a PR:
+1. Push and create a PR:
 
    ```bash
    git push -u origin <branch-name>
@@ -91,7 +93,7 @@ Use `--repo $REPO` on all `gh` commands below.
      --title "chore: release vX.Y.Z" --body "Version bump and changelog for vX.Y.Z."
    ```
 
-3. Wait for CI to pass (all checks):
+1. Wait for CI to pass (all checks):
 
    ```bash
    gh pr checks <branch-name> --repo $REPO --watch 2>&1
@@ -100,13 +102,13 @@ Use `--repo $REPO` on all `gh` commands below.
    **Important:** The `--watch` flag blocks until all checks complete.
    Do not proceed until you see the final summary showing all checks passed.
 
-4. Merge the PR:
+1. Merge the PR:
 
    ```bash
    gh pr merge <branch-name> --repo $REPO --squash --delete-branch
    ```
 
-5. Pull the merged main:
+1. Pull the merged main:
 
    ```bash
    git checkout main && git pull origin main
@@ -126,6 +128,7 @@ EOF
 ```
 
 This triggers two workflows:
+
 - **`release.yml`** builds cross-platform binaries and uploads them to the release (see
   [Binary Release Workflow](#binary-release-workflow) below).
 - **`publish.yml`** runs the test suite and publishes to crates.io via OIDC trusted
@@ -145,15 +148,15 @@ This triggers two workflows:
    gh run watch --repo $REPO <run-id>
    ```
 
-2. Verify release artifacts (6 archives + SHA256SUMS):
+1. Verify release artifacts (6 archives + SHA256SUMS):
 
    ```bash
    gh release view vX.Y.Z --repo $REPO --json assets --jq '.assets[].name'
    ```
 
-3. Verify on crates.io: https://crates.io/crates/flowmark
+1. Verify on crates.io: https://crates.io/crates/flowmark
 
-4. Test installation methods:
+1. Test installation methods:
 
    ```bash
    cargo install flowmark
@@ -177,11 +180,12 @@ formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
    cat /tmp/SHA256SUMS
    ```
 
-2. Update `repos/homebrew-flowmark/Formula/flowmark.rb`:
+1. Update `repos/homebrew-flowmark/Formula/flowmark.rb`:
+
    - Update `version` to the new version
    - Update each `sha256` with the corresponding value from SHA256SUMS
 
-3. Commit and push:
+1. Commit and push:
 
    ```bash
    cd repos/homebrew-flowmark
@@ -191,7 +195,7 @@ formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
    cd ../..
    ```
 
-4. Update the submodule reference in flowmark-rs (optional — can be batched with the
+1. Update the submodule reference in flowmark-rs (optional — can be batched with the
    next commit):
 
    ```bash
@@ -199,7 +203,7 @@ formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
    git commit -m "chore: update homebrew-flowmark submodule"
    ```
 
-5. Test the tap:
+1. Test the tap:
 
    ```bash
    brew update
@@ -217,7 +221,7 @@ formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
 ## Release Notes Format
 
 ```markdown
-## flowmark vX.Y.Z (parity: flowmark-py vA.B.C)
+## flowmark X.Y.Z-dev.N+g<hash> (Rust port of flowmark-py A.B.C; base vX.Y.Z)
 
 ### What's Changed
 
@@ -280,7 +284,7 @@ crates.io. This means no `CARGO_REGISTRY_TOKEN` secret is needed in the reposito
 To set this up (one-time):
 
 1. Go to https://crates.io/settings/tokens
-2. Add a trusted publisher with:
+1. Add a trusted publisher with:
    - GitHub repository: `jlevy/flowmark-rs`
    - Workflow: `publish.yml`
    - Environment: (leave blank)

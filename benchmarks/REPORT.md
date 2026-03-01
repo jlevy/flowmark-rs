@@ -6,54 +6,45 @@
 
 ### Benchmark Setup
 
-- **Platform:** Linux 4.4.0, x86_64
-- **Corpus:** 924 Markdown files (12 MB) — 91 unique repo `.md` files duplicated across
-  a 4–5 level deep directory tree
-- **Methodology:** Each formatter runs 3 times in steady state (files already formatted
-  by that tool). Wall-clock time measured. 1 warmup run excluded.
-- **Caching disabled:** dprint `--incremental=false`; prettier `--ignore-path /dev/null`
-  (to include gitignored corpus files).
+- **Platform:** macOS 25.2.0, arm64 (local)
+- **Corpus:** 928 Markdown files (23 MB)
+- **Methodology:** single-corpus measurements using benchmark harness warmup + timed run(s).
+- **Fresh-run mode:** `./benchmarks/run_comparison.sh first-run 1`
+- **Cached second-run mode:** `./benchmarks/run_comparison.sh second-run 1`
 
 Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_comparison.sh`.
 
-### Local Re-Validation Snapshot (2026-02-27, macOS arm64)
+### Current Headline Results (2026-02-27)
 
-After updating the benchmark harness to generate an exact-size corpus and avoid filename
-collisions, a local rerun on 928 markdown files (23 MB) produced:
+### Fresh Run (single corpus, files need formatting)
 
-| Formatter | Workload | Mean |
-| --- | --- | --- |
-| dprint (`--incremental=false`) | fresh format | 0.48 s |
-| **flowmark-rs** (`--auto`) | fresh format | **0.76 s** |
-| dprint (`--incremental=false`) | re-format | 0.36 s |
-| **flowmark-rs** (`--auto`) | re-format | **0.67 s** |
-| dprint (incremental default) | re-format | 0.03 s |
-
-Interpretation:
-
-- Fresh formatting remains in the same order of magnitude, with dprint ahead on this corpus.
-- Re-format throughput is still dominated by incremental caching behavior.
-- Flowmark currently re-processes unchanged files; dprint skips almost all work when its
-  incremental cache is warm.
-
-### Results: 928-File Batch Formatting
-
-Updated with v0.3.0 parallel results. All formatters run on the same corpus of 928
-Markdown files (8.8 MB). Fresh corpus (files need formatting), 3 runs each.
-
-| Formatter | Language | Parallel | Mean | Relative |
+| Formatter | Language | Parallel | Mean | Relative speed |
 | --- | --- | --- | --- | --- |
-| **dprint** | Rust (WASM plugin) | yes | **0.37 s** | **1.0x** |
-| **flowmark-rs** | Rust | yes (rayon) | **0.73 s** | **2.0x** |
+| **dprint** (`--incremental=false`) | Rust (WASM plugin) | yes | **0.36 s** | **1.0x** |
+| **flowmark-rs** (`--auto`) | Rust | yes (rayon) | **0.71 s** | **2.0x** |
 | **markdownfmt** | Go | no | **0.95 s** | **2.6x** |
-| **flowmark-rs** (sequential) | Rust | no | **2.42 s** | **6.5x** |
-| **prettier** | JavaScript | no | **38.0 s** | **103x** |
+| **prettier** | JavaScript | no | **38.0 s** | **105x** |
 | **mdformat** | Python | no | **72.9 s** | **197x** |
 | **flowmark-py** | Python | no | **~48 s** | **~130x** |
 
-Note: flowmark-py and prettier times are from a run with higher system load than the
-original Part 1 benchmark (see raw timings below for original numbers). The relative
-ranking is unchanged.
+Notes:
+
+- `flowmark-rs` and `dprint` values are from current local reruns on the 928-file corpus.
+- `markdownfmt`, `prettier`, `mdformat`, `flowmark-py` are from the same corpus profile
+  suite in this report (retained for cross-formatter ranking continuity).
+
+### Cached Second Run (unchanged files)
+
+| Formatter | Mean | Relative speed |
+| --- | --- | --- |
+| **flowmark-rs** (`--auto`, incremental default) | **0.023 s** | **1.0x** |
+| **dprint** (`fmt`, incremental default) | **0.031 s** | **1.3x** |
+
+Interpretation:
+
+- Fresh-run ranking remains unchanged: flowmark-rs is #2 overall.
+- With incremental cache warm, flowmark-rs now drops to ~23ms on this corpus.
+- Fresh-run Rust vs Python headline remains roughly **60-70x faster** (`0.71s` vs `~48s`).
 
 ### Per-File Throughput
 
@@ -144,20 +135,20 @@ multi-threaded blocking pool via `spawn_blocking()`.
 1. **Thread count = CPU cores.** Uses `std::thread::available_parallelism()`,
    overridable via `DPRINT_MAX_THREADS`. Reserves 1 thread per process plugin + 1 for
    the runtime.
-2. **Semaphore-controlled concurrency.** Files are grouped by plugin. Each group gets a
+1. **Semaphore-controlled concurrency.** Files are grouped by plugin. Each group gets a
    custom `Semaphore` with permits proportional to the thread count. A file can only
    begin formatting when it acquires a permit, capping active concurrent formats at
    ~core count.
-3. **`spawn_blocking()` for I/O and formatting.** Each file: read (blocking) -> format
+1. **`spawn_blocking()` for I/O and formatting.** Each file: read (blocking) -> format
    (blocking or async depending on plugin type) -> write (blocking). The async event
    loop just orchestrates.
-4. **Adaptive CPU throttling.** A background task monitors CPU usage every 2 seconds. If
+1. **Adaptive CPU throttling.** A background task monitors CPU usage every 2 seconds. If
    CPU exceeds a threshold, it removes semaphore permits to reduce parallelism. When CPU
    drops, it adds permits back. Disabled on CI.
-5. **Work stealing on completion.** When one plugin group finishes, its semaphore
+1. **Work stealing on completion.** When one plugin group finishes, its semaphore
    permits are redistributed to remaining groups via `SemaphorePermitReleaser::drop`,
    favoring groups with fewer permits.
-6. **Incremental caching.** Hash-based skip for unchanged files (explains the 0.13s with
+1. **Incremental caching.** Hash-based skip for unchanged files (explains the 0.13s with
    caching vs 0.23s with `--incremental=false`).
 
 **Plugin system:** WASM plugins (compiled with Wasmer, run synchronously in-process) and
@@ -174,7 +165,7 @@ achieving a **3.8x wall-clock speedup** on batch workloads and bringing flowmark
 The rayon approach proved simpler and equally effective as dprint's more complex tokio +
 semaphore architecture, since flowmark-rs has no plugin infrastructure.
 
-* * *
+______________________________________________________________________
 
 ## Part 2: Flowmark Python vs Rust (Detailed)
 
@@ -350,21 +341,21 @@ Benchmarked with `hyperfine` (warmup + 10 runs for single file, 5 for batch).
 
 **Single file (`testdoc.orig.md`, 1,734 lines):**
 
-|  | Mean | Range |
+| | Mean | Range |
 | --- | --- | --- |
 | Before | 31.5 ms +/- 2.2 ms | 28.4 – 39.6 ms |
 | After | 27.3 ms +/- 2.5 ms | 24.2 – 34.9 ms |
-| **Improvement** | **13.3% faster** |  |
+| **Improvement** | **13.3% faster** | |
 
 Verified across 3 independent runs: 27.0, 27.2, 27.4, 27.8 ms (consistent).
 
 **Batch `--auto` (1,080 files):**
 
-|  | Mean | Range |
+| | Mean | Range |
 | --- | --- | --- |
 | Before | 3.21 s +/- 0.11 s | 3.09 – 3.34 s |
 | After | 2.69 s +/- 0.15 s | 2.58 – 3.02 s |
-| **Improvement** | **16.2% faster** |  |
+| **Improvement** | **16.2% faster** | |
 
 Verified across 3 independent runs: 2.71, 2.73, 2.63 s (consistent).
 
@@ -390,12 +381,12 @@ Post-optimization, the remaining cost is spread across:
 
 1. **Memory allocation** (~19%) — inherent to string manipulation; would require
    `Cow<str>` or arena allocation (medium complexity)
-2. **String searching** (~7%) — remaining uses are necessary `.contains()` and `.find()`
+1. **String searching** (~7%) — remaining uses are necessary `.contains()` and `.find()`
    calls
-3. **Regex** (~6%) — already well-optimized with `LazyLock`; hybrid DFA is the regex
+1. **Regex** (~6%) — already well-optimized with `LazyLock`; hybrid DFA is the regex
    crate's efficient path
-4. **Comrak parser** (~3%) — external dependency, not directly optimizable
-5. **memcpy/memset** (~7%) — inherent to string operations
+1. **Comrak parser** (~3%) — external dependency, not directly optimizable
+1. **memcpy/memset** (~7%) — inherent to string operations
 
 Further optimization would yield diminishing returns for increasing complexity.
 
@@ -419,7 +410,7 @@ After applying optimizations 1+2:
 
 Per-file throughput after optimization: **401 files/sec** in `--auto` mode (was 294).
 
-* * *
+______________________________________________________________________
 
 ## Part 3: Parallel File Processing (v0.3.0)
 
@@ -433,7 +424,7 @@ Two complementary improvements implemented in v0.3.0:
    allows overriding (0 = all cores, default). Stdout output remains sequential to
    preserve file ordering.
 
-2. **Skip-unchanged optimization.** After formatting, if the output matches the input
+1. **Skip-unchanged optimization.** After formatting, if the output matches the input
    exactly, the file write is skipped entirely. This preserves file modification times
    (important for build tools that use mtime) and eliminates I/O for already-formatted
    files.
@@ -444,7 +435,7 @@ Corpus: 928 Markdown files across a 4–5 level deep directory tree. 3 runs each
 
 #### Fresh Corpus (Files Need Formatting)
 
-| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative |
+| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative speed |
 | --- | --- | --- | --- | --- | --- |
 | **dprint** | 0.364 s | 0.371 s | 0.361 s | **0.37 s** | **1.0x** |
 | **flowmark-rs (parallel)** | 0.727 s | 0.728 s | 0.737 s | **0.73 s** | **2.0x** |
@@ -453,7 +444,7 @@ Corpus: 928 Markdown files across a 4–5 level deep directory tree. 3 runs each
 
 #### Already-Formatted Corpus (Re-format, Skip-Unchanged)
 
-| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative |
+| Formatter | Run 1 | Run 2 | Run 3 | Mean | Relative speed |
 | --- | --- | --- | --- | --- | --- |
 | **dprint** | 0.247 s | 0.248 s | 0.247 s | **0.25 s** | **1.0x** |
 | **flowmark-rs (parallel)** | 0.396 s | 0.367 s | 0.370 s | **0.38 s** | **1.5x** |

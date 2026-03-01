@@ -2,7 +2,7 @@
 # Run performance comparison across available markdown formatters.
 #
 # Usage: ./benchmarks/run_comparison.sh [mode] [num_runs]
-#   mode: fresh|steady (default: fresh)
+#   mode: fresh|steady|first-run|second-run (default: fresh)
 #   num_runs: timed runs per formatter (default: 3)
 
 set -euo pipefail
@@ -17,9 +17,18 @@ RESULTS_FILE="$SCRIPT_DIR/results/comparison_results.txt"
 MODE="${1:-fresh}"
 NUM_RUNS="${2:-3}"
 INCLUDE_OPTIONAL_FORMATTERS="${INCLUDE_OPTIONAL_FORMATTERS:-0}"
+SKIP_MARKDOWNFMT="${SKIP_MARKDOWNFMT:-0}"
+MARKDOWNFMT_BATCH_SIZE="${MARKDOWNFMT_BATCH_SIZE:-200}"
 
-if [[ "$MODE" != "fresh" && "$MODE" != "steady" ]]; then
-    echo "ERROR: mode must be 'fresh' or 'steady' (got: $MODE)" >&2
+CANON_MODE="$MODE"
+if [ "$MODE" = "first-run" ]; then
+    CANON_MODE="fresh"
+fi
+if [ "$MODE" = "second-run" ]; then
+    CANON_MODE="steady"
+fi
+if [[ "$CANON_MODE" != "fresh" && "$CANON_MODE" != "steady" ]]; then
+    echo "ERROR: mode must be fresh|steady|first-run|second-run (got: $MODE)" >&2
     exit 1
 fi
 if ! [[ "$NUM_RUNS" =~ ^[0-9]+$ ]] || [ "$NUM_RUNS" -le 0 ]; then
@@ -130,14 +139,24 @@ JSON
 fi
 
 # Register benchmarks
-add_benchmark "flowmark-rs ($("$RUST_BIN" --version 2>&1))" "\"$RUST_BIN\" --auto \"$WORK_DIR\""
+FLOWMARK_CACHE_ARG="--no-cache"
+if [ "$CANON_MODE" = "steady" ]; then
+    FLOWMARK_CACHE_ARG=""
+fi
+add_benchmark "flowmark-rs ($("$RUST_BIN" --version 2>&1))" "\"$RUST_BIN\" --auto $FLOWMARK_CACHE_ARG \"$WORK_DIR\""
 if [ -n "$DPRINT_BIN" ]; then
-    add_benchmark "dprint ($($DPRINT_BIN --version 2>&1))" "cd \"$WORK_DIR\" && \"$DPRINT_BIN\" fmt --config dprint.json --incremental=false --log-level silent ."
+    DPRINT_INCREMENTAL_ARG="--incremental=false"
+    if [ "$CANON_MODE" = "steady" ]; then
+        DPRINT_INCREMENTAL_ARG=""
+    fi
+    add_benchmark "dprint ($($DPRINT_BIN --version 2>&1))" "(cd \"$WORK_DIR\" && \"$DPRINT_BIN\" fmt --config dprint.json $DPRINT_INCREMENTAL_ARG --log-level silent .)"
 fi
 
 if [ "$INCLUDE_OPTIONAL_FORMATTERS" = "1" ]; then
-    if [ -n "$MARKDOWNFMT_BIN" ]; then
-        add_benchmark "markdownfmt" "find \"$WORK_DIR\" -name '*.md' -exec \"$MARKDOWNFMT_BIN\" -w {} +"
+    if [ -n "$MARKDOWNFMT_BIN" ] && [ "$SKIP_MARKDOWNFMT" != "1" ]; then
+        add_benchmark "markdownfmt" "find \"$WORK_DIR\" -name '*.md' -print0 | xargs -0 -n \"$MARKDOWNFMT_BATCH_SIZE\" \"$MARKDOWNFMT_BIN\" -w"
+    elif [ -n "$MARKDOWNFMT_BIN" ] && [ "$SKIP_MARKDOWNFMT" = "1" ]; then
+        echo "Note: markdownfmt skipped (SKIP_MARKDOWNFMT=1)."
     fi
     if [ -n "$PRETTIER_BIN" ]; then
         add_benchmark "prettier ($($PRETTIER_BIN --version 2>&1))" "\"$PRETTIER_BIN\" --write \"$WORK_DIR/**/*.md\" --ignore-path /dev/null --log-level silent"
@@ -195,7 +214,7 @@ run_benchmark() {
     }
 
     for i in $(seq 1 "$NUM_RUNS"); do
-        if [ "$MODE" = "fresh" ]; then
+        if [ "$CANON_MODE" = "fresh" ]; then
             restore_corpus
         fi
         local t
