@@ -185,14 +185,34 @@ dynamic = ["version"]
 This means the version in `Cargo.toml` is the single source of truth.
 No manual sync needed.
 
+## Verified Dependency Versions (as of 2026-03-01)
+
+| Package / Action | Verified Latest | Pin in Workflow |
+| --- | --- | --- |
+| maturin (tool) | **1.12.5** (Feb 28, 2026) | `maturin-version: v1.12.5` |
+| `PyO3/maturin-action` | **v1.50.1** (Mar 1, 2025) | `@v1` (major tag) |
+| `astral-sh/setup-uv` | **v7** | `@v7` |
+| uv (tool) | **0.10.7** (Feb 27, 2026) | Latest (auto-resolved) |
+| `actions/checkout` | **v6.0.2** (Jan 9, 2026) | `@v6` |
+| `actions/upload-artifact` | **v4** (stable) | `@v4` |
+| `actions/download-artifact` | **v4** (stable) | `@v4` |
+
+Note: `actions/upload-artifact@v7` and `actions/download-artifact@v8` exist (Feb 26,
+2026) but are bleeding-edge with the new non-zipped artifact feature.
+Use v4 for stability; upgrade later via Dependabot.
+
 ## Implementation Plan
 
 ### Phase 1: Configuration and Local Testing
 
 Set up the maturin configuration and verify it works locally.
 
-- [ ] **1.1: Create root `pyproject.toml`** — Add at the repo root with maturin build
-  configuration:
+- [ ] **1.1: Create `/pyproject.toml`** (new file at repo root, alongside `Cargo.toml`)
+
+  This file tells maturin how to build the Python wheel.
+  It must be at the repo root (where `Cargo.toml` lives).
+
+  **Exact contents:**
 
   ```toml
   [build-system]
@@ -216,142 +236,388 @@ Set up the maturin configuration and verify it works locally.
   [project.urls]
   Repository = "https://github.com/jlevy/flowmark-rs"
   Documentation = "https://docs.rs/flowmark"
+  Changelog = "https://github.com/jlevy/flowmark-rs/blob/main/CHANGELOG.md"
 
   [tool.maturin]
   bindings = "bin"
   strip = true
   ```
 
-- [ ] **1.2: Update `.gitignore`** — Add `target/wheels/` and any maturin build
-  artifacts if not already ignored.
+  **Key settings explained:**
+  - `name = "flowmark-rs"` — PyPI package name (distinct from `flowmark` Python package)
+  - `dynamic = ["version"]` — maturin reads version from `Cargo.toml` line 3
+    (`version = "0.2.4"`)
+  - `bindings = "bin"` — standalone binary, not a Python extension module
+  - `strip = true` — strip debug symbols (redundant with `Cargo.toml` line 75
+    `strip = true` in `[profile.release]`, but explicit is good)
+  - `requires-python = ">=3.8"` — matches ruff; this is the install-side constraint, not
+    a runtime requirement (the binary is pure Rust)
 
-- [ ] **1.3: Update `Cargo.toml` exclude** — Add `pyproject.toml` to the crate's
-  `exclude` list if it shouldn't be included in the crates.io package.
-  (Maturin files are not needed for the Rust crate.)
+  **Interaction with existing files:**
+  - `python/pyproject.toml` (hatchling, `flowmark-dev-tools`) is unaffected — maturin
+    only reads the root `pyproject.toml`
+  - `Cargo.toml` is already correct — has two `[[bin]]` targets (lines 19-27), both
+    with `required-features = ["cli"]`, and `[features] default = ["cli"]` (line 30)
 
-- [ ] **1.4: Local build test** — Verify `maturin build --release` produces a wheel:
+- [ ] **1.2: Update `/.gitignore`** — Append after line 36:
+
+  ```
+  # Maturin build artifacts
+  *.whl
+  ```
+
+  The `target/` directory (line 36) already covers `target/wheels/` from maturin.
+  Adding `*.whl` catches any wheels left in the repo root.
+
+- [ ] **1.3: Update `/Cargo.toml` exclude list** — Line 13 currently:
+
+  ```toml
+  exclude = [".claude/", ".tbd/", ".github/", "docs/", "python/", "tests/tryscript/", "repos/", "admin/", "attic/"]
+  ```
+
+  Append `"pyproject.toml"` to exclude the maturin config from the crates.io package:
+
+  ```toml
+  exclude = [".claude/", ".tbd/", ".github/", "docs/", "python/", "tests/tryscript/", "repos/", "admin/", "attic/", "pyproject.toml"]
+  ```
+
+- [ ] **1.4: Local build test** — Verify maturin builds a wheel with both binaries:
 
   ```bash
   uv tool install maturin
   maturin build --release
   ls target/wheels/
+  # Expected: flowmark_rs-0.2.4-cp38-abi3-{platform}.whl or similar
+  # Verify wheel contents:
+  python -m zipfile -l target/wheels/flowmark_rs-*.whl
+  # Should show both flowmark and flowmark-rs in the scripts directory
   ```
 
-  Expected: a `.whl` file named something like
-  `flowmark_rs-0.2.4-py3-none-{platform}.whl`
+  **Important:** Check that both `flowmark` and `flowmark-rs` binaries appear in the
+  wheel's `.data/scripts/` directory.
+  If only one appears, maturin may need the `--bin` flag or we may need to investigate
+  how it handles multiple `[[bin]]` targets with `required-features`.
 
-- [ ] **1.5: Local install test** — Verify the wheel installs and works:
+- [ ] **1.5: Local install test** — Verify the installed wheel works:
 
   ```bash
   maturin develop --release
+  flowmark-rs --version
+  # Expected: flowmark 0.2.4 (parity: flowmark-py 0.6.4)
+  flowmark --version
+  # Expected: same output
   flowmark-rs --help
-  flowmark --help
+  echo "# Test" | flowmark-rs -
+  # Expected: formatted output
   ```
-
-  Both commands should work and show the same help text.
 
 ### Phase 2: CI Workflow
 
-Create the GitHub Actions workflow for building and publishing wheels.
+Create `.github/workflows/pypi.yml` — the full workflow for building wheels and
+publishing to PyPI.
 
-- [ ] **2.1: Create `.github/workflows/pypi.yml`** — The full workflow with build matrix
-  and publish job.
-  Structure:
+- [ ] **2.1: Create `.github/workflows/pypi.yml`**
 
-  **Trigger:** `release: types: [published]` + `workflow_dispatch`
+  **File:** `.github/workflows/pypi.yml` (new file)
 
-  **Build jobs (5 parallel):**
+  **Full workflow structure with exact action versions:**
 
-  Each build job:
-  1. `actions/checkout@v6`
-  2. `PyO3/maturin-action@v1` with `command: build`,
-     `args: --release --locked --out dist`, and the appropriate `target` and `manylinux`
-  3. Smoke test: install the wheel and run `flowmark-rs --version` (where possible)
-  4. `actions/upload-artifact@v4` to save the wheel
+  ```yaml
+  name: Publish to PyPI
 
-  **sdist job:**
-  1. `actions/checkout@v6`
-  2. `PyO3/maturin-action@v1` with `command: sdist`, `args: --out dist`
-  3. `actions/upload-artifact@v4`
+  on:
+    release:
+      types: [published]
+    workflow_dispatch:
 
-  **Publish job:**
-  1. `needs: [all build jobs + sdist]`
-  2. `environment: release`
-  3. `permissions: id-token: write`
-  4. `astral-sh/setup-uv@v7`
-  5. `actions/download-artifact@v4` with `pattern: wheels-*`, `merge-multiple: true`
-  6. `uv publish --trusted-publishing always wheels/*`
+  permissions:
+    contents: read
 
-  Key details:
-  - Pin `maturin-version` to a specific version (e.g., `v1.12.1`)
-  - Use `manylinux: "2_17"` for Linux glibc targets
-  - Use `macos-13` for x86_64 macOS, `macos-14` for ARM64 macOS
-  - Add `--locked` flag for reproducible builds
+  env:
+    CARGO_TERM_COLOR: always
 
-- [ ] **2.2: Test workflow with `workflow_dispatch`** — Before a real release, trigger
-  the workflow manually to verify the build matrix works.
-  The publish step will fail (no PyPI project yet), but the builds should succeed and
-  produce wheels.
+  jobs:
+    # ── Build: Linux x86_64 (glibc) ────────────────────────────────
+    build-linux-x86_64:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v6
+        - uses: PyO3/maturin-action@v1
+          with:
+            maturin-version: v1.12.5
+            command: build
+            args: --release --locked --out dist
+            target: x86_64-unknown-linux-gnu
+            manylinux: "2_17"
+        - uses: actions/upload-artifact@v4
+          with:
+            name: wheels-linux-x86_64
+            path: dist/*.whl
+
+    # ── Build: Linux aarch64 (glibc, cross-compiled) ───────────────
+    build-linux-aarch64:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v6
+        - uses: PyO3/maturin-action@v1
+          with:
+            maturin-version: v1.12.5
+            command: build
+            args: --release --locked --out dist
+            target: aarch64-unknown-linux-gnu
+            manylinux: "2_17"
+        - uses: actions/upload-artifact@v4
+          with:
+            name: wheels-linux-aarch64
+            path: dist/*.whl
+
+    # ── Build: macOS x86_64 ────────────────────────────────────────
+    build-macos-x86_64:
+      runs-on: macos-13  # x86_64 runner
+      steps:
+        - uses: actions/checkout@v6
+        - uses: PyO3/maturin-action@v1
+          with:
+            maturin-version: v1.12.5
+            command: build
+            args: --release --locked --out dist
+            target: x86_64-apple-darwin
+        - name: Smoke test
+          run: |
+            pip install --find-links dist flowmark-rs --force-reinstall
+            flowmark-rs --version
+        - uses: actions/upload-artifact@v4
+          with:
+            name: wheels-macos-x86_64
+            path: dist/*.whl
+
+    # ── Build: macOS aarch64 (Apple Silicon) ───────────────────────
+    build-macos-aarch64:
+      runs-on: macos-14  # ARM64 runner
+      steps:
+        - uses: actions/checkout@v6
+        - uses: PyO3/maturin-action@v1
+          with:
+            maturin-version: v1.12.5
+            command: build
+            args: --release --locked --out dist
+            target: aarch64-apple-darwin
+        - name: Smoke test
+          run: |
+            pip install --find-links dist flowmark-rs --force-reinstall
+            flowmark-rs --version
+        - uses: actions/upload-artifact@v4
+          with:
+            name: wheels-macos-aarch64
+            path: dist/*.whl
+
+    # ── Build: Windows x86_64 ──────────────────────────────────────
+    build-windows-x86_64:
+      runs-on: windows-latest
+      steps:
+        - uses: actions/checkout@v6
+        - uses: PyO3/maturin-action@v1
+          with:
+            maturin-version: v1.12.5
+            command: build
+            args: --release --locked --out dist
+            target: x86_64-pc-windows-msvc
+        - name: Smoke test
+          run: |
+            pip install --find-links dist flowmark-rs --force-reinstall
+            flowmark-rs --version
+        - uses: actions/upload-artifact@v4
+          with:
+            name: wheels-windows-x86_64
+            path: dist/*.whl
+
+    # ── Build: source distribution ─────────────────────────────────
+    build-sdist:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v6
+        - uses: PyO3/maturin-action@v1
+          with:
+            maturin-version: v1.12.5
+            command: sdist
+            args: --out dist
+        - uses: actions/upload-artifact@v4
+          with:
+            name: wheels-sdist
+            path: dist/*.tar.gz
+
+    # ── Publish to PyPI ────────────────────────────────────────────
+    publish:
+      needs:
+        - build-linux-x86_64
+        - build-linux-aarch64
+        - build-macos-x86_64
+        - build-macos-aarch64
+        - build-windows-x86_64
+        - build-sdist
+      runs-on: ubuntu-latest
+      environment: release
+      permissions:
+        id-token: write  # Required for PyPI trusted publishing (OIDC)
+      steps:
+        - uses: astral-sh/setup-uv@v7
+        - uses: actions/download-artifact@v4
+          with:
+            pattern: wheels-*
+            merge-multiple: true
+            path: wheels/
+        - name: List wheels
+          run: ls -la wheels/
+        - name: Publish to PyPI
+          run: uv publish --trusted-publishing always wheels/*
+  ```
+
+  **Key decisions and references:**
+  - Trigger matches existing `publish.yml` (line 4-5): `release: types: [published]`
+  - `maturin-version: v1.12.5` — pinned to latest stable (Feb 28, 2026)
+  - `manylinux: "2_17"` — minimum for Rust glibc builds; matches ruff/uv
+  - `macos-13` for x86_64, `macos-14` for ARM64 — matches ruff/uv runner selection
+  - Smoke tests on native platforms only (macOS, Windows) — Linux aarch64 is
+    cross-compiled so cannot be tested on the runner
+  - `environment: release` — matches the PyPI trusted publisher configuration
+  - `uv publish --trusted-publishing always` — explicitly requires OIDC (fails rather
+    than falling back to tokens)
+
+- [ ] **2.2: Test workflow with `workflow_dispatch`** — Push to main, then trigger
+  manually from the Actions tab or via:
+
+  ```bash
+  gh workflow run pypi.yml --repo jlevy/flowmark-rs
+  gh run list --workflow=pypi.yml --repo jlevy/flowmark-rs --limit 1
+  gh run watch --repo jlevy/flowmark-rs <run-id>
+  ```
+
+  The publish step will fail (no PyPI project yet), but all 5 build jobs + sdist should
+  produce wheel artifacts.
+  Download and inspect them:
+
+  ```bash
+  gh run download --repo jlevy/flowmark-rs <run-id>
+  python -m zipfile -l wheels-linux-x86_64/flowmark_rs-*.whl
+  ```
 
 ### Phase 3: PyPI Setup and First Publish
 
-Set up the PyPI project and do the first publish.
+Manual steps that require PyPI account access (owner action).
 
-- [ ] **3.1: Register `flowmark-rs` on PyPI** — Either:
-  - Create a "pending" trusted publisher at
-    `https://pypi.org/manage/account/publishing/` (for new projects), or
-  - Manually upload a first release to create the project, then configure trusted
-    publishing
+- [ ] **3.1: Register `flowmark-rs` on PyPI via pending trusted publisher**
 
-  Trusted publisher configuration:
+  Go to `https://pypi.org/manage/account/publishing/` and add a pending publisher:
+  - PyPI project name: `flowmark-rs`
   - Owner: `jlevy`
   - Repository: `flowmark-rs`
-  - Workflow: `pypi.yml`
-  - Environment: `release`
+  - Workflow name: `pypi.yml`
+  - Environment name: `release`
 
-- [ ] **3.2: Create GitHub environment** — Create a `release` environment in the
-  GitHub repo settings for the publish job.
-  Optionally add protection rules (require approval, limit to `main` branch).
+  This creates the PyPI project automatically on first successful publish.
 
-- [ ] **3.3: (Optional) Test with TestPyPI first** — Temporarily modify the workflow to
-  publish to TestPyPI (`https://test.pypi.org/legacy/`) to verify the end-to-end flow.
+- [ ] **3.2: Create GitHub `release` environment**
 
-- [ ] **3.4: First real publish** — Create a GitHub Release (or use an existing one) to
-  trigger the `pypi.yml` workflow.
-  Monitor the workflow run and verify success.
+  In GitHub repo settings → Environments → New environment → `release`.
+  Optional protection rules:
+  - Restrict to `main` branch
+  - Require approval (for manual oversight)
 
-- [ ] **3.5: Verify installation** — After publish, verify on all platforms:
+- [ ] **3.3: Test with TestPyPI first** (optional but recommended)
+
+  Create a separate trusted publisher on `https://test.pypi.org/manage/account/publishing/`
+  with the same settings.
+  Temporarily add a workflow dispatch job that publishes to TestPyPI:
 
   ```bash
+  uv publish --index-url https://test.pypi.org/legacy/ --trusted-publishing always wheels/*
+  ```
+
+  Then test: `uvx --index-url https://test.pypi.org/simple/ flowmark-rs --version`
+
+- [ ] **3.4: First real publish** — Create the next GitHub Release (e.g., tag a new
+  patch version).
+  This triggers both `publish.yml` (crates.io) and `pypi.yml` (PyPI) simultaneously.
+
+  ```bash
+  gh run list --workflow=pypi.yml --repo jlevy/flowmark-rs --limit 1
+  gh run watch --repo jlevy/flowmark-rs <run-id>
+  ```
+
+- [ ] **3.5: Verify installation on all platforms**
+
+  ```bash
+  # On-demand execution
   uvx flowmark-rs --version
-  uv tool install flowmark-rs && flowmark-rs --help
-  pip install flowmark-rs && flowmark-rs --help
+  uvx flowmark-rs --help
+
+  # Persistent install
+  uv tool install flowmark-rs
+  flowmark-rs --version
+  flowmark --version  # Both binaries should work
+
+  # Classic pip
+  pip install flowmark-rs
+  flowmark-rs --version
+
+  # Format a test file
+  echo "# Hello World\nThis is a test of flowmark-rs installed via PyPI." | uvx flowmark-rs -
   ```
 
 ### Phase 4: Documentation and Polish
 
 Update docs to include the new install method.
 
-- [ ] **4.1: Update README.md** — Add `uvx flowmark-rs` and `pip install flowmark-rs`
-  to the Installation section.
-  This should be added to the README template
-  (`docs/templates/rust-readme-wrapper.md`) and regenerated.
+- [ ] **4.1: Update `/README.md`** — Add PyPI install methods to the Installation
+  section.
+  Also update the README template at `docs/templates/rust-readme-wrapper.md` so future
+  regenerations include it.
 
-- [ ] **4.2: Update `docs/publishing.md`** — Add a section on PyPI publishing:
-  - How the `pypi.yml` workflow works
-  - How it chains with the existing release flow
-  - Verification steps after publish
-  - PyPI trusted publishing configuration
+  Add to the Installation section (after the Homebrew entry):
 
-- [ ] **4.3: Update the build-publishing spec** — Mark this PyPI work as done in the
-  existing spec and add cross-references.
+  ```markdown
+  ### PyPI (via uv or pip)
 
-- [ ] **4.4: (Optional) Add musl targets** — Add `x86_64-unknown-linux-musl` and
-  `aarch64-unknown-linux-musl` as `musllinux_1_2` wheels for Alpine Linux support.
-  This is low priority since the glibc wheels cover most users.
+  ```bash
+  uvx flowmark-rs          # run on demand (no install needed)
+  uv tool install flowmark-rs  # persistent install
+  pip install flowmark-rs      # classic pip
+  ```
+  ```
 
-- [ ] **4.5: Update flowmark (Python) repo** — Create a branch on `jlevy/flowmark` with
-  a README update explaining that users can upgrade to the high-performance Rust version:
+- [ ] **4.2: Update `/docs/publishing.md`** — Add a new section "Step 7: Verify PyPI
+  Publication" after the existing Step 6 (Homebrew).
+  Include:
+  - How `pypi.yml` triggers on the same release event as `publish.yml`
+  - Verification commands (`uvx flowmark-rs --version`)
+  - Link to the PyPI project page
+  - Trusted publishing configuration reference
+
+  Also update the "Release Workflows" section to mention the third workflow:
+  - `release.yml` → binary archives for GitHub Releases
+  - `publish.yml` → crates.io
+  - `pypi.yml` → PyPI (NEW)
+
+- [ ] **4.3: Update the build-publishing spec** — In
+  `docs/project/specs/active/plan-2026-02-17-build-publishing.md`, add a cross-reference
+  in the "Publishing Gaps" section noting that PyPI distribution is now covered by this
+  separate spec.
+
+- [ ] **4.4: (Optional) Add musl targets** — Add two more build jobs to `pypi.yml`:
+
+  ```yaml
+  build-linux-musl-x86_64:
+    # target: x86_64-unknown-linux-musl
+    # No manylinux setting needed — maturin auto-tags as musllinux_1_2
+  build-linux-musl-aarch64:
+    # target: aarch64-unknown-linux-musl
+  ```
+
+  This adds Alpine Linux support.
+
+- [ ] **4.5: Update flowmark (Python) repo** — Checkout `jlevy/flowmark` and create a
+  branch with a README update.
+  Add a section near the top (after the description, before Installation):
 
   > **High-Performance Rust Version**
   >
@@ -365,16 +631,54 @@ Update docs to include the new install method.
   > uvx flowmark-rs@latest
   > ```
 
-  This goes in the flowmark Python repo's README, near the installation section.
+  Create a PR on `jlevy/flowmark` for this change.
 
 - [ ] **4.6: (Optional) Add Python wrapper** — Add a thin Python wrapper package
   (following ruff's pattern) to enable `python -m flowmark_rs`.
-  Files:
-  - `py/flowmark_rs/__init__.py`
-  - `py/flowmark_rs/__main__.py`
-  - `py/flowmark_rs/_find_bin.py`
 
-  And add `python-source = "py"` to `[tool.maturin]`.
+  **New files:**
+  - `py/flowmark_rs/__init__.py` — exports `find_flowmark_rs_bin()` function that
+    locates the binary in the virtualenv's scripts directory
+  - `py/flowmark_rs/__main__.py` — enables `python -m flowmark_rs` by exec-ing the
+    binary (Unix: `os.execvp()`, Windows: `subprocess.run()`)
+  - `py/flowmark_rs/_find_bin.py` — binary locator that searches virtualenv bin dir,
+    system paths, and `sysconfig.get_path("scripts")`
+
+  **Config change in `/pyproject.toml`:**
+  Add `python-source = "py"` to `[tool.maturin]` and add `[project.scripts]`:
+  ```toml
+  [tool.maturin]
+  python-source = "py"
+  ```
+
+### Phase 5: Rust-Porting Playbook Update
+
+Map all learnings from this research and implementation into the
+[rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook) (submodule at
+`repos/rust-porting-playbook`).
+
+- [ ] **5.1: Add PyPI distribution guide** — Create or update a research/guide document
+  in the playbook's `docs/project/research/` directory covering:
+  - The maturin `bindings = "bin"` approach for Rust CLI → PyPI distribution
+  - `pyproject.toml` configuration template (generalized from flowmark-rs)
+  - GitHub Actions workflow template with maturin-action
+  - Platform target matrix with manylinux/musllinux/macOS/Windows tags
+  - PyPI trusted publishing (OIDC) setup
+  - Version management (dynamic from `Cargo.toml`)
+
+- [ ] **5.2: Add process recommendations** — Document the recommended process for any
+  Rust CLI project to add PyPI distribution:
+  - When to use this approach (CLI tools that have Python-ecosystem users)
+  - Which targets to start with (the 5-target minimum vs. 17-target comprehensive)
+  - How to handle the package naming (avoiding conflicts with existing Python packages)
+  - Testing checklist (`uvx`, `pip install`, smoke tests in CI)
+  - Integration with existing release workflows (separate workflow, same trigger)
+
+- [ ] **5.3: Reference projects** — Add a comparison table of how major Rust CLI
+  projects distribute via PyPI (ruff, uv, maturin, tpchgen-cli, celq) with links to
+  their configurations.
+  This is a condensed version of the findings from the
+  [research brief](../research/research-2026-03-01-rust-cli-pypi-distribution.md).
 
 ## Testing Strategy
 
