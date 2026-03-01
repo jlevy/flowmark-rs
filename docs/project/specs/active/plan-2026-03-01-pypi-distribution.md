@@ -4,13 +4,21 @@
 
 **Author:** Claude (agent)
 
-**Status:** Phases 1-2 complete, Phase 4-5 complete — Phase 3 requires manual PyPI setup
+**Status:** Phase 1 complete; Phase 2 partial (2.1 done, 2.2 pending); Phase 3 pending
+manual setup; Phase 4 partial (4.1-4.3 done, 4.4-4.6 open); Phase 5 complete
 
 **Related issue:**
 [#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
 
 **Research:**
 [Research: Distributing Rust CLI Binaries as Python Packages via PyPI](../research/research-2026-03-01-rust-cli-pypi-distribution.md)
+
+## Current Snapshot (as of 2026-03-01)
+
+- Beads linked to this spec: **22 total** (`12 closed`, `10 open`)
+- PyPI package `flowmark-rs`: **not yet published** (PyPI JSON API returns 404)
+- GitHub Actions workflow `pypi.yml` on `main`: **not yet present** (Actions API lookup
+  returns 404 for that workflow path on default branch)
 
 ## Overview
 
@@ -207,7 +215,7 @@ Use v4 for stability; upgrade later via Dependabot.
 
 Set up the maturin configuration and verify it works locally.
 
-- [ ] **1.1: Create `/pyproject.toml`** (new file at repo root, alongside `Cargo.toml`)
+- [x] **1.1: Create `/pyproject.toml`** (new file at repo root, alongside `Cargo.toml`)
 
   This file tells maturin how to build the Python wheel.
   It must be at the repo root (where `Cargo.toml` lives).
@@ -259,7 +267,7 @@ Set up the maturin configuration and verify it works locally.
   - `Cargo.toml` is already correct — has two `[[bin]]` targets (lines 19-27), both
     with `required-features = ["cli"]`, and `[features] default = ["cli"]` (line 30)
 
-- [ ] **1.2: Update `/.gitignore`** — Append after line 36:
+- [x] **1.2: Update `/.gitignore`** — Append after line 36:
 
   ```
   # Maturin build artifacts
@@ -269,7 +277,7 @@ Set up the maturin configuration and verify it works locally.
   The `target/` directory (line 36) already covers `target/wheels/` from maturin.
   Adding `*.whl` catches any wheels left in the repo root.
 
-- [ ] **1.3: Update `/Cargo.toml` exclude list** — Line 13 currently:
+- [x] **1.3: Update `/Cargo.toml` exclude list** — Line 13 currently:
 
   ```toml
   exclude = [".claude/", ".tbd/", ".github/", "docs/", "python/", "tests/tryscript/", "repos/", "admin/", "attic/"]
@@ -281,7 +289,7 @@ Set up the maturin configuration and verify it works locally.
   exclude = [".claude/", ".tbd/", ".github/", "docs/", "python/", "tests/tryscript/", "repos/", "admin/", "attic/", "pyproject.toml"]
   ```
 
-- [ ] **1.4: Local build test** — Verify maturin builds a wheel with both binaries:
+- [x] **1.4: Local build test** — Verify maturin builds a wheel with both binaries:
 
   ```bash
   uv tool install maturin
@@ -298,7 +306,7 @@ Set up the maturin configuration and verify it works locally.
   If only one appears, maturin may need the `--bin` flag or we may need to investigate
   how it handles multiple `[[bin]]` targets with `required-features`.
 
-- [ ] **1.5: Local install test** — Verify the installed wheel works:
+- [x] **1.5: Local install test** — Verify the installed wheel works:
 
   ```bash
   maturin develop --release
@@ -316,7 +324,7 @@ Set up the maturin configuration and verify it works locally.
 Create `.github/workflows/pypi.yml` — the full workflow for building wheels and
 publishing to PyPI.
 
-- [ ] **2.1: Create `.github/workflows/pypi.yml`**
+- [x] **2.1: Create `.github/workflows/pypi.yml`**
 
   **File:** `.github/workflows/pypi.yml` (new file)
 
@@ -568,7 +576,7 @@ Manual steps that require PyPI account access (owner action).
 
 Update docs to include the new install method.
 
-- [ ] **4.1: Update `/README.md`** — Add PyPI install methods to the Installation
+- [x] **4.1: Update `/README.md`** — Add PyPI install methods to the Installation
   section.
   Also update the README template at `docs/templates/rust-readme-wrapper.md` so future
   regenerations include it.
@@ -585,7 +593,7 @@ Update docs to include the new install method.
   ```
   ```
 
-- [ ] **4.2: Update `/docs/publishing.md`** — Add a new section "Step 7: Verify PyPI
+- [x] **4.2: Update `/docs/publishing.md`** — Add a new section "Step 7: Verify PyPI
   Publication" after the existing Step 6 (Homebrew).
   Include:
   - How `pypi.yml` triggers on the same release event as `publish.yml`
@@ -598,7 +606,7 @@ Update docs to include the new install method.
   - `publish.yml` → crates.io
   - `pypi.yml` → PyPI (NEW)
 
-- [ ] **4.3: Update the build-publishing spec** — In
+- [x] **4.3: Update the build-publishing spec** — In
   `docs/project/specs/active/plan-2026-02-17-build-publishing.md`, add a cross-reference
   in the "Publishing Gaps" section noting that PyPI distribution is now covered by this
   separate spec.
@@ -657,7 +665,7 @@ Map all learnings from this research and implementation into the
 [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook) (submodule at
 `repos/rust-porting-playbook`).
 
-- [ ] **5.1: Add PyPI distribution guide** — Create or update a research/guide document
+- [x] **5.1: Add PyPI distribution guide** — Create or update a research/guide document
   in the playbook's `docs/project/research/` directory covering:
   - The maturin `bindings = "bin"` approach for Rust CLI → PyPI distribution
   - `pyproject.toml` configuration template (generalized from flowmark-rs)
@@ -666,7 +674,7 @@ Map all learnings from this research and implementation into the
   - PyPI trusted publishing (OIDC) setup
   - Version management (dynamic from `Cargo.toml`)
 
-- [ ] **5.2: Add process recommendations** — Document the recommended process for any
+- [x] **5.2: Add process recommendations** — Document the recommended process for any
   Rust CLI project to add PyPI distribution:
   - When to use this approach (CLI tools that have Python-ecosystem users)
   - Which targets to start with (the 5-target minimum vs. 17-target comprehensive)
@@ -674,7 +682,7 @@ Map all learnings from this research and implementation into the
   - Testing checklist (`uvx`, `pip install`, smoke tests in CI)
   - Integration with existing release workflows (separate workflow, same trigger)
 
-- [ ] **5.3: Reference projects** — Add a comparison table of how major Rust CLI
+- [x] **5.3: Reference projects** — Add a comparison table of how major Rust CLI
   projects distribute via PyPI (ruff, uv, maturin, tpchgen-cli, celq) with links to
   their configurations.
   This is a condensed version of the findings from the
