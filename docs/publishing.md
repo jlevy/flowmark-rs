@@ -1,260 +1,217 @@
 # Publishing
 
-How to publish a new release of flowmark to crates.io and GitHub Releases.
-
-This is the end-to-end process, from version bump through crates.io publication.
+How to publish a new flowmark release across GitHub Releases, crates.io, PyPI, and
+Homebrew with a single orchestrated workflow.
 
 ## Prerequisites
 
 ### GitHub CLI (`gh`)
 
-The `gh` CLI is required for creating releases and monitoring CI. Verify it is installed
-and authenticated:
+Verify `gh` is installed and authenticated:
 
 ```bash
 gh auth status
 ```
 
-Expected: “Logged in to github.com” with your account.
-Required token scopes: `repo`, `workflow`.
-
-If `gh` is not set up, install it from https://cli.github.com/ and authenticate with
-`gh auth login` or by setting the `GH_TOKEN` environment variable.
-
-**Agent note:** In Claude Code Cloud sessions, `gh` is auto-installed by the
-SessionStart hook. If it isn’t working, run `tbd shortcut setup-github-cli`.
+Expected: logged in to `github.com` with `repo` and `workflow` access.
 
 ### Repo variable
 
-Many `gh` commands need `--repo` when the git remote URL doesn’t point directly at
-GitHub (e.g., in Claude Code Cloud sessions using a local proxy).
-Set it once:
-
 ```bash
 REPO=$(git remote get-url origin | sed -E 's#.*/git/##; s#.*github.com[:/]##; s#\.git$##')
-# Should resolve to: jlevy/flowmark-rs
+# Expected: jlevy/flowmark-rs
 ```
 
-Use `--repo $REPO` on all `gh` commands below.
+Use `--repo $REPO` on `gh` commands below.
 
 ## Step 1: Pre-Release Checks
 
-1. Determine the next version number (semver).
-   Check the latest release:
+1. Determine the next semver version.
 
    ```bash
-   gh release list --repo $REPO --limit 1
+   gh release list --repo "$REPO" --limit 1
    ```
 
-1. Run linting and tests locally:
+1. Run local quality checks.
 
    ```bash
-   cargo build --all-features && cargo fmt --check && cargo clippy --all-targets --all-features && cargo test --all-features
+   cargo fmt --check
+   cargo clippy --all-targets --all-features -- -D warnings
+   cargo test --locked --all-features
+   cargo publish --dry-run --locked
    ```
-
-   Note: `cargo build` must run before `cargo test` because some integration tests
-   invoke the compiled binary.
-   Cross-binary parity tests (D11) require Python flowmark installed and will be skipped
-   locally if unavailable — they run in CI.
 
 ## Step 2: Version Bump
 
-1. Update `Cargo.toml`:
+1. Update `Cargo.toml` version.
+1. Update `CHANGELOG.md`.
+1. Commit the release bump.
 
-   - Bump the `version` field
-   - Update `[package.metadata.parity]` version if Python parity has changed
-
-1. Update `CHANGELOG.md`:
-
-   - Move items from `[Unreleased]` into a new version section
-   - Add the new version’s comparison link at the bottom
-   - Follow the release notes guidelines (`tbd guidelines release-notes-guidelines`)
-
-1. Verify the crate packages correctly:
-
-   ```bash
-   cargo publish --dry-run
-   ```
+```bash
+git add Cargo.toml Cargo.lock CHANGELOG.md
+git commit -m "chore: bump version to X.Y.Z"
+```
 
 ## Step 3: PR and CI
 
-1. Commit the version bump on a release branch:
+1. Push branch and open PR.
 
    ```bash
-   git add Cargo.toml CHANGELOG.md
-   git commit -m "chore: bump version to X.Y.Z for release"
+   git push -u origin <branch>
+   gh pr create --repo "$REPO" --head <branch> --base main \
+     --title "chore: release vX.Y.Z" \
+     --body "Version bump and changelog for vX.Y.Z."
    ```
 
-1. Push and create a PR:
+1. Wait for checks and merge.
 
    ```bash
-   git push -u origin <branch-name>
-   gh pr create --repo $REPO --head <branch-name> --base main \
-     --title "chore: release vX.Y.Z" --body "Version bump and changelog for vX.Y.Z."
-   ```
-
-1. Wait for CI to pass (all checks):
-
-   ```bash
-   gh pr checks <branch-name> --repo $REPO --watch 2>&1
-   ```
-
-   **Important:** The `--watch` flag blocks until all checks complete.
-   Do not proceed until you see the final summary showing all checks passed.
-
-1. Merge the PR:
-
-   ```bash
-   gh pr merge <branch-name> --repo $REPO --squash --delete-branch
-   ```
-
-1. Pull the merged main:
-
-   ```bash
+   gh pr checks <branch> --repo "$REPO" --watch
+   gh pr merge <branch> --repo "$REPO" --squash --delete-branch
    git checkout main && git pull origin main
    ```
 
-## Step 4: Create the GitHub Release
+## Step 4: Run Release Dry-Run (Required)
 
-Create a GitHub Release, which automatically triggers the publish workflow:
+Run the release orchestrator in validation mode before publishing:
 
 ```bash
-gh release create vX.Y.Z --repo $REPO \
-  --title "flowmark vX.Y.Z" \
-  --notes "$(cat <<'EOF'
-<release notes here — see format below>
-EOF
-)"
+gh workflow run release.yml --repo "$REPO" \
+  -f tag=dry-run \
+  -f publish=false \
+  -f publish_prerelease=false
 ```
 
-This triggers three workflows:
+Watch the run:
 
-- **`release.yml`** builds cross-platform binaries and uploads them to the release (see
-  [Release Workflows](#release-workflows) below).
-- **`publish.yml`** runs the test suite and publishes to crates.io via OIDC trusted
-  publishing.
-- **`pypi.yml`** builds platform-specific Python wheels and publishes to PyPI via OIDC
-  trusted publishing.
+```bash
+gh run list --repo "$REPO" --workflow=release.yml --limit 1
+gh run watch --repo "$REPO" <run-id>
+```
 
-## Step 5: Verify Publication
+Dry-run validates:
+- cross-platform release archive builds
+- checksum generation
+- crates channel tests + `cargo publish --dry-run`
+- PyPI wheel/sdist builds + smoke tests + wheel-content checks + `uv publish --dry-run`
 
-1. Watch both workflows:
+## Step 5: Publish Release
 
-   ```bash
-   # Binary release workflow (builds archives + SHA256SUMS)
-   gh run list --repo $REPO --workflow=release.yml --limit 1
-   gh run watch --repo $REPO <run-id>
+Trigger the real publish by pushing a release tag:
 
-   # Publish workflow (crates.io)
-   gh run list --repo $REPO --workflow=publish.yml --limit 1
-   gh run watch --repo $REPO <run-id>
-   ```
+```bash
+git tag vX.Y.Z
+git push origin vX.Y.Z
+```
 
-1. Verify release artifacts (6 archives + SHA256SUMS):
+The single `release.yml` workflow orchestrates the full pipeline:
+1. build release archives and `SHA256SUMS`
+2. run crates and PyPI channel workflows in publish mode
+3. create/update the GitHub Release
+4. update Homebrew tap only after successful crates+PyPI publish (if
+   `HOMEBREW_TAP_TOKEN` is configured)
 
-   ```bash
-   gh release view vX.Y.Z --repo $REPO --json assets --jq '.assets[].name'
-   ```
+## Step 6: Verify Release Run
 
-1. Verify on crates.io: https://crates.io/crates/flowmark
+```bash
+gh run list --repo "$REPO" --workflow=release.yml --limit 1
+gh run watch --repo "$REPO" <run-id>
+```
 
-1. Test installation methods:
+Verify release artifacts:
 
-   ```bash
-   cargo install flowmark
-   flowmark --version
+```bash
+gh release view vX.Y.Z --repo "$REPO" --json assets --jq '.assets[].name'
+```
 
-   # If cargo-binstall is installed:
-   cargo binstall flowmark --force
-   flowmark --version
-   ```
+Expected: 6 platform archives + `SHA256SUMS`.
 
-## Step 6: Update Homebrew Tap
+## Step 7: Verify Channels
 
-After the release workflow completes and all binaries are uploaded, update the Homebrew
-formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
-(tracked as a submodule at `repos/homebrew-flowmark`).
+1. crates.io: https://crates.io/crates/flowmark
+1. PyPI: https://pypi.org/project/flowmark-rs/
+1. Install checks:
 
-1. Download the SHA256SUMS from the new release:
+```bash
+cargo install flowmark --force
+flowmark --version
 
-   ```bash
-   gh release download vX.Y.Z --repo $REPO --pattern SHA256SUMS --dir /tmp
-   cat /tmp/SHA256SUMS
-   ```
+uvx flowmark-rs --version
+uv tool install flowmark-rs --force
+flowmark-rs --version
 
-1. Update `repos/homebrew-flowmark/Formula/flowmark.rb`:
+pip install --upgrade flowmark-rs
+flowmark-rs --version
+```
 
-   - Update `version` to the new version
-   - Update each `sha256` with the corresponding value from SHA256SUMS
+1. Homebrew install check:
 
-1. Commit and push:
+```bash
+brew update
+brew upgrade flowmark || true
+brew tap jlevy/flowmark
+brew install jlevy/flowmark/flowmark
+"$(brew --prefix)/bin/flowmark" --version
+```
 
-   ```bash
-   cd repos/homebrew-flowmark
-   git add Formula/flowmark.rb
-   git commit -m "Update flowmark to vX.Y.Z"
-   git push origin main
-   cd ../..
-   ```
+## Step 8: Homebrew Fallback (If Tap Token Not Configured)
 
-1. Update the submodule reference in flowmark-rs (optional — can be batched with the
-   next commit):
+If `HOMEBREW_TAP_TOKEN` is not configured in the repo secrets, the release workflow skips
+Homebrew update. In that case update
+[`jlevy/homebrew-flowmark`](https://github.com/jlevy/homebrew-flowmark) manually using
+`SHA256SUMS` from the GitHub Release.
 
-   ```bash
-   git add repos/homebrew-flowmark
-   git commit -m "chore: update homebrew-flowmark submodule"
-   ```
+## Release Workflows
 
-1. Test the tap:
+- **`release.yml`**: orchestrator (dry-run + publish). Triggered by tag push or
+  `workflow_dispatch`.
+- **`publish.yml`**: reusable crates channel workflow (`workflow_call`), with rerun-safe
+  skip when the crate version already exists.
+- **`pypi.yml`**: reusable PyPI channel workflow (`workflow_call`), with wheel/sdist
+  validation and rerun-safe duplicate handling via `uv publish --check-url`.
 
-   ```bash
-   brew update
-   brew upgrade flowmark
-   # Or for a fresh install:
-   brew tap jlevy/flowmark
-   brew install jlevy/flowmark/flowmark
-   "$(brew --prefix)/bin/flowmark" --version
-   ```
+## Trusted Publishing Setup (One-Time)
 
-   If `flowmark --version` still reports Python `v0.6.4`, your PATH is picking the
-   Python binary first.
-   Check with `type -a flowmark`.
+### crates.io
 
-## Step 7: Verify PyPI Publication
+Configure trusted publisher for:
+- repository: `jlevy/flowmark-rs`
+- workflow: `publish.yml`
+- environment: blank
 
-The `pypi.yml` workflow triggers on the same `release: published` event and builds
-wheels for 5 platforms (Linux x86_64/aarch64, macOS x86_64/aarch64, Windows x86_64)
-plus a source distribution.
+### PyPI
 
-1. Watch the PyPI workflow:
+Configure trusted publisher for:
+- project: `flowmark-rs`
+- repository: `jlevy/flowmark-rs`
+- workflow: `pypi.yml`
+- environment: blank
 
-   ```bash
-   gh run list --repo $REPO --workflow=pypi.yml --limit 1
-   gh run watch --repo $REPO <run-id>
-   ```
+## Rerun and Recovery
 
-1. Verify on PyPI: https://pypi.org/project/flowmark-rs/
+Partial success can still happen across external registries, so recovery must be
+idempotent. The workflows are designed for safe reruns.
 
-1. Test installation methods:
+Rerun failed jobs:
 
-   ```bash
-   uvx flowmark-rs --version
-   uv tool install flowmark-rs
-   flowmark-rs --version
-   pip install flowmark-rs
-   flowmark-rs --version
-   ```
+```bash
+gh run rerun <run-id> --failed
+```
 
-### PyPI Trusted Publishing Setup (One-Time)
+Rerun a specific job:
 
-Configure a pending trusted publisher at
-https://pypi.org/manage/account/publishing/:
+```bash
+gh run view <run-id> --json jobs --jq '.jobs[] | {name, databaseId}'
+gh run rerun <run-id> --job <databaseId>
+```
 
-- PyPI project name: `flowmark-rs`
-- Owner: `jlevy`
-- Repository: `flowmark-rs`
-- Workflow name: `pypi.yml`
-- Environment name: leave blank
+Behavior on rerun:
+- crates: skips publish if crate version already exists
+- PyPI: `uv publish --check-url` skips already-uploaded files
+- release: creates release if missing, otherwise updates assets with `--clobber`
+- Homebrew: no-op if formula already matches target version/checksums
+
+If a bad version is already published to crates.io or PyPI, cut a new patch version.
 
 ## Release Notes Format
 
@@ -279,71 +236,3 @@ Description.
 
 https://github.com/jlevy/flowmark-rs/compare/vPREV...vX.Y.Z
 ```
-
-## Release Workflows
-
-The release process uses three workflows:
-
-1. **`release.yml`** — Triggered by tag push (`*`). Builds cross-platform binaries for 6
-   targets. Stable tags should follow `vX.Y.Z`; non-semver tags are treated as
-   prereleases by the workflow:
-
-| Target | OS | Arch |
-| --- | --- | --- |
-| `x86_64-unknown-linux-musl` | Linux | x86_64 |
-| `aarch64-unknown-linux-musl` | Linux | ARM64 |
-| `x86_64-apple-darwin` | macOS | x86_64 |
-| `aarch64-apple-darwin` | macOS | ARM64 |
-| `x86_64-pc-windows-msvc` | Windows | x86_64 |
-| `aarch64-pc-windows-msvc` | Windows | ARM64 |
-
-Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`. A unified
-`SHA256SUMS` file is generated after all builds complete.
-
-2. **`publish.yml`** — Triggered by the GitHub Release `published` event (typically from
-   `gh release create ...`). Runs the full test suite and publishes to crates.io via
-   OIDC trusted publishing.
-
-3. **`pypi.yml`** — Triggered by the same `published` event. Builds Python wheels for 5
-   platforms using maturin, then publishes to PyPI via `uv publish` with OIDC trusted
-   publishing. Includes smoke tests on native platforms (Linux x86_64, macOS, Windows).
-
-Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or `.zip`
-(Windows), which `cargo binstall` auto-detects.
-
-### Verifying checksums
-
-```bash
-# Download SHA256SUMS and an archive from the GitHub Release, then:
-shasum -a 256 -c SHA256SUMS --ignore-missing
-```
-
-## Trusted Publishing (OIDC)
-
-The publish workflow uses OpenID Connect (OIDC) trusted publishing to authenticate with
-crates.io. This means no `CARGO_REGISTRY_TOKEN` secret is needed in the repository.
-
-To set this up (one-time):
-
-1. Go to https://crates.io/settings/tokens
-1. Add a trusted publisher with:
-   - GitHub repository: `jlevy/flowmark-rs`
-   - Workflow: `publish.yml`
-   - Environment: (leave blank)
-
-## Troubleshooting
-
-**`gh` commands fail with “none of the git remotes configured...”:** Use
-`--repo jlevy/flowmark-rs` on all `gh` commands.
-This is required when the git remote uses a proxy URL (e.g., Claude Code Cloud).
-
-**Publish fails with authentication error:** Verify trusted publishing is configured on
-crates.io (see above).
-
-**Publish fails with “crate already exists”:** The version in `Cargo.toml` must be
-higher than the latest published version.
-Check: https://crates.io/crates/flowmark/versions
-
-**Tests fail in publish workflow:** The publish workflow runs
-`cargo test --locked --all-features` before publishing.
-Fix the failing tests, push to main, and create a new release.

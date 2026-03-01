@@ -6,7 +6,9 @@
 
 **Status:** Phase 1 complete; Phase 2 partial (2.1 done, 2.2 blocked pending merge to
 `main`); Phase 3 partial (3.2 done, 3.1/3.4/3.5 pending manual setup); Phase 4 partial
-(4.1-4.3 done, 4.4-4.6 open); Phase 5 complete
+(4.1-4.3 done, 4.4-4.6 open); Phase 5 complete; release orchestration now uses a single
+`release.yml` pipeline that invokes reusable channel workflows (`publish.yml`,
+`pypi.yml`)
 
 **Related issue:**
 [#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
@@ -46,8 +48,8 @@ packaged as a Python wheel, published to PyPI.
 - Both `flowmark` and `flowmark-rs` binaries included in the wheel
 - Automated publishing via GitHub Actions on each release
 - PyPI trusted publishing (OIDC) — no long-lived API tokens
-- Separate workflow from existing `release.yml` (binary archives) and `publish.yml`
-  (crates.io)
+- Reusable channel workflow (`pypi.yml`) orchestrated by `release.yml`, alongside
+  reusable crates workflow (`publish.yml`)
 - Source distribution (sdist) available as fallback for unsupported platforms
 
 ## Non-Goals
@@ -81,8 +83,9 @@ found that every major Rust CLI distributed via PyPI uses maturin with
 ### Key Design Decisions from Research
 
 1. **Build tool:** maturin with `bindings = "bin"` (unanimous across all projects)
-2. **Workflow:** Separate `pypi.yml`, not embedded in existing `release.yml`
-   (clean separation of concerns, failure isolation)
+2. **Workflow:** Keep `pypi.yml` as a reusable channel workflow, but orchestrate
+   publishing from a single `release.yml` DAG (dry-run support, clearer gating, better
+   rerun recovery)
 3. **Versioning:** Dynamic from `Cargo.toml` (`dynamic = ["version"]`) —
    simpler than manual sync for a single-crate project
 4. **Targets:** Standard coverage (5-7 targets), covering ~99% of users
@@ -94,12 +97,12 @@ found that every major Rust CLI distributed via PyPI uses maturin with
 
 ### Approach
 
-Add a `pyproject.toml` at the repo root with maturin configuration, and create a
-`.github/workflows/pypi.yml` workflow that builds platform-specific wheels and publishes
-to PyPI when a GitHub Release is published.
+Add a `pyproject.toml` at the repo root with maturin configuration and a reusable
+`.github/workflows/pypi.yml` channel workflow that builds platform-specific wheels and
+publishes to PyPI when invoked by `release.yml` in publish mode.
 
-The workflow fires on the same `release: published` event as the existing `publish.yml`
-(crates.io), so a single `gh release create` triggers both crates.io and PyPI publishing.
+`release.yml` is the single orchestrator: it runs channel workflows (`publish.yml`,
+`pypi.yml`) after artifact builds and before release announcement/homebrew update.
 
 ### Architecture
 
@@ -112,18 +115,18 @@ release.yml (existing)
   '-- creates GitHub Release
         |
         v
-GitHub Release "published" event
+release.yml (orchestrator)
         |
-        ├─── publish.yml (existing) → crates.io
-        |
-        └─── pypi.yml (NEW) → PyPI
+        |-- build binary release archives + SHA256SUMS
+        |-- call publish.yml (crates channel)
+        '-- call pypi.yml (PyPI channel)
                |-- build-linux-x86_64    (manylinux_2_17)
                |-- build-linux-aarch64   (manylinux_2_17)
                |-- build-macos-x86_64
                |-- build-macos-aarch64
                |-- build-windows-x86_64
                |-- build-sdist
-               '-- publish (uv publish --trusted-publishing always)
+               '-- publish (uv publish --trusted-publishing always --check-url ...)
 ```
 
 ### Platform Targets
@@ -489,7 +492,8 @@ publishing to PyPI.
   ```
 
   **Key decisions and references:**
-  - Trigger matches existing `publish.yml` (line 4-5): `release: types: [published]`
+  - Workflow supports both `workflow_call` (from `release.yml`) and `workflow_dispatch`
+    (manual testing)
   - `maturin-version: v1.12.5` — pinned to latest stable (Feb 28, 2026)
   - `manylinux: "2_17"` — minimum for Rust glibc builds; matches ruff/uv
   - `macos-13` for x86_64, `macos-14` for ARM64 — matches ruff/uv runner selection
@@ -498,7 +502,8 @@ publishing to PyPI.
   - Smoke tests use `--no-index --find-links dist` so they validate built wheels only,
     never PyPI
   - No explicit GitHub environment — keep setup simple for this single-maintainer repo
-  - Publish job runs only for `release` events; on `workflow_dispatch` it is skipped
+  - Publish job is controlled by explicit boolean input (`publish`) so dry-run and
+    publish modes are explicit
   - `uv publish --trusted-publishing always` — explicitly requires OIDC (fails rather
     than falling back to tokens)
 
@@ -552,9 +557,9 @@ Manual steps that require PyPI account access (owner action).
 
   Then test: `uvx --index-url https://test.pypi.org/simple/ flowmark-rs --version`
 
-- [ ] **3.4: First real publish** — Create the next GitHub Release (e.g., tag a new
-  patch version).
-  This triggers both `publish.yml` (crates.io) and `pypi.yml` (PyPI) simultaneously.
+- [ ] **3.4: First real publish** — Tag a new patch version and push it.
+  The `release.yml` orchestrator then runs both `publish.yml` (crates.io) and `pypi.yml`
+  (PyPI).
 
   ```bash
   gh run list --workflow=pypi.yml --repo jlevy/flowmark-rs --limit 1
@@ -605,7 +610,7 @@ Update docs to include the new install method.
 - [x] **4.2: Update `/docs/publishing.md`** — Add a new section "Step 7: Verify PyPI
   Publication" after the existing Step 6 (Homebrew).
   Include:
-  - How `pypi.yml` triggers on the same release event as `publish.yml`
+  - How `release.yml` orchestrates `publish.yml` and `pypi.yml` in one gated pipeline
   - Verification commands (`uvx flowmark-rs --version`)
   - Link to the PyPI project page
   - Trusted publishing configuration reference
@@ -689,7 +694,8 @@ Map all learnings from this research and implementation into the
   - Which targets to start with (the 5-target minimum vs. 17-target comprehensive)
   - How to handle the package naming (avoiding conflicts with existing Python packages)
   - Testing checklist (`uvx`, `pip install`, smoke tests in CI)
-  - Integration with existing release workflows (separate workflow, same trigger)
+  - Integration with existing release workflows (reusable channel workflows orchestrated
+    by one release DAG)
 
 - [x] **5.3: Reference projects** — Add a comparison table of how major Rust CLI
   projects distribute via PyPI (ruff, uv, maturin, tpchgen-cli, celq) with links to
@@ -725,7 +731,7 @@ After each release:
 1. Merge the `pyproject.toml` and `pypi.yml` workflow to `main`
 2. Set up PyPI trusted publishing for `flowmark-rs`
 3. Create the next release tag (e.g., the next version bump)
-4. The `pypi.yml` workflow fires automatically and publishes to PyPI
+4. `release.yml` orchestrates crates and PyPI channel publishes automatically
 5. Verify `uvx flowmark-rs` works
 6. Update README and docs
 

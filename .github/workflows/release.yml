@@ -4,6 +4,23 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.2.5). Use dry-run for validation-only runs."
+        required: true
+        type: string
+        default: dry-run
+      publish:
+        description: "Publish channels + create GitHub Release"
+        required: true
+        type: boolean
+        default: false
+      publish_prerelease:
+        description: "Allow publishing prerelease tags to crates.io/PyPI"
+        required: true
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -13,24 +30,75 @@ env:
   CARGO_TERM_COLOR: always
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref_name || inputs.tag || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
-  prerelease:
+  plan:
     runs-on: ubuntu-latest
-
     outputs:
-      value: ${{ steps.prerelease.outputs.value }}
-
+      release_tag: ${{ steps.plan.outputs.release_tag }}
+      artifact_tag: ${{ steps.plan.outputs.artifact_tag }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      publish: ${{ steps.plan.outputs.publish }}
+      publish_channels: ${{ steps.plan.outputs.publish_channels }}
     steps:
-      - name: Prerelease check
-        id: prerelease
+      - name: Resolve release mode
+        id: plan
         run: |
-          if [[ ${{ github.ref_name }} =~ ^v?[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
-            echo value=false >> $GITHUB_OUTPUT
+          set -euo pipefail
+
+          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            requested_tag="${GITHUB_REF_NAME}"
+            publish=true
+            publish_prerelease=false
           else
-            echo value=true >> $GITHUB_OUTPUT
+            requested_tag="${{ inputs.tag }}"
+            publish="${{ inputs.publish }}"
+            publish_prerelease="${{ inputs.publish_prerelease }}"
           fi
+
+          if [[ -z "${requested_tag}" || "${requested_tag}" == "dry-run" ]]; then
+            release_tag=""
+            artifact_tag="v0.0.0-dry-run-${GITHUB_RUN_ID}"
+            prerelease=true
+            publish=false
+          else
+            if [[ "${requested_tag}" =~ ^v ]]; then
+              release_tag="${requested_tag}"
+            else
+              release_tag="v${requested_tag}"
+            fi
+            artifact_tag="${release_tag}"
+            if [[ "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              prerelease=false
+            else
+              prerelease=true
+            fi
+          fi
+
+          publish_channels=false
+          if [[ "${publish}" == "true" ]]; then
+            if [[ "${prerelease}" == "true" && "${publish_prerelease}" != "true" ]]; then
+              publish_channels=false
+            else
+              publish_channels=true
+            fi
+          fi
+
+          if [[ "${publish}" == "true" && -z "${release_tag}" ]]; then
+            echo "Publish mode requires a real tag (not dry-run)."
+            exit 1
+          fi
+
+          echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
+          echo "artifact_tag=${artifact_tag}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
+          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
+          echo "publish_channels=${publish_channels}" >> "$GITHUB_OUTPUT"
 
   package:
     strategy:
@@ -64,7 +132,7 @@ jobs:
             target_rustflags: ''
 
     runs-on: ${{ matrix.os }}
-    needs: [prerelease]
+    needs: [plan]
 
     steps:
       - uses: actions/checkout@v6
@@ -105,7 +173,7 @@ jobs:
         id: package
         run: |
           set -euxo pipefail
-          VERSION=${GITHUB_REF#refs/tags/}
+          VERSION=${{ needs.plan.outputs.artifact_tag }}
           BIN=flowmark
           if [[ ${{ matrix.os }} == windows-latest ]]; then
             BIN=$BIN.exe
@@ -129,41 +197,203 @@ jobs:
               ;;
           esac
 
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload release archive artifact
+        uses: actions/upload-artifact@v4
         with:
-          draft: false
-          files: ${{ steps.package.outputs.archive }}
-          prerelease: ${{ needs.prerelease.outputs.value }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: release-archives-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive }}
 
   checksum:
     runs-on: ubuntu-latest
-    needs: [package, prerelease]
+    needs: [plan, package]
 
     steps:
       - name: Download release archives
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >-
-          gh release download
-          --repo ${{ github.repository }}
-          --pattern '*.tar.gz'
-          --pattern '*.zip'
-          --dir release
-          ${{ github.ref_name }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-archives-*
+          merge-multiple: true
+          path: release
 
       - name: Generate checksums
         run: |
           cd release
           shasum -a 256 * > ../SHA256SUMS
 
-      - name: Upload checksums
-        uses: softprops/action-gh-release@v2
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v4
         with:
-          draft: false
-          files: SHA256SUMS
-          prerelease: ${{ needs.prerelease.outputs.value }}
+          name: release-checksums
+          path: SHA256SUMS
+
+  crates:
+    needs: [plan, package, checksum]
+    uses: ./.github/workflows/publish.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      publish: ${{ needs.plan.outputs.publish_channels == 'true' }}
+    secrets: inherit
+
+  pypi:
+    needs: [plan, package, checksum]
+    uses: ./.github/workflows/pypi.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      publish: ${{ needs.plan.outputs.publish_channels == 'true' }}
+      check_url: https://pypi.org/simple/
+    secrets: inherit
+
+  announce:
+    runs-on: ubuntu-latest
+    needs: [plan, checksum, crates, pypi]
+    if: needs.plan.outputs.publish == 'true'
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release
+
+      - name: Create or update GitHub Release
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ needs.plan.outputs.release_tag }}"
+
+          if [[ -z "$tag" ]]; then
+            echo "Missing release tag in publish mode"
+            exit 1
+          fi
+
+          if ! git rev-parse --verify "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "Tag ${tag} does not exist in repository history"
+            exit 1
+          fi
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" release/* --clobber
+          else
+            prerelease_flag=""
+            if [[ "${{ needs.plan.outputs.prerelease }}" == "true" ]]; then
+              prerelease_flag="--prerelease"
+            fi
+            target_sha="$(git rev-list -n 1 "$tag")"
+            gh release create "$tag" --target "$target_sha" $prerelease_flag --generate-notes release/*
+          fi
+
+  homebrew:
+    runs-on: ubuntu-latest
+    needs: [plan, checksum, crates, pypi, announce]
+    if: needs.plan.outputs.publish_channels == 'true' && needs.plan.outputs.prerelease != 'true' && secrets.HOMEBREW_TAP_TOKEN != ''
+    permissions:
+      contents: read
+    steps:
+      - name: Download checksums artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: release-checksums
+          path: release
+
+      - name: Check out Homebrew tap
+        uses: actions/checkout@v6
+        with:
+          repository: jlevy/homebrew-flowmark
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula checksums
+        run: |
+          set -euo pipefail
+
+          tag="${{ needs.plan.outputs.release_tag }}"
+          version="${tag#v}"
+          formula="homebrew-tap/Formula/flowmark.rb"
+          checksums="release/SHA256SUMS"
+
+          if [[ ! -f "$checksums" ]]; then
+            echo "Missing checksum file: $checksums"
+            exit 1
+          fi
+
+          declare -A shas
+          for target in \
+            aarch64-apple-darwin \
+            x86_64-apple-darwin \
+            aarch64-unknown-linux-musl \
+            x86_64-unknown-linux-musl
+          do
+            archive="flowmark-v${version}-${target}.tar.gz"
+            sha="$(awk -v archive="$archive" '$2 == archive { print $1 }' "$checksums")"
+            if [[ -z "$sha" ]]; then
+              echo "Missing checksum for ${archive}"
+              exit 1
+            fi
+            shas[$target]="$sha"
+          done
+
+          sed -i.bak -E "s/version \"[^\"]+\"/version \"${version}\"/" "$formula"
+          rm -f "${formula}.bak"
+
+          tmp="$(mktemp)"
+          current_target=""
+          while IFS= read -r line; do
+            case "$line" in
+              *"flowmark-v#{version}-aarch64-apple-darwin.tar.gz"*)
+                current_target="aarch64-apple-darwin"
+                echo "$line" >> "$tmp"
+                continue
+                ;;
+              *"flowmark-v#{version}-x86_64-apple-darwin.tar.gz"*)
+                current_target="x86_64-apple-darwin"
+                echo "$line" >> "$tmp"
+                continue
+                ;;
+              *"flowmark-v#{version}-aarch64-unknown-linux-musl.tar.gz"*)
+                current_target="aarch64-unknown-linux-musl"
+                echo "$line" >> "$tmp"
+                continue
+                ;;
+              *"flowmark-v#{version}-x86_64-unknown-linux-musl.tar.gz"*)
+                current_target="x86_64-unknown-linux-musl"
+                echo "$line" >> "$tmp"
+                continue
+                ;;
+            esac
+
+            if [[ -n "$current_target" && "$line" =~ ^[[:space:]]*sha256[[:space:]]+\"[a-f0-9]+\" ]]; then
+              printf '      sha256 "%s"\n' "${shas[$current_target]}" >> "$tmp"
+              current_target=""
+            else
+              echo "$line" >> "$tmp"
+            fi
+          done < "$formula"
+          mv "$tmp" "$formula"
+
+      - name: Commit and push tap update
+        run: |
+          set -euo pipefail
+          cd homebrew-tap
+
+          if git diff --quiet -- Formula/flowmark.rb; then
+            echo "Formula already up to date"
+            exit 0
+          fi
+
+          version="${{ needs.plan.outputs.release_tag }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/flowmark.rb
+          git commit -m "chore: update flowmark formula to ${version}"
+          git push

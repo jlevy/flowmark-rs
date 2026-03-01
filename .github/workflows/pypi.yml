@@ -1,9 +1,30 @@
 name: Publish to PyPI
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      publish:
+        description: "Publish to PyPI when true; run validation-only when false"
+        required: false
+        type: boolean
+        default: false
+      check_url:
+        description: "Simple API URL used to skip duplicate uploads"
+        required: false
+        type: string
+        default: "https://pypi.org/simple/"
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to PyPI (otherwise validation-only)"
+        required: true
+        type: boolean
+        default: false
+      check_url:
+        description: "Simple API URL used to skip duplicate uploads"
+        required: true
+        type: string
+        default: "https://pypi.org/simple/"
 
 permissions:
   contents: read
@@ -125,9 +146,8 @@ jobs:
           name: wheels-sdist
           path: dist/*.tar.gz
 
-  # ── Publish to PyPI ────────────────────────────────────────────
-  publish:
-    if: github.event_name == 'release'
+  check-wheel-contents:
+    runs-on: ubuntu-latest
     needs:
       - build-linux-x86_64
       - build-linux-aarch64
@@ -135,6 +155,42 @@ jobs:
       - build-macos-aarch64
       - build-windows-x86_64
       - build-sdist
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: wheels/
+      - name: Verify wheel entrypoints
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          wheels = sorted(Path("wheels").glob("*.whl"))
+          if not wheels:
+              raise SystemExit("No wheel files found to validate")
+
+          missing = []
+          for wheel in wheels:
+              with zipfile.ZipFile(wheel) as zf:
+                  names = zf.namelist()
+              has_flowmark = any(name.endswith("/flowmark") or name.endswith("/flowmark.exe") for name in names)
+              has_flowmark_rs = any(name.endswith("/flowmark-rs") or name.endswith("/flowmark-rs.exe") for name in names)
+              if not (has_flowmark and has_flowmark_rs):
+                  missing.append(wheel.name)
+
+          if missing:
+              joined = ", ".join(missing)
+              raise SystemExit(f"Missing expected entrypoints in wheels: {joined}")
+
+          print(f"Validated wheel entrypoints for {len(wheels)} wheel(s).")
+          PY
+
+  # ── Publish to PyPI ────────────────────────────────────────────
+  publish:
+    needs:
+      - check-wheel-contents
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -145,7 +201,10 @@ jobs:
           pattern: wheels-*
           merge-multiple: true
           path: wheels/
-      - name: List wheels
+      - name: List distributions
         run: ls -la wheels/
+      - name: Validate upload command (dry-run)
+        run: uv publish --dry-run --check-url "${{ inputs.check_url }}" wheels/*
       - name: Publish to PyPI
-        run: uv publish --trusted-publishing always wheels/*
+        if: inputs.publish
+        run: uv publish --trusted-publishing always --check-url "${{ inputs.check_url }}" wheels/*
