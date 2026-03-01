@@ -49,56 +49,14 @@ jobs:
       - name: Resolve release mode
         id: plan
         run: |
-          set -euo pipefail
-
-          if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
-            requested_tag="${GITHUB_REF_NAME}"
-            publish=true
-            publish_prerelease=false
-          else
-            requested_tag="${{ inputs.tag }}"
-            publish="${{ inputs.publish }}"
-            publish_prerelease="${{ inputs.publish_prerelease }}"
-          fi
-
-          if [[ -z "${requested_tag}" || "${requested_tag}" == "dry-run" ]]; then
-            release_tag=""
-            artifact_tag="v0.0.0-dry-run-${GITHUB_RUN_ID}"
-            prerelease=true
-            publish=false
-          else
-            if [[ "${requested_tag}" =~ ^v ]]; then
-              release_tag="${requested_tag}"
-            else
-              release_tag="v${requested_tag}"
-            fi
-            artifact_tag="${release_tag}"
-            if [[ "${release_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-              prerelease=false
-            else
-              prerelease=true
-            fi
-          fi
-
-          publish_channels=false
-          if [[ "${publish}" == "true" ]]; then
-            if [[ "${prerelease}" == "true" && "${publish_prerelease}" != "true" ]]; then
-              publish_channels=false
-            else
-              publish_channels=true
-            fi
-          fi
-
-          if [[ "${publish}" == "true" && -z "${release_tag}" ]]; then
-            echo "Publish mode requires a real tag (not dry-run)."
-            exit 1
-          fi
-
-          echo "release_tag=${release_tag}" >> "$GITHUB_OUTPUT"
-          echo "artifact_tag=${artifact_tag}" >> "$GITHUB_OUTPUT"
-          echo "prerelease=${prerelease}" >> "$GITHUB_OUTPUT"
-          echo "publish=${publish}" >> "$GITHUB_OUTPUT"
-          echo "publish_channels=${publish_channels}" >> "$GITHUB_OUTPUT"
+          python3 ./scripts/resolve-release-plan.py \
+            --event-name "${GITHUB_EVENT_NAME}" \
+            --ref-name "${GITHUB_REF_NAME}" \
+            --tag "${{ inputs.tag || '' }}" \
+            --publish "${{ inputs.publish || 'false' }}" \
+            --publish-prerelease "${{ inputs.publish_prerelease || 'false' }}" \
+            --run-id "${GITHUB_RUN_ID}" \
+            --github-output "$GITHUB_OUTPUT"
 
   package:
     strategy:

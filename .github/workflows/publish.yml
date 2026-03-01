@@ -62,22 +62,9 @@ jobs:
       - name: Resolve crate metadata
         id: crate
         run: |
-          set -euo pipefail
-          crate_name=$(sed -n 's/^name = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
-          crate_version=$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)
-          if [[ -z "$crate_name" || -z "$crate_version" ]]; then
-            echo "Failed to resolve crate name/version from Cargo.toml"
-            exit 1
-          fi
-
-          already_published=false
-          if curl -fsSL "https://crates.io/api/v1/crates/${crate_name}/${crate_version}" >/dev/null; then
-            already_published=true
-          fi
-
-          echo "crate_name=${crate_name}" >> "$GITHUB_OUTPUT"
-          echo "crate_version=${crate_version}" >> "$GITHUB_OUTPUT"
-          echo "already_published=${already_published}" >> "$GITHUB_OUTPUT"
+          python3 ./scripts/resolve-crate-metadata.py \
+            --manifest-path Cargo.toml \
+            --github-output "$GITHUB_OUTPUT"
 
       - name: Authenticate with crates.io
         if: inputs.publish && steps.crate.outputs.already_published != 'true'

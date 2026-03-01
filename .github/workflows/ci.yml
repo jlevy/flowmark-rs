@@ -182,6 +182,14 @@ jobs:
       - name: Verify README is in sync
         run: git diff --exit-code -- README.md
 
+  workflow-scripts:
+    name: Workflow script tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Run workflow script tests
+        run: python3 -m unittest discover -s scripts/tests -p 'test_*.py' -v
+
   check-mapping:
     name: Test mapping check
     runs-on: ubuntu-latest
