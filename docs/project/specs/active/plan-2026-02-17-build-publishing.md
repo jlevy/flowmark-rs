@@ -89,6 +89,8 @@ The CI pipeline is already well above average:
 - No release workflow (no binary builds, no GitHub Releases).
 - No crates.io publishing automation.
 - ~~No Homebrew tap or formula.~~ **Done** (`jlevy/homebrew-flowmark`)
+- ~~No PyPI distribution.~~ **Done** — see
+  [PyPI distribution spec](plan-2026-03-01-pypi-distribution.md)
 - No root README.md.
 - ~~Missing `readme` and `documentation` fields in Cargo.toml.~~ **Done**
 - No CONTRIBUTING.md or CHANGELOG.md.

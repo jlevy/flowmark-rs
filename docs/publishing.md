@@ -127,12 +127,14 @@ EOF
 )"
 ```
 
-This triggers two workflows:
+This triggers three workflows:
 
 - **`release.yml`** builds cross-platform binaries and uploads them to the release (see
   [Binary Release Workflow](#binary-release-workflow) below).
 - **`publish.yml`** runs the test suite and publishes to crates.io via OIDC trusted
   publishing.
+- **`pypi.yml`** builds platform-specific Python wheels and publishes to PyPI via OIDC
+  trusted publishing.
 
 ## Step 5: Verify Publication
 
@@ -218,6 +220,45 @@ formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
    Python binary first.
    Check with `type -a flowmark`.
 
+## Step 7: Verify PyPI Publication
+
+The `pypi.yml` workflow triggers on the same `release: published` event and builds
+wheels for 5 platforms (Linux x86_64/aarch64, macOS x86_64/aarch64, Windows x86_64)
+plus a source distribution.
+
+1. Watch the PyPI workflow:
+
+   ```bash
+   gh run list --repo $REPO --workflow=pypi.yml --limit 1
+   gh run watch --repo $REPO <run-id>
+   ```
+
+1. Verify on PyPI: https://pypi.org/project/flowmark-rs/
+
+1. Test installation methods:
+
+   ```bash
+   uvx flowmark-rs --version
+   uv tool install flowmark-rs
+   flowmark-rs --version
+   pip install flowmark-rs
+   flowmark-rs --version
+   ```
+
+### PyPI Trusted Publishing Setup (One-Time)
+
+Configure a pending trusted publisher at
+https://pypi.org/manage/account/publishing/:
+
+- PyPI project name: `flowmark-rs`
+- Owner: `jlevy`
+- Repository: `flowmark-rs`
+- Workflow name: `pypi.yml`
+- Environment name: `release`
+
+Also create a `release` environment in the GitHub repo settings
+(Settings -> Environments -> New environment -> `release`).
+
 ## Release Notes Format
 
 ```markdown
@@ -242,9 +283,9 @@ Description.
 https://github.com/jlevy/flowmark-rs/compare/vPREV...vX.Y.Z
 ```
 
-## Binary Release Workflow
+## Release Workflows
 
-The release process uses two workflows that chain together:
+The release process uses three workflows:
 
 1. **`release.yml`** — Triggered by tag push (`*`). Builds cross-platform binaries for 6
    targets. Stable tags should follow `vX.Y.Z`; non-semver tags are treated as
@@ -265,6 +306,10 @@ Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`. A unifi
 2. **`publish.yml`** — Triggered by the GitHub Release `published` event (typically from
    `gh release create ...`). Runs the full test suite and publishes to crates.io via
    OIDC trusted publishing.
+
+3. **`pypi.yml`** — Triggered by the same `published` event. Builds Python wheels for 5
+   platforms using maturin, then publishes to PyPI via `uv publish` with OIDC trusted
+   publishing. Includes smoke tests on native platforms (macOS, Windows).
 
 Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or `.zip`
 (Windows), which `cargo binstall` auto-detects.

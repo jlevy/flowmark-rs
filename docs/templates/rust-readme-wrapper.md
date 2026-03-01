@@ -98,6 +98,14 @@ cargo install flowmark
 cargo binstall flowmark
 ```
 
+### PyPI (via uv or pip)
+
+```bash
+uvx flowmark-rs          # run on demand (no install needed)
+uv tool install flowmark-rs  # persistent install
+pip install flowmark-rs      # classic pip
+```
+
 ### Homebrew (macOS)
 
 ```bash
