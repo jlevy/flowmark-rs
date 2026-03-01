@@ -4,8 +4,9 @@
 
 **Author:** Claude (agent)
 
-**Status:** Phase 1 complete; Phase 2 partial (2.1 done, 2.2 pending); Phase 3 pending
-manual setup; Phase 4 partial (4.1-4.3 done, 4.4-4.6 open); Phase 5 complete
+**Status:** Phase 1 complete; Phase 2 partial (2.1 done, 2.2 pending); Phase 3 partial
+(3.2 done, 3.1/3.4/3.5 pending manual setup); Phase 4 partial (4.1-4.3 done, 4.4-4.6
+open); Phase 5 complete
 
 **Related issue:**
 [#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
@@ -15,7 +16,7 @@ manual setup; Phase 4 partial (4.1-4.3 done, 4.4-4.6 open); Phase 5 complete
 
 ## Current Snapshot (as of 2026-03-01)
 
-- Beads linked to this spec: **22 total** (`12 closed`, `10 open`)
+- Beads linked to this spec: **22 total** (`13 closed`, `9 open`)
 - PyPI package `flowmark-rs`: **not yet published** (PyPI JSON API returns 404)
 - GitHub Actions workflow `pypi.yml` on `main`: **not yet present** (Actions API lookup
   returns 404 for that workflow path on default branch)
@@ -464,7 +465,6 @@ publishing to PyPI.
         - build-windows-x86_64
         - build-sdist
       runs-on: ubuntu-latest
-      environment: release
       permissions:
         id-token: write  # Required for PyPI trusted publishing (OIDC)
       steps:
@@ -487,7 +487,7 @@ publishing to PyPI.
   - `macos-13` for x86_64, `macos-14` for ARM64 — matches ruff/uv runner selection
   - Smoke tests on native platforms only (macOS, Windows) — Linux aarch64 is
     cross-compiled so cannot be tested on the runner
-  - `environment: release` — matches the PyPI trusted publisher configuration
+  - No explicit GitHub environment — keep setup simple for this single-maintainer repo
   - `uv publish --trusted-publishing always` — explicitly requires OIDC (fails rather
     than falling back to tokens)
 
@@ -520,21 +520,19 @@ Manual steps that require PyPI account access (owner action).
   - Owner: `jlevy`
   - Repository: `flowmark-rs`
   - Workflow name: `pypi.yml`
-  - Environment name: `release`
+  - Environment name: leave blank
 
   This creates the PyPI project automatically on first successful publish.
 
-- [ ] **3.2: Create GitHub `release` environment**
-
-  In GitHub repo settings → Environments → New environment → `release`.
-  Optional protection rules:
-  - Restrict to `main` branch
-  - Require approval (for manual oversight)
+- [x] **3.2: Keep workflow/environment config simple** — No explicit GitHub
+  environment is required. Keep `pypi.yml` without an `environment:` key and configure
+  PyPI trusted publisher with environment left blank.
 
 - [ ] **3.3: Test with TestPyPI first** (optional but recommended)
 
-  Create a separate trusted publisher on `https://test.pypi.org/manage/account/publishing/`
-  with the same settings.
+  Create a separate trusted publisher on
+  `https://test.pypi.org/manage/account/publishing/` with the same settings (including
+  environment left blank).
   Temporarily add a workflow dispatch job that publishes to TestPyPI:
 
   ```bash

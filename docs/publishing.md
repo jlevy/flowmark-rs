@@ -254,10 +254,7 @@ https://pypi.org/manage/account/publishing/:
 - Owner: `jlevy`
 - Repository: `flowmark-rs`
 - Workflow name: `pypi.yml`
-- Environment name: `release`
-
-Also create a `release` environment in the GitHub repo settings
-(Settings -> Environments -> New environment -> `release`).
+- Environment name: leave blank
 
 ## Release Notes Format
 
