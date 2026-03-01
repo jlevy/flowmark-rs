@@ -5,7 +5,7 @@ title: Distribute flowmark-rs on PyPI via maturin
 kind: epic
 status: open
 priority: 1
-version: 22
+version: 23
 spec_path: docs/project/specs/active/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies: []
@@ -32,5 +32,9 @@ child_order_hints:
   - is-01kjky0z1x73jj3gfj1374bpfw
   - is-01kjky0zgvdr0t91c2pn13jdfa
 created_at: 2026-03-01T05:29:51.166Z
-updated_at: 2026-03-01T05:30:33.370Z
+updated_at: 2026-03-01T19:20:32.144Z
 ---
+
+## Notes
+
+Snapshot 2026-03-01: 12/22 tasks closed. pypi.yml is not on default branch yet; flowmark-rs is not published on PyPI (404).
