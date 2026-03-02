@@ -6,7 +6,8 @@
 
 **Status:** Complete
 
-**Related issue:** [#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
+**Related issue:**
+[#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
 
 ## Overview
 
@@ -14,14 +15,14 @@ This research investigates the best approaches for distributing a Rust CLI binar
 (flowmark-rs) as a Python package on PyPI, so that users can install and run it with
 `uvx flowmark-rs`, `uv tool install flowmark-rs`, or `pip install flowmark-rs`.
 
-**Motivating use case:** The original flowmark is a Python package on PyPI.
-The Rust rewrite is dramatically faster.
-Distributing the Rust binary through PyPI keeps the install experience identical —
-just a different package name.
+**Motivating use case:** The original flowmark is a Python package on PyPI. The Rust
+rewrite is dramatically faster.
+Distributing the Rust binary through PyPI keeps the install experience identical — just
+a different package name.
 This is the same pattern used by **ruff**, **uv**, and **maturin** itself.
 
-**Decision context:** flowmark-rs already has GitHub Releases (binary archives), Homebrew
-tap, and crates.io publishing.
+**Decision context:** flowmark-rs already has GitHub Releases (binary archives),
+Homebrew tap, and crates.io publishing.
 Adding PyPI distribution would complete the set of install methods, making
 `uvx flowmark-rs` work on any platform.
 
@@ -30,12 +31,12 @@ Adding PyPI distribution would complete the set of install methods, making
 1. What is the standard approach for packaging Rust CLI binaries as Python wheels?
 2. How do major projects (ruff, uv, maturin) implement this?
 3. What platform targets are needed, and how do wheel platform tags work?
-4. How does maturin's `bindings = "bin"` mode work?
+4. How does maturin’s `bindings = "bin"` mode work?
 5. What CI/CD workflow is needed to build multi-platform wheels and publish to PyPI?
 6. How should PyPI trusted publishing (OIDC) be set up?
 7. What can we borrow from the simple-modern-uv template for workflow patterns?
 8. What are the best practices and pitfalls?
-9. What's the recommended approach for flowmark-rs specifically?
+9. What’s the recommended approach for flowmark-rs specifically?
 
 ## Scope
 
@@ -58,15 +59,14 @@ Adding PyPI distribution would complete the set of install methods, making
 ### 1. Maturin `bindings = "bin"` — The Core Mechanism
 
 [Maturin](https://www.maturin.rs/) is the standard tool for building Python wheels from
-Rust projects.
-Its `bindings = "bin"` mode packages a compiled Rust binary into a Python wheel as a
-"script" — when installed, the binary is placed on the user's PATH (e.g., in a
-virtualenv's `bin/` directory).
+Rust projects. Its `bindings = "bin"` mode packages a compiled Rust binary into a Python
+wheel as a “script” — when installed, the binary is placed on the user’s PATH (e.g., in
+a virtualenv’s `bin/` directory).
 
 **How it works:**
-- The compiled Rust binary goes into the wheel's `.data/scripts/` directory
+- The compiled Rust binary goes into the wheel’s `.data/scripts/` directory
 - pip/uv installs it into the appropriate `bin/` or `Scripts/` directory
-- No Python code runs when the binary is invoked — it's pure Rust
+- No Python code runs when the binary is invoked — it’s pure Rust
 - The wheel is platform-tagged (e.g., `manylinux_2_17_x86_64`) so pip/uv selects the
   right one
 
@@ -97,11 +97,10 @@ However, explicit configuration is recommended.
 **Repository:** [astral-sh/ruff](https://github.com/astral-sh/ruff)
 
 Ruff is an extremely fast Python linter/formatter written in Rust, distributed as a
-Python package on PyPI.
-It is the closest comparable project to flowmark-rs in terms of architecture: a pure
-Rust CLI binary distributed via PyPI.
+Python package on PyPI. It is the closest comparable project to flowmark-rs in terms of
+architecture: a pure Rust CLI binary distributed via PyPI.
 
-#### Ruff's Configuration
+#### Ruff’s Configuration
 
 **`pyproject.toml`:**
 ```toml
@@ -129,7 +128,7 @@ Key settings:
 - **`python-source = "python"`** — location of the Python wrapper package
 - **`strip = true`** — strips debug symbols to reduce binary size
 
-#### Ruff's Python Wrapper
+#### Ruff’s Python Wrapper
 
 Ruff ships a thin Python wrapper package (`python/ruff/`) with three files:
 
@@ -140,12 +139,12 @@ Ruff ships a thin Python wrapper package (`python/ruff/`) with three files:
 3. **`_find_ruff.py`** — sophisticated binary locator that searches multiple install
    locations (virtualenvs, system installs, `--prefix`, `--target`, user scheme)
 
-**Important:** Ruff does NOT use a "wrapper package" pattern with platform-specific
-sub-packages (e.g., `ruff-x86_64-linux`).
-Each wheel is a single self-contained `ruff` package, platform-tagged by maturin.
+**Important:** Ruff does NOT use a “wrapper package” pattern with platform-specific
+sub-packages (e.g., `ruff-x86_64-linux`). Each wheel is a single self-contained `ruff`
+package, platform-tagged by maturin.
 pip selects the correct wheel based on the platform tag.
 
-#### Ruff's CI/CD
+#### Ruff’s CI/CD
 
 Ruff builds **17 platform-specific wheel targets + 1 sdist = 18 distributions** per
 release.
@@ -153,7 +152,7 @@ release.
 The build pipeline uses:
 - **`PyO3/maturin-action@v1.50.0`** with **`maturin-version: v1.11.5`** (pinned)
 - **`cargo-dist`** for release orchestration (but with `build-local-artifacts = false` —
-  cargo-dist doesn't build the actual binaries)
+  cargo-dist doesn’t build the actual binaries)
 - **`uv publish`** for PyPI upload with OIDC trusted publishing
 
 Build flags: `maturin build --release --locked --out dist --compatibility pypi`
@@ -173,7 +172,7 @@ Build flags: `maturin build --release --locked --out dist --compatibility pypi`
 - RISC-V: `manylinux_2_31`
 - All musl targets: `musllinux_1_2`
 
-#### Ruff's Versioning
+#### Ruff’s Versioning
 
 The version is manually kept in sync between `pyproject.toml` and `Cargo.toml` using
 [rooster](https://github.com/astral-sh/rooster), which bumps the version across all
@@ -186,7 +185,7 @@ There is no automated derivation of one from the other at build time.
 
 uv uses virtually the same approach as ruff (both are from Astral):
 
-#### uv's Configuration
+#### uv’s Configuration
 
 ```toml
 [build-system]
@@ -201,19 +200,18 @@ python-source = "python"
 strip = true
 ```
 
-#### uv's Python Wrapper
+#### uv’s Python Wrapper
 
-Nearly identical to ruff's, with added sophistication:
+Nearly identical to ruff’s, with added sophistication:
 - Detects the current virtualenv and passes it via `VIRTUAL_ENV` env var
 - Passes the parent Python interpreter path via `UV_INTERNAL__PARENT_INTERPRETER`
 - On Unix, uses `os.execvpe()` to replace the Python process entirely
 - On Windows, uses `subprocess.run()` with `KeyboardInterrupt` handling
 
-#### uv's CI/CD
+#### uv’s CI/CD
 
 Also builds **17+ platform targets** using `maturin-action` + `cargo-dist` for
-orchestration.
-Publishes with `uv publish` and PyPI trusted publishing.
+orchestration. Publishes with `uv publish` and PyPI trusted publishing.
 
 **Notable extras:**
 - **Wheel content verification** — a CI script opens each `.whl` file and asserts the
@@ -250,8 +248,8 @@ For binary-only distributions (`bindings = "bin"`), the relevant tags are:
 - PEP 600: `manylinux_x_y` (generic, future-proof) — e.g., `manylinux_2_17`
 
 **Key constraint:** The Rust compiler since version 1.64 requires at least glibc 2.17,
-so the minimum manylinux version is `2_17` (manylinux2014).
-This is what ruff and uv both use for most targets.
+so the minimum manylinux version is `2_17` (manylinux2014). This is what ruff and uv
+both use for most targets.
 
 ### 5. Maturin-Action for CI/CD
 
@@ -271,9 +269,8 @@ installs and runs maturin with built-in cross-compilation support.
 | `sccache` | Enable compilation caching |
 | `before-script-linux` | Pre-build script for Linux containers |
 
-**Cross-compilation containers:**
-For non-native Linux architectures, maturin-action automatically selects appropriate
-Docker images:
+**Cross-compilation containers:** For non-native Linux architectures, maturin-action
+automatically selects appropriate Docker images:
 - x86_64 manylinux_2_17: `quay.io/pypa/manylinux2014_x86_64`
 - aarch64 manylinux_2_17: `ghcr.io/rust-cross/manylinux2014-cross:aarch64`
 - x86_64 musllinux: host build (no container needed)
@@ -295,11 +292,11 @@ workflows with PyPI, eliminating the need for long-lived API tokens.
 
 1. **Create or claim the PyPI project:** Register `flowmark-rs` on
    [pypi.org](https://pypi.org).
-   For new projects, you can set up a "pending" trusted publisher before the first
+   For new projects, you can set up a “pending” trusted publisher before the first
    publish.
 
-2. **Configure trusted publisher on PyPI:**
-   Navigate to `https://pypi.org/manage/project/flowmark-rs/settings/publishing/` and add:
+2. **Configure trusted publisher on PyPI:** Navigate to
+   `https://pypi.org/manage/project/flowmark-rs/settings/publishing/` and add:
    - Repository owner: `jlevy`
    - Repository name: `flowmark-rs`
    - Workflow name: e.g., `pypi.yml` (or whatever the publish workflow is named)
@@ -320,7 +317,7 @@ and grants a short-lived publishing token automatically.
 **Repository:** [jlevy/simple-modern-uv](https://github.com/jlevy/simple-modern-uv)
 
 This is a Copier template for modern Python projects.
-While it's designed for pure Python (not Rust binaries), several patterns are directly
+While it’s designed for pure Python (not Rust binaries), several patterns are directly
 reusable:
 
 **Reusable patterns:**
@@ -329,8 +326,8 @@ reusable:
 - **Workflow structure** — trigger on GitHub Release published event, checkout with
   `fetch-depth: 0`, build, publish
 - **`astral-sh/setup-uv@v7`** — standard action for installing uv in CI
-- **Dynamic versioning from Git tags** — using `uv-dynamic-versioning` plugin
-  (for pure Python; for Rust, maturin reads from `Cargo.toml`)
+- **Dynamic versioning from Git tags** — using `uv-dynamic-versioning` plugin (for pure
+  Python; for Rust, maturin reads from `Cargo.toml`)
 - **Test-before-publish** — runs full test suite before uploading to PyPI
 
 **What would need to change for Rust binary wheels:**
@@ -352,9 +349,8 @@ reusable:
 | **tpchgen-cli** | `bin` | maturin | ~5 | Single package |
 | **celq** | `bin` | maturin + cargo-zigbuild | ~6 | Single package |
 
-**Key observation:** For standalone CLI binaries, the universal approach is
-`maturin` with `bindings = "bin"`.
-No major project uses a different tool.
+**Key observation:** For standalone CLI binaries, the universal approach is `maturin`
+with `bindings = "bin"`. No major project uses a different tool.
 The only variation is the number of platform targets.
 
 ### 9. Manylinux vs Musl for Linux Wheels
@@ -376,11 +372,11 @@ There are two approaches for Linux wheel compatibility:
 - Works on Alpine and other musl-based distros
 - Also works on glibc distros (since musl binaries are statically linked)
 
-**Note about flowmark-rs's existing approach:** The current `release.yml` builds
+**Note about flowmark-rs’s existing approach:** The current `release.yml` builds
 `x86_64-unknown-linux-musl` and `aarch64-unknown-linux-musl` for GitHub Releases using
 musl for static linking.
 For PyPI, we should build **both** manylinux (glibc) and musllinux wheels to maximize
-compatibility, following ruff's example.
+compatibility, following ruff’s example.
 However, for a simpler initial approach, just manylinux wheels would cover the vast
 majority of users.
 
@@ -419,14 +415,14 @@ There are two approaches to keeping version numbers in sync:
 - Set `dynamic = ["version"]` in `pyproject.toml`
 - Maturin reads the version from `Cargo.toml` automatically
 - Avoids version drift
-- This is the approach recommended in issue #36 and documented in maturin's docs
+- This is the approach recommended in issue #36 and documented in maturin’s docs
 
 **Recommendation for flowmark-rs:** Use Approach B (dynamic version from Cargo.toml).
 This is simpler for a single-crate project and avoids the risk of version drift.
 Ruff and uv use Approach A because they are Cargo workspaces with complex versioning
 needs.
 
-### 12. Flowmark-rs's Existing Release Infrastructure
+### 12. Flowmark-rs’s Existing Release Infrastructure
 
 The current release setup already covers:
 
@@ -499,19 +495,19 @@ already builds binary archives.
 ### Option B: Separate `pypi.yml` Workflow (Recommended)
 
 **Description:** Create a new `pypi.yml` workflow dedicated to building wheels and
-publishing to PyPI.
-Triggered by the GitHub Release `published` event (same as `publish.yml` for crates.io).
+publishing to PyPI. Triggered by the GitHub Release `published` event (same as
+`publish.yml` for crates.io).
 
 **Pros:**
 - Clean separation of concerns
-- Can use maturin-action's Docker containers naturally
+- Can use maturin-action’s Docker containers naturally
 - Easy to test independently
-- Follows the simple-modern-uv pattern of "release event → build → publish"
-- Failure in PyPI publishing doesn't affect GitHub Releases or crates.io
+- Follows the simple-modern-uv pattern of “release event → build → publish”
+- Failure in PyPI publishing doesn’t affect GitHub Releases or crates.io
 
 **Cons:**
 - One more workflow file to maintain
-- Builds the project again (doesn't reuse existing binaries from release.yml)
+- Builds the project again (doesn’t reuse existing binaries from release.yml)
 
 ### Option C: Combined Maturin + Archive Workflow
 
@@ -529,15 +525,14 @@ that produces both wheels and binary archives.
 
 ### Eliminated Options
 
-- **cargo-zigbuild approach:** Uses Zig's linker for cross-compilation instead of Docker
-  containers.
-  While interesting for local development, maturin-action's Docker approach is more
-  battle-tested and used by ruff/uv.
+- **cargo-zigbuild approach:** Uses Zig’s linker for cross-compilation instead of Docker
+  containers. While interesting for local development, maturin-action’s Docker approach
+  is more battle-tested and used by ruff/uv.
   Eliminated because maturin-action already handles this well.
 
 - **Platform-specific sub-packages** (e.g., `flowmark-rs-x86_64-linux`): Used by some
-  npm-distributed Rust CLIs but NOT used by any major PyPI-distributed Rust CLI.
-  Ruff and uv both ship single platform-tagged packages.
+  npm-distributed Rust CLIs but NOT used by any major PyPI-distributed Rust CLI. Ruff
+  and uv both ship single platform-tagged packages.
   Eliminated because it adds unnecessary complexity.
 
 ## Recommendations
@@ -549,14 +544,14 @@ Every major Rust CLI distributed via PyPI uses this approach.
 
 ### 2. Create a Separate `pypi.yml` Workflow (Option B)
 
-Add a new `.github/workflows/pypi.yml` triggered by the GitHub Release `published` event.
-This keeps concerns separated and allows the existing `release.yml` (binary archives) and
-`publish.yml` (crates.io) to continue working unchanged.
+Add a new `.github/workflows/pypi.yml` triggered by the GitHub Release `published`
+event. This keeps concerns separated and allows the existing `release.yml` (binary
+archives) and `publish.yml` (crates.io) to continue working unchanged.
 
 ### 3. Start with Standard Coverage (7 targets)
 
-Build wheels for the platforms that match our existing release targets, plus
-manylinux glibc variants:
+Build wheels for the platforms that match our existing release targets, plus manylinux
+glibc variants:
 
 | Target | Platform Tag | Runner | manylinux |
 | --- | --- | --- | --- |
@@ -568,13 +563,12 @@ manylinux glibc variants:
 | `aarch64-apple-darwin` | `macosx_11_0_arm64` | `macos-14` | N/A |
 | `x86_64-pc-windows-msvc` | `win_amd64` | `windows-latest` | N/A |
 
-The musl targets are optional for the initial release — they primarily serve Alpine Linux
-users.
-A 5-target version (glibc + macOS + Windows) would cover ~95% of users.
+The musl targets are optional for the initial release — they primarily serve Alpine
+Linux users. A 5-target version (glibc + macOS + Windows) would cover ~95% of users.
 
 ### 4. Add a Minimal Python Wrapper
 
-Following ruff and uv's pattern, include a small Python wrapper at `python/flowmark_rs/`
+Following ruff and uv’s pattern, include a small Python wrapper at `python/flowmark_rs/`
 (or in a subdirectory) with:
 - `__init__.py` — exports `find_flowmark_rs_bin()`
 - `__main__.py` — enables `python -m flowmark_rs`
@@ -586,8 +580,7 @@ but it enables `python -m flowmark_rs` and programmatic discovery.
 ### 5. Use Dynamic Versioning from Cargo.toml
 
 Set `dynamic = ["version"]` in `pyproject.toml` and let maturin read the version from
-`Cargo.toml`.
-This avoids maintaining version numbers in two places.
+`Cargo.toml`. This avoids maintaining version numbers in two places.
 
 ### 6. Use PyPI Trusted Publishing
 
@@ -605,9 +598,9 @@ Publish using `uv publish --trusted-publishing always`.
 4. **`python/flowmark_rs/__main__.py`** — `python -m flowmark_rs` support (optional)
 5. **`python/flowmark_rs/_find_bin.py`** — Binary locator (optional)
 
-**Important:** The repo root already has a `python/` directory with `flowmark-dev-tools`.
-The new `pyproject.toml` for the PyPI package should be at the repo root (where
-`Cargo.toml` already lives), and maturin will handle the rest.
+**Important:** The repo root already has a `python/` directory with
+`flowmark-dev-tools`. The new `pyproject.toml` for the PyPI package should be at the
+repo root (where `Cargo.toml` already lives), and maturin will handle the rest.
 The `python/` directory already used for dev tools would need to be separate from the
 maturin `python-source` path.
 
@@ -673,15 +666,14 @@ jobs:
 
 ### 9. Key Considerations for flowmark-rs
 
-1. **Package name conflict:** The Python `flowmark` package already exists on PyPI
-   (the Python version).
-   Using `flowmark-rs` as the PyPI package name avoids conflict and makes the Rust
-   implementation explicit.
+1. **Package name conflict:** The Python `flowmark` package already exists on PyPI (the
+   Python version). Using `flowmark-rs` as the PyPI package name avoids conflict and
+   makes the Rust implementation explicit.
    Users would run `uvx flowmark-rs` (not `uvx flowmark`).
 
 2. **Binary names in the wheel:** The wheel should include both `flowmark` and
-   `flowmark-rs` binaries (both are defined in `Cargo.toml`).
-   This way, after `pip install flowmark-rs`, both commands work.
+   `flowmark-rs` binaries (both are defined in `Cargo.toml`). This way, after
+   `pip install flowmark-rs`, both commands work.
    However, this needs testing — maturin may need configuration to include both
    binaries.
 
@@ -692,13 +684,12 @@ jobs:
 
 4. **`python-source` configuration:** Since `python/` already contains
    `flowmark-dev-tools`, the Python wrapper for the PyPI package should go in a
-   different location, or maturin's `python-source` should be carefully configured.
+   different location, or maturin’s `python-source` should be carefully configured.
    One option: use `python-source = "py"` and put the wrapper in `py/flowmark_rs/`.
 
 5. **sdist (source distribution):** Including an sdist allows users to build from source
-   as a fallback.
-   This requires a Rust toolchain on the user's machine, but it's standard practice
-   and provides a safety net for unsupported platforms.
+   as a fallback. This requires a Rust toolchain on the user’s machine, but it’s standard
+   practice and provides a safety net for unsupported platforms.
 
 ## Implementation Checklist
 
@@ -745,8 +736,8 @@ This research was conducted by:
 
 1. **Reading GitHub issue #36** in full, which provided a detailed proposal
 2. **Cloning and examining three repositories:**
-   - `astral-sh/ruff` — pyproject.toml, maturin config, all CI workflows, Python
-     wrapper code
+   - `astral-sh/ruff` — pyproject.toml, maturin config, all CI workflows, Python wrapper
+     code
    - `astral-sh/uv` — pyproject.toml, maturin config, all CI workflows, Python wrapper
      code, wheel verification scripts
    - `jlevy/simple-modern-uv` — Copier template, CI workflows, publishing workflow
@@ -774,13 +765,13 @@ This research was conducted by:
 
 ### Real-World Examples
 
-- [Ruff's pyproject.toml](https://github.com/astral-sh/ruff/blob/main/pyproject.toml) —
+- [Ruff’s pyproject.toml](https://github.com/astral-sh/ruff/blob/main/pyproject.toml) —
   primary reference (same pattern)
-- [Ruff's build-binaries.yml](https://github.com/astral-sh/ruff/blob/main/.github/workflows/build-binaries.yml)
+- [Ruff’s build-binaries.yml](https://github.com/astral-sh/ruff/blob/main/.github/workflows/build-binaries.yml)
   — comprehensive 17-target build
-- [uv's pyproject.toml](https://github.com/astral-sh/uv/blob/main/pyproject.toml) —
+- [uv’s pyproject.toml](https://github.com/astral-sh/uv/blob/main/pyproject.toml) —
   another primary reference
-- [uv's build-release-binaries.yml](https://github.com/astral-sh/uv/blob/main/.github/workflows/build-release-binaries.yml)
+- [uv’s build-release-binaries.yml](https://github.com/astral-sh/uv/blob/main/.github/workflows/build-release-binaries.yml)
   — comprehensive build with testing
 - [simple-modern-uv](https://github.com/jlevy/simple-modern-uv) — template for PyPI
   publishing workflow patterns
@@ -801,6 +792,6 @@ This research was conducted by:
 ### Existing flowmark-rs Infrastructure
 
 - [Issue #36](https://github.com/jlevy/flowmark-rs/issues/36) — the detailed proposal
-- [Build-Publishing Spec](docs/project/specs/active/plan-2026-02-17-build-publishing.md)
-  — existing release infrastructure
+- [Build-Publishing Spec](docs/project/specs/done/plan-2026-02-17-build-publishing.md) —
+  existing release infrastructure
 - [docs/publishing.md](docs/publishing.md) — current publishing guide
