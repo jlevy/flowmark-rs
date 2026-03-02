@@ -1,47 +1,142 @@
-# Development Workflow (Rust Port)
+# Development
 
-This is a short operational index for development and release work in `flowmark-rs`.
-Reusable synchronization methodology lives in the `rust-porting-playbook` submodule.
+How to build, test, and work on flowmark-rs.
 
-## Start Here
+## Prerequisites
 
-- Reusable sync-release workflow:
-  [`repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md`](../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md)
-- Upstream sync checklist:
-  [`repos/rust-porting-playbook/playbooks/port-checklist-update-template.md`](../repos/rust-porting-playbook/playbooks/port-checklist-update-template.md)
-- Agent sync prompt template:
-  [`repos/rust-porting-playbook/playbooks/auto-sync-agent-prompt-template.md`](../repos/rust-porting-playbook/playbooks/auto-sync-agent-prompt-template.md)
+- **Rust 1.85+** (see `rust-version` in `Cargo.toml` for MSRV)
+- **Python flowmark v0.6.4** — for cross-binary parity tests
+  (`uv tool install flowmark==0.6.4`)
+- **Node.js 22+** and **tryscript** — for golden CLI tests
+  (`npm install -g tryscript@latest`)
 
-## Two Release Modes
+All test dependencies are required.
+Tests fail loudly when a dependency is missing — there is no skip logic.
 
-1. **Mode A: Rust-only stabilization release** Keep Python baseline unchanged.
-   Use this for cleanups, docs, and build/release hardening before upstream sync.
-2. **Mode B: Upstream sync release** Update to a new Python release/tag/commit and port
-   baseline->target changes.
+## Building
 
-## flowmark-rs Local Docs
-
-- Publishing steps: [`docs/publishing.md`](publishing.md)
-- Rust-only CLI features: [`docs/rust-only-features.md`](rust-only-features.md)
-- Incremental cache (developer reference): [`docs/cache.md`](cache.md)
-- flowmark-specific sync details (fixtures, mapping files, local scripts):
-  [`docs/port-sync-playbook.md`](port-sync-playbook.md)
-- Coverage mapping system: [`admin/README.md`](../admin/README.md)
-
-Cache docs are kept concise and include:
-
-- default cache path resolution order
-- fallback and warning behavior
-- manifest layout and CLI/config knobs
-
-## Project-Specific Baseline Field
-
-`flowmark-rs` tracks parity baseline in:
-
-```toml
-[package.metadata.parity]
-version = "..."
+```bash
+cargo build --all-features
 ```
 
-Mode A keeps this value unchanged.
-Mode B updates it after successful sync validation.
+The `--all-features` flag enables the `cli` feature gate, which includes the binary
+entry point and clap/anyhow dependencies.
+Without it, only the library crate is built.
+
+## Testing
+
+```bash
+cargo test --all-features
+```
+
+The full suite (470+ tests) includes:
+
+| Category | Description |
+| --- | --- |
+| Unit tests (`src/`) | Module-level tests for parsers, formatters, wrappers |
+| Integration tests (`tests/`) | Full-pipeline formatting, CLI, file discovery |
+| Doc tests | Library API usage example |
+| Tryscript golden tests | End-to-end CLI behavior specs |
+| D11 parity tests | Cross-binary comparison (invokes both Python and Rust) |
+
+Zero `#[ignore]` annotations.
+Zero skipped tests.
+
+## Linting
+
+```bash
+cargo fmt --check
+cargo clippy --all-targets --all-features -- -D warnings
+```
+
+The project uses pedantic clippy lints at deny level.
+`unsafe_code` and `unwrap_used` are denied in `Cargo.toml`.
+
+## Project Structure
+
+```
+Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] → [fill_markdown] → Output
+```
+
+| Module | Python Source | Purpose |
+| --- | --- | --- |
+| `formatter/filling.rs` | `flowmark/filling.py` | Core Markdown rendering pipeline |
+| `formatter/markdown.rs` | `flowmark/formats/flowmark_markdown.py` | comrak configuration and workarounds |
+| `parser/frontmatter.rs` | `flowmark/frontmatter.py` | YAML frontmatter preservation |
+| `wrapping/text_filling.rs` | `flowmark/text_filling.py` | Plaintext wrapping |
+| `wrapping/text_wrapping.rs` | `flowmark/text_wrapping.py` | Markdown-aware word splitting |
+| `wrapping/sentence.rs` | `flowmark/sentence.py` | Sentence boundary detection |
+| `wrapping/line_wrappers.rs` | `flowmark/line_wrappers.py` | Line wrapper composition |
+| `transform/cleanups.rs` | `flowmark/cleanups.py` | Safe document cleanups |
+| `typography/quotes.rs` | `flowmark/smartquotes.py` | Smart quote conversion |
+| `typography/ellipses.rs` | `flowmark/ellipses.py` | Ellipsis conversion |
+| `file_resolver/` | `flowmark/file_resolver.py` | File discovery and filtering |
+| `config.rs` | `flowmark/config.py` | TOML config loading, three-way merge |
+| `lib.rs` | `flowmark/__init__.py` | Public API |
+| `main.rs` | `flowmark/__main__.py` | CLI entry point |
+
+Key design decisions:
+
+- **Feature-gated CLI** — library usable without clap/anyhow via `--no-default-features`
+- **Zero `unsafe` code** — `unsafe_code = "deny"` (1 exception: SIGPIPE handler in
+  `main.rs`)
+- **No `unwrap()` in library** — `unwrap_used = "deny"`; all errors use `?` or
+  `expect()` with messages
+- **Pedantic clippy at deny level** — catches issues locally, not just in CI
+- **Atomic file writes** — tempfile + persist pattern prevents corruption
+- **13 comrak workarounds** — each tagged `COMRAK-WORKAROUNDn` in
+  `src/formatter/filling.rs`
+
+## CI Pipeline
+
+The CI runs 12 checks on every push and PR:
+
+| Job | What It Checks |
+| --- | --- |
+| `fmt` | `cargo fmt --check` |
+| `clippy` | Pedantic clippy with `-D warnings` |
+| `test` (Ubuntu + macOS) | Full test suite with Python parity + tryscript golden tests |
+| `test-lib-only` | Library builds and tests without CLI feature |
+| `msrv` | Compiles on minimum supported Rust version (1.85) |
+| `deny` | License allowlist and supply chain audit |
+| `docs` | `cargo doc` with `-D warnings` |
+| `coverage` | `cargo-llvm-cov` with Codecov upload |
+| `semver-checks` | API breakage detection (PRs only) |
+| `markdown-fmt` | Markdown formatting consistency |
+| `check-mapping` | Test mapping completeness (292/292 Python tests mapped) |
+| `readme-sync` | README generation stays in sync with template |
+
+## Configuration
+
+Flowmark supports TOML-based configuration.
+It searches for config files in this order (first match wins, walking up directories):
+
+1. `.flowmark.toml`
+2. `flowmark.toml`
+3. `pyproject.toml` (only if it has a `[tool.flowmark]` section)
+
+A `.flowmarkignore` file (gitignore syntax) can exclude paths from formatting.
+
+## Rust-Only Features
+
+The Rust port adds performance features not present in Python:
+
+- Incremental cache (`--no-cache`, `--cache-dir`, `--show-cache`, `--clear-cache`)
+- Parallel file processing (`--threads`)
+- Stage-level performance stats (`--perf-stats`)
+
+See [`docs/rust-only-features.md`](rust-only-features.md) and
+[`docs/cache.md`](cache.md) for details.
+
+## Releasing
+
+See [`docs/publishing.md`](publishing.md) for the full release runbook (crates.io, PyPI,
+GitHub Releases, Homebrew tap).
+
+## Port Sync
+
+For syncing with new Python flowmark upstream releases, see
+[`docs/port-sync-playbook.md`](port-sync-playbook.md).
+
+For the full port overview and parity verification history, see
+[`docs/port-status.md`](port-status.md).

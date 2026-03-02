@@ -5,13 +5,12 @@ and fix issues as they are discovered.
 
 ## Purpose
 
-This document is the operational guide for anyone — human or AI agent — working on
-flowmark-rs. Read this before starting any work that involves improving the port, fixing
-parity issues, adding features from a new Python upstream release, or investigating
-discrepancies.
+This document is the operational guide for syncing with Python upstream — porting new
+features, fixing parity issues, and maintaining the test mapping.
+Read this before starting any sync or parity work.
 
-It establishes the methodology, links to the foundational principles, and describes the
-concrete procedures for keeping the Rust port aligned with Python flowmark.
+For general build/test/lint instructions, see [`docs/development.md`](development.md).
+For the full port overview and release status, see [`docs/port-status.md`](port-status.md).
 
 This document is **flowmark-rs-specific** (fixtures, mapping files, local scripts).
 For reusable process, use the canonical playbook docs first:
@@ -72,13 +71,13 @@ document defines 8 non-negotiable rules.
 Each was learned from an actual mistake during agent-driven porting:
 
 1. **Parity definition must be crisp** — never redefine scope without approval
-1. **Agents must actively pursue parity** — every gap is a blocker, not a note
-1. **Tests must always run in CI** — no orphaned test files
-1. **Tests must never hide failures** — no massaging, truncating, or weakening
-1. **Fix the process, not the test** — when tests fail, fix the code or CI
-1. **Environment dependencies must be explicit** — CI installs everything
-1. **Ignored tests must be tracked** — every `#[ignore]` needs a reason and issue
-1. **Disparities must be tested before fixed** — write failing test first, then fix
+2. **Agents must actively pursue parity** — every gap is a blocker, not a note
+3. **Tests must always run in CI** — no orphaned test files
+4. **Tests must never hide failures** — no massaging, truncating, or weakening
+5. **Fix the process, not the test** — when tests fail, fix the code or CI
+6. **Environment dependencies must be explicit** — CI installs everything
+7. **Ignored tests must be tracked** — every `#[ignore]` needs a reason and issue
+8. **Disparities must be tested before fixed** — write failing test first, then fix
 
 ## Repository Layout
 
@@ -96,6 +95,16 @@ The current Python version is tracked in `Cargo.toml`:
 [package.metadata.parity]
 version = "0.6.4"
 ```
+
+## Version Convention
+
+Each release documents which Python version it targets, and dev builds include
+commits-ahead and git hash metadata:
+
+> flowmark 0.2.5-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.5)
+
+The Rust version follows its own semver independently.
+The port note indicates which Python version's behavior is fully covered.
 
 ## Initial Setup
 
@@ -182,8 +191,8 @@ CI-enforced system that tracks provenance between every Python test and its Rust
 counterpart. This ensures that when Python upstream adds or changes tests, we know
 exactly which Rust tests correspond and whether any are missing.
 
-See the [full spec](project/specs/active/plan-2026-02-17-test-mapping-meta-test.md) for
-design rationale, and the [admin README](../admin/README.md) for quick reference.
+See the [full spec](project/specs/done/plan-2026-02-17-test-mapping-meta-test.md) for
+design rationale.
 
 ### How it works
 
@@ -233,11 +242,11 @@ It:
 
 1. Runs 13 smoke tests (`pytest tests/test_smoke.py`) that verify YAML round-trip
    stability, deterministic ordering, discovery counts, and mapping completeness
-1. Runs `flowmark-dev check-mapping` which validates:
+2. Runs `flowmark-dev check-mapping` which validates:
    - Every Python test has a mapping entry
    - Every mapped Rust function exists in `rust-tests.yaml`
    - No entries have `status: missing`
-1. **Fails the build** if any check fails
+3. **Fails the build** if any check fails
 
 ### Updating after a Python upstream release
 

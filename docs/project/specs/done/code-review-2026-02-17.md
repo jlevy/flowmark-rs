@@ -161,6 +161,7 @@ if is_backtick_fence || is_tilde_fence {
 fn process_lines_outside_code<F>(text: &str, process_line: F) -> String
 where F: Fn(&str) -> String
 ```
+
 This would reduce ~60 lines of duplication and make the fence-tracking logic a single
 source of truth.
 
@@ -264,6 +265,7 @@ let lang_text = if info.is_empty() {
 let _ = writeln!(output, "{prefix}{fence}{info}");
 // (empty info just produces no extra text)
 ```
+
 Since `info` is already a `String` reference and `writeln!` takes `Display` impls, no
 clone is needed.
 

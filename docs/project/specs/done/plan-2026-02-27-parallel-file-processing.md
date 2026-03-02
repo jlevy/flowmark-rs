@@ -14,8 +14,9 @@ author: Joshua Levy (github.com/jlevy) with LLM assistance
 ## Overview
 
 Add parallel file processing to flowmark-rs using rayon, and implement per-file
-optimizations inspired by dprint's architecture. The goal is to bring batch formatting
-performance from ~2.7s (924 files) down to ~0.3-0.5s, competitive with dprint (0.23s).
+optimizations inspired by dprint’s architecture.
+The goal is to bring batch formatting performance from ~2.7s (924 files) down to
+~0.3-0.5s, competitive with dprint (0.23s).
 
 ## Goals
 
@@ -46,9 +47,9 @@ for file in &resolved_files {
 }
 ```
 
-Each call to `reformat_file` reads one file, formats it, and writes it back. There is no
-shared mutable state between files — `FormatOptions` is `Clone`, all regex patterns are
-`LazyLock<Regex>` (thread-safe), and `atomic_write` uses per-file
+Each call to `reformat_file` reads one file, formats it, and writes it back.
+There is no shared mutable state between files — `FormatOptions` is `Clone`, all regex
+patterns are `LazyLock<Regex>` (thread-safe), and `atomic_write` uses per-file
 `tempfile::NamedTempFile`.
 
 ### Cross-Formatter Benchmark (924 files, 12 MB)
@@ -63,8 +64,9 @@ shared mutable state between files — `FormatOptions` is `Clone`, all regex pat
 | mdformat (Python) | 37.49 s | 160.4x |
 
 dprint achieves 0.23s wall-clock with 3.3s user CPU time, indicating ~14x parallelism on
-the benchmark machine. flowmark-rs at 2.74s with single-threaded execution suggests that
-with equivalent parallelism, it could achieve ~0.2-0.4s.
+the benchmark machine.
+flowmark-rs at 2.74s with single-threaded execution suggests that with equivalent
+parallelism, it could achieve ~0.2-0.4s.
 
 ### dprint Architecture (Source Analysis)
 
@@ -93,8 +95,9 @@ Two complementary improvements:
    `available_parallelism()` by default, with zero boilerplate.
 
 2. **Skip-unchanged optimization** — After formatting, compare the output to the
-   original content. If identical, skip the write entirely. This avoids unnecessary disk
-   I/O and preserves file timestamps, which matters for build tools that use mtime.
+   original content. If identical, skip the write entirely.
+   This avoids unnecessary disk I/O and preserves file timestamps, which matters for
+   build tools that use mtime.
 
 ### Components
 
@@ -216,8 +219,8 @@ loop. Remaining in-flight files finish their current work but no new files start
 
 ### Verbose Output
 
-With parallel execution, verbose output (`--verbose`) may interleave. This is acceptable
-since:
+With parallel execution, verbose output (`--verbose`) may interleave.
+This is acceptable since:
 
 - The output is on stderr (informational, not machine-parsed)
 - `eprintln!` acquires the stderr lock per call (no torn lines)
@@ -242,8 +245,8 @@ since:
 
 ## Testing Strategy
 
-- **Correctness:** All 430+ existing tests pass unchanged. Formatting output is
-  identical to sequential mode.
+- **Correctness:** All 430+ existing tests pass unchanged.
+  Formatting output is identical to sequential mode.
 - **Thread safety:** Run with `--threads 1` (sequential), `--threads 2`, and default
   (all cores) on the benchmark corpus to verify identical output.
 - **Benchmark:** Re-run `benchmarks/run_comparison.sh` with 3 runs each, verify CV% <
@@ -271,7 +274,7 @@ audit shows no blockers.
 
 - `benchmarks/REPORT.md` — Cross-formatter benchmark results and dprint architecture
   analysis
-- `docs/project/specs/active/plan-2026-02-26-perf-comparison-profiling.md` — Previous
+- `docs/project/specs/done/plan-2026-02-26-perf-comparison-profiling.md` — Previous
   profiling spec
 - [rayon crate](https://crates.io/crates/rayon) (v1.11, data parallelism library)
 - [dprint source](https://github.com/dprint/dprint) — `crates/dprint/src/format.rs`

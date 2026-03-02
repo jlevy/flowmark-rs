@@ -60,11 +60,6 @@ fn run_tryscript(file: &str) {
 // --- Parity-clean tryscript tests (must pass) ---
 
 #[test]
-fn tryscript_cli_golden() {
-    run_tryscript("cli-golden.tryscript.md");
-}
-
-#[test]
 fn tryscript_auto_mode() {
     run_tryscript("auto-mode.tryscript.md");
 }

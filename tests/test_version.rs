@@ -17,7 +17,7 @@ fn flowmark_bin() -> PathBuf {
 }
 
 #[test]
-fn test_version_includes_dev_revision_and_git_hash() {
+fn test_version_has_expected_shape() {
     let output =
         Command::new(flowmark_bin()).arg("--version").output().expect("run flowmark --version");
 
@@ -25,11 +25,6 @@ fn test_version_includes_dev_revision_and_git_hash() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let version_line = stdout.trim();
 
-    assert!(
-        version_line.contains("-dev."),
-        "version should include commits-ahead marker: {version_line}"
-    );
-    assert!(version_line.contains("+g"), "version should include git hash marker: {version_line}");
     assert!(
         version_line.contains("Rust port of flowmark-py "),
         "version should include Python source version: {version_line}"
@@ -39,10 +34,12 @@ fn test_version_includes_dev_revision_and_git_hash() {
         "version should include release base tag: {version_line}"
     );
 
-    let re = Regex::new(
-        r"^flowmark \d+\.\d+\.\d+-dev\.(\d+|unknown)\+g([0-9a-f]+|unknown) \(Rust port of flowmark-py \d+\.\d+\.\d+; base .+\)$",
-    )
-    .expect("valid regex");
+    assert!(
+        !version_line.contains("-dev.unknown+gunknown"),
+        "version should never expose dev.unknown+gunknown in release artifacts: {version_line}"
+    );
+
+    let re = Regex::new(r"^flowmark \d+\.\d+\.\d+(?:-dev\.\d+\+g[0-9a-f]+)? \(Rust port of flowmark-py \d+\.\d+\.\d+; base .+\)$").expect("valid regex");
     assert!(
         re.is_match(version_line),
         "version line does not match expected format: {version_line}"

@@ -429,8 +429,8 @@ Every finding is mapped to a specific playbook action, target document, and work
 | `project/specs/done/porting-plan.md` | 137 | Complete | Updated and moved to specs/done |
 | `porting-checklist.md` | 643 | Duplicate | Copy of playbook’s `python-to-rust-playbook.md` |
 | `code-review-2026-02-17.md` | 471 | Current | Fresh review with P0-P3 issues |
-| `specs/active/plan-2026-02-17-exact-parity.md` | 751 | Complete | Comprehensive parity spec |
-| `specs/active/plan-2026-02-17-test-mapping-meta-test.md` | 482 | Implemented | Test mapping infrastructure |
+| `specs/done/plan-2026-02-17-exact-parity.md` | 751 | Complete | Comprehensive parity spec |
+| `specs/done/plan-2026-02-17-test-mapping-meta-test.md` | 482 | Implemented | Test mapping infrastructure |
 
 #### rust-porting-playbook (`repos/rust-porting-playbook/`)
 
@@ -982,9 +982,8 @@ None remaining. All decisions resolved.
 
 ## References
 
-- Exact parity spec: `docs/project/specs/active/plan-2026-02-17-exact-parity.md`
-- Test mapping spec:
-  `docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md`
+- Exact parity spec: `docs/project/specs/done/plan-2026-02-17-exact-parity.md`
+- Test mapping spec: `docs/project/specs/done/plan-2026-02-17-test-mapping-meta-test.md`
 - Code review: `docs/project/specs/active/code-review-2026-02-17.md`
 - Porting plan: `docs/project/specs/done/porting-plan.md`
 - Porting log: `docs/porting-log-review.md`
@@ -993,13 +992,13 @@ None remaining. All decisions resolved.
 - Playbook README: `repos/rust-porting-playbook/README.md`
 - Meta-playbook: `repos/rust-porting-playbook/reference/meta-improving-this-playbook.md`
 - Playbook review fixes spec:
-  `repos/rust-porting-playbook/docs/project/specs/active/plan-2026-02-08-playbook-review-fixes.md`
+  `repos/rust-porting-playbook/docs/project/specs/done/plan-2026-02-08-playbook-review-fixes.md`
 - Comprehensive review spec:
-  `repos/rust-porting-playbook/docs/project/specs/active/plan-2026-02-12-comprehensive-playbook-review.md`
+  `repos/rust-porting-playbook/docs/project/specs/done/plan-2026-02-12-comprehensive-playbook-review.md`
 - Phase 7C observations:
   `repos/rust-porting-playbook/case-studies/flowmark/flowmark-port-observations-2.md`
 - Comprehensive tryscript spec:
-  `docs/project/specs/active/plan-2026-02-17-comprehensive-tryscript-golden-tests.md`
+  `docs/project/specs/done/plan-2026-02-17-comprehensive-tryscript-golden-tests.md`
 - **Python source**: Cloned on demand by `flowmark-dev discover-python` from
   `https://github.com/jlevy/flowmark` at tag `v0.6.4`
 - **Golden testing methodology**: `tbd guidelines golden-testing-guidelines`

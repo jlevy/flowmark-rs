@@ -8,6 +8,11 @@ on:
         required: false
         type: boolean
         default: false
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
       publish:
@@ -15,6 +20,11 @@ on:
         required: true
         type: boolean
         default: false
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   id-token: write
@@ -23,6 +33,7 @@ permissions:
 env:
   # Python flowmark version for parity tests — sync with [package.metadata.parity] in Cargo.toml
   FLOWMARK_PY_VERSION: "0.6.4"
+  FLOWMARK_RELEASE_TAG: ${{ inputs.release_tag || '' }}
 
 jobs:
   publish:
