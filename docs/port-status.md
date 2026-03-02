@@ -204,7 +204,7 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 | [Build & Publishing](project/specs/done/plan-2026-02-17-build-publishing.md) | CI, crates.io, PyPI, release workflows |
 | [Tryscript Golden Tests](project/specs/done/plan-2026-02-17-comprehensive-tryscript-golden-tests.md) | Comprehensive CLI golden test suite |
 | [Test Mapping](project/specs/done/plan-2026-02-17-test-mapping-meta-test.md) | Cross-language test provenance tracking |
-| [Code Review](project/specs/active/code-review-2026-02-17.md) | Senior code review (P0-P1 fixed) |
+| [Code Review](project/specs/done/code-review-2026-02-17.md) | Senior code review (P0-P1 fixed) |
 
 ## Porting Methodology
 
@@ -588,4 +588,3 @@ fmr-m7o8      P4  ✓ closed  [bug] markdown_escape_word uses byte indexing, fra
 
 235 issues: 225 closed, 10 open
 ```
-

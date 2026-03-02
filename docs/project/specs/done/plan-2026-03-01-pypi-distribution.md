@@ -14,7 +14,7 @@
 [#36 — Distribute flowmark-rs on PyPI via maturin](https://github.com/jlevy/flowmark-rs/issues/36)
 
 **Research:**
-[Research: Distributing Rust CLI Binaries as Python Packages via PyPI](../research/research-2026-03-01-rust-cli-pypi-distribution.md)
+[Research: Distributing Rust CLI Binaries as Python Packages via PyPI](../../../../repos/rust-porting-playbook/docs/project/research/research-rust-cli-pypi-distribution.md)
 
 ## Current Snapshot (as of 2026-03-01)
 
@@ -75,7 +75,7 @@ The original flowmark is a Python package on PyPI. Adding PyPI distribution to t
 rewrite keeps the install experience familiar and leverages the Python ecosystem’s
 ubiquity.
 
-The [research brief](../research/research-2026-03-01-rust-cli-pypi-distribution.md)
+The [research brief](../../../../repos/rust-porting-playbook/docs/project/research/research-rust-cli-pypi-distribution.md)
 found that every major Rust CLI distributed via PyPI uses maturin with
 `bindings = "bin"` — this is the universal standard approach.
 
@@ -701,7 +701,7 @@ Map all learnings from this research and implementation into the
   projects distribute via PyPI (ruff, uv, maturin, tpchgen-cli, celq) with links to
   their configurations.
   This is a condensed version of the findings from the
-  [research brief](../research/research-2026-03-01-rust-cli-pypi-distribution.md).
+  [research brief](../../../../repos/rust-porting-playbook/docs/project/research/research-rust-cli-pypi-distribution.md).
 
 ## Testing Strategy
 
@@ -773,7 +773,7 @@ This should be documented in:
 
 ## References
 
-- [Research: Distributing Rust CLI Binaries via PyPI](../research/research-2026-03-01-rust-cli-pypi-distribution.md)
+- [Research: Distributing Rust CLI Binaries via PyPI](../../../../repos/rust-porting-playbook/docs/project/research/research-rust-cli-pypi-distribution.md)
   — comprehensive background and analysis
 - [Issue #36](https://github.com/jlevy/flowmark-rs/issues/36) — original proposal with
   detailed configuration

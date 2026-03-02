@@ -3,7 +3,7 @@
 scripts/generate_rust_readme.py.
 -->
 
-# flowmark
+# flowmark-rs
 
 [![Follow @ojoshe on X](https://img.shields.io/badge/follow_%40ojoshe-black?logo=x&logoColor=white)](https://x.com/ojoshe)
 [![CI](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/jlevy/flowmark-rs/actions/workflows/ci.yml)
@@ -18,16 +18,15 @@ scripts/generate_rust_readme.py.
 > [**Python Flowmark**](https://github.com/jlevy/flowmark), the original reference
 > implementation.
 > 
-> This Rust port has carefully tested identical CLI usage and formatting behavior, while
-> giving 50x+ faster performance processing large numbers of files.
-> So it is now the recommended version for CLI and IDE usage.
+> It offers **50x+ faster performance** processing large numbers of files with identical
+> CLI usage and formatting behavior.
+> It is now the recommended version for CLI and IDE usage.
 > 
 > Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
 > 
-> For more on the **automated porting methodology**, see the
+> For more on the **automated porting methodology** used to build flowmark-rs, see the
+> [**port status report**](docs/port-status.md) and the
 > [**rust-porting-playbook**](https://github.com/jlevy/rust-porting-playbook).
-> For the full **port status and retrospective**, see
-> [`docs/port-status.md`](docs/port-status.md).
 
 ## Why the Rust Version?
 
