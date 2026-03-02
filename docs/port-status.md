@@ -589,12 +589,3 @@ fmr-m7o8      P4  ✓ closed  [bug] markdown_escape_word uses byte indexing, fra
 235 issues: 225 closed, 10 open
 ```
 
-## Version Convention
-
-Each release documents which Python version it targets, and dev builds include
-commits-ahead and git hash metadata:
-
-> flowmark 0.2.5-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.5)
-
-The Rust version follows its own semver independently.
-The port note indicates which Python version’s behavior is fully covered.
