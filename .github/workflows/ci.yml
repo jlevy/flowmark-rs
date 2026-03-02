@@ -159,12 +159,11 @@ jobs:
       - name: Exclude generated README from markdown drift check
         run: git checkout -- README.md
       - name: Check for formatting changes
-        run: |
-          if git diff --exit-code -- '*.md'; then
-            echo "All markdown files are properly formatted"
-          else
-            echo "::warning::Some markdown files need formatting. Run: uvx flowmark@${FLOWMARK_PY_VERSION} --auto --extend-exclude tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude python/ --extend-exclude README.md ."
-          fi
+        run: >-
+          git diff --exit-code -- '*.md' || echo "::warning::Some markdown files need
+          formatting. Run: uvx flowmark@${FLOWMARK_PY_VERSION} --auto --extend-exclude
+          tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude
+          python/ --extend-exclude README.md ."
 
   readme-sync:
     name: README generation sync
