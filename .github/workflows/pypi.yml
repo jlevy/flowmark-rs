@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "https://pypi.org/simple/"
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
     inputs:
       publish:
@@ -25,12 +30,18 @@ on:
         required: true
         type: string
         default: "https://pypi.org/simple/"
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
 
 env:
   CARGO_TERM_COLOR: always
+  FLOWMARK_RELEASE_TAG: ${{ inputs.release_tag || '' }}
 
 jobs:
   # ── Build: Linux x86_64 (glibc) ────────────────────────────────

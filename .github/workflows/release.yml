@@ -149,6 +149,7 @@ jobs:
       contents: read
     with:
       publish: ${{ needs.plan.outputs.publish_channels == 'true' }}
+      release_tag: ${{ needs.plan.outputs.release_tag }}
     secrets: inherit
 
   pypi:
@@ -160,6 +161,7 @@ jobs:
     with:
       publish: ${{ needs.plan.outputs.publish_channels == 'true' }}
       check_url: https://pypi.org/simple/
+      release_tag: ${{ needs.plan.outputs.release_tag }}
     secrets: inherit
 
   announce:
