@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.6] (parity: flowmark-py 0.6.4)
+
+Release infrastructure and documentation hardening release.
+No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
+
+### Improvements
+
+- Stabilized embedded version metadata so release builds produce clean version strings
+  (no spurious `-dev.unknown+gunknown` suffix)
+- Codified canonical publishing runbook for hybrid Rust/Python multi-channel releases
+- Refreshed top-level docs, README, and installation guidance (leading with `uv`/`uvx`)
+
+### CI and release process
+
+- Fixed clippy format-arg lint in version metadata build script
+- Added `release_tag` passthrough to `publish.yml` and `pypi.yml` reusable workflows
+  for stable version embedding in CI builds
+- Moved completed specs from `active` to `done` and reorganized project docs
+
+### Testing
+
+- Retired legacy `cli-golden.tryscript.md` test without coverage loss (replaced by
+  focused `file-discovery` and `stdin` tryscript tests)
+
+## [0.2.5] (parity: flowmark-py 0.6.4)
+
+First multi-channel release: crates.io, PyPI, GitHub Releases, and Homebrew.
+No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
+
 ### Features
 
 - Added PyPI distribution support for `flowmark-rs` via maturin (`pyproject.toml`) and
@@ -144,4 +173,6 @@ Early development release.
 [0.2.2]: https://github.com/jlevy/flowmark-rs/compare/v0.2.1...v0.2.2
 [0.2.3]: https://github.com/jlevy/flowmark-rs/compare/v0.2.2...v0.2.3
 [0.2.4]: https://github.com/jlevy/flowmark-rs/compare/v0.2.3...v0.2.4
-[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.4...HEAD
+[0.2.5]: https://github.com/jlevy/flowmark-rs/compare/v0.2.4...v0.2.5
+[0.2.6]: https://github.com/jlevy/flowmark-rs/compare/v0.2.5...v0.2.6
+[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.6...HEAD
