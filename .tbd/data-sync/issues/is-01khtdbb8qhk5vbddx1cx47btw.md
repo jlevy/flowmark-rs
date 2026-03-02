@@ -5,10 +5,11 @@ title: Python plaintext mode uses html_md_word_splitter instead of simple_word_s
 kind: bug
 status: open
 priority: 3
-version: 2
+version: 3
 labels:
   - upstream-bug
 dependencies: []
+parent_id: is-01khq6xzg875b9nb22t0aeqb00
 created_at: 2026-02-19T07:38:06.486Z
-updated_at: 2026-02-19T07:38:11.464Z
+updated_at: 2026-03-02T18:00:31.443Z
 ---

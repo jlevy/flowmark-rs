@@ -5,10 +5,11 @@ title: Distribute flowmark-rs on PyPI via maturin
 kind: epic
 status: open
 priority: 1
-version: 27
+version: 28
 spec_path: docs/project/specs/active/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies: []
+parent_id: is-01khq6kjwwq12m46jr9e3v2hfw
 child_order_hints:
   - is-01kjky00nw931d7mv070g97ery
   - is-01kjky019g5pj2zbtg0t2chpzd
@@ -32,7 +33,7 @@ child_order_hints:
   - is-01kjky0z1x73jj3gfj1374bpfw
   - is-01kjky0zgvdr0t91c2pn13jdfa
 created_at: 2026-03-01T05:29:51.166Z
-updated_at: 2026-03-01T22:49:28.635Z
+updated_at: 2026-03-02T18:00:30.915Z
 ---
 ## Notes
 

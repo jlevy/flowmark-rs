@@ -3,9 +3,9 @@ type: is
 id: is-01kjky0dmya56xfcs5y9ayc3sx
 title: "2.2: Test pypi.yml workflow via workflow_dispatch (dry run)"
 kind: task
-status: open
+status: closed
 priority: 1
-version: 4
+version: 5
 spec_path: docs/project/specs/active/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies:
@@ -13,7 +13,9 @@ dependencies:
     target: is-01kjky0e3tve5arqcd4nxjvzra
 parent_id: is-01kjkxzp9z0zwwmq8tqa3yk8ax
 created_at: 2026-03-01T05:30:15.069Z
-updated_at: 2026-03-01T19:39:42.902Z
+updated_at: 2026-03-02T18:00:29.921Z
+closed_at: 2026-03-02T18:00:29.920Z
+close_reason: Completed and verified
 ---
 ## Notes
 
