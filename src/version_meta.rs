@@ -50,7 +50,7 @@ pub fn compute_version_metadata(
 
     let base_tag = base_tag_from_git.unwrap_or(&expected_release_tag).to_string();
     let dev_suffix = match commits_ahead_raw.parse::<u64>() {
-        Ok(commits) if commits > 0 => format!("-dev.{commits}+g{}", git_hash),
+        Ok(commits) if commits > 0 => format!("-dev.{commits}+g{git_hash}"),
         _ => String::new(),
     };
 
