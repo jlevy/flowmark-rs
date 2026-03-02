@@ -2,8 +2,7 @@
 
 **Last updated:** 2026-03-02
 
-**Current release:** v0.2.5
-([crates.io](https://crates.io/crates/flowmark),
+**Current release:** v0.2.5 ([crates.io](https://crates.io/crates/flowmark),
 [PyPI](https://pypi.org/project/flowmark-rs/),
 [Homebrew](https://github.com/jlevy/homebrew-flowmark))
 
@@ -242,12 +241,11 @@ This port was built using the
 
 ### Task Management with tbd
 
-All work in this port was managed using
-[tbd](https://github.com/jlevy/get-tbd), a git-native issue tracking tool.
-tbd tracks work as "beads" — lightweight, dependency-aware tasks that live alongside the
-code in git.
-Every bug, feature, spec phase, and code review finding was tracked as a bead, giving
-full traceability from requirement to implementation.
+All work in this port was managed using [tbd](https://github.com/jlevy/get-tbd), a
+git-native issue tracking tool.
+tbd tracks work as “beads” — lightweight, dependency-aware tasks that live alongside the
+code in git. Every bug, feature, spec phase, and code review finding was tracked as a
+bead, giving full traceability from requirement to implementation.
 This systematic decomposition was essential for managing a port of this complexity.
 
 **235 issues** were tracked across the full project lifecycle: 225 closed, 10 remaining
@@ -261,10 +259,10 @@ This systematic decomposition was essential for managing a port of this complexi
    Python→Rust provenance and CI enforcement.
 3. **Exact parity delivery**: High-priority output mismatches fixed (P and D discrepancy
    tracks), ending in byte-for-byte parity claims with broad test backing.
-4. **Code review hardening**: External review findings converted into concrete engineering
-   tasks and lint policy tightening.
-5. **CI and release engineering**: Build and publish workflows matured from crate-only to
-   full multi-channel release orchestration.
+4. **Code review hardening**: External review findings converted into concrete
+   engineering tasks and lint policy tightening.
+5. **CI and release engineering**: Build and publish workflows matured from crate-only
+   to full multi-channel release orchestration.
 6. **CLI and docs polish**: Help/usage UX improved and documentation synchronization
    tightened.
 7. **Performance phase**: Baseline profiling quantified bottlenecks; parallel processing
@@ -276,24 +274,22 @@ This systematic decomposition was essential for managing a port of this complexi
 ### Workstreams
 
 **Port architecture and core formatter** — Established Rust module architecture
-(`formatter`, `wrapping`, `parser`, `transform`, `typography`, `file_resolver`, `skills`).
-Reimplemented behavior on top of `comrak` with custom rendering and parity-oriented
-post-processing.
+(`formatter`, `wrapping`, `parser`, `transform`, `typography`, `file_resolver`,
+`skills`). Reimplemented behavior on top of `comrak` with custom rendering and
+parity-oriented post-processing.
 Preserved CLI/library split with feature-gated CLI and strict lint posture.
 
 **Parity and correctness** — Implemented cross-language test mapping lifecycle and CI
-checks.
-Closed discrepancy tracks across plaintext, list spacing, blockquote/footnote, wrapping
-edge cases, and CLI error compatibility.
+checks. Closed discrepancy tracks across plaintext, list spacing, blockquote/footnote,
+wrapping edge cases, and CLI error compatibility.
 Eliminated test masking patterns so gaps fail visibly instead of hiding behind weak
-assertions.
-Expanded tryscript/golden strategy as executable parity contract.
+assertions. Expanded tryscript/golden strategy as executable parity contract.
 
 **Engineering quality and CI discipline** — Adopted strict lint policy (`warnings=deny`,
 pedantic clippy posture).
-Enforced formatter consistency and warning-free builds in CI.
-Added/strengthened checks: docs build, coverage, semver checks, dependency audit, workflow
-script tests, multi-platform test matrix.
+Enforced formatter consistency and warning-free builds in CI. Added/strengthened checks:
+docs build, coverage, semver checks, dependency audit, workflow script tests,
+multi-platform test matrix.
 
 **Packaging and release operations** — Crates.io trusted publishing path established.
 GitHub Release artifact packaging/checksum flow implemented.
@@ -301,8 +297,8 @@ Homebrew tap flow established and codified.
 PyPI/maturin wheel+sdist distribution path integrated.
 Release orchestration moved to reusable workflows plus script-driven planning logic.
 
-**Performance and scalability** — Baseline profiling measured major speedups vs Python and
-identified string/alloc-heavy hotspots.
+**Performance and scalability** — Baseline profiling measured major speedups vs Python
+and identified string/alloc-heavy hotspots.
 Parallel file processing added (rayon + threading controls + skip-unchanged behavior).
 Incremental cache architecture implemented with invalidation/fingerprint behavior and
 supporting tests.
@@ -346,10 +342,12 @@ The strongest patterns worth reusing in future Rust/Python ports:
 
 ### Full Issue Overview
 
+Complex spec-driven tasks are tracked with beads via
+[**tbd**](https://github.com/jlevy/tbd).
+
 The complete issue history below (from `tbd list --all --pretty`) shows every task, bug,
 feature, and epic tracked during the port, organized hierarchically with dependency
-structure.
-Summary: 158 tasks, 61 bugs, 9 features, 7 epics.
+structure. Summary: 158 tasks, 61 bugs, 9 features, 7 epics.
 
 ```
 fmr-unf9      P0  ✓ closed  [task] Set up Rust project structure (Cargo.toml, module hierarchy)

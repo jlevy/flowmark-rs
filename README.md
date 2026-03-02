@@ -26,20 +26,23 @@ scripts/generate_rust_readme.py.
 > 
 > For more on the **automated porting methodology**, see the
 > [**rust-porting-playbook**](https://github.com/jlevy/rust-porting-playbook).
+> For the full **port status and retrospective**, see
+> [`docs/port-status.md`](docs/port-status.md).
 
 ## Why the Rust Version?
 
-- **Single binary**: install via Cargo, Cargo binstall, or Homebrew.
-- **Fast CLI**: good for large repos and CI pipelines.
-- **Library crate**: embed in Rust tooling via
+- **Fast:** good for large repos and CI pipelines.
+  - If you use it for auto-save in your IDE, it feels instant.
+  - If you run it on 1000 documents over and over in your build system, it only takes
+    milliseconds.
+
+- **Single binary:** install via uv (prebuilt wheel), Cargo (`cargo binstall`), or
+  Homebrew (macOS).
+
+- **Library crate:** embed Flowmark’s formatting capabilities in Rust tooling via
   [docs.rs/flowmark](https://docs.rs/flowmark).
 
 ### Performance
-
-TLDR:
-- If you use it for auto-save in your IDE, it feels instant.
-- If you run it on 1000 documents over and over in your build system, it only takes
-  milliseconds.
 
 Flowmark is now arguably the most sophisticated Markdown autoformatter, given its
 advanced wrapping and typographic rules.
