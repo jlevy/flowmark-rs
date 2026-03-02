@@ -49,7 +49,7 @@ jobs:
       - name: Resolve release mode
         id: plan
         run: |
-          python3 ./scripts/resolve-release-plan.py \
+          python3 ./scripts/resolve_release_plan.py \
             --event-name "${GITHUB_EVENT_NAME}" \
             --ref-name "${GITHUB_REF_NAME}" \
             --tag "${{ inputs.tag || '' }}" \

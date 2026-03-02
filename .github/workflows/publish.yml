@@ -62,7 +62,7 @@ jobs:
       - name: Resolve crate metadata
         id: crate
         run: |
-          python3 ./scripts/resolve-crate-metadata.py \
+          python3 ./scripts/resolve_crate_metadata.py \
             --manifest-path Cargo.toml \
             --github-output "$GITHUB_OUTPUT"
 

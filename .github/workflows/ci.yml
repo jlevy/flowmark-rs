@@ -178,7 +178,7 @@ jobs:
           python-version: "3.14"
           enable-cache: true
       - name: Regenerate README
-        run: ./scripts/generate-rust-readme.py
+        run: ./scripts/generate_rust_readme.py
       - name: Verify README is in sync
         run: git diff --exit-code -- README.md
 

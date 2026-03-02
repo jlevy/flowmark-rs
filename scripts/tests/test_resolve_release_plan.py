@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for scripts/resolve-release-plan.py."""
+"""Tests for scripts/resolve_release_plan.py."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = REPO_ROOT / "scripts" / "resolve-release-plan.py"
+SCRIPT_PATH = REPO_ROOT / "scripts" / "resolve_release_plan.py"
 
 
 class ResolveReleasePlanTests(unittest.TestCase):

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tests for scripts/resolve-crate-metadata.py."""
+"""Tests for scripts/resolve_crate_metadata.py."""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ import unittest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT_PATH = REPO_ROOT / "scripts" / "resolve-crate-metadata.py"
+SCRIPT_PATH = REPO_ROOT / "scripts" / "resolve_crate_metadata.py"
 
 
 def _start_stub_server(status_code: int, expected_path: str):

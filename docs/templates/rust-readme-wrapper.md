@@ -1,6 +1,6 @@
 <!-- Generated from shared docs source
 (repos/flowmark/docs/shared/flowmark-readme-shared.md) via
-scripts/generate-rust-readme.py.
+scripts/generate_rust_readme.py.
 -->
 
 # flowmark
