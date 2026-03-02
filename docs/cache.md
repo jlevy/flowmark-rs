@@ -48,7 +48,8 @@ The manifest stores:
 - `--incremental[=true|false]`
   - explicit enable/disable form
 - `--show-cache`
-  - print resolved cache directory, file count, and total size
+  - print resolved cache directory, file count, total size, total manifest
+    count, current project manifest path, and current project entry count
 - `--clear-cache`
   - non-interactively delete the resolved cache directory (idempotent)
 

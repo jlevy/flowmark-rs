@@ -45,12 +45,7 @@ impl IncrementalCache {
     ) -> std::io::Result<Self> {
         let incremental_dir = cache_dir.join(INCREMENTAL_CACHE_SUBDIR);
         fs::create_dir_all(&incremental_dir)?;
-
-        let canonical_project_root =
-            project_root.canonicalize().unwrap_or_else(|_| project_root.to_path_buf());
-        let project_hash = hash_string(&canonical_project_root.to_string_lossy());
-        let manifest_name = format!("{project_hash:016x}.{HASH_FILE_EXTENSION}");
-        let manifest_path = incremental_dir.join(manifest_name);
+        let manifest_path = project_manifest_path(cache_dir, project_root);
 
         let read_hashes = match load_manifest(&manifest_path) {
             Some(manifest) if manifest.formatter_fingerprint == formatter_fingerprint => {
@@ -108,6 +103,23 @@ impl IncrementalCache {
             write_hashes.insert(hash);
         }
     }
+}
+
+/// Derive the project-scoped manifest path from cache root and project root.
+pub fn project_manifest_path(cache_dir: &Path, project_root: &Path) -> PathBuf {
+    let canonical_project_root =
+        project_root.canonicalize().unwrap_or_else(|_| project_root.to_path_buf());
+    let project_hash = hash_string(&canonical_project_root.to_string_lossy());
+    let manifest_name = format!("{project_hash:016x}.{HASH_FILE_EXTENSION}");
+    cache_dir.join(INCREMENTAL_CACHE_SUBDIR).join(manifest_name)
+}
+
+/// Return the number of stored content hashes in a manifest, if readable.
+///
+/// Returns `None` when the manifest does not exist or cannot be parsed.
+pub fn manifest_hash_count(manifest_path: &Path) -> Option<usize> {
+    let manifest = load_manifest(manifest_path)?;
+    Some(manifest.hashes.len())
 }
 
 /// Compute a formatter fingerprint used for cache invalidation.

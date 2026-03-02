@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Features
+
+- Added PyPI distribution support for `flowmark-rs` via maturin (`pyproject.toml`) and
+  a dedicated GitHub Actions workflow (`pypi.yml`)
+- Added incremental cache lifecycle/inspection support in the CLI, including
+  `--cache-dir`, `--show-cache`, and `--clear-cache`
+
+### Fixes
+
+- `--clear-cache` no longer requires resolving the current working directory
+- Hardened PyPI smoke tests to install only locally built wheels (`--no-index`), and
+  restricted PyPI publish job execution to release-triggered runs
+
 ## [0.2.4] (parity: flowmark-py 0.6.4)
 
 Release process and documentation hardening release.

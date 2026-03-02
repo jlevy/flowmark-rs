@@ -144,7 +144,7 @@ in `Usage:`.
 9. `/Users/levy/wrk/github/flowmark-rs/build.rs`
    - Generate embedded docs payload at build time (`OUT_DIR/flowmark_docs.md`)
 
-10. `/Users/levy/wrk/github/flowmark-rs/scripts/generate-rust-readme.py`
+10. `/Users/levy/wrk/github/flowmark-rs/scripts/generate_rust_readme.py`
 - Generate Rust README as a superset of Python README with a Rust-specific preface
 
 ## Three-Phase Delivery Plan

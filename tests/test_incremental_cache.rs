@@ -1,6 +1,7 @@
 //! CLI integration tests for incremental cache behavior.
 #![cfg(feature = "cli")]
 
+use flowmark::incremental_cache::project_manifest_path;
 use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Output};
@@ -192,6 +193,20 @@ fn test_show_cache_reports_usage_without_files() {
     );
     assert!(stdout.contains("Cache files: "), "show-cache output should include file count");
     assert!(stdout.contains("Cache size: "), "show-cache output should include total size");
+    assert!(
+        stdout.contains("Cache manifests: "),
+        "show-cache output should include manifest count"
+    );
+
+    let expected_manifest = project_manifest_path(&cache_root, project_dir.path());
+    assert!(
+        stdout.contains(&format!("Current project manifest: {}", expected_manifest.display())),
+        "show-cache output should include current project manifest path, got: {stdout}"
+    );
+    assert!(
+        stdout.contains("Current project entries: 1"),
+        "show-cache output should include current project entry count, got: {stdout}"
+    );
 }
 
 #[test]

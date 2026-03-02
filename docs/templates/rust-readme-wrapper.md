@@ -1,6 +1,6 @@
 <!-- Generated from shared docs source
 (repos/flowmark/docs/shared/flowmark-readme-shared.md) via
-scripts/generate-rust-readme.py.
+scripts/generate_rust_readme.py.
 -->
 
 # flowmark
@@ -15,11 +15,11 @@ scripts/generate-rust-readme.py.
 
 > [!TIP]
 > This is a 100% agent-written, auto-synced Rust port of
-> [**Python Flowmark](https://github.com/jlevy/flowmark), the original reference
+> [**Python Flowmark**](https://github.com/jlevy/flowmark), the original reference
 > implementation.
 > 
 > This Rust port has carefully tested identical CLI usage and formatting behavior, while
-> giving 60-70x faster performance processing large numbers of files.
+> giving 50x+ faster performance processing large numbers of files.
 > So it is now the recommended version for CLI and IDE usage.
 
 Last sync: **{{ last_sync_date }}** against **Python v{{ parity_version }}**
@@ -48,7 +48,7 @@ But because it was pure Python, it was never highly performant.
 
 Now flowmark-rs has identical functionality and in a rough benchmark is the #1 fastest
 Markdown formatter for repeated runs of large numbers of documents, the #2 fastest on
-new documents, and ~100X or more faster than other TypeScript or Python formatters.
+new documents, and 50X or more faster than other TypeScript or Python formatters.
 
 Fresh-run cross-formatter ranking (profiled benchmark suite, 928 files / 8.8 MB):
 
@@ -75,7 +75,8 @@ So on the same corpus flowmark-rs is roughly **60-70x faster than flowmark-py**.
 The only exception to the exact parity of the port of Python Flowmark are these
 Rust-only performance features:
 
-- incremental cache (`--no-cache`, `--cache-dir`, `--incremental`, `--show-cache`, `--clear-cache`)
+- incremental cache (`--no-cache`, `--cache-dir`, `--incremental`, `--show-cache`,
+  `--clear-cache`)
 - stage-level performance stats (`--perf-stats`)
 
 See [`docs/rust-only-features.md`](docs/rust-only-features.md) for a concise feature
@@ -98,6 +99,14 @@ cargo install flowmark
 cargo binstall flowmark
 ```
 
+### PyPI (via uv or pip)
+
+```bash
+uvx flowmark-rs          # run on demand (no install needed)
+uv tool install flowmark-rs  # persistent install
+pip install flowmark-rs      # classic pip
+```
+
 ### Homebrew (macOS)
 
 ```bash
@@ -106,10 +115,12 @@ brew install jlevy/flowmark/flowmark
 "$(brew --prefix)/bin/flowmark" --version
 ```
 
-If `flowmark --version` shows Python `v0.6.4`, your PATH is resolving Python first.
-Use `type -a flowmark` to inspect precedence.
-
-Primary command: `flowmark` (`flowmark-rs` is also available in this repo).
+**Note on the `flowmark` command name:** The PyPI package `flowmark-rs` provides both
+`flowmark` and `flowmark-rs` commands.
+If you only want the CLI tool, just install `flowmark-rs` — you don’t need the Python
+`flowmark` package. If you have both packages installed as uv tools,
+`uv tool install flowmark-rs --force` will let the Rust version take precedence for the
+`flowmark` command.
 
 * * *
 

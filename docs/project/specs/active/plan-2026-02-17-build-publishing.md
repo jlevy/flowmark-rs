@@ -1,11 +1,11 @@
 # Feature: Build, CI Hardening, and Publishing Improvements
 
-**Date:** 2026-02-17 (last updated 2026-02-25)
+**Date:** 2026-02-17 (last updated 2026-03-01)
 
 **Author:** Joshua Levy
 
-**Status:** Phases 1-6 Complete — Phase 5 step 5.4 complete (release cycle verified) —
-Phase 7 in progress (Homebrew tap published; automation/docs follow-ups pending)
+**Status:** Phases 1-7 Complete — release orchestration and multi-channel publishing
+framework implemented (GitHub Releases, crates.io, PyPI, Homebrew)
 
 **Epic bead:** fmr-8yos
 
@@ -89,6 +89,8 @@ The CI pipeline is already well above average:
 - No release workflow (no binary builds, no GitHub Releases).
 - No crates.io publishing automation.
 - ~~No Homebrew tap or formula.~~ **Done** (`jlevy/homebrew-flowmark`)
+- ~~No PyPI distribution.~~ **Done** — see
+  [PyPI distribution spec](plan-2026-03-01-pypi-distribution.md)
 - No root README.md.
 - ~~Missing `readme` and `documentation` fields in Cargo.toml.~~ **Done**
 - No CONTRIBUTING.md or CHANGELOG.md.
@@ -288,37 +290,38 @@ that `cargo-binstall` auto-detects.
 
 #### 5E: Release Flow and Workflow Coordination
 
-The release process involves two GitHub Actions workflows that chain together:
+The release process now uses one orchestrated workflow (`release.yml`) with reusable
+channel workflows:
 
 ```
-Developer pushes tag v0.X.Y
+Developer pushes tag v0.X.Y (or runs workflow_dispatch dry-run)
         |
         v
-release.yml (custom workflow) ---------------------------------.
-  |-- prerelease: detect semver vs prerelease tag               |
-  |-- package: matrix build for each target (6 jobs)            |
-  |     |-- install target deps (apt/rustup)                    |
-  |     |-- cargo build --release --target $TARGET              |
-  |     |-- create archive (.tar.gz / .zip)                     |
-  |     '-- upload archive to GitHub Release                    |
-  |-- checksum: download all artifacts, generate SHA256SUMS     |
-  '-- upload SHA256SUMS to GitHub Release                       |
-                                                                |
-        GitHub Release "published" event <----------------------'
-        |
-        v
-publish.yml (existing OIDC workflow)
-  |-- run tests
-  '-- cargo publish to crates.io
+release.yml (orchestrator)
+  |-- plan: resolve tag, dry-run vs publish, prerelease mode
+  |-- package: matrix build for each target (6 jobs)
+  |     |-- install target deps (apt/rustup)
+  |     |-- cargo build --release --target $TARGET
+  |     '-- create release archives (.tar.gz / .zip)
+  |-- checksum: generate SHA256SUMS from built artifacts
+  |-- call publish.yml (reusable crates channel workflow)
+  |     |-- run tests
+  |     |-- cargo publish --dry-run
+  |     '-- cargo publish (publish mode only, idempotent skip if already published)
+  |-- call pypi.yml (reusable PyPI channel workflow)
+  |     |-- build wheels/sdist + smoke tests
+  |     |-- wheel-content validation
+  |     '-- uv publish (publish mode only, rerun-safe with --check-url)
+  |-- announce: create/update GitHub Release after channels complete
+  '-- homebrew: update tap formula after successful channel publish
 ```
 
 **Key coordination points:**
-- `release.yml` triggers on tag push (`*`) and uses `softprops/action-gh-release@v2` to
-  publish archives directly (not as draft)
-- `publish.yml` (already exists) triggers on `release: published` event
-- `publish.yml` handles crates.io publishing via OIDC trusted publishing
-- Prerelease detection: tags matching `^[0-9]+\.[0-9]+\.[0-9]+$` are releases; all
-  others are prereleases (just’s approach)
+- `release.yml` supports both `push: tags` and `workflow_dispatch` dry-runs.
+- `publish.yml` and `pypi.yml` are reusable (`workflow_call`) and can also be run
+  manually via `workflow_dispatch`.
+- GitHub Release creation is gated to run after channel workflows complete.
+- Homebrew tap updates are gated after successful crates.io + PyPI publish.
 
 #### 5F: Implementation Steps
 
@@ -417,7 +420,7 @@ The custom workflow has minimal ongoing maintenance:
   runner (just’s approach).
   No pinning needed unless reproducibility is a concern.
 - **Adding installers**: Shell/PowerShell installers can be added as separate workflows
-  when needed. Homebrew tap is now published; Phase 7 follow-ups are automation-oriented.
+  when needed. Homebrew tap automation is integrated into `release.yml`.
 
 ### Phase 6: Documentation and Community — DONE
 
@@ -438,7 +441,7 @@ Standard open source project documentation.
 - [x] **Verify `cargo doc` output** (fmr-ghvq) — Docs build cleanly with `-D warnings`.
   No broken links or missing documentation.
 
-### Phase 7: Homebrew Tap — IN PROGRESS (PUBLISHED)
+### Phase 7: Homebrew Tap — COMPLETE (PUBLISHED + AUTOMATED)
 
 The Homebrew tap is now published, so macOS and Linux users can install via:
 
@@ -470,87 +473,17 @@ convenience.
 
 2. **Add as submodule** — **DONE** — tracked at `repos/homebrew-flowmark`.
 
-3. **Automate formula updates** — **Planned follow-up** — Add a `homebrew` job to
-   `release.yml` that runs after the `checksum` job and automatically bumps the formula
-   version and SHA256 values.
+3. **Automate formula updates** — **DONE** — `release.yml` now includes a gated
+   `homebrew` job that runs only after successful channel publish (crates.io + PyPI) and
+   only for stable tags. It updates `jlevy/homebrew-flowmark/Formula/flowmark.rb` with
+   the new version and per-target SHA256 values from generated `SHA256SUMS`.
 
    **Why not `mislav/bump-homebrew-formula-action`?** That action explicitly cannot
    handle formulas with Ruby `if...else` conditionals for platform-specific downloads.
-   Our formula uses `on_macos`/`on_linux` with `Hardware::CPU.arm?` — exactly the
-   pattern it doesn’t support.
+   The custom job handles this formula structure directly.
 
-   **Approach: Custom job in `release.yml`** that:
-   1. Downloads the `SHA256SUMS` file from the just-created release
-   2. Checks out `jlevy/homebrew-flowmark`
-   3. Runs a shell script to update `Formula/flowmark.rb`:
-      - Replaces the `version` string with the new tag
-      - Extracts each platform’s SHA256 from `SHA256SUMS` and replaces the corresponding
-        `sha256` line in the formula (matching by target triple in the URL on the
-        preceding line)
-   4. Commits and pushes to `jlevy/homebrew-flowmark` main
-
-   **Authentication:** Requires a GitHub token with push access to the
-   `homebrew-flowmark` repo.
-   Options:
-   - A fine-grained personal access token (PAT) stored as a repo secret (e.g.,
-     `HOMEBREW_TAP_TOKEN`) — simplest approach
-   - A GitHub App installation token — more secure but more setup
-
-   **Job definition (to add to `release.yml`):**
-
-   ```yaml
-   homebrew:
-     runs-on: ubuntu-latest
-     needs: [checksum, prerelease]
-     if: needs.prerelease.outputs.value == 'false'
-
-     steps:
-       - name: Download SHA256SUMS
-         env:
-           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-         run: >-
-           gh release download ${{ github.ref_name }}
-           --repo ${{ github.repository }}
-           --pattern SHA256SUMS
-
-       - name: Checkout homebrew tap
-         uses: actions/checkout@v6
-         with:
-           repository: jlevy/homebrew-flowmark
-           token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
-
-       - name: Update formula
-         run: |
-           VERSION="${{ github.ref_name }}"
-           VERSION="${VERSION#v}"  # strip leading v
-           FORMULA="Formula/flowmark.rb"
-
-           # Update version
-           sed -i "s/version \".*\"/version \"$VERSION\"/" "$FORMULA"
-
-           # Update SHA256 for each target
-           for target in aarch64-apple-darwin x86_64-apple-darwin \
-                         aarch64-unknown-linux-musl x86_64-unknown-linux-musl; do
-             sha=$(grep "$target" SHA256SUMS | awk '{print $1}')
-             # Replace sha256 on the line after the URL containing this target
-             sed -i "/$target/{ n; s/sha256 \"[a-f0-9]*\"/sha256 \"$sha\"/; }" "$FORMULA"
-           done
-
-           cat "$FORMULA"  # debug output
-
-       - name: Commit and push
-         run: |
-           git config user.name "github-actions[bot]"
-           git config user.email "github-actions[bot]@users.noreply.github.com"
-           git add Formula/flowmark.rb
-           git commit -m "Update flowmark to ${{ github.ref_name }}"
-           git push
-   ```
-
-   **Setup required:**
-   - Create a fine-grained PAT with `Contents: Read and write` permission scoped to
-     `jlevy/homebrew-flowmark`
-   - Add it as a repository secret `HOMEBREW_TAP_TOKEN` in `jlevy/flowmark-rs`
+   **Authentication:** Uses a fine-grained token stored as `HOMEBREW_TAP_TOKEN` with
+   push access to `jlevy/homebrew-flowmark`.
 
 4. **Update README.md** — **Pending** — Add `brew install` instructions to the
    Installation section.

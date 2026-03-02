@@ -295,7 +295,7 @@ uvx "flowmark@${PARITY_VERSION}" --version
 > Run this manually only when validating outside CI.
 
 ```bash
-scripts/generate-rust-readme.py
+scripts/generate_rust_readme.py
 git diff -- README.md
 ```
 
@@ -423,7 +423,7 @@ sed -n '1,220p' tests/tryscript/cli-golden.tryscript.md
 ### README generation drift
 
 ```bash
-scripts/generate-rust-readme.py
+scripts/generate_rust_readme.py
 git diff -- README.md repos/flowmark/README.md
 ```
 

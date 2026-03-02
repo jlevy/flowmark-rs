@@ -1,9 +1,20 @@
 name: Publish to crates.io
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      publish:
+        description: "Publish to crates.io when true; run validation-only when false"
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to crates.io (otherwise validation-only)"
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   id-token: write
@@ -15,7 +26,7 @@ env:
 
 jobs:
   publish:
-    name: Publish
+    name: Crates channel
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -45,11 +56,28 @@ jobs:
         env:
           RUSTFLAGS: "-D warnings"
 
+      - name: Validate cargo publish payload (dry-run)
+        run: cargo publish --dry-run --locked
+
+      - name: Resolve crate metadata
+        id: crate
+        run: |
+          python3 ./scripts/resolve_crate_metadata.py \
+            --manifest-path Cargo.toml \
+            --github-output "$GITHUB_OUTPUT"
+
       - name: Authenticate with crates.io
+        if: inputs.publish && steps.crate.outputs.already_published != 'true'
         uses: rust-lang/crates-io-auth-action@v1
         id: auth
 
       - name: Publish to crates.io
-        run: cargo publish
+        if: inputs.publish && steps.crate.outputs.already_published != 'true'
+        run: cargo publish --locked
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Skip publish (already exists)
+        if: inputs.publish && steps.crate.outputs.already_published == 'true'
+        run: |
+          echo "${{ steps.crate.outputs.crate_name }} v${{ steps.crate.outputs.crate_version }} is already published; skipping upload."
