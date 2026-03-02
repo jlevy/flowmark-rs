@@ -162,7 +162,7 @@ cargo test --test test_tryscript_golden
 **Verify**:
 
 - [ ] 12/12 tryscript tests pass (or current expected count)
-- [ ] `tryscript_cli_golden`, `tryscript_help`, and `tryscript_verbose_docs` pass
+- [ ] `tryscript_errors_version`, `tryscript_file_discovery`, `tryscript_help`, and `tryscript_verbose_docs` pass
 
 ### 2.3 Run file-discovery and skill/docs focused suites
 
@@ -226,7 +226,8 @@ cd ..
 ### 3.1 Manually inspect key tryscript session outputs
 
 ```bash
-npx tryscript@latest run tests/tryscript/cli-golden.tryscript.md
+npx tryscript@latest run tests/tryscript/errors-version.tryscript.md
+npx tryscript@latest run tests/tryscript/file-discovery.tryscript.md
 npx tryscript@latest run tests/tryscript/help.tryscript.md
 npx tryscript@latest run tests/tryscript/verbose-docs.tryscript.md
 ```
@@ -410,8 +411,10 @@ access is available.
 ### Tryscript runs but output seems suspiciously weak
 
 ```bash
-npx tryscript@latest run tests/tryscript/cli-golden.tryscript.md
-sed -n '1,220p' tests/tryscript/cli-golden.tryscript.md
+npx tryscript@latest run tests/tryscript/errors-version.tryscript.md
+npx tryscript@latest run tests/tryscript/file-discovery.tryscript.md
+sed -n '1,220p' tests/tryscript/errors-version.tryscript.md
+sed -n '1,260p' tests/tryscript/file-discovery.tryscript.md
 ```
 
 **Solution**: Inspect for over-broad match patterns and tighten assertions if needed.
