@@ -1004,7 +1004,7 @@ formatting, inconsistent behavior), these are recorded separately:
 
 ## References
 
-- Exact parity spec: `docs/project/specs/active/plan-2026-02-17-exact-parity.md` (Phase
+- Exact parity spec: `docs/project/specs/done/plan-2026-02-17-exact-parity.md` (Phase
   10.4)
 - Current tryscript tests: `tests/tryscript/cli-golden.tryscript.md` (31 tests)
 - Tryscript documentation: `npx tryscript@latest docs`

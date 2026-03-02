@@ -410,7 +410,7 @@ equivalent. There are zero permanently excluded tests.
 - **Code review PR:** [#2](https://github.com/jlevy/flowmark-rs/pull/2) (Phase 9b — all
   code review findings, branch `code-review-fixes`)
 - Test mapping infrastructure spec:
-  `docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md`
+  `docs/project/specs/done/plan-2026-02-17-test-mapping-meta-test.md`
 - YAML artifacts: `port-coverage-mapping/`
 - Original Python repo: https://github.com/jlevy/flowmark (pinned: `v0.6.4`)
 - Local Python checkout: `attic/flowmark/` (gitignored — clone with
@@ -421,7 +421,7 @@ equivalent. There are zero permanently excluded tests.
 - Meta-playbook (improving the playbook):
   `attic/rust-porting-playbook/reference/meta-improving-this-playbook.md`
 - **Phase 10 + Playbook Sync** (continuation):
-  `docs/project/specs/active/plan-2026-02-19-parity-review-and-playbook-sync.md`
+  `docs/project/specs/done/plan-2026-02-19-parity-review-and-playbook-sync.md`
 
 * * *
 
@@ -1440,8 +1440,8 @@ the rendered output.
 **Behavior difference:**
 - **Input:** `` `throw new CLIError(\`${msg}: ${error.message}\`)` `` in table cell
 - **Python output:** Both ``` escapes preserved
-- **Rust output:** Trailing `\`` stripped → `` `throw new
-  CLIError(\`${msg}: ${error.message}`)` ``
+- **Rust output:** Trailing `\`` stripped → `` `throw new CLIError(\`${msg}:
+  ${error.message}`)` ``
 
 **Demonstrated diff (1 instance):**
 

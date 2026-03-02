@@ -71,12 +71,11 @@ flowmark-rs already has a mature release pipeline:
 | Homebrew tap | Active | `jlevy/homebrew-flowmark` |
 | **PyPI** | **Not yet** | **This spec** |
 
-The original flowmark is a Python package on PyPI.
-Adding PyPI distribution to the Rust rewrite keeps the install experience familiar and
-leverages the Python ecosystem's ubiquity.
+The original flowmark is a Python package on PyPI. Adding PyPI distribution to the Rust
+rewrite keeps the install experience familiar and leverages the Python ecosystem’s
+ubiquity.
 
-The
-[research brief](../research/research-2026-03-01-rust-cli-pypi-distribution.md)
+The [research brief](../research/research-2026-03-01-rust-cli-pypi-distribution.md)
 found that every major Rust CLI distributed via PyPI uses maturin with
 `bindings = "bin"` — this is the universal standard approach.
 
@@ -86,11 +85,11 @@ found that every major Rust CLI distributed via PyPI uses maturin with
 2. **Workflow:** Keep `pypi.yml` as a reusable channel workflow, but orchestrate
    publishing from a single `release.yml` DAG (dry-run support, clearer gating, better
    rerun recovery)
-3. **Versioning:** Dynamic from `Cargo.toml` (`dynamic = ["version"]`) —
-   simpler than manual sync for a single-crate project
+3. **Versioning:** Dynamic from `Cargo.toml` (`dynamic = ["version"]`) — simpler than
+   manual sync for a single-crate project
 4. **Targets:** Standard coverage (5-7 targets), covering ~99% of users
-5. **Python wrapper:** Deferred to polish phase — the binary is directly on PATH
-   without one
+5. **Python wrapper:** Deferred to polish phase — the binary is directly on PATH without
+   one
 6. **Publishing:** `uv publish --trusted-publishing always` via OIDC
 
 ## Design
@@ -102,8 +101,8 @@ Add a `pyproject.toml` at the repo root with maturin configuration and a reusabl
 publishes to PyPI when invoked by `release.yml` in publish mode.
 
 `release.yml` is the single orchestrator: it runs channel workflows (`publish.yml`,
-`pypi.yml`) after artifact builds and before release announcement. Homebrew tap updates
-are handled as a short manual post-release step.
+`pypi.yml`) after artifact builds and before release announcement.
+Homebrew tap updates are handled as a short manual post-release step.
 
 ### Architecture
 
@@ -140,8 +139,8 @@ release.yml (orchestrator)
 | `aarch64-apple-darwin` | `macosx_11_0_arm64` | `macos-14` | N/A |
 | `x86_64-pc-windows-msvc` | `win_amd64` | `windows-latest` | N/A |
 
-**Why manylinux_2_17:** The Rust compiler requires glibc >= 2.17.
-This covers CentOS 7+, Ubuntu 14.04+, Debian 8+ — virtually all Linux in use.
+**Why manylinux_2_17:** The Rust compiler requires glibc >= 2.17. This covers CentOS 7+,
+Ubuntu 14.04+, Debian 8+ — virtually all Linux in use.
 This is what ruff and uv use for most targets.
 
 **Why not musl for PyPI:** The existing `release.yml` builds musl targets for GitHub
@@ -150,7 +149,7 @@ For PyPI, glibc (manylinux) wheels are the standard and cover ~95% of users.
 Musl (musllinux) wheels for Alpine can be added later.
 
 **macOS runners:** `macos-13` is x86_64, `macos-14` is ARM64 (Apple Silicon).
-This matches ruff/uv's approach.
+This matches ruff/uv’s approach.
 
 ### File Layout
 
@@ -163,8 +162,7 @@ pyproject.toml               ← maturin build configuration
 
 **Interaction with existing `python/` directory:** The existing `python/pyproject.toml`
 is for `flowmark-dev-tools` (a development-only package, marked
-`Private :: Do Not Upload`).
-It uses hatchling as its build backend.
+`Private :: Do Not Upload`). It uses hatchling as its build backend.
 The new root-level `pyproject.toml` uses maturin as its build backend.
 These are completely separate — maturin reads the root `pyproject.toml` and the existing
 `python/pyproject.toml` is unaffected.
@@ -184,14 +182,14 @@ path = "src/main.rs"
 ```
 
 Maturin with `bindings = "bin"` packages all binary targets from the crate into the
-wheel's `scripts` directory.
+wheel’s `scripts` directory.
 After `pip install flowmark-rs`, both `flowmark` and `flowmark-rs` commands will be
 available on PATH.
 
 ### Versioning
 
-Use `dynamic = ["version"]` in `pyproject.toml`.
-Maturin reads the version from `Cargo.toml` automatically:
+Use `dynamic = ["version"]` in `pyproject.toml`. Maturin reads the version from
+`Cargo.toml` automatically:
 
 ```toml
 [project]
@@ -214,7 +212,7 @@ No manual sync needed.
 | `actions/download-artifact` | **v4** (stable) | `@v4` |
 
 Note: `actions/upload-artifact@v7` and `actions/download-artifact@v8` exist (Feb 26,
-2026) but are bleeding-edge with the new non-zipped artifact feature.
+2026\) but are bleeding-edge with the new non-zipped artifact feature.
 Use v4 for stability; upgrade later via Dependabot.
 
 ## Implementation Plan
@@ -272,8 +270,8 @@ Set up the maturin configuration and verify it works locally.
   **Interaction with existing files:**
   - `python/pyproject.toml` (hatchling, `flowmark-dev-tools`) is unaffected — maturin
     only reads the root `pyproject.toml`
-  - `Cargo.toml` is already correct — has two `[[bin]]` targets (lines 19-27), both
-    with `required-features = ["cli"]`, and `[features] default = ["cli"]` (line 30)
+  - `Cargo.toml` is already correct — has two `[[bin]]` targets (lines 19-27), both with
+    `required-features = ["cli"]`, and `[features] default = ["cli"]` (line 30)
 
 - [x] **1.2: Update `/.gitignore`** — Append after line 36:
 
@@ -310,7 +308,7 @@ Set up the maturin configuration and verify it works locally.
   ```
 
   **Important:** Check that both `flowmark` and `flowmark-rs` binaries appear in the
-  wheel's `.data/scripts/` directory.
+  wheel’s `.data/scripts/` directory.
   If only one appears, maturin may need the `--bin` flag or we may need to investigate
   how it handles multiple `[[bin]]` targets with `required-features`.
 
@@ -541,9 +539,9 @@ Manual steps that require PyPI account access (owner action).
 
   This creates the PyPI project automatically on first successful publish.
 
-- [x] **3.2: Keep workflow/environment config simple** — No explicit GitHub
-  environment is required. Keep `pypi.yml` without an `environment:` key and configure
-  PyPI trusted publisher with environment left blank.
+- [x] **3.2: Keep workflow/environment config simple** — No explicit GitHub environment
+  is required. Keep `pypi.yml` without an `environment:` key and configure PyPI trusted
+  publisher with environment left blank.
 
 - [ ] **3.3: Test with TestPyPI first** (optional but recommended)
 
@@ -592,38 +590,38 @@ Manual steps that require PyPI account access (owner action).
 Update docs to include the new install method.
 
 - [x] **4.1: Update `/README.md`** — Add PyPI install methods to the Installation
-  section.
-  Also update the README template at `docs/templates/rust-readme-wrapper.md` so future
-  regenerations include it.
+  section. Also update the README template at `docs/templates/rust-readme-wrapper.md` so
+  future regenerations include it.
 
   Add to the Installation section (after the Homebrew entry):
 
-  ```markdown
+  ````markdown
   ### PyPI (via uv or pip)
 
   ```bash
   uvx flowmark-rs          # run on demand (no install needed)
   uv tool install flowmark-rs  # persistent install
   pip install flowmark-rs      # classic pip
+  ````
   ```
   ```
 
-- [x] **4.2: Update `/docs/publishing.md`** — Add a new section "Step 7: Verify PyPI
-  Publication" after the existing Step 6 (Homebrew).
+- [x] **4.2: Update `/docs/publishing.md`** — Add a new section “Step 7: Verify PyPI
+  Publication” after the existing Step 6 (Homebrew).
   Include:
   - How `release.yml` orchestrates `publish.yml` and `pypi.yml` in one gated pipeline
   - Verification commands (`uvx flowmark-rs --version`)
   - Link to the PyPI project page
   - Trusted publishing configuration reference
 
-  Also update the "Release Workflows" section to mention the third workflow:
+  Also update the “Release Workflows” section to mention the third workflow:
   - `release.yml` → binary archives for GitHub Releases
   - `publish.yml` → crates.io
   - `pypi.yml` → PyPI (NEW)
 
 - [x] **4.3: Update the build-publishing spec** — In
-  `docs/project/specs/active/plan-2026-02-17-build-publishing.md`, add a cross-reference
-  in the "Publishing Gaps" section noting that PyPI distribution is now covered by this
+  `docs/project/specs/done/plan-2026-02-17-build-publishing.md`, add a cross-reference
+  in the “Publishing Gaps” section noting that PyPI distribution is now covered by this
   separate spec.
 
 - [ ] **4.4: (Optional) Add musl targets** — Add two more build jobs to `pypi.yml`:
@@ -643,13 +641,13 @@ Update docs to include the new install method.
   Add a section near the top (after the description, before Installation):
 
   > **High-Performance Rust Version**
-  >
+  > 
   > A Rust rewrite of flowmark is available as
   > [flowmark-rs](https://github.com/jlevy/flowmark-rs).
   > It produces identical output but runs significantly faster.
-  > If you have [uv](https://docs.astral.sh/uv/) installed, you can switch with no
-  > other dependencies:
-  >
+  > If you have [uv](https://docs.astral.sh/uv/) installed, you can switch with no other
+  > dependencies:
+  > 
   > ```bash
   > uvx flowmark-rs@latest
   > ```
@@ -657,18 +655,18 @@ Update docs to include the new install method.
   Create a PR on `jlevy/flowmark` for this change.
 
 - [ ] **4.6: (Optional) Add Python wrapper** — Add a thin Python wrapper package
-  (following ruff's pattern) to enable `python -m flowmark_rs`.
+  (following ruff’s pattern) to enable `python -m flowmark_rs`.
 
   **New files:**
   - `py/flowmark_rs/__init__.py` — exports `find_flowmark_rs_bin()` function that
-    locates the binary in the virtualenv's scripts directory
+    locates the binary in the virtualenv’s scripts directory
   - `py/flowmark_rs/__main__.py` — enables `python -m flowmark_rs` by exec-ing the
     binary (Unix: `os.execvp()`, Windows: `subprocess.run()`)
   - `py/flowmark_rs/_find_bin.py` — binary locator that searches virtualenv bin dir,
     system paths, and `sysconfig.get_path("scripts")`
 
-  **Config change in `/pyproject.toml`:**
-  Add `python-source = "py"` to `[tool.maturin]` and add `[project.scripts]`:
+  **Config change in `/pyproject.toml`:** Add `python-source = "py"` to `[tool.maturin]`
+  and add `[project.scripts]`:
   ```toml
   [tool.maturin]
   python-source = "py"
@@ -681,7 +679,7 @@ Map all learnings from this research and implementation into the
 `repos/rust-porting-playbook`).
 
 - [x] **5.1: Add PyPI distribution guide** — Create or update a research/guide document
-  in the playbook's `docs/project/research/` directory covering:
+  in the playbook’s `docs/project/research/` directory covering:
   - The maturin `bindings = "bin"` approach for Rust CLI → PyPI distribution
   - `pyproject.toml` configuration template (generalized from flowmark-rs)
   - GitHub Actions workflow template with maturin-action
@@ -692,7 +690,8 @@ Map all learnings from this research and implementation into the
 - [x] **5.2: Add process recommendations** — Document the recommended process for any
   Rust CLI project to add PyPI distribution:
   - When to use this approach (CLI tools that have Python-ecosystem users)
-  - Which targets to start with (the 5-target minimum vs. 17-target comprehensive)
+  - Which targets to start with (the 5-target minimum vs.
+    17-target comprehensive)
   - How to handle the package naming (avoiding conflicts with existing Python packages)
   - Testing checklist (`uvx`, `pip install`, smoke tests in CI)
   - Integration with existing release workflows (reusable channel workflows orchestrated
@@ -752,7 +751,7 @@ No Python runtime, no Rust toolchain, no Homebrew — just `uv`.
 This should be documented in:
 
 1. **flowmark-rs README** — in the Installation section
-2. **flowmark (Python) README** — as a "High-Performance Alternative" or "Upgrade" note,
+2. **flowmark (Python) README** — as a “High-Performance Alternative” or “Upgrade” note,
    explaining that users can switch to the Rust version for significantly faster
    formatting by changing `uvx flowmark` to `uvx flowmark-rs`
 3. **flowmark (Python) repo** — a PR on a branch updating the README with migration
@@ -765,9 +764,8 @@ This should be documented in:
    with/replacing the Python package)?
    **Recommendation:** Use `flowmark-rs` to keep them distinct.
 
-2. **Both binaries in wheel:** Verified locally on 2026-03-01.
-   Maturin packages both `flowmark` and `flowmark-rs`, and both commands execute after
-   local wheel install.
+2. **Both binaries in wheel:** Verified locally on 2026-03-01. Maturin packages both
+   `flowmark` and `flowmark-rs`, and both commands execute after local wheel install.
 
 3. **Existing `python/pyproject.toml` interaction:** Verify that having a root-level
    `pyproject.toml` (maturin) and a `python/pyproject.toml` (hatchling) causes no
@@ -775,8 +773,8 @@ This should be documented in:
 
 ## References
 
-- [Research: Distributing Rust CLI Binaries via PyPI](../research/research-2026-03-01-rust-cli-pypi-distribution.md) —
-  comprehensive background and analysis
+- [Research: Distributing Rust CLI Binaries via PyPI](../research/research-2026-03-01-rust-cli-pypi-distribution.md)
+  — comprehensive background and analysis
 - [Issue #36](https://github.com/jlevy/flowmark-rs/issues/36) — original proposal with
   detailed configuration
 - [Build-Publishing Spec](plan-2026-02-17-build-publishing.md) — existing release
@@ -785,7 +783,7 @@ This should be documented in:
 - [Maturin `bin` Bindings](https://www.maturin.rs/bindings) — binary distribution docs
 - [PyO3/maturin-action](https://github.com/PyO3/maturin-action) — GitHub Actions for
   cross-platform builds
-- [Ruff's pyproject.toml](https://github.com/astral-sh/ruff/blob/main/pyproject.toml) —
+- [Ruff’s pyproject.toml](https://github.com/astral-sh/ruff/blob/main/pyproject.toml) —
   primary real-world reference
 - [PyPI Trusted Publishers](https://docs.pypi.org/trusted-publishers/) — OIDC setup
 - [simple-modern-uv](https://github.com/jlevy/simple-modern-uv) — workflow patterns

@@ -3,7 +3,6 @@ title: Performance Comparison and Profiling
 description: End-to-end performance comparison of Python vs Rust flowmark, plus Rust profiling
 author: Joshua Levy (github.com/jlevy) with LLM assistance
 ---
-
 # Feature: Performance Comparison and Profiling
 
 **Date:** 2026-02-26 (last updated 2026-02-26)
@@ -15,15 +14,15 @@ author: Joshua Levy (github.com/jlevy) with LLM assistance
 ## Overview
 
 Quantify end-to-end performance of flowmark-rs vs Python flowmark using a realistic
-workload of ~1,000 Markdown files, then profile the Rust binary to identify
-optimization opportunities.
+workload of ~1,000 Markdown files, then profile the Rust binary to identify optimization
+opportunities.
 
 ## Goals
 
 - Create a reproducible benchmark corpus (~1,000 Markdown files in a deep directory
   tree) from repo sources
-- Measure end-to-end formatting time for both Python and Rust (file discovery +
-  parsing + formatting + writing)
+- Measure end-to-end formatting time for both Python and Rust (file discovery + parsing
+  \+ formatting + writing)
 - Use `hyperfine` for statistically rigorous wall-clock comparison
 - Profile the Rust binary with `valgrind --tool=callgrind` to identify hot spots
 - Document findings and actionable optimization opportunities
@@ -37,11 +36,11 @@ optimization opportunities.
 
 ## Background
 
-flowmark-rs v0.2.4 is a full behavioral parity port of Python flowmark v0.6.4.
-The port prioritized correctness over performance.
-Now that parity is achieved and verified (430 tests, 292 Python tests mapped),
-it's time to quantify the performance difference and identify optimization
-opportunities in the Rust implementation.
+flowmark-rs v0.2.4 is a full behavioral parity port of Python flowmark v0.6.4. The port
+prioritized correctness over performance.
+Now that parity is achieved and verified (430 tests, 292 Python tests mapped), it’s time
+to quantify the performance difference and identify optimization opportunities in the
+Rust implementation.
 
 The repo contains 90 Markdown files of varying complexity:
 
@@ -50,16 +49,16 @@ The repo contains 90 Markdown files of varying complexity:
 - `tests/tryscript/fixtures/content/*.md` (~20 files, varying sizes)
 - `docs/*.md` and `README.md` — project documentation
 
-These are duplicated into 12 sets of 90 files (1,080 total) in a deep directory tree
-to create a realistic batch-formatting workload.
+These are duplicated into 12 sets of 90 files (1,080 total) in a deep directory tree to
+create a realistic batch-formatting workload.
 
 ## Design
 
 ### Approach
 
 1. **Corpus generation script** (`benchmarks/generate_corpus.sh`): Copies all 90 repo
-   Markdown files into a deep directory tree with 1,080 total files, organized in
-   nested subdirectories to exercise file discovery.
+   Markdown files into a deep directory tree with 1,080 total files, organized in nested
+   subdirectories to exercise file discovery.
 
 2. **Benchmark script** (`benchmarks/run_benchmarks.sh`): Uses `hyperfine` to compare
    `flowmark --auto <corpus_dir>` (Python) vs
@@ -67,8 +66,8 @@ to create a realistic batch-formatting workload.
    iterations, and statistical output.
 
 3. **Profiling** (`benchmarks/profile_rust.sh`): Runs the Rust binary under
-   `valgrind --tool=callgrind` with debug symbols to get instruction-level profiling
-   of all functions.
+   `valgrind --tool=callgrind` with debug symbols to get instruction-level profiling of
+   all functions.
 
 ### Components
 
@@ -76,8 +75,7 @@ to create a realistic batch-formatting workload.
   `benchmarks/corpus/`)
 - `benchmarks/run_benchmarks.sh` — hyperfine comparison (4 benchmarks)
 - `benchmarks/profile_rust.sh` — callgrind profiling
-- `docs/project/specs/active/plan-2026-02-26-perf-comparison-profiling.md` — this
-  spec
+- `docs/project/specs/done/plan-2026-02-26-perf-comparison-profiling.md` — this spec
 
 ### Corpus Structure
 
@@ -95,7 +93,7 @@ benchmarks/corpus/           (1,080 files, 11 MB total)
     └── ...
 ```
 
-Each "set" contains all 90 unique source Markdown files.
+Each “set” contains all 90 unique source Markdown files.
 12 sets across 3 batches = 1,080 files total in a 4-5 level deep tree.
 
 ### API Changes
@@ -107,10 +105,10 @@ None — this is purely tooling and measurement.
 ### Phase 1: Corpus and Benchmarking
 
 - [x] Create `benchmarks/generate_corpus.sh` that collects all repo `.md` files
-  (excluding `.git`, `target`, `.tbd`, `benchmarks/corpus`) and replicates them
-  into a deep nested directory tree totaling ~1,000 files
-- [x] Create `benchmarks/run_benchmarks.sh` that uses `hyperfine` to compare Python
-  vs Rust end-to-end formatting of the corpus
+  (excluding `.git`, `target`, `.tbd`, `benchmarks/corpus`) and replicates them into a
+  deep nested directory tree totaling ~1,000 files
+- [x] Create `benchmarks/run_benchmarks.sh` that uses `hyperfine` to compare Python vs
+  Rust end-to-end formatting of the corpus
 - [x] Run the benchmark and record results in this spec
 - [x] Verify both tools produce equivalent output on the corpus
 
@@ -186,8 +184,8 @@ Rust flowmark is **9-14x faster** than Python flowmark across all workloads:
 
 ## Profiling Results
 
-Profiled using `valgrind --tool=callgrind` on `testdoc.orig.md` (155.7M
-instructions total) with the Rust release binary built with debug symbols.
+Profiled using `valgrind --tool=callgrind` on `testdoc.orig.md` (155.7M instructions
+total) with the Rust release binary built with debug symbols.
 
 ### Inclusive Call Hierarchy
 
@@ -219,51 +217,49 @@ fill_markdown (entry point)                    99.4%  (154.7M instructions)
 
 ### Key Finding: String Searching Dominates
 
-The **#1 bottleneck is `str::pattern` string searching** at ~30% of total
-instructions.
+The **#1 bottleneck is `str::pattern` string searching** at ~30% of total instructions.
 This comes from:
 
-1. **`str::replace()` calls in loops** — The `restore_atomic_constructs()` function
-   in `text_wrapping.rs:56-71` calls `.replace()` on every token for every
-   placeholder.
+1. **`str::replace()` calls in loops** — The `restore_atomic_constructs()` function in
+   `text_wrapping.rs:56-71` calls `.replace()` on every token for every placeholder.
    With N tokens and M placeholders, this is O(N*M) string scans.
 
-2. **Escape placeholder replacement** — `fill_markdown` replaces 32 escape
-   placeholder patterns (`ESCAPE_CHARS`) across the entire document twice (once for
-   protection, once for restoration), each using `.replace()` which triggers
-   `StrSearcher::new` + `TwoWaySearcher::next`.
+2. **Escape placeholder replacement** — `fill_markdown` replaces 32 escape placeholder
+   patterns (`ESCAPE_CHARS`) across the entire document twice (once for protection, once
+   for restoration), each using `.replace()` which triggers `StrSearcher::new` +
+   `TwoWaySearcher::next`.
 
-3. **`remove_period_escapes_preserving_code()`** — Called on every non-code-fence
-   line, this does character-by-character scanning which shows up as a
-   secondary hot spot.
+3. **`remove_period_escapes_preserving_code()`** — Called on every non-code-fence line,
+   this does character-by-character scanning which shows up as a secondary hot spot.
 
 ### Optimization Opportunities
 
 Ranked by estimated impact:
 
-1. **Replace O(N\*M) `restore_atomic_constructs` with O(N) single-pass scan**
-   (est. 10-15% speedup)
+1. **Replace O(N\*M) `restore_atomic_constructs` with O(N) single-pass scan** (est.
+   10-15% speedup)
    - Current: loops over all tokens and calls `.replace()` for each placeholder
    - Better: walk each token once, scanning for `\x00AC` prefix to find and restore
      placeholders in a single pass without `.replace()`
 
-2. **Replace 32x `.replace()` for escape placeholders with single-pass PUA scan**
-   (est. 5-10% speedup)
+2. **Replace 32x `.replace()` for escape placeholders with single-pass PUA scan** (est.
+   5-10% speedup)
    - Current: 32 sequential `.replace()` calls, each scanning the full document
    - Better: single pass scanning for any PUA character in range `\u{E000}..=\u{E07E}`
      and replacing them inline
 
-3. **Reduce allocation in wrapping pipeline** (est. 3-5% speedup)
+3. **Reduce allocation in wrapping pipeline** (est.
+   3-5% speedup)
    - 18.5% of time is in malloc/free
    - Reuse buffers across `wrap_paragraph_lines` calls instead of creating new
      `Vec<String>` each time
    - Use `Cow<str>` instead of `String` where no modification occurs
 
-4. **Cache or precompile regex patterns** (est. 1-2% speedup)
+4. **Cache or precompile regex patterns** (est.
+   1-2% speedup)
    - Already using `LazyLock` for most patterns, which is good
-   - The `regex_automata::hybrid::dfa::Lazy::cache_next_state` (0.25%) suggests
-     the DFA cache is warming up repeatedly; passing a shared `Cache` object could
-     help
+   - The `regex_automata::hybrid::dfa::Lazy::cache_next_state` (0.25%) suggests the DFA
+     cache is warming up repeatedly; passing a shared `Cache` object could help
 
 5. **Optimize `comrak::parser::autolink::process_email_autolinks`** (0.71%)
    - This is inside comrak and not directly controllable

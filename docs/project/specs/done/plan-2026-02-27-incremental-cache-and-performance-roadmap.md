@@ -14,9 +14,9 @@ author: Joshua Levy (github.com/jlevy) with Codex assistance
 ## Overview
 
 Implement a persistent incremental cache for `flowmark-rs` and add stage-level
-performance instrumentation to identify and remove remaining bottlenecks. The
-goal is to match or beat dprint on fresh runs and decisively beat non-cached
-reruns when files are unchanged.
+performance instrumentation to identify and remove remaining bottlenecks.
+The goal is to match or beat dprint on fresh runs and decisively beat non-cached reruns
+when files are unchanged.
 
 ## Goals
 
@@ -52,22 +52,22 @@ Interpretation:
 
 ### Why Incremental Cache Matters
 
-Incremental cache does not depend on duplicate files. It helps when the same
-files are seen again and content is unchanged. That is why dprint can move from
-sub-second fresh runs to near-instant reruns.
+Incremental cache does not depend on duplicate files.
+It helps when the same files are seen again and content is unchanged.
+That is why dprint can move from sub-second fresh runs to near-instant reruns.
 
 ### Industry Pattern (Where Caches Live)
 
 Common formatter/linter behavior:
 
-- Prettier: optional cache (`--cache`), typically under project-local cache path
-  (for example `node_modules/.cache/prettier` unless overridden).
-- ESLint: optional cache (`--cache`), default cache file in project (`.eslintcache`
-  or configured cache location).
+- Prettier: optional cache (`--cache`), typically under project-local cache path (for
+  example `node_modules/.cache/prettier` unless overridden).
+- ESLint: optional cache (`--cache`), default cache file in project (`.eslintcache` or
+  configured cache location).
 - Black: on by default, stored under user cache directory (for example
   `~/.cache/black/...` on Unix-like systems).
-- dprint: cache directory under user cache root, with per-project incremental
-  data keyed from base path and plugin/config fingerprint.
+- dprint: cache directory under user cache root, with per-project incremental data keyed
+  from base path and plugin/config fingerprint.
 
 Takeaway: persisted hash metadata is now standard behavior for fast reruns.
 
@@ -82,8 +82,8 @@ From `attic/dprint/crates/dprint/src/incremental/*` and
 - Atomic file writes for cache durability
 - Blocking work off async control plane (in flowmark, rayon already provides this)
 
-Native/process plugin support in dprint is not the main advantage here; the
-incremental skip path is.
+Native/process plugin support in dprint is not the main advantage here; the incremental
+skip path is.
 
 ## First-Principles Bottleneck Model
 
@@ -98,8 +98,8 @@ Likely dominant costs:
   `src/formatter/filling.rs`
 - unavoidable per-file read/decode on reruns when cache miss logic is absent
 
-Because discovery is already fast and concurrency is implemented, the next
-high-leverage win is to skip parse/render entirely on unchanged files.
+Because discovery is already fast and concurrency is implemented, the next high-leverage
+win is to skip parse/render entirely on unchanged files.
 
 ## Design
 
@@ -114,6 +114,7 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 ### File and Function-Level Implementation Map
 
 1. `src/incremental_cache.rs` (new)
+
 - `IncrementalCache::open(cache_dir, project_root, fingerprint) -> Result<Self>`
 - `IncrementalCache::is_known_formatted(path: &Path, input_bytes: &[u8]) -> bool`
 - `IncrementalCache::record_formatted(path: &Path, formatted_bytes: &[u8])`
@@ -122,37 +123,41 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 - `load_manifest` / `save_manifest_atomic`
 
 2. `src/main.rs`
-- `Args`: add cache controls with explicit UX:
-  `--incremental`, `--no-cache`, `--cache-dir`, `--show-cache`,
-  `--clear-cache`, `--perf-stats`
+
+- `Args`: add cache controls with explicit UX: `--incremental`, `--no-cache`,
+  `--cache-dir`, `--show-cache`, `--clear-cache`, `--perf-stats`
 - `run`: initialize cache once for command execution
-- `run`: replace `opts.reformat_file(...)` in file loop with cache-aware path:
-  read -> cache check -> format -> write -> cache record
+- `run`: replace `opts.reformat_file(...)` in file loop with cache-aware path: read ->
+  cache check -> format -> write -> cache record
 - `run`: aggregate and print perf/cache summary when `--perf-stats`
 - `run`: support cache lifecycle operations:
   - `--show-cache`: print resolved cache root, total cache file count, and
     human-readable total cache size
-  - `--clear-cache`: delete resolved cache root recursively and report result
-    without interactive confirmation
+  - `--clear-cache`: delete resolved cache root recursively and report result without
+    interactive confirmation
   - both commands respect `--cache-dir` override
 
 3. `src/lib.rs`
+
 - Add a non-I/O formatting helper to avoid duplicated read/write logic in CLI path:
   `FormatOptions::format_str(&self, text: &str) -> String` (or equivalent wrapper)
 - Keep public API compatibility; current `reformat_file` remains behaviorally stable
 
 4. `src/config.rs`
+
 - `FlowmarkConfig`: add optional incremental controls
 - `VALID_FIELDS` and `set_config_field`: parse both canonical and friendly keys:
   `incremental`, `cache`, `cache-dir`, `incremental-cache-dir`
 - `merge_cli_with_config`: merge incremental settings with explicit CLI precedence
 
 5. `src/settings.rs` (new)
-- Centralize cache path constants:
-  `FALLBACK_CACHE_DIR`, `APP_CACHE_DIR`, `INCREMENTAL_CACHE_SUBDIR`
+
+- Centralize cache path constants: `FALLBACK_CACHE_DIR`, `APP_CACHE_DIR`,
+  `INCREMENTAL_CACHE_SUBDIR`
 - `default_cache_root()` for consistent path resolution
 
 6. `src/formatter/filling.rs`
+
 - Introduce timing hooks around:
   - preprocess block
   - comrak parse
@@ -163,14 +168,16 @@ high-leverage win is to skip parse/render entirely on unchanged files.
 - Add internal timed variant used only when perf stats enabled
 
 7. Tests
+
 - `tests/test_config.rs`: new config merge coverage for incremental flags
-- `tests/test_cli_file_discovery.rs` or new `tests/test_incremental_cache.rs`:
-  unchanged file skip, changed file miss, disabled incremental behavior
-- `tests/tryscript/help.tryscript.md`: help text snapshots for new flags
-  (including `--no-cache`, `--cache-dir`)
+- `tests/test_cli_file_discovery.rs` or new `tests/test_incremental_cache.rs`: unchanged
+  file skip, changed file miss, disabled incremental behavior
+- `tests/tryscript/help.tryscript.md`: help text snapshots for new flags (including
+  `--no-cache`, `--cache-dir`)
 - corruption reset / invalid fingerprint unit tests for cache manifest
 
 8. Benchmark/Docs
+
 - `benchmarks/run_comparison.sh`: add explicit first-run and second-run modes
 - `benchmarks/REPORT.md`: add cached rerun section after implementation
 - `README.md`: concise first-run + second-run summary using same corpus
@@ -200,29 +207,28 @@ Child beads with file/function scope and blockers:
   - Blocked by: none
 - `fmr-ynyg` - CLI/config wiring: incremental flags and merge precedence
   - Files/functions: `src/main.rs` (`Args`, `run` flag handling, `--show-cache`,
-    `--clear-cache` command path), `src/config.rs`
-    (`FlowmarkConfig`, `set_config_field`, `merge_cli_with_config`),
-    `src/settings.rs` (`default_cache_root`, cache path constants)
+    `--clear-cache` command path), `src/config.rs` (`FlowmarkConfig`,
+    `set_config_field`, `merge_cli_with_config`), `src/settings.rs`
+    (`default_cache_root`, cache path constants)
   - Blocked by: `fmr-qb08`
 - `fmr-m4z9` - Integrate cache-aware file processing path in formatter loop
-  - Files/functions: `src/main.rs` (`run` per-file pipeline), `src/lib.rs`
-    (minimal non-I/O helper extraction if needed)
+  - Files/functions: `src/main.rs` (`run` per-file pipeline), `src/lib.rs` (minimal
+    non-I/O helper extraction if needed)
   - Blocked by: `fmr-qb08`, `fmr-ynyg`
 - `fmr-8tpy` - Stage-level perf instrumentation
-  - Files/functions: `src/formatter/filling.rs` (timed pipeline sections),
-    `src/main.rs` (`--perf-stats` aggregation/output)
+  - Files/functions: `src/formatter/filling.rs` (timed pipeline sections), `src/main.rs`
+    (`--perf-stats` aggregation/output)
   - Blocked by: `fmr-ynyg`
 - `fmr-2z00` - Validation: cache correctness, invalidation, and CLI coverage
   - Files/functions: `tests/test_config.rs`, new cache integration/unit tests,
     `tests/tryscript/help.tryscript.md`, cache lifecycle command coverage
   - Blocked by: `fmr-m4z9`, `fmr-8tpy`
 - `fmr-ysne` - Hotspot follow-up: optimize dominant `fill_markdown` stages
-  - Files/functions: targeted optimizations in `src/formatter/filling.rs`
-    based on measured stage costs
+  - Files/functions: targeted optimizations in `src/formatter/filling.rs` based on
+    measured stage costs
   - Blocked by: `fmr-8tpy`
 - `fmr-unp8` - Benchmark + docs: first-run and second-run performance reporting
-  - Files/functions: `benchmarks/run_comparison.sh`, `benchmarks/REPORT.md`,
-    `README.md`
+  - Files/functions: `benchmarks/run_comparison.sh`, `benchmarks/REPORT.md`, `README.md`
   - Blocked by: `fmr-2z00`, `fmr-ysne`
 
 ### Current Implementation Status (2026-02-27)
@@ -285,9 +291,9 @@ Child beads with file/function scope and blockers:
 ## References
 
 - Existing perf spec:
-  - `docs/project/specs/active/plan-2026-02-26-perf-comparison-profiling.md`
+  - `docs/project/specs/done/plan-2026-02-26-perf-comparison-profiling.md`
 - Existing concurrency spec:
-  - `docs/project/specs/active/plan-2026-02-27-parallel-file-processing.md`
+  - `docs/project/specs/done/plan-2026-02-27-parallel-file-processing.md`
 - Benchmark report:
   - `benchmarks/REPORT.md`
 - dprint source (incremental and scheduler):
