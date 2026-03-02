@@ -173,7 +173,8 @@ The Python flowmark source is tracked as a git submodule at `repos/flowmark`, cu
 pinned to `v0.6.4`. The porting playbook (also a submodule) is at
 `repos/rust-porting-playbook`.
 
-See [docs/port-sync-playbook.md](../../port-sync-playbook.md) for the full sync process.
+See [docs/port-sync-playbook.md](../../../port-sync-playbook.md) for the full sync
+process.
 
 ## Key Pitfalls (from playbook + actual porting experience)
 
