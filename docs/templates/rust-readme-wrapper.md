@@ -86,24 +86,20 @@ methodology.
 
 ## Installing Rust Flowmark
 
-### Cargo (source build)
+### uv / uvx (recommended)
+
+The easiest way to install or run flowmark:
 
 ```bash
-cargo install flowmark
+uvx flowmark-rs@latest --auto .           # run on demand (no install needed)
+uv tool install flowmark-rs@latest        # persistent install
 ```
 
-### Cargo binstall (prebuilt binary)
+### Cargo
 
 ```bash
-cargo binstall flowmark
-```
-
-### PyPI (via uv or pip)
-
-```bash
-uvx flowmark-rs          # run on demand (no install needed)
-uv tool install flowmark-rs  # persistent install
-pip install flowmark-rs      # classic pip
+cargo install flowmark       # source build
+cargo binstall flowmark      # prebuilt binary
 ```
 
 ### Homebrew (macOS)
@@ -111,7 +107,12 @@ pip install flowmark-rs      # classic pip
 ```bash
 brew tap jlevy/flowmark
 brew install jlevy/flowmark/flowmark
-"$(brew --prefix)/bin/flowmark" --version
+```
+
+### pip
+
+```bash
+pip install flowmark-rs
 ```
 
 **Note on the `flowmark` command name:** The PyPI package `flowmark-rs` provides both
