@@ -313,7 +313,7 @@ release.yml (orchestrator)
   |     |-- wheel-content validation
   |     '-- uv publish (publish mode only, rerun-safe with --check-url)
   |-- announce: create/update GitHub Release after channels complete
-  '-- homebrew: update tap formula after successful channel publish
+  '-- (manual) update `homebrew-flowmark` formula using `SHA256SUMS`
 ```
 
 **Key coordination points:**
@@ -321,7 +321,7 @@ release.yml (orchestrator)
 - `publish.yml` and `pypi.yml` are reusable (`workflow_call`) and can also be run
   manually via `workflow_dispatch`.
 - GitHub Release creation is gated to run after channel workflows complete.
-- Homebrew tap updates are gated after successful crates.io + PyPI publish.
+- Homebrew tap update is intentionally manual via a short `gh` runbook.
 
 #### 5F: Implementation Steps
 
@@ -420,7 +420,7 @@ The custom workflow has minimal ongoing maintenance:
   runner (just’s approach).
   No pinning needed unless reproducibility is a concern.
 - **Adding installers**: Shell/PowerShell installers can be added as separate workflows
-  when needed. Homebrew tap automation is integrated into `release.yml`.
+  when needed. Homebrew tap update stays manual for simplicity.
 
 ### Phase 6: Documentation and Community — DONE
 
@@ -441,7 +441,7 @@ Standard open source project documentation.
 - [x] **Verify `cargo doc` output** (fmr-ghvq) — Docs build cleanly with `-D warnings`.
   No broken links or missing documentation.
 
-### Phase 7: Homebrew Tap — COMPLETE (PUBLISHED + AUTOMATED)
+### Phase 7: Homebrew Tap — COMPLETE (PUBLISHED + MANUAL UPDATE FLOW)
 
 The Homebrew tap is now published, so macOS and Linux users can install via:
 
@@ -473,23 +473,16 @@ convenience.
 
 2. **Add as submodule** — **DONE** — tracked at `repos/homebrew-flowmark`.
 
-3. **Automate formula updates** — **DONE** — `release.yml` now includes a gated
-   `homebrew` job that runs only after successful channel publish (crates.io + PyPI) and
-   only for stable tags. It updates `jlevy/homebrew-flowmark/Formula/flowmark.rb` with
-   the new version and per-target SHA256 values from generated `SHA256SUMS`.
-
-   **Why not `mislav/bump-homebrew-formula-action`?** That action explicitly cannot
-   handle formulas with Ruby `if...else` conditionals for platform-specific downloads.
-   The custom job handles this formula structure directly.
-
-   **Authentication:** Uses a fine-grained token stored as `HOMEBREW_TAP_TOKEN` with
-   push access to `jlevy/homebrew-flowmark`.
+3. **Use manual formula updates** — **DONE** — Keep Homebrew as a short,
+   explicit post-release task documented in `docs/publishing.md`:
+   download `SHA256SUMS` from the new release via `gh`, update
+   `jlevy/homebrew-flowmark/Formula/flowmark.rb`, and push.
 
 4. **Update README.md** — **Pending** — Add `brew install` instructions to the
    Installation section.
 
-5. **Update `docs/publishing.md`** — **Pending** — Once automation is in place, simplify
-   Step 6 to just verify (no manual formula edits needed).
+5. **Update `docs/publishing.md`** — **DONE** — Includes manual `gh`-based
+   Homebrew update runbook.
 
 6. **Publish and validate tap installation** — **DONE** — Homebrew formula is available
    in `jlevy/homebrew-flowmark` and install flow works via:

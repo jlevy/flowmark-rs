@@ -108,8 +108,7 @@ The single `release.yml` workflow orchestrates the full pipeline:
 1. build release archives and `SHA256SUMS`
 2. run crates and PyPI channel workflows in publish mode
 3. create/update the GitHub Release
-4. update Homebrew tap only after successful crates+PyPI publish (if
-   `HOMEBREW_TAP_TOKEN` is configured)
+4. manual Homebrew tap update (Step 8) using release `SHA256SUMS`
 
 ## Step 6: Verify Release Run
 
@@ -154,12 +153,34 @@ brew install jlevy/flowmark/flowmark
 "$(brew --prefix)/bin/flowmark" --version
 ```
 
-## Step 8: Homebrew Fallback (If Tap Token Not Configured)
+## Step 8: Update Homebrew Tap (Manual, Via `gh`)
 
-If `HOMEBREW_TAP_TOKEN` is not configured in the repo secrets, the release workflow skips
-Homebrew update. In that case update
-[`jlevy/homebrew-flowmark`](https://github.com/jlevy/homebrew-flowmark) manually using
-`SHA256SUMS` from the GitHub Release.
+After a successful stable release, update
+[`jlevy/homebrew-flowmark`](https://github.com/jlevy/homebrew-flowmark) using
+`SHA256SUMS` from the new GitHub Release:
+
+```bash
+REPO=jlevy/flowmark-rs
+TAP_REPO=jlevy/homebrew-flowmark
+TAG=vX.Y.Z
+
+workdir="$(mktemp -d)"
+gh release download "$TAG" --repo "$REPO" --pattern SHA256SUMS --dir "$workdir"
+gh repo clone "$TAP_REPO" "$workdir/homebrew-flowmark"
+
+echo "Edit $workdir/homebrew-flowmark/Formula/flowmark.rb:"
+echo "  - set version to ${TAG#v}"
+echo "  - set the 4 sha256 values from $workdir/SHA256SUMS"
+```
+
+Then commit and push:
+
+```bash
+cd "$workdir/homebrew-flowmark"
+git add Formula/flowmark.rb
+git commit -m "chore: update flowmark formula to ${TAG}"
+git push
+```
 
 ## Release Workflows
 
@@ -208,8 +229,7 @@ gh run rerun <run-id> --job <databaseId>
 Behavior on rerun:
 - crates: skips publish if crate version already exists
 - PyPI: `uv publish --check-url` skips already-uploaded files
-- release: creates release if missing, otherwise updates assets with `--clobber`
-- Homebrew: no-op if formula already matches target version/checksums
+- release: updates the existing tag release and re-uploads artifacts
 
 If a bad version is already published to crates.io or PyPI, cut a new patch version.
 

@@ -102,7 +102,8 @@ Add a `pyproject.toml` at the repo root with maturin configuration and a reusabl
 publishes to PyPI when invoked by `release.yml` in publish mode.
 
 `release.yml` is the single orchestrator: it runs channel workflows (`publish.yml`,
-`pypi.yml`) after artifact builds and before release announcement/homebrew update.
+`pypi.yml`) after artifact builds and before release announcement. Homebrew tap updates
+are handled as a short manual post-release step.
 
 ### Architecture
 
