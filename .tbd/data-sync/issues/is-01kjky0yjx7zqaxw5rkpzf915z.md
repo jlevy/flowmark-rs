@@ -5,8 +5,8 @@ title: "5.1: Add PyPI distribution guide to rust-porting-playbook"
 kind: task
 status: closed
 priority: 2
-version: 5
-spec_path: docs/project/specs/active/plan-2026-03-01-pypi-distribution.md
+version: 6
+spec_path: docs/project/specs/done/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies:
   - type: blocks
@@ -15,7 +15,7 @@ dependencies:
     target: is-01kjky0zgvdr0t91c2pn13jdfa
 parent_id: is-01kjkxzp9z0zwwmq8tqa3yk8ax
 created_at: 2026-03-01T05:30:32.412Z
-updated_at: 2026-03-01T11:02:54.154Z
+updated_at: 2026-03-02T18:01:45.295Z
 closed_at: 2026-03-01T11:02:54.154Z
 close_reason: Created comprehensive PyPI distribution guide in playbook
 ---

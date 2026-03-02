@@ -5,15 +5,15 @@ title: "2.2: Test pypi.yml workflow via workflow_dispatch (dry run)"
 kind: task
 status: closed
 priority: 1
-version: 5
-spec_path: docs/project/specs/active/plan-2026-03-01-pypi-distribution.md
+version: 6
+spec_path: docs/project/specs/done/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies:
   - type: blocks
     target: is-01kjky0e3tve5arqcd4nxjvzra
 parent_id: is-01kjkxzp9z0zwwmq8tqa3yk8ax
 created_at: 2026-03-01T05:30:15.069Z
-updated_at: 2026-03-02T18:00:29.921Z
+updated_at: 2026-03-02T18:01:45.295Z
 closed_at: 2026-03-02T18:00:29.920Z
 close_reason: Completed and verified
 ---

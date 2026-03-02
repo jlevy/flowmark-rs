@@ -5,8 +5,8 @@ title: "3.5: Verify installation (uvx, uv tool install, pip install)"
 kind: task
 status: open
 priority: 1
-version: 8
-spec_path: docs/project/specs/active/plan-2026-03-01-pypi-distribution.md
+version: 10
+spec_path: docs/project/specs/done/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies:
   - type: blocks
@@ -21,7 +21,7 @@ dependencies:
     target: is-01kjky0yjx7zqaxw5rkpzf915z
 parent_id: is-01kjkxzp9z0zwwmq8tqa3yk8ax
 created_at: 2026-03-01T05:30:17.528Z
-updated_at: 2026-03-02T18:01:26.692Z
+updated_at: 2026-03-02T18:01:45.656Z
 ---
 ## Notes
 
