@@ -16,9 +16,8 @@ and Python sources.
 
 > [!IMPORTANT]
 > Scope rule: This playbook should cover only checks that are **not already enforced**
-> by automated tests.
-> If a recurring issue can be automated, add or update an automated test first, then
-> remove or reduce the corresponding manual check here.
+> by automated tests. If a recurring issue can be automated, add or update an automated
+> test first, then remove or reduce the corresponding manual check here.
 
 > This is a manual validation playbook on top of automated tests.
 > Goals:
@@ -69,13 +68,11 @@ and Python sources.
 ## Related Documentation — Read for Context
 
 - [port-sync-playbook.md](/Users/levy/wrk/github/flowmark-rs/docs/port-sync-playbook.md)
-  \- Operational sync process and mapping workflow
+  \- Operational sync process, mapping workflow, and coverage mapping
 - [port-status.md](/Users/levy/wrk/github/flowmark-rs/docs/port-status.md) - Current
   project status and parity scope
-- [plan-2026-02-25-cli-help-cleanup.md](/Users/levy/wrk/github/flowmark-rs/docs/project/specs/active/plan-2026-02-25-cli-help-cleanup.md)
+- [plan-2026-02-25-cli-help-cleanup.md](/Users/levy/wrk/github/flowmark-rs/docs/project/specs/done/plan-2026-02-25-cli-help-cleanup.md)
   \- Current CLI/help/doc sync plan
-- [admin/README.md](/Users/levy/wrk/github/flowmark-rs/admin/README.md) - Mapping/admin
-  tooling overview
 
 ## Phase 1: Setup & Environment
 
@@ -165,7 +162,7 @@ cargo test --test test_tryscript_golden
 **Verify**:
 
 - [ ] 12/12 tryscript tests pass (or current expected count)
-- [ ] `tryscript_cli_golden`, `tryscript_help`, and `tryscript_verbose_docs` pass
+- [ ] `tryscript_errors_version`, `tryscript_file_discovery`, `tryscript_help`, and `tryscript_verbose_docs` pass
 
 ### 2.3 Run file-discovery and skill/docs focused suites
 
@@ -229,7 +226,8 @@ cd ..
 ### 3.1 Manually inspect key tryscript session outputs
 
 ```bash
-npx tryscript@latest run tests/tryscript/cli-golden.tryscript.md
+npx tryscript@latest run tests/tryscript/errors-version.tryscript.md
+npx tryscript@latest run tests/tryscript/file-discovery.tryscript.md
 npx tryscript@latest run tests/tryscript/help.tryscript.md
 npx tryscript@latest run tests/tryscript/verbose-docs.tryscript.md
 ```
@@ -290,12 +288,11 @@ uvx "flowmark@${PARITY_VERSION}" --version
 
 ### 4.2 README/docs generation sync (manual fallback)
 
-> This is automatically enforced by GitHub Actions job
-> `readme-sync` in `.github/workflows/ci.yml`.
-> Run this manually only when validating outside CI.
+> This is automatically enforced by GitHub Actions job `readme-sync` in
+> `.github/workflows/ci.yml`. Run this manually only when validating outside CI.
 
 ```bash
-scripts/generate-rust-readme.py
+scripts/generate_rust_readme.py
 git diff -- README.md
 ```
 
@@ -414,8 +411,10 @@ access is available.
 ### Tryscript runs but output seems suspiciously weak
 
 ```bash
-npx tryscript@latest run tests/tryscript/cli-golden.tryscript.md
-sed -n '1,220p' tests/tryscript/cli-golden.tryscript.md
+npx tryscript@latest run tests/tryscript/errors-version.tryscript.md
+npx tryscript@latest run tests/tryscript/file-discovery.tryscript.md
+sed -n '1,220p' tests/tryscript/errors-version.tryscript.md
+sed -n '1,260p' tests/tryscript/file-discovery.tryscript.md
 ```
 
 **Solution**: Inspect for over-broad match patterns and tighten assertions if needed.
@@ -423,7 +422,7 @@ sed -n '1,220p' tests/tryscript/cli-golden.tryscript.md
 ### README generation drift
 
 ```bash
-scripts/generate-rust-readme.py
+scripts/generate_rust_readme.py
 git diff -- README.md repos/flowmark/README.md
 ```
 

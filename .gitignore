@@ -27,6 +27,12 @@ tests/parity/*.actual.*.md
 tests/parity/*.python.*.md
 tests/parity/*.rust.*.md
 
+# Benchmark artifacts (generated corpus and results)
+benchmarks/corpus/
+benchmarks/results/
+
+# Maturin build artifacts
+*.whl
 
 # Added by cargo
 

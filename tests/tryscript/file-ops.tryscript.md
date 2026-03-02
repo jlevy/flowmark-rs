@@ -26,13 +26,13 @@ Another paragraph here.
 
 ## FO2: Inplace with backup
 
+Use content that needs reformatting so the file is actually written (and backup created).
+
 ```console
-$ cp fixtures/content/simple.md test-backup.md && flowmark --inplace test-backup.md && cat test-backup.md && test -f test-backup.bak && echo "backup exists"
-# Simple Document
+$ printf '# Test\nsome   text   here\n' > test-backup.md && flowmark --inplace test-backup.md && cat test-backup.md && test -f test-backup.bak && echo "backup exists"
+# Test
 
-This is a basic paragraph with some text.
-
-Another paragraph here.
+some text here
 backup exists
 ```
 

@@ -1,303 +1,187 @@
-# Publishing
+# Publishing (Canonical Hybrid Rust/Python)
 
-How to publish a new release of flowmark to crates.io and GitHub Releases.
+This file is the canonical release runbook for `flowmark-rs` and the template baseline
+for future hybrid Rust/Python projects.
 
-This is the end-to-end process, from version bump through crates.io publication.
+## Release Invariants
 
-## Prerequisites
+1. Complex workflow logic must live in testable scripts (`scripts/*.py`), not long inline
+   bash in Actions YAML.
+1. A release tag (`vX.Y.Z`) must flow into build env (`FLOWMARK_RELEASE_TAG`) so built
+   binaries/wheels embed the stable version, not `dev.unknown`.
+1. Release steps must be rerun-safe:
+   - crates publishes are skip-safe when version already exists
+   - PyPI publishes are skip-safe via `uv publish --check-url`
+   - GitHub release updates are idempotent
+1. Homebrew tap updates remain explicit and auditable (manual commit in tap repo).
 
-### GitHub CLI (`gh`)
-
-The `gh` CLI is required for creating releases and monitoring CI. Verify it is installed
-and authenticated:
-
-```bash
-gh auth status
-```
-
-Expected: “Logged in to github.com” with your account.
-Required token scopes: `repo`, `workflow`.
-
-If `gh` is not set up, install it from https://cli.github.com/ and authenticate with
-`gh auth login` or by setting the `GH_TOKEN` environment variable.
-
-**Agent note:** In Claude Code Cloud sessions, `gh` is auto-installed by the
-SessionStart hook. If it isn’t working, run `tbd shortcut setup-github-cli`.
-
-### Repo variable
-
-Many `gh` commands need `--repo` when the git remote URL doesn’t point directly at
-GitHub (e.g., in Claude Code Cloud sessions using a local proxy).
-Set it once:
+## Variables
 
 ```bash
-REPO=$(git remote get-url origin | sed -E 's#.*/git/##; s#.*github.com[:/]##; s#\.git$##')
-# Should resolve to: jlevy/flowmark-rs
+REPO=jlevy/flowmark-rs
+TAP_REPO=jlevy/homebrew-flowmark
+VERSION=X.Y.Z
+TAG=v${VERSION}
 ```
 
-Use `--repo $REPO` on all `gh` commands below.
+## One-Time Setup
 
-## Step 1: Pre-Release Checks
+1. `gh auth status` succeeds for the maintainer account.
+1. crates.io trusted publisher is configured for this repo.
+   - Current working path can be `publish.yml` (crate-first flow).
+   - If you want fully one-step release from `release.yml`, add that workflow in crates
+     trusted publisher settings too.
+1. PyPI trusted publisher is configured for project `flowmark-rs`, workflow `pypi.yml`,
+   environment blank.
+1. Homebrew tap access is configured for `jlevy/homebrew-flowmark` (maintainer account or
+   token with push access).
 
-1. Determine the next version number (semver).
-   Check the latest release:
+## Phase 0: Preflight
 
-   ```bash
-   gh release list --repo $REPO --limit 1
-   ```
-
-2. Run linting and tests locally:
-
-   ```bash
-   cargo build --all-features && cargo fmt --check && cargo clippy --all-targets --all-features && cargo test --all-features
-   ```
-
-   Note: `cargo build` must run before `cargo test` because some integration tests
-   invoke the compiled binary.
-   Cross-binary parity tests (D11) require Python flowmark installed and will be skipped
-   locally if unavailable — they run in CI.
-
-## Step 2: Version Bump
-
-1. Update `Cargo.toml`:
-   - Bump the `version` field
-   - Update `[package.metadata.parity]` version if Python parity has changed
-
-2. Update `CHANGELOG.md`:
-   - Move items from `[Unreleased]` into a new version section
-   - Add the new version’s comparison link at the bottom
-   - Follow the release notes guidelines (`tbd guidelines release-notes-guidelines`)
-
-3. Verify the crate packages correctly:
-
-   ```bash
-   cargo publish --dry-run
-   ```
-
-## Step 3: PR and CI
-
-1. Commit the version bump on a release branch:
-
-   ```bash
-   git add Cargo.toml CHANGELOG.md
-   git commit -m "chore: bump version to X.Y.Z for release"
-   ```
-
-2. Push and create a PR:
-
-   ```bash
-   git push -u origin <branch-name>
-   gh pr create --repo $REPO --head <branch-name> --base main \
-     --title "chore: release vX.Y.Z" --body "Version bump and changelog for vX.Y.Z."
-   ```
-
-3. Wait for CI to pass (all checks):
-
-   ```bash
-   gh pr checks <branch-name> --repo $REPO --watch 2>&1
-   ```
-
-   **Important:** The `--watch` flag blocks until all checks complete.
-   Do not proceed until you see the final summary showing all checks passed.
-
-4. Merge the PR:
-
-   ```bash
-   gh pr merge <branch-name> --repo $REPO --squash --delete-branch
-   ```
-
-5. Pull the merged main:
-
-   ```bash
-   git checkout main && git pull origin main
-   ```
-
-## Step 4: Create the GitHub Release
-
-Create a GitHub Release, which automatically triggers the publish workflow:
+1. Ensure release bump is merged to `main`:
+   - `Cargo.toml`
+   - `Cargo.lock`
+   - `CHANGELOG.md`
+   - README/docs sync updates
+1. Confirm local checkout is clean and on current `main`.
+1. Run required dry-run orchestration:
 
 ```bash
-gh release create vX.Y.Z --repo $REPO \
-  --title "flowmark vX.Y.Z" \
-  --notes "$(cat <<'EOF'
-<release notes here — see format below>
-EOF
-)"
+gh workflow run release.yml --repo "$REPO" -r main \
+  -f tag=dry-run \
+  -f publish=false \
+  -f publish_prerelease=false
+
+gh run list --repo "$REPO" --workflow release.yml --limit 1
+gh run watch --repo "$REPO" <run-id>
 ```
 
-This triggers two workflows:
-- **`release.yml`** builds cross-platform binaries and uploads them to the release (see
-  [Binary Release Workflow](#binary-release-workflow) below).
-- **`publish.yml`** runs the test suite and publishes to crates.io via OIDC trusted
-  publishing.
+Do not proceed until dry-run is green.
 
-## Step 5: Verify Publication
+## Phase 1: Publish Registry Channels
 
-1. Watch both workflows:
-
-   ```bash
-   # Binary release workflow (builds archives + SHA256SUMS)
-   gh run list --repo $REPO --workflow=release.yml --limit 1
-   gh run watch --repo $REPO <run-id>
-
-   # Publish workflow (crates.io)
-   gh run list --repo $REPO --workflow=publish.yml --limit 1
-   gh run watch --repo $REPO <run-id>
-   ```
-
-2. Verify release artifacts (6 archives + SHA256SUMS):
-
-   ```bash
-   gh release view vX.Y.Z --repo $REPO --json assets --jq '.assets[].name'
-   ```
-
-3. Verify on crates.io: https://crates.io/crates/flowmark
-
-4. Test installation methods:
-
-   ```bash
-   cargo install flowmark
-   flowmark --version
-
-   # If cargo-binstall is installed:
-   cargo binstall flowmark --force
-   flowmark --version
-   ```
-
-## Step 6: Update Homebrew Tap
-
-After the release workflow completes and all binaries are uploaded, update the Homebrew
-formula in [jlevy/homebrew-flowmark](https://github.com/jlevy/homebrew-flowmark)
-(tracked as a submodule at `repos/homebrew-flowmark`).
-
-1. Download the SHA256SUMS from the new release:
-
-   ```bash
-   gh release download vX.Y.Z --repo $REPO --pattern SHA256SUMS --dir /tmp
-   cat /tmp/SHA256SUMS
-   ```
-
-2. Update `repos/homebrew-flowmark/Formula/flowmark.rb`:
-   - Update `version` to the new version
-   - Update each `sha256` with the corresponding value from SHA256SUMS
-
-3. Commit and push:
-
-   ```bash
-   cd repos/homebrew-flowmark
-   git add Formula/flowmark.rb
-   git commit -m "Update flowmark to vX.Y.Z"
-   git push origin main
-   cd ../..
-   ```
-
-4. Update the submodule reference in flowmark-rs (optional — can be batched with the
-   next commit):
-
-   ```bash
-   git add repos/homebrew-flowmark
-   git commit -m "chore: update homebrew-flowmark submodule"
-   ```
-
-5. Test the tap:
-
-   ```bash
-   brew update
-   brew upgrade flowmark
-   # Or for a fresh install:
-   brew tap jlevy/flowmark
-   brew install jlevy/flowmark/flowmark
-   "$(brew --prefix)/bin/flowmark" --version
-   ```
-
-   If `flowmark --version` still reports Python `v0.6.4`, your PATH is picking the
-   Python binary first.
-   Check with `type -a flowmark`.
-
-## Release Notes Format
-
-```markdown
-## flowmark vX.Y.Z (parity: flowmark-py vA.B.C)
-
-### What's Changed
-
-#### Features
-
-**Short title of feature**
-
-Description.
-
-#### Bug Fixes
-
-**Short title of fix**
-
-Description.
-
-### Full Changelog
-
-https://github.com/jlevy/flowmark-rs/compare/vPREV...vX.Y.Z
-```
-
-## Binary Release Workflow
-
-The release process uses two workflows that chain together:
-
-1. **`release.yml`** — Triggered by tag push (`*`). Builds cross-platform binaries for 6
-   targets. Stable tags should follow `vX.Y.Z`; non-semver tags are treated as
-   prereleases by the workflow:
-
-| Target | OS | Arch |
-| --- | --- | --- |
-| `x86_64-unknown-linux-musl` | Linux | x86_64 |
-| `aarch64-unknown-linux-musl` | Linux | ARM64 |
-| `x86_64-apple-darwin` | macOS | x86_64 |
-| `aarch64-apple-darwin` | macOS | ARM64 |
-| `x86_64-pc-windows-msvc` | Windows | x86_64 |
-| `aarch64-pc-windows-msvc` | Windows | ARM64 |
-
-Each archive contains the `flowmark` binary, `LICENSE`, and `README.md`. A unified
-`SHA256SUMS` file is generated after all builds complete.
-
-2. **`publish.yml`** — Triggered by the GitHub Release `published` event (typically from
-   `gh release create ...`). Runs the full test suite and publishes to crates.io via
-   OIDC trusted publishing.
-
-Archives follow the naming convention `flowmark-vX.Y.Z-TARGET.tar.gz` (Unix) or `.zip`
-(Windows), which `cargo binstall` auto-detects.
-
-### Verifying checksums
+### 1A. Publish crate first (current trusted-publisher-safe path)
 
 ```bash
-# Download SHA256SUMS and an archive from the GitHub Release, then:
-shasum -a 256 -c SHA256SUMS --ignore-missing
+gh workflow run publish.yml --repo "$REPO" -r main -f publish=true
+gh run list --repo "$REPO" --workflow publish.yml --limit 1
+gh run watch --repo "$REPO" <run-id>
 ```
 
-## Trusted Publishing (OIDC)
+Verify crate availability:
 
-The publish workflow uses OpenID Connect (OIDC) trusted publishing to authenticate with
-crates.io. This means no `CARGO_REGISTRY_TOKEN` secret is needed in the repository.
+```bash
+curl -fsSL "https://crates.io/api/v1/crates/flowmark/${VERSION}" >/dev/null
+```
 
-To set this up (one-time):
+### 1B. Run orchestrated tagged release
 
-1. Go to https://crates.io/settings/tokens
-2. Add a trusted publisher with:
-   - GitHub repository: `jlevy/flowmark-rs`
-   - Workflow: `publish.yml`
-   - Environment: (leave blank)
+This publishes PyPI and creates/updates the GitHub release. The workflow passes
+`release_tag` through to reusable publish workflows so compiled artifacts embed the stable
+version string.
 
-## Troubleshooting
+```bash
+gh workflow run release.yml --repo "$REPO" -r main \
+  -f tag="$TAG" \
+  -f publish=true \
+  -f publish_prerelease=false
 
-**`gh` commands fail with “none of the git remotes configured...”:** Use
-`--repo jlevy/flowmark-rs` on all `gh` commands.
-This is required when the git remote uses a proxy URL (e.g., Claude Code Cloud).
+gh run list --repo "$REPO" --workflow release.yml --limit 1
+gh run watch --repo "$REPO" <run-id>
+```
 
-**Publish fails with authentication error:** Verify trusted publishing is configured on
-crates.io (see above).
+Expected:
+1. crates job skips as already published
+1. PyPI publishes
+1. GitHub release/tag is created or updated
 
-**Publish fails with “crate already exists”:** The version in `Cargo.toml` must be
-higher than the latest published version.
-Check: https://crates.io/crates/flowmark/versions
+## Phase 2: Verify Outputs
 
-**Tests fail in publish workflow:** The publish workflow runs
-`cargo test --locked --all-features` before publishing.
-Fix the failing tests, push to main, and create a new release.
+GitHub release:
+
+```bash
+gh release view "$TAG" --repo "$REPO" --json url,publishedAt,isDraft,isPrerelease
+gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name'
+```
+
+Registry versions:
+
+```bash
+curl -fsSL "https://crates.io/api/v1/crates/flowmark/${VERSION}" | jq -r '.version.num'
+python3 - <<'PY'
+import json, urllib.request
+data = json.load(urllib.request.urlopen("https://pypi.org/pypi/flowmark-rs/json", timeout=10))
+print(data["info"]["version"])
+PY
+```
+
+CLI version smoke check from PyPI package:
+
+```bash
+uvx "flowmark-rs==${VERSION}" --version
+```
+
+Expected output starts with `flowmark ${VERSION}` and does not include
+`-dev.unknown+gunknown`.
+
+## Phase 3: Homebrew Tap Update (Manual, Required)
+
+Download checksums and clone tap:
+
+```bash
+workdir="$(mktemp -d)"
+gh release download "$TAG" --repo "$REPO" --pattern SHA256SUMS --dir "$workdir"
+gh repo clone "$TAP_REPO" "$workdir/homebrew-flowmark"
+```
+
+Update `Formula/flowmark.rb`:
+1. Set `version` to `${VERSION}`.
+1. Update the four `sha256` values from `SHA256SUMS`:
+   - `aarch64-apple-darwin`
+   - `x86_64-apple-darwin`
+   - `aarch64-unknown-linux-musl`
+   - `x86_64-unknown-linux-musl`
+
+Commit and push:
+
+```bash
+cd "$workdir/homebrew-flowmark"
+git add Formula/flowmark.rb
+git commit -m "Update flowmark to ${TAG}"
+git push origin main
+```
+
+Homebrew verification:
+
+```bash
+brew update
+brew tap jlevy/flowmark
+brew upgrade flowmark || true
+brew install jlevy/flowmark/flowmark
+flowmark --version
+```
+
+## Failure Handling and Partial Success
+
+Cross-channel publishing is not atomic. Treat release as a controlled two-phase process:
+1. Publish immutable registries first (crates, PyPI).
+1. Update Homebrew only after registries and GitHub release are confirmed good.
+
+If a channel fails:
+1. Fix the issue.
+1. Rerun the same workflow/tag.
+1. Verify channel state before proceeding.
+
+Current channel behavior:
+1. crates: already-published versions are detected and skipped.
+1. PyPI: `uv publish --check-url` avoids duplicate uploads.
+1. Homebrew: push a corrective follow-up formula commit if needed.
+
+## Template Guidance (For Upstream Playbook)
+
+Use this as the baseline pattern for hybrid Rust/Python projects:
+1. `release.yml` orchestrates packaging + checksums + announce.
+1. Reusable channel workflows (`publish.yml`, `pypi.yml`) do channel-specific publish.
+1. Workflow decision logic is delegated to tested `scripts/*.py`.
+1. Script tests run in CI (`python3 -m unittest discover -s scripts/tests -p 'test_*.py'`).
+1. Naming conventions stay consistent (`snake_case.py` for Python scripts).

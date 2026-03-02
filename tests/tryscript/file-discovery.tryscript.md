@@ -125,3 +125,18 @@ tutorial.md
 $ flowmark --list-files fixtures/project/README.md | xargs -I{} basename {}
 README.md
 ```
+
+## D11: Nested gitignore is respected by default
+
+```console
+$ flowmark --list-files fixtures/project/nested/ | xargs -I{} basename {} | sort
+file.md
+```
+
+## D12: --no-respect-gitignore includes nested generated files
+
+```console
+$ flowmark --list-files --no-respect-gitignore fixtures/project/nested/ | xargs -I{} basename {} | sort
+file.md
+output.md
+```

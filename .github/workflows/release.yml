@@ -4,6 +4,23 @@ on:
   push:
     tags:
       - '*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. v0.2.5). Use dry-run for validation-only runs."
+        required: true
+        type: string
+        default: dry-run
+      publish:
+        description: "Publish channels + create GitHub Release"
+        required: true
+        type: boolean
+        default: false
+      publish_prerelease:
+        description: "Allow publishing prerelease tags to crates.io/PyPI"
+        required: true
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -13,24 +30,26 @@ env:
   CARGO_TERM_COLOR: always
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref_name || inputs.tag || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
-  prerelease:
+  plan:
     runs-on: ubuntu-latest
-
     outputs:
-      value: ${{ steps.prerelease.outputs.value }}
-
+      release_tag: ${{ steps.plan.outputs.release_tag }}
+      artifact_tag: ${{ steps.plan.outputs.artifact_tag }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+      publish: ${{ steps.plan.outputs.publish }}
+      publish_channels: ${{ steps.plan.outputs.publish_channels }}
     steps:
-      - name: Prerelease check
-        id: prerelease
-        run: |
-          if [[ ${{ github.ref_name }} =~ ^v?[0-9]+[.][0-9]+[.][0-9]+$ ]]; then
-            echo value=false >> $GITHUB_OUTPUT
-          else
-            echo value=true >> $GITHUB_OUTPUT
-          fi
+      - uses: actions/checkout@v6
+      - name: Resolve release mode
+        id: plan
+        run: python3 ./scripts/resolve_release_plan.py --event-name "${GITHUB_EVENT_NAME}" --ref-name "${GITHUB_REF_NAME}" --tag "${{ inputs.tag || '' }}" --publish "${{ inputs.publish || 'false' }}" --publish-prerelease "${{ inputs.publish_prerelease || 'false' }}" --run-id "${GITHUB_RUN_ID}" --github-output "$GITHUB_OUTPUT"
 
   package:
     strategy:
@@ -64,7 +83,7 @@ jobs:
             target_rustflags: ''
 
     runs-on: ${{ matrix.os }}
-    needs: [prerelease]
+    needs: [plan]
 
     steps:
       - uses: actions/checkout@v6
@@ -73,21 +92,13 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install target dependencies
-        run: |
-          case ${{ matrix.target }} in
-            aarch64-pc-windows-msvc)
-              rustup target add aarch64-pc-windows-msvc
-              ;;
-            aarch64-unknown-linux-musl)
-              sudo apt-get update
-              sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools
-              ;;
-            x86_64-unknown-linux-musl)
-              sudo apt-get update
-              sudo apt-get install -y musl-tools
-              ;;
-          esac
+      - name: Install Linux ARM64 musl dependencies
+        if: matrix.target == 'aarch64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu musl-tools
+
+      - name: Install Linux x86_64 musl dependencies
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Add Rust target
         run: rustup target add ${{ matrix.target }}
@@ -97,73 +108,83 @@ jobs:
         run: echo "CC_aarch64_unknown_linux_musl=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
       - name: Build
-        run: |
-          RUSTFLAGS="--deny warnings --codegen target-feature=+crt-static ${{ matrix.target_rustflags }}" \
-            cargo build --bin flowmark --release --locked --target ${{ matrix.target }}
+        run: RUSTFLAGS="--deny warnings --codegen target-feature=+crt-static ${{ matrix.target_rustflags }}" cargo build --bin flowmark --release --locked --target ${{ matrix.target }}
 
       - name: Package
         id: package
-        run: |
-          set -euxo pipefail
-          VERSION=${GITHUB_REF#refs/tags/}
-          BIN=flowmark
-          if [[ ${{ matrix.os }} == windows-latest ]]; then
-            BIN=$BIN.exe
-          fi
+        run: python3 ./scripts/package_release_archive.py --artifact-tag "${{ needs.plan.outputs.artifact_tag }}" --target "${{ matrix.target }}" --runner-os "${{ matrix.os }}" --github-output "$GITHUB_OUTPUT"
 
-          STAGING=flowmark-$VERSION-${{ matrix.target }}
-          mkdir "$STAGING"
-          cp target/${{ matrix.target }}/release/$BIN "$STAGING/"
-          cp LICENSE README.md "$STAGING/"
-
-          case ${{ matrix.os }} in
-            ubuntu-latest | macos-latest)
-              ARCHIVE=$STAGING.tar.gz
-              tar czf "$ARCHIVE" "$STAGING"
-              echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
-              ;;
-            windows-latest)
-              ARCHIVE=$STAGING.zip
-              7z a "$ARCHIVE" "$STAGING"
-              echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
-              ;;
-          esac
-
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload release archive artifact
+        uses: actions/upload-artifact@v4
         with:
-          draft: false
-          files: ${{ steps.package.outputs.archive }}
-          prerelease: ${{ needs.prerelease.outputs.value }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: release-archives-${{ matrix.target }}
+          path: ${{ steps.package.outputs.archive }}
 
   checksum:
     runs-on: ubuntu-latest
-    needs: [package, prerelease]
+    needs: [plan, package]
 
     steps:
       - name: Download release archives
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: >-
-          gh release download
-          --repo ${{ github.repository }}
-          --pattern '*.tar.gz'
-          --pattern '*.zip'
-          --dir release
-          ${{ github.ref_name }}
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-archives-*
+          merge-multiple: true
+          path: release
 
       - name: Generate checksums
-        run: |
-          cd release
-          shasum -a 256 * > ../SHA256SUMS
+        run: (cd release && shasum -a 256 * > ../SHA256SUMS)
 
-      - name: Upload checksums
+      - name: Upload checksums artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-checksums
+          path: SHA256SUMS
+
+  crates:
+    needs: [plan, package, checksum]
+    uses: ./.github/workflows/publish.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      publish: ${{ needs.plan.outputs.publish_channels == 'true' }}
+      release_tag: ${{ needs.plan.outputs.release_tag }}
+    secrets: inherit
+
+  pypi:
+    needs: [plan, package, checksum]
+    uses: ./.github/workflows/pypi.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      publish: ${{ needs.plan.outputs.publish_channels == 'true' }}
+      check_url: https://pypi.org/simple/
+      release_tag: ${{ needs.plan.outputs.release_tag }}
+    secrets: inherit
+
+  announce:
+    runs-on: ubuntu-latest
+    needs: [plan, checksum, crates, pypi]
+    if: needs.plan.outputs.publish == 'true'
+    permissions:
+      contents: write
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          merge-multiple: true
+          path: release
+
+      - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          draft: false
-          files: SHA256SUMS
-          prerelease: ${{ needs.prerelease.outputs.value }}
+          tag_name: ${{ needs.plan.outputs.release_tag }}
+          prerelease: ${{ needs.plan.outputs.prerelease == 'true' }}
+          files: release/*
+          generate_release_notes: true
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

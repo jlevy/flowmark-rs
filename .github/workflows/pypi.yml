@@ -1,0 +1,191 @@
+name: Publish to PyPI
+
+on:
+  workflow_call:
+    inputs:
+      publish:
+        description: "Publish to PyPI when true; run validation-only when false"
+        required: false
+        type: boolean
+        default: false
+      check_url:
+        description: "Simple API URL used to skip duplicate uploads"
+        required: false
+        type: string
+        default: "https://pypi.org/simple/"
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to PyPI (otherwise validation-only)"
+        required: true
+        type: boolean
+        default: false
+      check_url:
+        description: "Simple API URL used to skip duplicate uploads"
+        required: true
+        type: string
+        default: "https://pypi.org/simple/"
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  FLOWMARK_RELEASE_TAG: ${{ inputs.release_tag || '' }}
+
+jobs:
+  # ── Build: Linux x86_64 (glibc) ────────────────────────────────
+  build-linux-x86_64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: x86_64-unknown-linux-gnu
+          manylinux: "2_17"
+      - name: Smoke test
+        run: python ./scripts/pypi_smoke_test.py --target x86_64-unknown-linux-gnu
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-x86_64
+          path: dist/*.whl
+
+  # ── Build: Linux aarch64 (glibc, cross-compiled) ───────────────
+  build-linux-aarch64:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: aarch64-unknown-linux-gnu
+          manylinux: "2_17"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-linux-aarch64
+          path: dist/*.whl
+
+  # ── Build: macOS x86_64 ────────────────────────────────────────
+  build-macos-x86_64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: x86_64-apple-darwin
+      - name: Smoke test
+        run: python ./scripts/pypi_smoke_test.py --target x86_64-apple-darwin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-x86_64
+          path: dist/*.whl
+
+  # ── Build: macOS aarch64 (Apple Silicon) ───────────────────────
+  build-macos-aarch64:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: aarch64-apple-darwin
+      - name: Smoke test
+        run: python ./scripts/pypi_smoke_test.py --target aarch64-apple-darwin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-macos-aarch64
+          path: dist/*.whl
+
+  # ── Build: Windows x86_64 ──────────────────────────────────────
+  build-windows-x86_64:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: build
+          args: --release --locked --out dist
+          target: x86_64-pc-windows-msvc
+      - name: Smoke test
+        run: python ./scripts/pypi_smoke_test.py --target x86_64-pc-windows-msvc
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-windows-x86_64
+          path: dist/*.whl
+
+  # ── Build: source distribution ─────────────────────────────────
+  build-sdist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: PyO3/maturin-action@v1
+        with:
+          maturin-version: v1.12.5
+          command: sdist
+          args: --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-sdist
+          path: dist/*.tar.gz
+
+  check-wheel-contents:
+    runs-on: ubuntu-latest
+    needs:
+      - build-linux-x86_64
+      - build-linux-aarch64
+      - build-macos-x86_64
+      - build-macos-aarch64
+      - build-windows-x86_64
+      - build-sdist
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: wheels/
+      - name: Verify wheel entrypoints
+        run: python3 ./scripts/validate_wheel_entrypoints.py --wheels-dir wheels
+
+  # ── Publish to PyPI ────────────────────────────────────────────
+  publish:
+    needs:
+      - check-wheel-contents
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+    steps:
+      - uses: astral-sh/setup-uv@v7
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: wheels/
+      - name: List distributions
+        run: ls -la wheels/
+      - name: Validate upload command (dry-run)
+        run: uv publish --dry-run --check-url "${{ inputs.check_url }}" wheels/*
+      - name: Publish to PyPI
+        if: inputs.publish
+        run: uv publish --trusted-publishing always --check-url "${{ inputs.check_url }}" wheels/*

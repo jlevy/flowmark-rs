@@ -5,13 +5,12 @@ and fix issues as they are discovered.
 
 ## Purpose
 
-This document is the operational guide for anyone — human or AI agent — working on
-flowmark-rs. Read this before starting any work that involves improving the port, fixing
-parity issues, adding features from a new Python upstream release, or investigating
-discrepancies.
+This document is the operational guide for syncing with Python upstream — porting new
+features, fixing parity issues, and maintaining the test mapping.
+Read this before starting any sync or parity work.
 
-It establishes the methodology, links to the foundational principles, and describes the
-concrete procedures for keeping the Rust port aligned with Python flowmark.
+For general build/test/lint instructions, see [`docs/development.md`](development.md).
+For the full port overview and release status, see [`docs/port-status.md`](port-status.md).
 
 This document is **flowmark-rs-specific** (fixtures, mapping files, local scripts).
 For reusable process, use the canonical playbook docs first:
@@ -96,6 +95,16 @@ The current Python version is tracked in `Cargo.toml`:
 [package.metadata.parity]
 version = "0.6.4"
 ```
+
+## Version Convention
+
+Each release documents which Python version it targets, and dev builds include
+commits-ahead and git hash metadata:
+
+> flowmark 0.2.5-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.5)
+
+The Rust version follows its own semver independently.
+The port note indicates which Python version's behavior is fully covered.
 
 ## Initial Setup
 
@@ -233,8 +242,8 @@ CI-enforced system that tracks provenance between every Python test and its Rust
 counterpart. This ensures that when Python upstream adds or changes tests, we know
 exactly which Rust tests correspond and whether any are missing.
 
-See the [full spec](project/specs/active/plan-2026-02-17-test-mapping-meta-test.md) for
-design rationale, and the [admin README](../admin/README.md) for quick reference.
+See the [full spec](project/specs/done/plan-2026-02-17-test-mapping-meta-test.md) for
+design rationale.
 
 ### How it works
 
@@ -249,6 +258,7 @@ Three YAML files form the mapping system:
 ### Discovery procedure
 
 **Python test discovery** (`flowmark-dev discover-python`):
+
 - AST-parses the Python flowmark repo at the pinned release tag
 - Extracts every `test_*` function, classifies by type (unit, integration, golden,
   infrastructure)
@@ -256,6 +266,7 @@ Three YAML files form the mapping system:
   re-generation
 
 **Rust test discovery** (`flowmark-dev discover-rust`):
+
 - Runs `cargo test -- --list --format terse` (compiler-authoritative)
 - Resolves file paths and line numbers
 - Writes `rust-tests.yaml` with idempotent merge
@@ -312,6 +323,7 @@ cd ..
 ```
 
 For each new `missing` entry, either:
+
 - Port the corresponding test to Rust and set `status: mapped`
 - Set `status: excluded` with a `notes:` field explaining why
 

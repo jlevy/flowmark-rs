@@ -53,17 +53,44 @@ fn extract_atomic_constructs(text: &str) -> (Vec<String>, Vec<String>, String) {
 }
 
 /// Restore original constructs from placeholders in token list.
+///
+/// Uses a single-pass scan per token: looks for the placeholder prefix byte (`\x00`)
+/// and checks for the full `\x00AC<idx><filler>\x00` pattern, avoiding O(N×M) string
+/// searches.
 fn restore_atomic_constructs(
     tokens: &[String],
     constructs: &[String],
     placeholders: &[String],
 ) -> Vec<String> {
+    if constructs.is_empty() {
+        return tokens.to_vec();
+    }
+
+    // Build a lookup from placeholder string → construct index for O(1) matching.
+    let placeholder_map: std::collections::HashMap<&str, &str> =
+        placeholders.iter().zip(constructs.iter()).map(|(p, c)| (p.as_str(), c.as_str())).collect();
+
     tokens
         .iter()
         .map(|token| {
+            // Fast path: if the token doesn't contain the prefix byte, no placeholders.
+            if !token.contains('\x00') {
+                return token.clone();
+            }
+
+            // Check if the entire token is a placeholder (common case: atomic constructs
+            // become single whitespace-delimited tokens).
+            if let Some(construct) = placeholder_map.get(token.as_str()) {
+                return (*construct).to_string();
+            }
+
+            // Slow path: token contains embedded placeholders mixed with other text.
+            // Fall back to sequential replacement (rare in practice).
             let mut result = token.clone();
             for (placeholder, construct) in placeholders.iter().zip(constructs.iter()) {
-                result = result.replace(placeholder.as_str(), construct);
+                if result.contains(placeholder.as_str()) {
+                    result = result.replace(placeholder.as_str(), construct);
+                }
             }
             result
         })

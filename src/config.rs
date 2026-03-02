@@ -138,6 +138,9 @@ fn kebab_to_snake() -> HashMap<&'static str, &'static str> {
     m.insert("files-max-size", "files_max_size");
     m.insert("respect-gitignore", "respect_gitignore");
     m.insert("force-exclude", "force_exclude");
+    m.insert("cache", "incremental");
+    m.insert("cache-dir", "incremental_cache_dir");
+    m.insert("incremental-cache-dir", "incremental_cache_dir");
     m
 }
 
@@ -156,6 +159,10 @@ const VALID_FIELDS: &[&str] = &[
     "files_max_size",
     "respect_gitignore",
     "force_exclude",
+    // CLI-only keys accepted here to avoid "unknown key" warnings.
+    // They are parsed and applied in `src/main.rs` to preserve public API semver.
+    "incremental",
+    "incremental_cache_dir",
 ];
 
 /// Walk up from `start_dir` looking for a config file. Returns the first
@@ -265,6 +272,12 @@ fn parse_config_data(data: &toml::Value) -> FlowmarkConfig {
 
         if !VALID_FIELDS.contains(&effective_key) {
             eprintln!("Warning: unrecognized config key '{key}'");
+            continue;
+        }
+
+        // Cache keys are handled in CLI wiring (`src/main.rs`) to avoid
+        // semver changes in the public `FlowmarkConfig` struct.
+        if matches!(effective_key, "incremental" | "incremental_cache_dir") {
             continue;
         }
 

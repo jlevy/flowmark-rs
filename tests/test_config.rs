@@ -200,6 +200,28 @@ fn test_load_config_partial() {
     assert_eq!(config.force_exclude, None);
 }
 
+#[test]
+fn test_load_config_performance_section_cache_settings_are_accepted() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let config_path = dir.path().join("flowmark.toml");
+    fs::write(
+        &config_path,
+        r#"
+[performance]
+cache = false
+cache-dir = "/tmp/flowmark-cache-test"
+"#,
+    )
+    .expect("write config");
+
+    let config = load_config(&config_path);
+    assert_eq!(
+        config,
+        FlowmarkConfig::default(),
+        "cache keys are accepted by parser and handled separately by CLI wiring"
+    );
+}
+
 // --- Config merge (7) ---
 
 #[test]

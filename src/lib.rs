@@ -6,7 +6,9 @@ pub mod config;
 pub mod error;
 pub mod file_resolver;
 pub mod formatter;
+pub mod incremental_cache;
 pub mod parser;
+pub mod settings;
 pub mod skills;
 pub mod transform;
 pub mod typography;
@@ -80,6 +82,11 @@ impl FormatOptions {
     ) -> Result<()> {
         let content = std::fs::read_to_string(path)?;
         let formatted = self.reformat_text(&content);
+
+        // Skip write if content is unchanged (preserves mtime, avoids I/O)
+        if inplace && formatted == content {
+            return Ok(());
+        }
 
         if inplace {
             if !nobackup {

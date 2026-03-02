@@ -1,9 +1,30 @@
 name: Publish to crates.io
 
 on:
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      publish:
+        description: "Publish to crates.io when true; run validation-only when false"
+        required: false
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
   workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to crates.io (otherwise validation-only)"
+        required: true
+        type: boolean
+        default: false
+      release_tag:
+        description: "Release tag (vX.Y.Z) used for stable version embedding"
+        required: false
+        type: string
+        default: ""
 
 permissions:
   id-token: write
@@ -12,10 +33,11 @@ permissions:
 env:
   # Python flowmark version for parity tests — sync with [package.metadata.parity] in Cargo.toml
   FLOWMARK_PY_VERSION: "0.6.4"
+  FLOWMARK_RELEASE_TAG: ${{ inputs.release_tag || '' }}
 
 jobs:
   publish:
-    name: Publish
+    name: Crates channel
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -45,11 +67,24 @@ jobs:
         env:
           RUSTFLAGS: "-D warnings"
 
+      - name: Validate cargo publish payload (dry-run)
+        run: cargo publish --dry-run --locked
+
+      - name: Resolve crate metadata
+        id: crate
+        run: python3 ./scripts/resolve_crate_metadata.py --manifest-path Cargo.toml --github-output "$GITHUB_OUTPUT"
+
       - name: Authenticate with crates.io
+        if: inputs.publish && steps.crate.outputs.already_published != 'true'
         uses: rust-lang/crates-io-auth-action@v1
         id: auth
 
       - name: Publish to crates.io
-        run: cargo publish
+        if: inputs.publish && steps.crate.outputs.already_published != 'true'
+        run: cargo publish --locked
         env:
           CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Skip publish (already exists)
+        if: inputs.publish && steps.crate.outputs.already_published == 'true'
+        run: echo "${{ steps.crate.outputs.crate_name }} v${{ steps.crate.outputs.crate_version }} is already published; skipping upload."
