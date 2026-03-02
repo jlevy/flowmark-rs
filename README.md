@@ -21,12 +21,11 @@ scripts/generate_rust_readme.py.
 > This Rust port has carefully tested identical CLI usage and formatting behavior, while
 > giving 50x+ faster performance processing large numbers of files.
 > So it is now the recommended version for CLI and IDE usage.
-
-Last sync: **2026-02-19** against **Python v0.6.4**
-
-- Port sync process: [`docs/port-sync-playbook.md`](docs/port-sync-playbook.md)
-- Porting methodology:
-  [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook)
+> 
+> Last sync: **2026-02-19** against **Python v0.6.4**
+> 
+> For more on the **automated porting methodology**, see the
+> [**rust-porting-playbook**](https://github.com/jlevy/rust-porting-playbook).
 
 ## Why the Rust Version?
 

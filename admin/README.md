@@ -74,5 +74,5 @@ process.
 ## Full spec
 
 See
-[`docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md`](../docs/project/specs/active/plan-2026-02-17-test-mapping-meta-test.md)
+[`docs/project/specs/done/plan-2026-02-17-test-mapping-meta-test.md`](../docs/project/specs/done/plan-2026-02-17-test-mapping-meta-test.md)
 for the design rationale and implementation spec.

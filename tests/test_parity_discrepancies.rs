@@ -7,7 +7,7 @@
 //! D11 tests invoke both the Python and Rust binaries and compare error output.
 //! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.6.4`).
 //!
-//! See: docs/project/specs/active/plan-2026-02-18-parity-discrepancies.md
+//! See: docs/project/specs/done/plan-2026-02-18-parity-discrepancies.md
 #![allow(clippy::unwrap_used)]
 
 use flowmark::Wrap;

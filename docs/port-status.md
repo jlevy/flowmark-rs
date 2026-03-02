@@ -95,10 +95,10 @@ Zero ignored tests. No technical debt from silenced failures.
 Every discrepancy followed the test-before-fix protocol:
 
 1. Write test against Python’s behavior (expected output from Python)
-1. Confirm test fails against Rust
-1. Investigate the class of behavior (e.g., D4 tight list spacing led to investigating
+2. Confirm test fails against Rust
+3. Investigate the class of behavior (e.g., D4 tight list spacing led to investigating
    all list spacing modes)
-1. Fix, verify test goes green
+4. Fix, verify test goes green
 
 All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` labels in
 `src/formatter/filling.rs` with rationale for each.
@@ -256,13 +256,13 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 
 | Document | Status | Description |
 | --- | --- | --- |
-| [Exact Parity](project/specs/active/plan-2026-02-17-exact-parity.md) | **Complete** | Full parity requirements and verification |
-| [Parity Discrepancies](project/specs/active/plan-2026-02-18-parity-discrepancies.md) | **Complete** | All 15 discrepancies (D1-D15) resolved |
-| [Build & Publishing](project/specs/active/plan-2026-02-17-build-publishing.md) | **Phases 1-4,6 Done** | CI, crates.io, publish workflow (Phase 5: binary releases deferred) |
-| [Tryscript Golden Tests](project/specs/active/plan-2026-02-17-comprehensive-tryscript-golden-tests.md) | **Implemented** | Comprehensive CLI golden test suite |
-| [Test Mapping](project/specs/active/plan-2026-02-17-test-mapping-meta-test.md) | **Implemented** | Cross-language test provenance tracking |
+| [Exact Parity](project/specs/done/plan-2026-02-17-exact-parity.md) | **Complete** | Full parity requirements and verification |
+| [Parity Discrepancies](project/specs/done/plan-2026-02-18-parity-discrepancies.md) | **Complete** | All 15 discrepancies (D1-D15) resolved |
+| [Build & Publishing](project/specs/done/plan-2026-02-17-build-publishing.md) | **Phases 1-4,6 Done** | CI, crates.io, publish workflow (Phase 5: binary releases deferred) |
+| [Tryscript Golden Tests](project/specs/done/plan-2026-02-17-comprehensive-tryscript-golden-tests.md) | **Implemented** | Comprehensive CLI golden test suite |
+| [Test Mapping](project/specs/done/plan-2026-02-17-test-mapping-meta-test.md) | **Implemented** | Cross-language test provenance tracking |
 | [Code Review](project/specs/active/code-review-2026-02-17.md) | **Complete** | Senior code review with P0-P3 issues (P0-P1 fixed) |
-| [Playbook Sync](project/specs/active/plan-2026-02-17-playbook-review-sync.md) | Draft | Bidirectional doc sync with porting playbook |
+| [Playbook Sync](project/specs/done/plan-2026-02-17-playbook-review-sync.md) | Draft | Bidirectional doc sync with porting playbook |
 
 ### Specifications (Done)
 
@@ -298,13 +298,13 @@ This port was built using the
 8-phase methodology:
 
 1. **Analysis** — Understand Python source structure and dependencies
-1. **Scaffolding** — Set up Rust project with matching module structure
-1. **Core porting** — Translate Python logic to idiomatic Rust
-1. **Test porting** — Map all Python tests to Rust equivalents
-1. **Parity verification** — Golden test comparison across all modes
-1. **CI hardening** — 12-check pipeline with coverage and semver checks
-1. **Documentation** — Specs, playbooks, and operational guides
-1. **Publishing** — crates.io metadata, trusted publishing, release workflow
+2. **Scaffolding** — Set up Rust project with matching module structure
+3. **Core porting** — Translate Python logic to idiomatic Rust
+4. **Test porting** — Map all Python tests to Rust equivalents
+5. **Parity verification** — Golden test comparison across all modes
+6. **CI hardening** — 12-check pipeline with coverage and semver checks
+7. **Documentation** — Specs, playbooks, and operational guides
+8. **Publishing** — crates.io metadata, trusted publishing, release workflow
 
 ### Key Metrics
 
@@ -346,4 +346,4 @@ commits-ahead and git hash metadata:
 > flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.0)
 
 The Rust version follows its own semver independently.
-The port note indicates which Python version's behavior is fully covered.
+The port note indicates which Python version’s behavior is fully covered.

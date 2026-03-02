@@ -16,9 +16,8 @@ and Python sources.
 
 > [!IMPORTANT]
 > Scope rule: This playbook should cover only checks that are **not already enforced**
-> by automated tests.
-> If a recurring issue can be automated, add or update an automated test first, then
-> remove or reduce the corresponding manual check here.
+> by automated tests. If a recurring issue can be automated, add or update an automated
+> test first, then remove or reduce the corresponding manual check here.
 
 > This is a manual validation playbook on top of automated tests.
 > Goals:
@@ -72,7 +71,7 @@ and Python sources.
   \- Operational sync process and mapping workflow
 - [port-status.md](/Users/levy/wrk/github/flowmark-rs/docs/port-status.md) - Current
   project status and parity scope
-- [plan-2026-02-25-cli-help-cleanup.md](/Users/levy/wrk/github/flowmark-rs/docs/project/specs/active/plan-2026-02-25-cli-help-cleanup.md)
+- [plan-2026-02-25-cli-help-cleanup.md](/Users/levy/wrk/github/flowmark-rs/docs/project/specs/done/plan-2026-02-25-cli-help-cleanup.md)
   \- Current CLI/help/doc sync plan
 - [admin/README.md](/Users/levy/wrk/github/flowmark-rs/admin/README.md) - Mapping/admin
   tooling overview
@@ -290,9 +289,8 @@ uvx "flowmark@${PARITY_VERSION}" --version
 
 ### 4.2 README/docs generation sync (manual fallback)
 
-> This is automatically enforced by GitHub Actions job
-> `readme-sync` in `.github/workflows/ci.yml`.
-> Run this manually only when validating outside CI.
+> This is automatically enforced by GitHub Actions job `readme-sync` in
+> `.github/workflows/ci.yml`. Run this manually only when validating outside CI.
 
 ```bash
 scripts/generate_rust_readme.py
