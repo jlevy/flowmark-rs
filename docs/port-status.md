@@ -1,8 +1,11 @@
-# Project Status: flowmark-rs v0.2.0
+# Project Status: flowmark-rs
 
-**Last updated:** 2026-02-19
+**Last updated:** 2026-03-02
 
-**Target release:** v0.2.0 (first formal release of the Rust port)
+**Current release:** v0.2.5
+([crates.io](https://crates.io/crates/flowmark),
+[PyPI](https://pypi.org/project/flowmark-rs/),
+[Homebrew](https://github.com/jlevy/homebrew-flowmark))
 
 **Python parity target:** flowmark v0.6.4
 
@@ -53,7 +56,7 @@ Everything not on this list is required to be identical.
 
 ### Tests Always Run in CI (Principle 3)
 
-All 430 tests run in CI on every commit.
+All 470+ tests run in CI on every commit.
 No test file is orphaned.
 The CI test job installs all required external tools:
 
@@ -103,9 +106,9 @@ Every discrepancy followed the test-before-fix protocol:
 All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` labels in
 `src/formatter/filling.rs` with rationale for each.
 
-## Release Readiness
+## Release Status
 
-### What’s Done
+All release channels are live as of v0.2.5:
 
 | Area | Status | Details |
 | --- | --- | --- |
@@ -117,64 +120,34 @@ All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` label
 | **CLI interface** | Complete | All flags match Python, including `--auto`, `--inplace`, `--skill` |
 | **Error handling** | Complete | Error messages match Python (see tolerated variations above) |
 | **Library crate** | Complete | Public API via `FormatOptions::reformat_text()`, feature-gated CLI |
-| **CI pipeline** | Complete | 12 checks: fmt, clippy, test (Ubuntu+macOS), lib-only, MSRV, deny, docs, coverage, semver, markdown-fmt, check-mapping |
-| **Test coverage** | Complete | 430 tests, 0 ignored, 0 failures |
+| **CI pipeline** | Complete | 12 checks: fmt, clippy, test (Ubuntu+macOS), lib-only, MSRV, deny, docs, coverage, semver, markdown-fmt, check-mapping, readme-sync |
+| **Test coverage** | Complete | 470+ tests, 0 ignored, 0 failures |
 | **Test mapping** | Complete | 292 Python tests mapped, 0 excluded, 0 missing |
 | **Parity verification** | Complete | All 15 discrepancies (D1-D15) resolved, 33 parity-specific tests |
-| **crates.io metadata** | Complete | README, description, keywords, categories, documentation link |
-| **Trusted publishing** | Complete | OIDC configured for crates.io |
-| **Publish workflow** | Complete | `.github/workflows/publish.yml` with test-before-publish |
+| **crates.io** | Live | [crates.io/crates/flowmark](https://crates.io/crates/flowmark) |
+| **PyPI** | Live | [pypi.org/project/flowmark-rs](https://pypi.org/project/flowmark-rs/) (`uvx flowmark-rs`) |
+| **GitHub Releases** | Live | Pre-built binaries for macOS, Linux, Windows |
+| **Homebrew tap** | Live | `brew install jlevy/flowmark/flowmark` |
+| **Trusted publishing** | Complete | OIDC configured for crates.io and PyPI |
 | **Documentation** | Complete | README, CONTRIBUTING, CHANGELOG, publishing guide, sync playbook |
 | **Claude Code skill** | Complete | `--install-skill` and `--skill` flags working |
 
-### Remaining Before Release
+### Future Work
 
-| Item | Priority | Bead | Notes |
-| --- | --- | --- | --- |
-| **First publish** | P0 | fmr-bfam | Tag `v0.2.0`, create GitHub Release → triggers publish workflow |
-| **Binary release workflow** | P2 | fmr-q3pu | Pre-built binaries via cargo-dist — deferred |
-| **Homebrew tap** | Complete | — | Live via `brew tap jlevy/flowmark && brew install jlevy/flowmark/flowmark` |
-| **Shell completions** | P3 | — | bash/zsh/fish via `clap_complete` — future work |
-
-### Release Checklist
-
-- [x] All formatting modes match Python v0.6.4 exactly
-- [x] All 430 tests pass (0 ignored, 0 failures)
-- [x] CI pipeline green (12/12 checks)
-- [x] `cargo publish --dry-run` succeeds
-- [x] Trusted publishing (OIDC) configured on crates.io
-- [x] Publish workflow includes full test suite with all external deps
-- [x] README, CONTRIBUTING, CHANGELOG ready
-- [ ] Create GitHub Release tagged `v0.2.0` (fmr-bfam)
-- [ ] Verify crates.io publish succeeds
-- [ ] Verify on https://crates.io/crates/flowmark
-
-## Build & Quality Verification
-
-Compliance verified 2026-02-19:
-
-| Check | Result |
-| --- | --- |
-| `cargo fmt --check` | PASS |
-| `cargo clippy --locked --all-targets --all-features -- -D warnings` | PASS (0 warnings) |
-| `cargo doc --locked --no-deps --all-features` (with `-D warnings`) | PASS |
-| `cargo test --all-features` | PASS (430 tests, 0 failures) |
-| `cargo test --locked --no-default-features` | PASS (library-only) |
-| `cargo publish --dry-run` | PASS |
-| `#[ignore]` tests | 0 |
-| `unsafe` code blocks | 1 (SIGPIPE handler in `main.rs`, annotated) |
-| `FIXME`/`TODO`/`HACK` in source | 0 |
-| `COMRAK-WORKAROUND` comments | 13 (all documented with rationale) |
+| Item | Priority | Notes |
+| --- | --- | --- |
+| Shell completions | P3 | bash/zsh/fish via `clap_complete` |
 
 ## Test Summary
 
-| Category | Count | Description |
-| --- | --- | --- |
-| Unit tests (in `src/`) | 46 | Module-level tests for parsers, formatters, wrappers |
-| Integration tests (in `tests/`) | 372 | Full-pipeline formatting, CLI, file discovery |
-| Doc tests | 1 | Library API usage example |
-| Tryscript golden tests | 11 | End-to-end CLI behavior specs |
-| **Total** | **430** | **0 ignored, 0 failures** |
+| Category | Description |
+| --- | --- |
+| Unit tests (`src/`) | Module-level tests for parsers, formatters, wrappers |
+| Integration tests (`tests/`) | Full-pipeline formatting, CLI, file discovery |
+| Doc tests | Library API usage example |
+| Tryscript golden tests | End-to-end CLI behavior specs |
+| D11 parity tests | Cross-binary comparison (invokes both Python and Rust) |
+| **Total** | **470+ tests, 0 ignored, 0 failures** |
 
 ### Parity Testing
 
@@ -183,17 +156,9 @@ Compliance verified 2026-02-19:
 - **5 D11 tests** invoke both Python and Rust binaries, comparing stderr and exit codes
 - **Golden reference document** tested across 4 modes (default, semantic, auto,
   plaintext)
-- **292 Python tests** have verified Rust counterparts — see
-  [admin/port-coverage-mapping/](../admin/port-coverage-mapping/) for the full mapping
+- **292 Python tests** have verified Rust counterparts (CI-enforced via test mapping)
 
-### Test Dependencies
-
-Tests require the following external tools (all installed in CI):
-
-- **Python flowmark v0.6.4** — for D11 cross-binary parity tests
-  (`uv tool install flowmark==0.6.4`)
-- **tryscript** — for golden CLI tests (`npm install -g tryscript@latest`)
-- **Rust toolchain** — stable, MSRV 1.85
+For build/test/lint instructions, see [`docs/development.md`](development.md).
 
 ## Architecture
 
@@ -220,76 +185,27 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 | `lib.rs` | `flowmark/__init__.py` | Public API |
 | `main.rs` | `flowmark/__main__.py` | CLI entry point |
 
-### Key Design Decisions
+## Related Documentation
 
-- **Zero `unsafe` code** — `unsafe_code = "deny"` in Cargo.toml (1 exception: SIGPIPE
-  handler)
-- **No `unwrap()` in library** — `unwrap_used = "deny"`, all errors use `?` or
-  `expect()` with messages
-- **Feature-gated CLI** — library usable without clap/anyhow via `--no-default-features`
-- **Pedantic clippy at deny level** — catches issues locally, not just in CI
-- **Supply chain security** — `deny.toml` with license allowlist
-- **Atomic file writes** — tempfile + persist pattern prevents corruption
-- **13 comrak workarounds** — documented in `src/formatter/filling.rs` module docs, each
-  tagged with `COMRAK-WORKAROUNDn` and rationale
-
-## Documentation Index
-
-### Root Documents
-
-| Document | Description |
+| Document | Purpose |
 | --- | --- |
-| [README.md](../README.md) | Project overview, installation, usage |
-| [CONTRIBUTING.md](../CONTRIBUTING.md) | Build, test, lint instructions |
-| [CHANGELOG.md](../CHANGELOG.md) | Release notes |
+| [`docs/development.md`](development.md) | Building, testing, linting, project structure, CI pipeline |
+| [`docs/port-sync-playbook.md`](port-sync-playbook.md) | Syncing with Python upstream, test mapping, porting methodology |
+| [`docs/publishing.md`](publishing.md) | Release process (crates.io, PyPI, GitHub Releases, Homebrew) |
+| [`docs/porting-log-review.md`](porting-log-review.md) | Bug log and lessons learned from the porting process |
+| [`tests/qa/rust-python-parity-e2e.qa.md`](../tests/qa/rust-python-parity-e2e.qa.md) | Manual end-to-end QA playbook |
 
-### Operational Guides
-
-| Document | Description |
-| --- | --- |
-| [docs/publishing.md](publishing.md) | Release process, crates.io, trusted publishing |
-| [docs/port-sync-playbook.md](port-sync-playbook.md) | Sync with Python upstream, porting methodology, test mapping procedures |
-| [tests/qa/rust-python-parity-e2e.qa.md](../tests/qa/rust-python-parity-e2e.qa.md) | Manual end-to-end QA playbook for parity, tryscript sanity, and docs/version alignment |
-| [admin/](../admin/) | Port administration: test mapping data, dev tools overview |
-
-### Specifications (Active)
-
-| Document | Status | Description |
-| --- | --- | --- |
-| [Exact Parity](project/specs/done/plan-2026-02-17-exact-parity.md) | **Complete** | Full parity requirements and verification |
-| [Parity Discrepancies](project/specs/done/plan-2026-02-18-parity-discrepancies.md) | **Complete** | All 15 discrepancies (D1-D15) resolved |
-| [Build & Publishing](project/specs/done/plan-2026-02-17-build-publishing.md) | **Phases 1-4,6 Done** | CI, crates.io, publish workflow (Phase 5: binary releases deferred) |
-| [Tryscript Golden Tests](project/specs/done/plan-2026-02-17-comprehensive-tryscript-golden-tests.md) | **Implemented** | Comprehensive CLI golden test suite |
-| [Test Mapping](project/specs/done/plan-2026-02-17-test-mapping-meta-test.md) | **Implemented** | Cross-language test provenance tracking |
-| [Code Review](project/specs/active/code-review-2026-02-17.md) | **Complete** | Senior code review with P0-P3 issues (P0-P1 fixed) |
-| [Playbook Sync](project/specs/done/plan-2026-02-17-playbook-review-sync.md) | Draft | Bidirectional doc sync with porting playbook |
-
-### Specifications (Done)
+### Specifications (all complete)
 
 | Document | Description |
 | --- | --- |
 | [Porting Plan](project/specs/done/porting-plan.md) | Original porting plan (all phases complete) |
-
-### Test Provenance
-
-| Document | Description |
-| --- | --- |
-| [admin/port-coverage-mapping/](../admin/port-coverage-mapping/) | Python-to-Rust test mapping (292 tests) |
-| [admin/port-coverage-mapping/test-mapping.yaml](../admin/port-coverage-mapping/test-mapping.yaml) | Hand-maintained 1:1 and 1:N test mappings |
-
-### Porting Playbook (Submodule)
-
-The [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook) is available
-at `repos/rust-porting-playbook/` with these key documents:
-
-| Document | Description |
-| --- | --- |
-| [Porting Principles](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md) | 8 non-negotiable principles for agent-driven porting |
-| [Porting Rules](../repos/rust-porting-playbook/guidelines/python-to-rust-porting-rules.md) | Type mappings, patterns, and acceptance criteria |
-| [Test Coverage](../repos/rust-porting-playbook/guidelines/test-coverage-for-porting.md) | Test strategy, coverage targets, cross-validation |
-| [Python-to-Rust Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-playbook.md) | Step-by-step porting process |
-| [Sync Release Workflow](../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md) | Two-stage release refresh process for existing ports |
-| [Code Review Checklist](../repos/rust-porting-playbook/playbooks/rust-code-review-checklist.md) | Rust code review checklist for ports |
+| [Exact Parity](project/specs/done/plan-2026-02-17-exact-parity.md) | Full parity requirements and verification |
+| [Parity Discrepancies](project/specs/done/plan-2026-02-18-parity-discrepancies.md) | All 15 discrepancies (D1-D15) resolved |
+| [Build & Publishing](project/specs/done/plan-2026-02-17-build-publishing.md) | CI, crates.io, PyPI, release workflows |
+| [Tryscript Golden Tests](project/specs/done/plan-2026-02-17-comprehensive-tryscript-golden-tests.md) | Comprehensive CLI golden test suite |
+| [Test Mapping](project/specs/done/plan-2026-02-17-test-mapping-meta-test.md) | Cross-language test provenance tracking |
+| [Code Review](project/specs/active/code-review-2026-02-17.md) | Senior code review (P0-P1 fixed) |
 
 ## Porting Methodology
 
@@ -314,7 +230,7 @@ This port was built using the
 | Rust source lines | ~3,500 |
 | Rust/Python LOC ratio | 0.66x (Rust is more concise) |
 | Python test functions | 292 |
-| Rust test functions | 430 |
+| Rust test functions | 470+ |
 | Parity discrepancies found | 15 |
 | Parity discrepancies resolved | 15 (100%) |
 | comrak library workarounds | 13 (all documented) |
@@ -322,28 +238,12 @@ This port was built using the
 | `unsafe` code | 1 block (SIGPIPE handler, annotated) |
 | `FIXME`/`TODO`/`HACK` | 0 |
 
-## CI Pipeline
-
-| Job | What It Checks |
-| --- | --- |
-| `fmt` | `cargo fmt --check` |
-| `clippy` | Pedantic clippy with `-D warnings` |
-| `test` (Ubuntu + macOS) | Full test suite with Python parity + tryscript golden tests |
-| `test-lib-only` | Library builds and tests without CLI feature |
-| `msrv` | Compiles on minimum supported Rust version (1.85) |
-| `deny` | License allowlist and supply chain audit |
-| `docs` | `cargo doc` with `-D warnings` |
-| `coverage` | `cargo-llvm-cov` with Codecov upload |
-| `semver-checks` | API breakage detection (PRs only) |
-| `markdown-fmt` | Markdown formatting consistency |
-| `check-mapping` | Test mapping completeness (292/292) |
-
 ## Version Convention
 
 Each release documents which Python version it targets, and dev builds include
 commits-ahead and git hash metadata:
 
-> flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.0)
+> flowmark 0.2.5-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.5)
 
 The Rust version follows its own semver independently.
 The port note indicates which Python version’s behavior is fully covered.

@@ -22,7 +22,7 @@ scripts/generate_rust_readme.py.
 > giving 50x+ faster performance processing large numbers of files.
 > So it is now the recommended version for CLI and IDE usage.
 > 
-> Last sync: **2026-02-19** against **Python v0.6.4**
+> Last sync: **2026-03-02** against **Python v0.6.4**
 > 
 > For more on the **automated porting methodology**, see the
 > [**rust-porting-playbook**](https://github.com/jlevy/rust-porting-playbook).
@@ -577,6 +577,11 @@ For development workflows, see [development.md](docs/development.md).
 
 Rust-specific docs:
 
-- [`docs/rust-only-features.md`](docs/rust-only-features.md)
-- [`docs/cache.md`](docs/cache.md)
-- [`docs/development.md`](docs/development.md)
+- [`docs/port-status.md`](docs/port-status.md) — port overview, parity verification,
+  architecture
+- [`docs/port-sync-playbook.md`](docs/port-sync-playbook.md) — syncing with Python
+  upstream
+- [`docs/publishing.md`](docs/publishing.md) — release process (crates.io, PyPI,
+  Homebrew)
+- [`docs/rust-only-features.md`](docs/rust-only-features.md) — Rust-only CLI features
+- [`docs/cache.md`](docs/cache.md) — incremental cache behavior

@@ -5,13 +5,12 @@ and fix issues as they are discovered.
 
 ## Purpose
 
-This document is the operational guide for anyone — human or AI agent — working on
-flowmark-rs. Read this before starting any work that involves improving the port, fixing
-parity issues, adding features from a new Python upstream release, or investigating
-discrepancies.
+This document is the operational guide for syncing with Python upstream — porting new
+features, fixing parity issues, and maintaining the test mapping.
+Read this before starting any sync or parity work.
 
-It establishes the methodology, links to the foundational principles, and describes the
-concrete procedures for keeping the Rust port aligned with Python flowmark.
+For general build/test/lint instructions, see [`docs/development.md`](development.md).
+For the full port overview and release status, see [`docs/port-status.md`](port-status.md).
 
 This document is **flowmark-rs-specific** (fixtures, mapping files, local scripts).
 For reusable process, use the canonical playbook docs first:

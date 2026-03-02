@@ -127,6 +127,11 @@ If you only want the CLI tool, just install `flowmark-rs` — you don’t need t
 
 Rust-specific docs:
 
-- [`docs/rust-only-features.md`](docs/rust-only-features.md)
-- [`docs/cache.md`](docs/cache.md)
-- [`docs/development.md`](docs/development.md)
+- [`docs/port-status.md`](docs/port-status.md) — port overview, parity verification,
+  architecture
+- [`docs/port-sync-playbook.md`](docs/port-sync-playbook.md) — syncing with Python
+  upstream
+- [`docs/publishing.md`](docs/publishing.md) — release process (crates.io, PyPI,
+  Homebrew)
+- [`docs/rust-only-features.md`](docs/rust-only-features.md) — Rust-only CLI features
+- [`docs/cache.md`](docs/cache.md) — incremental cache behavior
