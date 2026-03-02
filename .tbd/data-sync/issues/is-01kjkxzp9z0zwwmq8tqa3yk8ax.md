@@ -5,7 +5,7 @@ title: Distribute flowmark-rs on PyPI via maturin
 kind: epic
 status: open
 priority: 1
-version: 29
+version: 30
 spec_path: docs/project/specs/done/plan-2026-03-01-pypi-distribution.md
 labels: []
 dependencies: []
@@ -33,7 +33,7 @@ child_order_hints:
   - is-01kjky0z1x73jj3gfj1374bpfw
   - is-01kjky0zgvdr0t91c2pn13jdfa
 created_at: 2026-03-01T05:29:51.166Z
-updated_at: 2026-03-02T18:01:45.229Z
+updated_at: 2026-03-02T18:22:14.454Z
 ---
 ## Notes
 
@@ -61,4 +61,19 @@ Configuration decision retained: no explicit GitHub environment is required for 
 
 ## Notes
 
-Snapshot 2026-03-01: 13/22 tasks closed. pypi.yml is not on default branch yet; flowmark-rs is not published on PyPI (404). No explicit GitHub environment is required for trusted publishing.
+Snapshot updated on 2026-03-02.
+
+Current status: 18/22 child tasks closed; 4 open.
+Open tasks are:
+- fmr-foeq: final install verification for published release artifacts
+- fmr-en1o: optional TestPyPI preflight
+- fmr-sgqv: optional musllinux targets for PyPI
+- fmr-b11z: optional python -m flowmark_rs wrapper
+
+Operational state now differs from the original notes:
+- pypi.yml is present on default branch and active
+- release orchestration has been validated on main
+- flowmark-rs 0.2.5 exists on PyPI and crates.io
+- Homebrew tap formula is updated to 0.2.5
+
+Remaining non-optional completion gate for this epic is fmr-foeq tied to next stable tag publish verification.
