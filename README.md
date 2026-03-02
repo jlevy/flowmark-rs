@@ -109,18 +109,10 @@ brew tap jlevy/flowmark
 brew install jlevy/flowmark/flowmark
 ```
 
-### pip
-
-```bash
-pip install flowmark-rs
-```
-
 **Note on the `flowmark` command name:** The PyPI package `flowmark-rs` provides both
 `flowmark` and `flowmark-rs` commands.
 If you only want the CLI tool, just install `flowmark-rs` — you don’t need the Python
-`flowmark` package. If you have both packages installed as uv tools,
-`uv tool install flowmark-rs --force` will let the Rust version take precedence for the
-`flowmark` command.
+`flowmark` package.
 
 * * *
 
