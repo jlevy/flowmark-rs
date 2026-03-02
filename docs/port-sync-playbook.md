@@ -183,7 +183,7 @@ counterpart. This ensures that when Python upstream adds or changes tests, we kn
 exactly which Rust tests correspond and whether any are missing.
 
 See the [full spec](project/specs/done/plan-2026-02-17-test-mapping-meta-test.md) for
-design rationale, and the [admin README](../admin/README.md) for quick reference.
+design rationale.
 
 ### How it works
 

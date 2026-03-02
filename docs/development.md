@@ -26,7 +26,8 @@ Reusable synchronization methodology lives in the `rust-porting-playbook` submod
 - Incremental cache (developer reference): [`docs/cache.md`](cache.md)
 - flowmark-specific sync details (fixtures, mapping files, local scripts):
   [`docs/port-sync-playbook.md`](port-sync-playbook.md)
-- Coverage mapping system: [`admin/README.md`](../admin/README.md)
+- Coverage mapping system:
+  [`docs/port-sync-playbook.md`](port-sync-playbook.md#test-coverage-mapping)
 
 Cache docs are kept concise and include:
 

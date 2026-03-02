@@ -68,13 +68,11 @@ and Python sources.
 ## Related Documentation — Read for Context
 
 - [port-sync-playbook.md](/Users/levy/wrk/github/flowmark-rs/docs/port-sync-playbook.md)
-  \- Operational sync process and mapping workflow
+  \- Operational sync process, mapping workflow, and coverage mapping
 - [port-status.md](/Users/levy/wrk/github/flowmark-rs/docs/port-status.md) - Current
   project status and parity scope
 - [plan-2026-02-25-cli-help-cleanup.md](/Users/levy/wrk/github/flowmark-rs/docs/project/specs/done/plan-2026-02-25-cli-help-cleanup.md)
   \- Current CLI/help/doc sync plan
-- [admin/README.md](/Users/levy/wrk/github/flowmark-rs/admin/README.md) - Mapping/admin
-  tooling overview
 
 ## Phase 1: Setup & Environment
 
