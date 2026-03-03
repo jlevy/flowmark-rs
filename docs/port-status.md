@@ -25,7 +25,7 @@ test-driven parity verification.
 ## Porting Principles Compliance
 
 This port adheres to the 8 non-negotiable principles from the
-[Porting Principles and Anti-Patterns](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
+[Porting Principles and Anti-Patterns](https://github.com/jlevy/rust-porting-playbook/blob/main/guidelines/porting-principles-and-antipatterns.md)
 guide. Each principle was learned from an actual mistake during agent-driven porting.
 None are hypothetical.
 
