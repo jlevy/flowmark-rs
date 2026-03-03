@@ -31,6 +31,9 @@ tests/parity/*.rust.*.md
 benchmarks/corpus/
 benchmarks/results/
 
+# Python bytecode caches
+__pycache__/
+
 # Maturin build artifacts
 *.whl
 
