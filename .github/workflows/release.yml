@@ -115,7 +115,7 @@ jobs:
         run: python3 ./scripts/package_release_archive.py --artifact-tag "${{ needs.plan.outputs.artifact_tag }}" --target "${{ matrix.target }}" --runner-os "${{ matrix.os }}" --github-output "$GITHUB_OUTPUT"
 
       - name: Upload release archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-archives-${{ matrix.target }}
           path: ${{ steps.package.outputs.archive }}
@@ -136,7 +136,7 @@ jobs:
         run: (cd release && shasum -a 256 * > ../SHA256SUMS)
 
       - name: Upload checksums artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-checksums
           path: SHA256SUMS
