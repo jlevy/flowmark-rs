@@ -1,8 +1,8 @@
 # Project Status: flowmark-rs
 
-**Last updated:** 2026-03-02
+**Last updated:** 2026-03-04
 
-**Current release:** v0.2.5 ([crates.io](https://crates.io/crates/flowmark),
+**Current release:** v0.2.6 ([crates.io](https://crates.io/crates/flowmark),
 [PyPI](https://pypi.org/project/flowmark-rs/),
 [Homebrew](https://github.com/jlevy/homebrew-flowmark))
 
@@ -55,7 +55,7 @@ Everything not on this list is required to be identical.
 
 ### Tests Always Run in CI (Principle 3)
 
-All 470+ tests run in CI on every commit.
+All 469 tests run in CI on every commit.
 No test file is orphaned.
 The CI test job installs all required external tools:
 
@@ -102,12 +102,13 @@ Every discrepancy followed the test-before-fix protocol:
    all list spacing modes)
 4. Fix, verify test goes green
 
-All 13 comrak library workarounds are documented with `COMRAK-WORKAROUNDn` labels in
+All 13 numbered comrak library workarounds (COMRAK-WORKAROUND1–13, 66 comment
+references) are documented with `COMRAK-WORKAROUNDn` labels in
 `src/formatter/filling.rs` with rationale for each.
 
 ## Release Status
 
-All release channels are live as of v0.2.5:
+All release channels are live as of v0.2.6:
 
 | Area | Status | Details |
 | --- | --- | --- |
@@ -120,7 +121,7 @@ All release channels are live as of v0.2.5:
 | **Error handling** | Complete | Error messages match Python (see tolerated variations above) |
 | **Library crate** | Complete | Public API via `FormatOptions::reformat_text()`, feature-gated CLI |
 | **CI pipeline** | Complete | 12 checks: fmt, clippy, test (Ubuntu+macOS), lib-only, MSRV, deny, docs, coverage, semver, markdown-fmt, check-mapping, readme-sync |
-| **Test coverage** | Complete | 470+ tests, 0 ignored, 0 failures |
+| **Test coverage** | Complete | 469 tests, 0 ignored, 0 failures |
 | **Test mapping** | Complete | 292 Python tests mapped, 0 excluded, 0 missing |
 | **Parity verification** | Complete | All 15 discrepancies (D1-D15) resolved, 33 parity-specific tests |
 | **crates.io** | Live | [crates.io/crates/flowmark](https://crates.io/crates/flowmark) |
@@ -146,7 +147,7 @@ All release channels are live as of v0.2.5:
 | Doc tests | Library API usage example |
 | Tryscript golden tests | End-to-end CLI behavior specs |
 | D11 parity tests | Cross-binary comparison (invokes both Python and Rust) |
-| **Total** | **470+ tests, 0 ignored, 0 failures** |
+| **Total** | **469 tests, 0 ignored, 0 failures** |
 
 ### Parity Testing
 
@@ -225,14 +226,14 @@ This port was built using the
 
 | Metric | Value |
 | --- | --- |
-| Python source lines | 5,279 |
-| Rust source lines | ~3,500 |
-| Rust/Python LOC ratio | 0.66x (Rust is more concise) |
+| Python total LOC | ~12,400 (~4,250 app + ~5,800 test + ~1,770 golden) |
+| Rust total LOC | ~16,150 (~7,250 app + ~7,300 test + ~1,520 golden) |
+| Rust/Python app ratio | ~1.7x |
 | Python test functions | 292 |
-| Rust test functions | 470+ |
+| Rust test functions | 469 |
 | Parity discrepancies found | 15 |
 | Parity discrepancies resolved | 15 (100%) |
-| comrak library workarounds | 13 (all documented) |
+| comrak library workarounds | 13 numbered (66 comment references) |
 | Ignored tests | 0 |
 | `unsafe` code | 1 block (SIGPIPE handler, annotated) |
 | `FIXME`/`TODO`/`HACK` | 0 |

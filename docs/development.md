@@ -29,7 +29,7 @@ Without it, only the library crate is built.
 cargo test --all-features
 ```
 
-The full suite (470+ tests) includes:
+The full suite (469 tests) includes:
 
 | Category | Description |
 | --- | --- |

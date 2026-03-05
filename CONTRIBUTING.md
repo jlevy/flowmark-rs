@@ -28,7 +28,7 @@ cargo build --all-features
 cargo test --all-features
 ```
 
-The full test suite (470+ tests) includes unit tests, integration tests, D11 cross-binary
+The full test suite (469 tests) includes unit tests, integration tests, D11 cross-binary
 parity tests (requires Python flowmark), and tryscript golden tests (requires
 tryscript).
 
