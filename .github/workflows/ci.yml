@@ -125,7 +125,7 @@ jobs:
         run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info --ignore-filename-regex test_tryscript_golden -- --skip tryscript
         env:
           RUSTFLAGS: "-D warnings"
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           files: lcov.info
           fail_ci_if_error: false
