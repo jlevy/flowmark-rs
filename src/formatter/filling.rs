@@ -2133,12 +2133,29 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
 
         NodeValue::Image(image) => {
             let inner = render_inline_children(node, options, in_heading);
-            let title = if image.title.is_empty() {
-                String::new()
+            // COMRAK-WORKAROUND1: Detect PUA-encoded reference image.
+            if image.url.starts_with(REF_LABEL_START) {
+                if let Some(sep_pos) = image.url.find(REF_LABEL_SEP) {
+                    let label = &image.url[REF_LABEL_START.len_utf8()..sep_pos];
+                    format!("![{inner}][{label}]")
+                } else {
+                    // Malformed PUA marker — strip it and render as inline.
+                    let url = &image.url[REF_LABEL_START.len_utf8()..];
+                    let title = if image.title.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" \"{}\"", image.title.replace('"', "\\\""))
+                    };
+                    format!("![{inner}]({url}{title})")
+                }
             } else {
-                format!(" \"{}\"", image.title.replace('"', "\\\""))
-            };
-            format!("![{inner}]({}{})", image.url, title)
+                let title = if image.title.is_empty() {
+                    String::new()
+                } else {
+                    format!(" \"{}\"", image.title.replace('"', "\\\""))
+                };
+                format!("![{inner}]({}{})", image.url, title)
+            }
         }
 
         NodeValue::HtmlInline(html) => html.clone(),

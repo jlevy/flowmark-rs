@@ -297,3 +297,44 @@ fn test_fill_perf_stats_records_stage_times_when_enabled() {
     assert!(stats.render_ns > 0, "expected non-zero render stage");
     reset_fill_perf_stats();
 }
+
+#[test]
+fn test_reference_image_roundtrips() {
+    // COMRAK-WORKAROUND1 covers reference links via PUA-encoded URLs that
+    // are decoded back to `[text][label]` during rendering. Reference
+    // images need the same decoding so the encoded URL does not survive
+    // into the output.
+    let input = "\
+![alt][img]
+
+[img]: https://example.com/img.png
+";
+    let output =
+        fill_markdown(input, true, 88, false, false, false, false, None, ListSpacing::Preserve);
+    assert!(
+        !output.contains('\u{F000}') && !output.contains('\u{F001}'),
+        "output should not contain PUA sentinels: {output:?}"
+    );
+    assert!(output.contains("![alt][img]"), "output should preserve reference image: {output:?}");
+}
+
+#[test]
+fn test_reference_image_inside_reference_link_roundtrips() {
+    // Badge pattern: a reference image nested inside a reference link.
+    // Both the inner image and the outer link should preserve their
+    // reference form, and the encoded URL should not survive into the
+    // output.
+    let input = "\
+[![alt][img]][url]
+
+[img]: https://example.com/img.png
+[url]: https://example.com/page
+";
+    let output =
+        fill_markdown(input, true, 88, false, false, false, false, None, ListSpacing::Preserve);
+    assert!(
+        !output.contains('\u{F000}') && !output.contains('\u{F001}'),
+        "output should not contain PUA sentinels: {output:?}"
+    );
+    assert!(output.contains("![alt][img]"), "output should preserve reference image: {output:?}");
+}
