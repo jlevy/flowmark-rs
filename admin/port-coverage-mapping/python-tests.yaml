@@ -164,6 +164,26 @@
   function: test_stdin_still_works
   test_type: infrastructure
   line_number: 145
+- file: tests/test_cli_help.py
+  function: test_help_includes_agent_guidance
+  test_type: unit
+  line_number: 34
+  doc_string: Help output should include explicit agent guidance via --skill.
+- file: tests/test_cli_help.py
+  function: test_help_includes_brief_common_usage
+  test_type: unit
+  line_number: 24
+  doc_string: Help output should include the concise common usage examples.
+- file: tests/test_cli_help.py
+  function: test_help_includes_tagline
+  test_type: unit
+  line_number: 18
+  doc_string: Help output should include the canonical Flowmark tagline.
+- file: tests/test_cli_help.py
+  function: test_help_omits_old_long_epilog
+  test_type: unit
+  line_number: 43
+  doc_string: Help output should not include the old long-form examples section.
 - file: tests/test_config.py
   function: test_find_config_dot_flowmark_toml_takes_precedence
   test_type: infrastructure
@@ -664,6 +684,11 @@
   test_type: integration
   line_number: 63
   doc_string: Tight lists become loose in loose mode.
+- file: tests/test_packaging_entrypoints.py
+  function: test_flowmark_py_alias_entrypoint
+  test_type: unit
+  line_number: 14
+  doc_string: Both flowmark and flowmark-py should point to the same CLI entrypoint.
 - file: tests/test_ref_docs.py
   function: test_reference_doc_formats
   test_type: golden
@@ -678,16 +703,22 @@
   test_type: unit
   line_number: 14
 - file: tests/test_skill.py
+  function: test_docs_content_has_vscode_cursor_setup
+  class_name: TestGetDocsContent
+  test_type: infrastructure
+  line_number: 56
+  doc_string: README/docs content includes VS Code/Cursor run-on-save setup.
+- file: tests/test_skill.py
   function: test_docs_content_is_readme
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 42
+  line_number: 48
   doc_string: get_docs_content returns README.md content.
 - file: tests/test_skill.py
   function: test_docs_content_loads
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 36
+  line_number: 42
   doc_string: README.md content can be loaded.
 - file: tests/test_skill.py
   function: test_skill_content_has_metadata
@@ -702,6 +733,12 @@
   line_number: 26
   doc_string: SKILL.md contains usage instructions.
 - file: tests/test_skill.py
+  function: test_skill_content_has_vscode_cursor_setup
+  class_name: TestGetSkillContent
+  test_type: infrastructure
+  line_number: 32
+  doc_string: SKILL.md includes VS Code/Cursor run-on-save guidance.
+- file: tests/test_skill.py
   function: test_skill_content_loads
   class_name: TestGetSkillContent
   test_type: infrastructure
@@ -711,25 +748,25 @@
   function: test_install_skill_creates_directories
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 79
+  line_number: 91
   doc_string: Skill installation creates necessary directories.
 - file: tests/test_skill.py
   function: test_install_skill_custom_base
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 67
+  line_number: 79
   doc_string: Skill installs to custom agent base directory.
 - file: tests/test_skill.py
   function: test_install_skill_default
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 54
+  line_number: 66
   doc_string: Skill installs to ~/.claude by default.
 - file: tests/test_skill.py
   function: test_install_skill_overwrites_existing
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 88
+  line_number: 100
   doc_string: Skill installation overwrites existing SKILL.md.
 - file: tests/test_smartquotes.py
   function: test_apostrophes_and_contractions
@@ -907,10 +944,60 @@
   line_number: 35
   doc_string: Single-tilde ~strikethrough~ is valid GFM; flowmark normalizes to ~~double~~.
 - file: tests/test_strikethrough.py
+  function: test_strikethrough_after_punctuation
+  test_type: unit
+  line_number: 159
+  doc_string: Strikethrough after punctuation like quotes should still work.
+- file: tests/test_strikethrough.py
   function: test_strikethrough_in_paragraph
   test_type: integration
   line_number: 92
   doc_string: Strikethrough within a longer paragraph should be preserved during wrapping.
+- file: tests/test_strikethrough.py
+  function: test_strikethrough_inside_parens
+  test_type: unit
+  line_number: 152
+  doc_string: (~~text~~) — valid double-tilde strikethrough inside parens is preserved.
+- file: tests/test_strikethrough.py
+  function: test_strikethrough_with_punctuation_content
+  test_type: unit
+  line_number: 171
+  doc_string: ~~hello!~~ — strikethrough containing punctuation at end of content.
+- file: tests/test_strikethrough.py
+  function: test_tilde_before_and_inside_parens
+  test_type: unit
+  line_number: 106
+  doc_string: ~100 (~200) must NOT be parsed as strikethrough.
+- file: tests/test_strikethrough.py
+  function: test_tilde_before_and_inside_parens_fill
+  test_type: integration
+  line_number: 117
+  doc_string: Same bug through the full fill_markdown pipeline.
+- file: tests/test_strikethrough.py
+  function: test_tilde_before_parens_no_tilde_inside
+  test_type: unit
+  line_number: 145
+  doc_string: ~100 (200) — tilde before parens without tilde inside stays literal.
+- file: tests/test_strikethrough.py
+  function: test_tilde_in_brackets
+  test_type: unit
+  line_number: 182
+  doc_string: ~100 [~200] — tilde near square brackets, same flanking logic.
+- file: tests/test_strikethrough.py
+  function: test_tilde_in_parens_then_outside
+  test_type: unit
+  line_number: 138
+  doc_string: (~200) ~100 — tilde in parens then outside, both literal.
+- file: tests/test_strikethrough.py
+  function: test_tilde_inside_parens_with_text
+  test_type: unit
+  line_number: 131
+  doc_string: ~100 (x ~200) — tilde inside parens with intervening text stays literal.
+- file: tests/test_strikethrough.py
+  function: test_tilde_only_inside_parens
+  test_type: unit
+  line_number: 124
+  doc_string: 100 (~200) — tilde only inside parens should remain literal.
 - file: tests/test_strikethrough.py
   function: test_tilde_space_after_opener
   test_type: unit

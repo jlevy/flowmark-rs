@@ -19,7 +19,7 @@ echo "=== Performance Comparison: Python vs Rust flowmark ==="
 echo ""
 if [ -z "$PYTHON_BIN" ]; then
     echo "ERROR: Python flowmark not found in PATH" >&2
-    echo "Install with: uv tool install flowmark==0.6.4" >&2
+    echo "Install with: uv tool install flowmark==0.6.5" >&2
     exit 1
 fi
 

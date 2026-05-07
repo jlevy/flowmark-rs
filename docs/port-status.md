@@ -1,18 +1,18 @@
 # Project Status: flowmark-rs
 
-**Last updated:** 2026-03-04
+**Last updated:** 2026-05-07
 
 **Current release:** v0.2.6 ([crates.io](https://crates.io/crates/flowmark),
 [PyPI](https://pypi.org/project/flowmark-rs/),
 [Homebrew](https://github.com/jlevy/homebrew-flowmark))
 
-**Python parity target:** flowmark v0.6.4
+**Python parity target:** flowmark v0.6.5
 
 ## Overview
 
 flowmark-rs is a complete Rust port of the Python
 [flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter.
-The port achieves full behavioral parity with Python flowmark v0.6.4 — identical CLI
+The port achieves full behavioral parity with Python flowmark v0.6.5 — identical CLI
 interface, identical formatting output across all modes, and identical file discovery
 behavior.
 
@@ -59,7 +59,7 @@ All 469 tests run in CI on every commit.
 No test file is orphaned.
 The CI test job installs all required external tools:
 
-- Python flowmark v0.6.4 (via `uv tool install`)
+- Python flowmark v0.6.5 (via `uv tool install`)
 - tryscript (via `npm install -g`)
 
 ### Tests Never Hide Failures (Principle 4)
@@ -80,7 +80,7 @@ The CI test job installs all required external tools:
 
 **Required test dependencies** (all installed in CI):
 
-- Python flowmark v0.6.4 (`uv tool install flowmark==0.6.4`)
+- Python flowmark v0.6.5 (`uv tool install flowmark==0.6.5`)
 - tryscript (`npm install -g tryscript@latest`)
 - Node.js 22+ (for tryscript)
 

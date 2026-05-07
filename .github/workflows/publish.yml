@@ -32,7 +32,7 @@ permissions:
 
 env:
   # Python flowmark version for parity tests — sync with [package.metadata.parity] in Cargo.toml
-  FLOWMARK_PY_VERSION: "0.6.4"
+  FLOWMARK_PY_VERSION: "0.6.5"
   FLOWMARK_RELEASE_TAG: ${{ inputs.release_tag || '' }}
 
 jobs:

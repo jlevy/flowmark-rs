@@ -1,0 +1,71 @@
+diff --git a/playbooks/auto-sync-agent-prompt-template.md b/playbooks/auto-sync-agent-prompt-template.md
+index 8efb6e6..001e430 100644
+--- a/playbooks/auto-sync-agent-prompt-template.md
++++ b/playbooks/auto-sync-agent-prompt-template.md
+@@ -22,6 +22,21 @@ sync), see
+ - Target upstream release/tag or commit
+ - Any known accepted divergences
+ 
++### Auto-detecting the target
++
++If the target is not given, an agent can discover it from the upstream submodule:
++
++```bash
++# Project-specific: read the current pinned baseline. Adapt path/keys for your repo.
++BASELINE=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
++git -C <PYTHON_REPO_PATH> fetch --tags >/dev/null
++LATEST=$(git -C <PYTHON_REPO_PATH> tag -l 'v[0-9]*' | sort -V | tail -1)
++echo "Baseline: v${BASELINE} | Latest upstream: ${LATEST}"
++```
++
++If `LATEST > v${BASELINE}`, the target is `LATEST`. If equal, no sync is needed
++(consider Mode A from `python-to-rust-sync-release-workflow.md` instead).
++
+ ## Prompt
+ 
+ ```text
+@@ -69,6 +84,12 @@ Hard requirements:
+ - Do not weaken assertions to pass tests.
+ - No unexplained output differences.
+ - If blocked by ambiguity, stop and ask for a decision with clear options.
++
++When the upstream change targets a library or framework that the Rust port
++replaced with a different one (e.g. Python `marko` vs Rust `comrak`), DO NOT
++auto-port the implementation change. First verify the new tests against the
++existing Rust binary; the replacement library may already have correct behavior.
++Port the tests regardless — they are the parity contract going forward.
+ ```
+ 
+ ## Expected Deliverables
+diff --git a/playbooks/python-to-rust-sync-release-workflow.md b/playbooks/python-to-rust-sync-release-workflow.md
+index bd185b1..09a0f83 100644
+--- a/playbooks/python-to-rust-sync-release-workflow.md
++++ b/playbooks/python-to-rust-sync-release-workflow.md
+@@ -60,16 +60,24 @@ Use when upstream Python has a new version and you are updating Rust to match it
+ Required sequence:
+ 
+ 1. Identify baseline and target Python versions/tags/commits.
++   See
++   [auto-sync-agent-prompt-template.md → Auto-detecting the target](auto-sync-agent-prompt-template.md#auto-detecting-the-target)
++   for a snippet that diffs the current parity baseline against upstream's latest tag.
+ 2. Produce baseline->target diff summary artifact.
+ 3. Categorize changes:
+    - bug fixes
+    - features
+    - test changes
+    - refactors/no-op behavior changes
+-4. Execute [port-checklist-update-template.md](port-checklist-update-template.md)
++4. **For each upstream behavior change, verify against the existing Rust binary
++   *before* concluding code must change.** The Rust port may use a different
++   parser/library that already implements the upstream fix. Port the tests
++   regardless — they're the parity contract going forward — but do not auto-port
++   the implementation change.
++5. Execute [port-checklist-update-template.md](port-checklist-update-template.md)
+    end-to-end.
+-5. Update version correspondence metadata to target baseline.
+-6. Cut release and publish sync report.
++6. Update version correspondence metadata to target baseline.
++7. Cut release and publish sync report.
+ 
+ Mode B acceptance gates:
+ - no skipped changed upstream tests without documented rationale

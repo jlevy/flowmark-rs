@@ -108,11 +108,29 @@ The port note indicates which Python version's behavior is fully covered.
 
 ## Initial Setup
 
-After cloning, initialize submodules:
+> **First thing every session:** initialize submodules. Most sync work fails early
+> without them and the failure modes are confusing (missing `repos/flowmark` paths,
+> empty fixtures, "playbook not found").
 
 ```bash
 git submodule update --init --recursive
 ```
+
+## Checking for Upstream Updates
+
+To check whether the Python upstream has a newer release than the current parity
+target, run:
+
+```bash
+BASELINE=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
+git -C repos/flowmark fetch --tags >/dev/null 2>&1
+LATEST=$(git -C repos/flowmark tag -l 'v[0-9]*' | sort -V | tail -1)
+echo "Current parity target: v${BASELINE}"
+echo "Latest upstream tag:   ${LATEST}"
+```
+
+If `LATEST` is greater than `v${BASELINE}`, run a Mode B sync (below).
+Otherwise, no sync work is needed.
 
 ## Sync Process (Mode B: Upstream baseline change)
 
@@ -165,8 +183,11 @@ For this repo, use these concrete equivalents:
    ```bash
    cp repos/flowmark/tests/testdocs/testdoc.orig.md tests/testdocs/
    cp repos/flowmark/tests/testdocs/testdoc.expected.*.md tests/testdocs/
-   ./scripts/generate-rust-readme.py
+   ./scripts/generate_rust_readme.py
    ```
+
+   The generator pulls `last_sync_date` from `docs/port-status.md` and
+   `parity_version` from `Cargo.toml`, so update those before running it.
 
 5. **Triage mapping gaps early (temp manifest)**
 
