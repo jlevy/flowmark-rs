@@ -29,8 +29,7 @@ fn python_flowmark_available() -> bool {
     Command::new("uvx")
         .args([spec.as_str(), "--version"])
         .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+        .is_ok_and(|o| o.status.success())
 }
 
 fn run_python_stdin(args: &[&str], input: &str) -> String {
