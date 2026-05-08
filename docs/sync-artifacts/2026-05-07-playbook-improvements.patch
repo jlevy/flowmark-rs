@@ -1,5 +1,321 @@
+diff --git a/_meta/playbook-improvement-log.md b/_meta/playbook-improvement-log.md
+index d943341..5db3602 100644
+--- a/_meta/playbook-improvement-log.md
++++ b/_meta/playbook-improvement-log.md
+@@ -2,6 +2,90 @@
+ 
+ Chronological log of improvements to the Rust Porting Playbook and its meta-process.
+ 
++## 2026-05-07
++
++### Sync-workflow improvements from flowmark-rs v0.6.4 → v0.6.5 sync
++
++Real-world Mode B sync surfaced several gaps in the current sync guidance.
++Source case study: [flowmark-rs PR #55](https://github.com/jlevy/flowmark-rs/pull/55)
++and the
++[sync artifact](https://github.com/jlevy/flowmark-rs/blob/claude/review-python-porting-0i29L/docs/sync-artifacts/2026-05-07-sync-v0.6.4-to-v0.6.5.md).
++
++Changes (all `ADD` / `CLARIFY`):
++
++- **`guidelines/porting-principles-and-antipatterns.md`** — added a Sub-rule under
++  Principle 8 (Disparities tested before fixed) titled “Empirical pre-port
++  verification”. When an upstream behavior fix lands with new tests, the agent must run
++  the new tests against the *existing* Rust binary first.
++  If they pass, port only the tests; the Rust port may use a different parser/library
++  that already implements the upstream fix.
++  This was the most impactful gap exposed by this sync — every behavior change in v0.6.5
++  was already correct in Rust because comrak handles GFM flanking, so 100% of the diff
++  was test/metadata, not code.
++
++- **`playbooks/port-checklist-update-template.md`** —
++  - Added a new “Preflight” section at the top with
++    `git submodule update --init --recursive` as the very first step.
++  - Added a step to install the upstream binary at the **target** version so
++    cross-binary parity tests target the right baseline.
++  - Added a step to run a clean clippy on the current Rust HEAD before sync work begins;
++    CI uses a floating `dtolnay/rust-toolchain@stable` and a recent stable bump may add
++    new pedantic lints that flag pre-existing code unrelated to the sync.
++    Land those fixes first so they don’t get conflated.
++  - Added a new **Phase 0: Empirical Pre-Port Verification** as a hard gate before Phase
++    1 implementation.
++  - Added a “Refresh Test Mapping” sub-checklist in Phase 2 covering the
++    discover/init/check loop and the smoke-test count constants that drift on every
++    sync.
++  - Fixed broken link to `rust-cli-best-practices.md` (was pointing at non-existent
++    `../references/`).
++
++- **`playbooks/auto-sync-agent-prompt-template.md`** —
++  - Added an “Auto-detecting the target” snippet so agents can compute
++    baseline-vs-latest without being told the target tag.
++  - Inserted “Empirical pre-port verification” as step 4 in the prompt so the agent
++    records per-change Rust impact before writing code.
++  - Added a “library-replaced” reminder to Hard Requirements.
++  - Added a “Per-change Rust impact table format” with the exact table format the sync
++    report should use.
++  - Added a “Sync artifact naming convention”:
++    `<rust-repo>/docs/sync-artifacts/YYYY-MM-DD-sync-v<BASELINE>-to-v<TARGET>.md`.
++  - Added a “Cross-binary churn investigation” section: when users report diff churn
++    between Python and Rust binaries on real-world docs, first verify both binaries are
++    at the same parity surface; mismatched intermediate versions commonly produce
++    false-positive churn.
++
++- **`playbooks/python-to-rust-sync-release-workflow.md`** — Mode B step 1 now
++  cross-references the auto-detect snippet, and a new step 4 mandates empirical
++  verification before checklist execution.
++
++- **`references/cross-language-test-mapping.md`** —
++  - Added “Update smoke-test count constants” to the ongoing-sync workflow, calling out
++    that count assertions are not parity issues and just need to be bumped alongside the
++    YAML refresh.
++  - Added “Mapping new test files (not just new tests inside existing files)” with
++    concrete decisions: parallel Rust file, excluded with rationale, or partial.
++
++### Underlying observations
++
++- **OBS-1:** The v0.6.4 → v0.6.5 sync had zero Rust code changes — every upstream “fix”
++  already worked correctly under comrak.
++  Without the empirical pre-port gate, an agent would have ported the regex/find
++  override unnecessarily.
++- **OBS-2:** CI’s `Clippy lint` job failed on the initial sync push because Rust 1.95
++  stable added two new pedantic lints (`map_unwrap_or`, `unnecessary_trailing_comma`)
++  that flagged pre-existing code unrelated to the sync.
++  Trivial mechanical fixes, but the failure was confusing because the local toolchain
++  was 1.94.1.
++- **OBS-3:** Smoke-test count constants in the case-study repo
++  (`EXPECTED_PYTHON_TEST_COUNT`, etc.)
++  needed updating, but the playbook didn’t mention this.
++  Easy to miss.
++- **OBS-4:** A user reported diff churn between Python and Rust binaries on three
++  real-world docs. Investigation showed all three produced byte-identical output once
++  both binaries were at v0.6.5. The churn was version-mismatch, not parity.
++  The sync workflow should mention this troubleshooting routine.
++
+ ## 2026-03-03
+ 
+ ### Multi-channel distribution documentation (from flowmark-rs sync)
+@@ -13,7 +97,7 @@ workflows, testable release scripts, and idempotent publishing.
+ 
+ **Changes made:**
+ 
+-- Added new section 6.5 "Multi-Channel Distribution" to
++- Added new section 6.5 “Multi-Channel Distribution” to
+   `references/rust-cli-best-practices.md` covering:
+   - PyPI distribution via maturin (`bindings = "bin"`) with full workflow template
+   - Homebrew tap distribution with formula template
+@@ -23,16 +107,16 @@ workflows, testable release scripts, and idempotent publishing.
+   `guidelines/rust-project-setup.md`.
+ - Expanded Phase 7.5 in `playbooks/python-to-rust-playbook.md` to recommend
+   multi-channel distribution for Python-to-Rust ports (PyPI, Homebrew, crates.io).
+-- Added "Multi-Channel Distribution Learnings" section to
++- Added “Multi-Channel Distribution Learnings” section to
+   `case-studies/flowmark/flowmark-port-analysis.md` documenting key innovations.
+ - Updated `README.md`:
+   - Added `docs/project/research/` to structure map.
+-  - Added "Research Docs" section to reference tables.
++  - Added “Research Docs” section to reference tables.
+   - Updated documentation layers from four to five (adding Research layer).
+ 
+ **Source of improvements:** flowmark-rs submodule review — specifically the publishing
+-system (release.yml orchestrator, publish.yml for crates.io, pypi.yml for PyPI,
+-scripts/ for testable release logic, docs/publishing.md runbook).
++system (release.yml orchestrator, publish.yml for crates.io, pypi.yml for PyPI, scripts/
++for testable release logic, docs/publishing.md runbook).
+ 
+ ### CI workflow and release automation hardening (from flowmark-rs sync)
+ 
+@@ -47,18 +131,19 @@ setup into playbook guidance.
+   scripts); added `CARGO_INCREMENTAL: 0` and `CARGO_PROFILE_TEST_DEBUG: 0` env vars;
+   added `--locked` on clippy; added `RUSTFLAGS: "-D warnings"` to test jobs.
+ - Rewrote release workflow (6.4) to replace `cross` Docker approach with RUSTFLAGS
+-  linker overrides + apt-get packages (simpler, more transparent). Added: plan job
+-  with script-driven decision logic, concurrency control, SHA256SUMS checksum
+-  generation, `fail-fast: false`, `fail_on_unmatched_files: true`, static linking
+-  via `+crt-static`, reusable channel workflow invocation, crates.io OIDC auth via
+-  `rust-lang/crates-io-auth-action@v1`.
+-- Added "Release Automation Scripts" section documenting the pattern of extracting
++  linker overrides + apt-get packages (simpler, more transparent).
++  Added: plan job with script-driven decision logic, concurrency control, SHA256SUMS
++  checksum generation, `fail-fast: false`, `fail_on_unmatched_files: true`, static
++  linking via `+crt-static`, reusable channel workflow invocation, crates.io OIDC auth
++  via `rust-lang/crates-io-auth-action@v1`.
++- Added “Release Automation Scripts” section documenting the pattern of extracting
+   workflow logic into testable Python scripts (resolve_release_plan, package_archive,
+   resolve_crate_metadata, validate_wheel_entrypoints, pypi_smoke_test) with code
+   examples and directory layout.
+ - Updated `guidelines/rust-project-setup.md` CI workflow to match (13 jobs, env vars,
+-  coverage, semver-checks, workflow-scripts). Rewrote release workflow section to
+-  document RUSTFLAGS cross-compilation, OIDC auth, and script-driven automation.
++  coverage, semver-checks, workflow-scripts).
++  Rewrote release workflow section to document RUSTFLAGS cross-compilation, OIDC auth,
++  and script-driven automation.
+ 
+ ## 2026-02-26
+ 
+diff --git a/guidelines/porting-principles-and-antipatterns.md b/guidelines/porting-principles-and-antipatterns.md
+index d1f6369..268aaa4 100644
+--- a/guidelines/porting-principles-and-antipatterns.md
++++ b/guidelines/porting-principles-and-antipatterns.md
+@@ -10,9 +10,9 @@ These principles override convenience, speed, and local judgment.
+ There are no exceptions.
+ 
+ See also: [Python-to-Rust Porting Rules](python-to-rust-porting-rules.md) and
+-[Test Coverage for Porting](test-coverage-for-porting.md) (for implementation
+-specifics: fixture organization, golden test patterns, coverage tools, and
+-cross-validation mechanics).
++[Test Coverage for Porting](test-coverage-for-porting.md) (for implementation specifics:
++fixture organization, golden test patterns, coverage tools, and cross-validation
++mechanics).
+ 
+ ## Key Principles
+ 
+@@ -54,6 +54,16 @@ None are hypothetical.
+    Then investigate the class of behavior the disparity represents — one discovered gap
+    usually means more are hiding nearby.
+ 
++   **Sub-rule (sync mode): empirical pre-port verification.** When the upstream project
++   ships a behavior fix accompanied by new tests, do not auto-port the implementation
++   change. First run the new tests against the *existing* Rust binary.
++   If they pass, port only the tests — the Rust port may use a different parser/library
++   that already implements the upstream fix, and adding a redundant Rust-side fix risks
++   introducing duplicate workarounds or regressions.
++   If they fail, follow the standard test-before-fix protocol.
++   This is especially common once a port is mature: a frequent shape of sync work is
++   “Python catches up to Rust” rather than “Rust catches up to Python”.
++
+ * * *
+ 
+ ## Illustrations
+@@ -134,15 +144,16 @@ The correct behavior seems obvious, and the agent reasons the user would want th
+ improvement.
+ 
+ **The fix:** Parity means parity, including bugs.
+-The default is to match the original's behavior exactly.
++The default is to match the original’s behavior exactly.
+ 
+ 1. Match the buggy behavior in the port.
+ 2. Write a test that captures the (buggy) behavior and passes against both
+    implementations.
+ 3. Note the bug in the spec or as a tracked issue — agents should absolutely document
+-   bugs they discover in the original. But documenting is not fixing. The bug is a
+-   separate issue to escalate as unresolved at the end of the current development
+-   cycle, not a reason to diverge from the original now.
++   bugs they discover in the original.
++   But documenting is not fixing.
++   The bug is a separate issue to escalate as unresolved at the end of the current
++   development cycle, not a reason to diverge from the original now.
+ 4. If the user explicitly approves fixing the bug during the current cycle, fix it in
+    both implementations and add the intentional divergence to the tolerated variations
+    list.
+@@ -623,7 +634,7 @@ Parity must also be validated dynamically by running both implementations agains
+ corpus of real-world inputs and comparing outputs.**
+ 
+ Static test assertions encode expected behavior at the time the test is written.
+-If the expected value is wrong (because the developer misunderstood the original's
++If the expected value is wrong (because the developer misunderstood the original’s
+ behavior), the test passes but parity is false.
+ Dynamic corpus validation catches these cases because it compares live output from both
+ implementations, not hardcoded strings.
+@@ -635,58 +646,65 @@ The workflow:
+    The corpus should be significantly larger than the unit test fixture set.
+ 
+ 2. **Run both implementations against the full corpus** after every merge to main.
+-   Compare outputs byte-for-byte. Any diff is a parity failure.
++   Compare outputs byte-for-byte.
++   Any diff is a parity failure.
+ 
+ 3. **Extract corner-cases from the corpus into regression tests.** When a corpus diff
+    reveals a bug, add a minimal reproducing input as a permanent unit test fixture.
+    The corpus catches the bug; the regression test prevents it from recurring.
+ 
+-4. **Prefer dynamic assertions over static ones** where possible. Instead of
+-   `assert_eq!(result, "hardcoded expected output")`, prefer tests that run both
+-   implementations and compare: `assert_eq!(rust_output, python_output)`. This ensures
+-   parity even when the expected behavior is complex or hard to specify statically.
++4. **Prefer dynamic assertions over static ones** where possible.
++   Instead of `assert_eq!(result, "hardcoded expected output")`, prefer tests that run
++   both implementations and compare: `assert_eq!(rust_output, python_output)`. This
++   ensures parity even when the expected behavior is complex or hard to specify
++   statically.
+ 
+ ### Anti-Pattern: False Parity Through Wrong Expected Values
+ 
+ **What happens:** An agent writes tests with hardcoded expected values, but the expected
+-values are wrong — they reflect the agent's assumption about the original's behavior,
+-not its actual behavior. All tests pass. CI is green. The port is declared at parity.
++values are wrong — they reflect the agent’s assumption about the original’s behavior,
++not its actual behavior.
++All tests pass. CI is green.
++The port is declared at parity.
+ Later, running the original implementation against the same inputs reveals the expected
+ values were incorrect.
+ 
+ **Example (real, PR #17):** An agent ported a set of formatting tests and encoded
+-expected output based on reading the Python source code. The tests all passed against
+-the Rust implementation. But when the Python implementation was actually run against the
+-same inputs, its output differed from the encoded expected values in several cases. The
+-tests were asserting parity with a fictional version of the Python output, not the real
+-one.
++expected output based on reading the Python source code.
++The tests all passed against the Rust implementation.
++But when the Python implementation was actually run against the same inputs, its output
++differed from the encoded expected values in several cases.
++The tests were asserting parity with a fictional version of the Python output, not the
++real one.
+ 
+ The root cause: the agent never ran the Python implementation to generate expected
+ values. The agent read the code and inferred what it would produce, then encoded those
+-inferences as the expected output. Several inferences were wrong.
++inferences as the expected output.
++Several inferences were wrong.
+ 
+ **Why agents do this:** Running the original implementation requires setting up the
+-environment (Python virtualenv, dependencies, etc.), which feels like overhead. Reading
+-the code and deducing the output is faster. The agent trusts their understanding of the
+-original code.
++environment (Python virtualenv, dependencies, etc.), which feels like overhead.
++Reading the code and deducing the output is faster.
++The agent trusts their understanding of the original code.
+ 
+ **The fix:**
+ 
+ 1. **Expected values must come from running the original, never from reading its code.**
+    Generate expected test outputs by actually executing the Python implementation.
+-   Even "obvious" outputs should be generated, not hand-written.
++   Even “obvious” outputs should be generated, not hand-written.
+ 
+ 2. **Automate expected output generation.** Use a script or test harness that runs the
+-   Python implementation, captures output, and writes it to fixture files. This
+-   eliminates human judgment about what the output "should" be.
++   Python implementation, captures output, and writes it to fixture files.
++   This eliminates human judgment about what the output “should” be.
+ 
+ 3. **Use dynamic cross-validation as a backstop.** Even with correct static assertions,
+    run corpus validation (see above) to catch cases where the static assertions
+    themselves are wrong.
+ 
+-4. **Never trust "all tests pass" as proof of parity** unless the tests were generated
+-   from running the original implementation. Passing tests prove consistency with
+-   expected values. They don't prove the expected values are correct.
++4. **Never trust “all tests pass” as proof of parity** unless the tests were generated
++   from running the original implementation.
++   Passing tests prove consistency with expected values.
++   They don’t prove the expected values are correct.
+ 
+ * * *
+ 
+@@ -767,8 +785,8 @@ prominently tracked before the work is considered done.
+ 
+ - [ ] A corpus of real-world inputs exists and is significantly larger than the unit
+   test fixture set.
+-- [ ] Both implementations (Python and Rust) are run against the full corpus after
+-  every merge, with byte-for-byte output comparison.
++- [ ] Both implementations (Python and Rust) are run against the full corpus after every
++  merge, with byte-for-byte output comparison.
+ - [ ] Expected values in static tests were generated by running the original
+   implementation, not by reading its code or by manual inference.
+ - [ ] Corner-cases discovered through corpus validation have been extracted into
 diff --git a/playbooks/auto-sync-agent-prompt-template.md b/playbooks/auto-sync-agent-prompt-template.md
-index 8efb6e6..001e430 100644
+index 8efb6e6..aff0615 100644
 --- a/playbooks/auto-sync-agent-prompt-template.md
 +++ b/playbooks/auto-sync-agent-prompt-template.md
 @@ -22,6 +22,21 @@ sync), see
@@ -24,7 +340,39 @@ index 8efb6e6..001e430 100644
  ## Prompt
  
  ```text
-@@ -69,6 +84,12 @@ Hard requirements:
+@@ -50,18 +65,25 @@ Required process:
+    - new features
+    - test additions/updates
+    - refactors/no-op behavioral changes
+-4. Execute the full update workflow from:
++4. **Empirical pre-port verification.** Before porting any code change, run the
++   new upstream tests (or representative inputs) against the *existing* Rust
++   binary and record the result for each one. If the new tests already pass,
++   the upstream code change is not required in Rust — port the tests only.
++   This commonly happens when the Rust port uses a different parser/library
++   that already implements the upstream fix.
++5. Execute the full update workflow from:
+    - playbooks/port-checklist-update-template.md
+    - playbooks/python-to-rust-playbook.md (Phase 8)
+    - relevant guidelines in guidelines/
+-5. Port changes in Rust with tests-first discipline and parity validation.
+-6. Run full validation gates (tests, cross-validation, lint/format/docs checks).
+-7. Update version correspondence and sync documentation.
+-8. Produce a final sync report with:
++6. Port changes in Rust with tests-first discipline and parity validation.
++7. Run full validation gates (tests, cross-validation, lint/format/docs checks).
++8. Update version correspondence and sync documentation.
++9. Produce a final sync report with:
+    - upstream diff summary
++   - per-change Rust impact (using the table format below)
+    - what was ported
+    - any intentional divergences (with rationale)
+-   - validation results
++   - validation results (each command + exit status)
+    - unresolved blockers (if any)
+ 
+ Hard requirements:
+@@ -69,7 +91,66 @@ Hard requirements:
  - Do not weaken assertions to pass tests.
  - No unexplained output differences.
  - If blocked by ambiguity, stop and ask for a decision with clear options.
@@ -34,11 +382,165 @@ index 8efb6e6..001e430 100644
 +auto-port the implementation change. First verify the new tests against the
 +existing Rust binary; the replacement library may already have correct behavior.
 +Port the tests regardless — they are the parity contract going forward.
++```
++
++### Per-change Rust impact table format
++
++The sync report should categorize each upstream change with its concrete Rust effect.
++Use this table format:
++
++| Upstream commit | Type | Rust impact |
++| --- | --- | --- |
++| `<sha>` | fix / feat / docs / test / refactor | None — comrak already handles it. Tests ported. |
++| `<sha>` | feat(cli) | None — Rust already emits the new behavior. Tests ported. |
++| `<sha>` | feat | New `--xyz` flag added to `src/main.rs`; tests ported. |
++| `<sha>` | docs | None applicable to Rust. |
++
++The table makes “what we changed in Rust for this upstream commit” reviewable at a
++glance, and makes “tests-only” syncs auditable rather than mysterious.
++
++### Sync artifact naming convention
++
++Save the diff summary + per-change table + validation evidence to a single artifact at:
++
  ```
++<rust-repo>/docs/sync-artifacts/YYYY-MM-DD-sync-v<BASELINE>-to-v<TARGET>.md
++```
++
++Recommended sections in the artifact:
++
++1. Baseline and target tags / commits
++2. Upstream commits in range (from `git log --oneline <baseline>..<target>`)
++3. Changed files (from `git diff --name-status`)
++4. Per-change Rust impact (the table above)
++5. Test fixture changes (or “none — fixtures byte-identical between versions”)
++6. Required Rust update checklist (with `[x]` as items complete)
++7. Validation evidence (each gate command + result)
++8. User-reported regressions investigated, if any (see “Cross-binary churn”, below)
++
++### Cross-binary churn investigation (user-reported)
++
++When users report diff churn between Python and Rust binaries on real-world documents,
++the first step is *always* to confirm both binaries are at the same parity surface.
++Frequently the churn is from running mismatched flowmark versions across formatting
++passes (older Python vs newer Rust, or vice versa), not a true parity bug.
++The investigation routine:
++
++```bash
++# Both binaries on the same input
++flowmark --auto sample.md            # produces output A
++./target/release/flowmark --auto sample.md  # produces output B
++diff sample-A.md sample-B.md
++```
++
++If the diff is empty, the user’s churn is version-mismatch, not a parity gap.
++If the diff is non-empty *and* parity is supposed to hold, the case is a genuine
++regression and must be tested + fixed before the sync ships.
  
  ## Expected Deliverables
+ 
+diff --git a/playbooks/port-checklist-update-template.md b/playbooks/port-checklist-update-template.md
+index 403b7f8..e58188b 100644
+--- a/playbooks/port-checklist-update-template.md
++++ b/playbooks/port-checklist-update-template.md
+@@ -17,7 +17,9 @@ Then fill in the copy, so that this template can be reused for each subsequent s
+ cycle.
+ 
+ **Related:** [Initial Port Checklist](port-checklist-initial-template.md) |
+-[Rust CLI Best Practices](../references/rust-cli-best-practices.md)
++[Rust CLI Best Practices](../references/rust-cli-best-practices.md) |
++[Auto-Sync Prompt](auto-sync-agent-prompt-template.md) |
++[Cross-Language Test Mapping](../references/cross-language-test-mapping.md)
+ 
+ **Applicability profile:** This checklist is CLI-forward because flowmark is a CLI case
+ study. For non-CLI ports, mark CLI-only items as **N/A** and substitute equivalent
+@@ -55,12 +57,55 @@ polling:
+ 
+ These are optional but strongly recommended for projects with active Python upstreams.
+ 
+-## Preflight: Confirm Release Mode
++## Preflight: Environment + Release Mode
++
++> **First thing every sync session:** initialize submodules.
++> Sync work fails early without them and the failure modes are confusing (missing
++> `repos/<python>` paths, empty fixtures, “playbook not found”).
++
++```bash
++git submodule update --init --recursive
++```
+ 
+ - [ ] Confirm this run changes the Python baseline version/tag/commit.
+ - [ ] If baseline is unchanged, stop and use
+   [python-to-rust-sync-release-workflow.md](python-to-rust-sync-release-workflow.md)
+   Mode A instead of this checklist.
++- [ ] Install / refresh the upstream Python binary at the **target** version so
++  cross-binary parity tests run against the right baseline:
++  ```bash
++  uv tool install <package>==<TARGET_VERSION>   # or equivalent
++  ```
++- [ ] Run a clean `cargo clippy --locked --all-targets --all-features -- -D warnings` on
++  the **current** Rust HEAD before making any sync edits.
++  CI uses a floating stable toolchain (`dtolnay/rust-toolchain@stable`) and a recent
++  Rust release may add new pedantic lints that flag pre-existing code.
++  Land those fixes as trivial commits *before* sync work so they don’t get conflated
++  with the sync diff.
++
++## Phase 0: Empirical Pre-Port Verification
++
++> **Hard gate (do not start Phase 1 implementation work):** for every behavior change in
++> the upstream diff, run the new upstream tests / representative inputs against the
++> *existing* Rust binary and record the result.
++> The Rust port may use a different parser/library that already implements the upstream
++> fix; in that case the upstream code change is not required, only the tests.
++
++- [ ] For each upstream behavior commit:
++  - [ ] Identify the new test cases the commit adds or modifies.
++  - [ ] Run those test inputs through the existing release Rust binary
++    (`./target/release/<bin> ...`).
++  - [ ] Record the result in the per-change Rust impact table: “None — Rust already
++    passes” / “Code change required” / “Investigation needed”.
++- [ ] Cross-check `--help` text changes: if Python aligned its CLI to Rust’s existing
++  format (a common pattern), the Rust change set is empty for that commit — only the
++  Python tests need porting.
++
++This gate exists because the most common shape of an upstream sync, once a port is
++mature, is “Python catches up to Rust” rather than “Rust catches up to Python”.
++Treating every upstream commit as a Rust code change inflates the diff and risks
++introducing duplicate workarounds for fixes the Rust replacement library already
++implements.
+ 
+ ## Phase 1: Sync Python Changes
+ 
+@@ -174,6 +219,27 @@ These are optional but strongly recommended for projects with active Python upst
+ 
+   - [ ] Create tracking issues for deferred features if they may be ported later
+ 
++- [ ] **Refresh Test Mapping** (if the project uses
++  [cross-language test mapping](../references/cross-language-test-mapping.md))
++
++  - [ ] Re-run `discover-python` against the new Python tag to refresh
++    `python-tests.yaml`.
++
++  - [ ] Re-run `discover-rust` after porting tests, to refresh `rust-tests.yaml`.
++
++  - [ ] Run `init-mapping` to add new entries (they appear with `status: missing`).
++
++  - [ ] For each `missing` entry: set `status: mapped` with `rust_file` /
++    `rust_function` if a Rust counterpart was added, or `status: excluded` with a
++    `notes:` rationale (Python-specific infrastructure, etc.).
++
++  - [ ] Run `check-mapping` and confirm exit 0 with `Missing: 0`.
++
++  - [ ] **Update count constants** in any smoke-test that pins the manifest sizes (e.g.
++    `EXPECTED_PYTHON_TEST_COUNT`, `EXPECTED_RUST_TEST_COUNT`, `EXPECTED_MAPPING_COUNT`).
++    These need to be bumped on every sync; CI failure here is expected and not a parity
++    issue.
++
+ ## Phase 3: CLI Updates
+ 
+ - [ ] **Update CLI Interface** (if changed in Python)
 diff --git a/playbooks/python-to-rust-sync-release-workflow.md b/playbooks/python-to-rust-sync-release-workflow.md
-index bd185b1..09a0f83 100644
+index bd185b1..e408530 100644
 --- a/playbooks/python-to-rust-sync-release-workflow.md
 +++ b/playbooks/python-to-rust-sync-release-workflow.md
 @@ -60,16 +60,24 @@ Use when upstream Python has a new version and you are updating Rust to match it
@@ -47,7 +549,7 @@ index bd185b1..09a0f83 100644
  1. Identify baseline and target Python versions/tags/commits.
 +   See
 +   [auto-sync-agent-prompt-template.md → Auto-detecting the target](auto-sync-agent-prompt-template.md#auto-detecting-the-target)
-+   for a snippet that diffs the current parity baseline against upstream's latest tag.
++   for a snippet that diffs the current parity baseline against upstream’s latest tag.
  2. Produce baseline->target diff summary artifact.
  3. Categorize changes:
     - bug fixes
@@ -55,11 +557,11 @@ index bd185b1..09a0f83 100644
     - test changes
     - refactors/no-op behavior changes
 -4. Execute [port-checklist-update-template.md](port-checklist-update-template.md)
-+4. **For each upstream behavior change, verify against the existing Rust binary
-+   *before* concluding code must change.** The Rust port may use a different
-+   parser/library that already implements the upstream fix. Port the tests
-+   regardless — they're the parity contract going forward — but do not auto-port
-+   the implementation change.
++4. **For each upstream behavior change, verify against the existing Rust binary *before*
++   concluding code must change.** The Rust port may use a different parser/library that
++   already implements the upstream fix.
++   Port the tests regardless — they’re the parity contract going forward — but do not
++   auto-port the implementation change.
 +5. Execute [port-checklist-update-template.md](port-checklist-update-template.md)
     end-to-end.
 -5. Update version correspondence metadata to target baseline.
@@ -69,3 +571,131 @@ index bd185b1..09a0f83 100644
  
  Mode B acceptance gates:
  - no skipped changed upstream tests without documented rationale
+diff --git a/references/cross-language-test-mapping.md b/references/cross-language-test-mapping.md
+index 9602d12..7661459 100644
+--- a/references/cross-language-test-mapping.md
++++ b/references/cross-language-test-mapping.md
+@@ -17,15 +17,17 @@ See also: [Test Coverage for Porting](../guidelines/test-coverage-for-porting.md
+ 
+ ## Why Test Mapping Matters
+ 
+-During a port, test count alone is misleading. A Rust codebase can have 400+ tests while
+-still missing coverage for critical Python behaviors — if the tests cover different code
+-paths or encode wrong expected values (see Principle 9). Test mapping provides:
++During a port, test count alone is misleading.
++A Rust codebase can have 400+ tests while still missing coverage for critical Python
++behaviors — if the tests cover different code paths or encode wrong expected values (see
++Principle 9). Test mapping provides:
+ 
+ 1. **Traceability:** Every Python test maps to one or more Rust equivalents
+ 2. **Gap detection:** Unmapped Python tests are immediately visible
+ 3. **Split tracking:** When a single Python test becomes multiple Rust tests, the
+    relationship is explicit
+-4. **Exclusion justification:** Tests intentionally not ported are documented with reasons
++4. **Exclusion justification:** Tests intentionally not ported are documented with
++   reasons
+ 5. **CI enforcement:** The mapping is validated on every push — no silent drift
+ 
+ ## Architecture
+@@ -97,7 +99,8 @@ Rust tests are simpler: no class hierarchy, no type classification needed.
+ 
+ ### test-mapping.yaml
+ 
+-The core mapping file. Auto-generated skeleton, manually curated:
++The core mapping file.
++Auto-generated skeleton, manually curated:
+ 
+ ```yaml
+ - python_file: tests/test_alerts.py
+@@ -148,7 +151,8 @@ When a single Python test with many assertions is split into focused Rust tests:
+ ## CLI Tool
+ 
+ The discovery and validation commands are implemented as a Python CLI tool
+-(`flowmark-dev` in the flowmark port). Adapt the tool name and paths to your project.
++(`flowmark-dev` in the flowmark port).
++Adapt the tool name and paths to your project.
+ 
+ ### Commands
+ 
+@@ -182,16 +186,18 @@ flowmark-dev check-mapping \
+ extract function names starting with `test_`, classify by test type based on function
+ calls and filename patterns, and capture the first line of any docstring.
+ 
+-**Rust discovery** prefers `cargo test -- --list --format terse` for compiler-authoritative
+-results. This finds both integration tests (`tests/`) and unit tests (`src/**/mod tests`).
+-A regex fallback parses `#[test]` attributes directly when cargo is unavailable.
++**Rust discovery** prefers `cargo test -- --list --format terse` for
++compiler-authoritative results.
++This finds both integration tests (`tests/`) and unit tests (`src/**/mod tests`). A
++regex fallback parses `#[test]` attributes directly when cargo is unavailable.
+ 
+ ### Regeneration Safety
+ 
+-All three YAML files have an `# Auto-generated. Manual edits are preserved on
+-re-generation.` header. The init-mapping command merges new Python tests into the
+-existing mapping file without overwriting manually curated fields (`status`, `rust_file`,
+-`rust_function`, `rust_functions`, `notes`).
++All three YAML files have an `# Auto-generated.
++Manual edits are preserved on re-generation.` header.
++The init-mapping command merges new Python tests into the existing mapping file without
++overwriting manually curated fields (`status`, `rust_file`, `rust_function`,
++`rust_functions`, `notes`).
+ 
+ ## CI Enforcement
+ 
+@@ -218,7 +224,8 @@ check-mapping:
+ The `check-mapping` command validates:
+ 
+ 1. **Every Python test has a mapping entry.** Unmapped tests fail CI.
+-2. **Every mapped Rust reference exists.** Broken `rust_file`/`rust_function` refs fail CI.
++2. **Every mapped Rust reference exists.** Broken `rust_file`/`rust_function` refs fail
++   CI.
+ 3. **No stale entries.** Mapping entries referencing removed Python tests are flagged.
+ 4. **Extra Rust tests are reported** (informational, not a failure — Rust can have
+    additional tests beyond what Python covers).
+@@ -254,6 +261,24 @@ PASS: All Python tests are covered by the mapping.
+ 2. New tests appear as `missing` — port them and update to `mapped`
+ 3. Run `discover-rust` to refresh the Rust manifest after adding tests
+ 4. CI prevents merging with unmapped tests
++5. **Update smoke-test count constants.** If the project pins manifest sizes (e.g.
++   `EXPECTED_PYTHON_TEST_COUNT`, `EXPECTED_RUST_TEST_COUNT`, `EXPECTED_MAPPING_COUNT` in
++   a `test_smoke.py`-style guard), bump them to match the new YAML sizes.
++   These constants drift on every sync; the failing assertion is telling you to update
++   the count, not flagging a parity issue.
++
++### Mapping new test files (not just new tests inside existing files)
++
++When upstream adds an entirely new test file (e.g. `tests/test_cli_help.py`) the mapping
++needs a corresponding Rust file decision:
++
++- **Port to a parallel Rust file** of the same name (`tests/test_cli_help.rs`) if the
++  test concept maps cleanly.
++  Set `status: mapped` for each new entry with `rust_file` pointing at the new file.
++- **Mark `excluded` with rationale** if the new test file is Python-specific (e.g.
++  packaging-entrypoint tests asserting `[project.scripts]` shape; the Rust analog might
++  exist as a `[[bin]]` shape test that isn’t 1:1).
++- **Split via `partial`** if the Python test maps to multiple Rust tests.
+ 
+ ### When Refactoring Rust Tests
+ 
+@@ -274,14 +299,14 @@ To implement this system for a new port:
+ 5. **Version-control all three YAML files** — they are the source of truth for coverage
+ 
+ The key design decision: **mapping is a hard CI gate, not an advisory report.** This
+-ensures test coverage never silently regresses. Every new Python test must be mapped
+-before the next PR merges.
++ensures test coverage never silently regresses.
++Every new Python test must be mapped before the next PR merges.
+ 
+ ## Related
+ 
+ - [Test Coverage for Porting](../guidelines/test-coverage-for-porting.md) — fixture
+   organization, golden tests, coverage tools
+-- [Porting Principles](../guidelines/porting-principles-and-antipatterns.md) — Principle 9
+-  covers dynamic corpus validation as a complement to static test mapping
+-- [Python-to-Rust Playbook](../playbooks/python-to-rust-playbook.md) — Phase 5 references
+-  test coverage strategy
++- [Porting Principles](../guidelines/porting-principles-and-antipatterns.md) — Principle
++  9 covers dynamic corpus validation as a complement to static test mapping
++- [Python-to-Rust Playbook](../playbooks/python-to-rust-playbook.md) — Phase 5
++  references test coverage strategy
