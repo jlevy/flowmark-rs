@@ -10,7 +10,8 @@ features, fixing parity issues, and maintaining the test mapping.
 Read this before starting any sync or parity work.
 
 For general build/test/lint instructions, see [`docs/development.md`](development.md).
-For the full port overview and release status, see [`docs/port-status.md`](port-status.md).
+For the full port overview and release status, see
+[`docs/port-status.md`](port-status.md).
 
 This document is **flowmark-rs-specific** (fixtures, mapping files, local scripts).
 For reusable process, use the canonical playbook docs first:
@@ -104,13 +105,13 @@ commits-ahead and git hash metadata:
 > flowmark 0.2.5-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.5; base v0.2.5)
 
 The Rust version follows its own semver independently.
-The port note indicates which Python version's behavior is fully covered.
+The port note indicates which Python version’s behavior is fully covered.
 
 ## Initial Setup
 
-> **First thing every session:** initialize submodules. Most sync work fails early
-> without them and the failure modes are confusing (missing `repos/flowmark` paths,
-> empty fixtures, "playbook not found").
+> **First thing every session:** initialize submodules.
+> Most sync work fails early without them and the failure modes are confusing (missing
+> `repos/flowmark` paths, empty fixtures, “playbook not found”).
 
 ```bash
 git submodule update --init --recursive
@@ -118,8 +119,8 @@ git submodule update --init --recursive
 
 ## Checking for Upstream Updates
 
-To check whether the Python upstream has a newer release than the current parity
-target, run:
+To check whether the Python upstream has a newer release than the current parity target,
+run:
 
 ```bash
 BASELINE=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
@@ -186,8 +187,8 @@ For this repo, use these concrete equivalents:
    ./scripts/generate_rust_readme.py
    ```
 
-   The generator pulls `last_sync_date` from `docs/port-status.md` and
-   `parity_version` from `Cargo.toml`, so update those before running it.
+   The generator pulls `last_sync_date` from `docs/port-status.md` and `parity_version`
+   from `Cargo.toml`, so update those before running it.
 
 5. **Triage mapping gaps early (temp manifest)**
 

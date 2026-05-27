@@ -45,9 +45,10 @@ identical error behavior.**
   (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.5; base v0.2.0)`)
 - Reference-link normalization (upstream flowmark issue #45): a reference link whose
   text equals its normalized label renders as the unambiguous collapsed form `[text][]`
-  rather than the fragile shortcut `[text]`. Rust adopts the upstream fix (released after
-  v0.6.5, commit `0af9e24`); released v0.6.5 still emits the shortcut form. Rust matches
-  Python `main` (v0.6.6.dev) here. Covered by D18 parity tests.
+  rather than the fragile shortcut `[text]`. Rust adopts the upstream fix (released
+  after v0.6.5, commit `0af9e24`); released v0.6.5 still emits the shortcut form.
+  Rust matches Python `main` (v0.6.6.dev) here.
+  Covered by D18 parity tests.
 
 Everything not on this list is required to be identical.
 
