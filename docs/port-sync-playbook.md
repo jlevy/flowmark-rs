@@ -42,7 +42,7 @@ Before doing any porting, parity, or maintenance work, read or load these docume
 | [Test Coverage for Porting](../repos/rust-porting-playbook/guidelines/test-coverage-for-porting.md) | Test strategy, coverage targets, fixture organization, cross-validation | Must read |
 | [Python-to-Rust CLI Porting](../repos/rust-porting-playbook/guidelines/python-to-rust-cli-porting.md) | argparse→clap mapping, SIGPIPE handling, exit codes, I/O parity | Read for CLI work |
 | [Rust General Rules](../repos/rust-porting-playbook/guidelines/rust-general-rules.md) | Edition 2024 changes, ownership patterns, error handling, string safety | Read for Rust coding |
-| [Rust CLI App Patterns](../repos/rust-porting-playbook/guidelines/rust-cli-app-patterns.md) | CLI project structure, logging, progress, config management | Read for CLI work |
+| [Rust CLI App Patterns](../repos/rust-porting-playbook/references/rust-cli-app-patterns.md) | CLI project structure, logging, progress, config management | Read for CLI work |
 | [Rust Project Setup](../repos/rust-porting-playbook/guidelines/rust-project-setup.md) | Cargo.toml, CI/CD, lint config, release workflow, security auditing | Read for infra work |
 
 ### Reference documents
@@ -53,8 +53,8 @@ For deeper context on the porting methodology and decision history:
 | --- | --- |
 | [Python-to-Rust Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-playbook.md) | The complete porting process from assessment through ongoing sync |
 | [Sync Release Workflow](../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md) | Two-stage release refresh: Rust-only stabilization, then upstream sync |
-| [Code Review Checklist](../repos/rust-porting-playbook/playbooks/rust-code-review-checklist.md) | Rust code review checklist for ports |
-| [Mapping Reference](../repos/rust-porting-playbook/playbooks/python-to-rust-mapping-reference.md) | Comprehensive type/project/dependency mapping tables |
+| [Code Review Checklist](../repos/rust-porting-playbook/references/rust-code-review-checklist.md) | Rust code review checklist for ports |
+| [Mapping Reference](../repos/rust-porting-playbook/references/python-to-rust-mapping-reference.md) | Comprehensive type/project/dependency mapping tables |
 | [Test Coverage Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-test-coverage-playbook.md) | Pre-port test coverage strategy and tooling |
 
 ### Flowmark case study
