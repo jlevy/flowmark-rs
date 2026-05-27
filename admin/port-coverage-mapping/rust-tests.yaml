@@ -15,61 +15,67 @@
   line_number: 0
 - file: src/formatter/filling.rs
   function: encode_collapsed_ref_link
-  line_number: 2675
+  line_number: 2721
 - file: src/formatter/filling.rs
   function: encode_empty_labels_passthrough
-  line_number: 2693
+  line_number: 2760
 - file: src/formatter/filling.rs
   function: encode_full_ref_link
-  line_number: 2664
+  line_number: 2710
 - file: src/formatter/filling.rs
   function: encode_inside_code_fence_unchanged
-  line_number: 2701
+  line_number: 2768
+- file: src/formatter/filling.rs
+  function: encode_shortcut_ref_link
+  line_number: 2730
+- file: src/formatter/filling.rs
+  function: encode_shortcut_ref_lowercases_label
+  line_number: 2741
 - file: src/formatter/filling.rs
   function: encode_unknown_label_unchanged
-  line_number: 2684
+  line_number: 2751
 - file: src/formatter/filling.rs
   function: extract_footnote_basic
-  line_number: 2591
+  line_number: 2637
 - file: src/formatter/filling.rs
   function: extract_footnote_consecutive_blank_line_preserved
-  line_number: 2612
+  line_number: 2658
 - file: src/formatter/filling.rs
   function: extract_footnote_inside_code_fence_ignored
-  line_number: 2654
+  line_number: 2700
 - file: src/formatter/filling.rs
   function: extract_footnote_multiline
-  line_number: 2603
+  line_number: 2649
 - file: src/formatter/filling.rs
   function: extract_footnote_with_autolink_blank_line_preserved
-  line_number: 2626
+  line_number: 2672
 - file: src/formatter/filling.rs
   function: extract_ref_defs_basic
-  line_number: 2523
+  line_number: 2569
 - file: src/formatter/filling.rs
   function: extract_ref_defs_case_insensitive
-  line_number: 2534
+  line_number: 2580
 - file: src/formatter/filling.rs
   function: extract_ref_defs_inside_code_fence_ignored
-  line_number: 2542
+  line_number: 2588
 - file: src/formatter/filling.rs
   function: extract_ref_defs_multiple
-  line_number: 2559
+  line_number: 2605
 - file: src/formatter/filling.rs
   function: extract_ref_defs_skips_footnote_definitions
-  line_number: 2568
+  line_number: 2614
 - file: src/formatter/filling.rs
   function: extract_ref_defs_with_title
-  line_number: 2551
+  line_number: 2597
 - file: src/formatter/filling.rs
   function: markers_contain_pua_char
-  line_number: 2722
+  line_number: 2789
 - file: src/formatter/filling.rs
   function: replace_until_stable_multiple_matches
-  line_number: 2712
+  line_number: 2779
 - file: src/formatter/filling.rs
   function: user_html_comment_not_treated_as_marker
-  line_number: 2728
+  line_number: 2795
 - file: src/incremental_cache.rs
   function: cache_ignores_corrupt_manifest_and_recovers
   line_number: 261
@@ -297,7 +303,7 @@
   line_number: 272
 - file: tests/test_cli_help.rs
   function: test_help_includes_agent_guidance
-  line_number: 50
+  line_number: 53
 - file: tests/test_cli_help.rs
   function: test_help_includes_brief_common_usage
   line_number: 39
@@ -306,7 +312,7 @@
   line_number: 30
 - file: tests/test_cli_help.rs
   function: test_help_omits_old_long_epilog
-  line_number: 63
+  line_number: 66
 - file: tests/test_config.rs
   function: test_find_config_dot_flowmark_toml_takes_precedence
   line_number: 25
@@ -816,13 +822,13 @@
   line_number: 12
 - file: tests/test_parity_cross_binary.rs
   function: test_cross_binary_corner_cases
-  line_number: 113
+  line_number: 112
 - file: tests/test_parity_cross_binary.rs
   function: test_golden_files_match_python
-  line_number: 153
+  line_number: 152
 - file: tests/test_parity_discrepancies.rs
   function: test_absolute_url_autolink_still_works
-  line_number: 746
+  line_number: 896
 - file: tests/test_parity_discrepancies.rs
   function: test_d10_html_entities_preserved
   line_number: 310
@@ -858,25 +864,70 @@
   line_number: 493
 - file: tests/test_parity_discrepancies.rs
   function: test_d13_blockquote_list_code_block_blank_line_indent
-  line_number: 604
+  line_number: 754
 - file: tests/test_parity_discrepancies.rs
   function: test_d13_blockquote_list_with_blank_continuation
-  line_number: 638
+  line_number: 788
 - file: tests/test_parity_discrepancies.rs
   function: test_d14_escaped_backtick_in_table_inline_code
-  line_number: 660
+  line_number: 810
 - file: tests/test_parity_discrepancies.rs
   function: test_d15_no_smart_quote_after_code_ending_with_non_word_char
-  line_number: 697
+  line_number: 847
 - file: tests/test_parity_discrepancies.rs
   function: test_d15_smart_quote_after_code_ending_with_word_char
-  line_number: 685
+  line_number: 835
 - file: tests/test_parity_discrepancies.rs
   function: test_d15_smart_quote_after_various_code_spans
-  line_number: 709
+  line_number: 859
 - file: tests/test_parity_discrepancies.rs
   function: test_d16_adjacent_empty_code_blocks
   line_number: 558
+- file: tests/test_parity_discrepancies.rs
+  function: test_d17_thematic_break_after_paragraph_tight
+  line_number: 617
+- file: tests/test_parity_discrepancies.rs
+  function: test_d17_thematic_break_before_heading_tight
+  line_number: 606
+- file: tests/test_parity_discrepancies.rs
+  function: test_d17_thematic_break_consecutive_tight
+  line_number: 639
+- file: tests/test_parity_discrepancies.rs
+  function: test_d17_thematic_break_loose_preserved
+  line_number: 650
+- file: tests/test_parity_discrepancies.rs
+  function: test_d17_thematic_break_then_paragraph_tight
+  line_number: 628
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_collapsed_form_is_idempotent
+  line_number: 732
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_collapsed_ref_preserved
+  line_number: 685
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_full_ref_distinct_label_preserved
+  line_number: 696
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_full_ref_label_equals_text_collapsed
+  line_number: 690
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_inline_link_unaffected
+  line_number: 739
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_label_normalized_to_lowercase
+  line_number: 711
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_multiple_shortcut_refs_on_one_line
+  line_number: 724
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_shortcut_ref_normalized_to_collapsed
+  line_number: 679
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_shortcut_without_definition_unchanged
+  line_number: 718
+- file: tests/test_parity_discrepancies.rs
+  function: test_d18_uppercase_shortcut_expands_to_full
+  line_number: 702
 - file: tests/test_parity_discrepancies.rs
   function: test_d1_plaintext_preserves_code_fences
   line_number: 55
@@ -930,7 +981,7 @@
   line_number: 293
 - file: tests/test_parity_discrepancies.rs
   function: test_relative_path_link_preserved
-  line_number: 736
+  line_number: 886
 - file: tests/test_parity_golden.rs
   function: test_parity_corner_cases_auto
   line_number: 105

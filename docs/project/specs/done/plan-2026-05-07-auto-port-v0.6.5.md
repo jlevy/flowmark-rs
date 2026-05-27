@@ -123,21 +123,21 @@ Internal: only test additions and string-content tweaks to `SKILL.md`.
 
 Single phase (sync release).
 
-- [ ] **Triage and artifact.** Create `docs/sync-artifacts/2026-05-07-sync-v0.6.4-to-v0.6.5.md` with commit table, categorization, and Rust-impact decisions.
-- [ ] **Bump submodule.** `cd repos/flowmark && git checkout v0.6.5`.
-- [ ] **Refresh fixtures.** `cp repos/flowmark/tests/testdocs/{testdoc.orig.md,testdoc.expected.*.md} tests/testdocs/`.
-- [ ] **Bump metadata.** `Cargo.toml`, `.github/workflows/ci.yml`, `python/src/flowmark_dev_tools/cli.py`, `README.md` last-sync, `docs/port-status.md`.
-- [ ] **Empirical comrak verification.** Run all 10 new strikethrough cases through `./target/release/flowmark`; record exact outputs in the sync artifact.
-- [ ] **Port new tests.** Rust counterparts for: 10 strikethrough flanking, 4 CLI help, 1 packaging entrypoint (or excluded), 2 SKILL/docs, plus tryscript additions where applicable.
-- [ ] **Update Rust SKILL.md content** with the VS Code/Cursor run-on-save section.
-- [ ] **Re-run discovery + mapping.** `flowmark-dev discover-python --local-path ../repos/flowmark`, `flowmark-dev discover-rust`, `flowmark-dev init-mapping`, `flowmark-dev check-mapping` until exit 0.
-- [ ] **Update smoke counts.** `EXPECTED_PYTHON_TEST_COUNT`, `EXPECTED_RUST_TEST_COUNT`, `EXPECTED_MAPPING_COUNT` if changed.
-- [ ] **Regenerate Rust README** via `scripts/generate_rust_readme.py`.
-- [ ] **Reproduce user churn examples.** Capture exact Python vs Rust output for the user's TODO.md / runbook / performance-notes diffs; classify each.
-- [ ] **Validate locally.** `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --locked --all-features`, `FLOWMARK_PARITY_PYTHON=1 cargo test --locked --test test_parity_cross_binary`, `pytest python/tests/test_smoke.py -q`, `flowmark-dev check-mapping`, `scripts/generate-parity-golden.sh`, `cargo build --release`, `scripts/corpus-parity-check.sh`.
-- [ ] **Improve port-sync docs.** Fix script-name typo in playbook (`generate-rust-readme.py` → `generate_rust_readme.py`), surface submodule init reminder, add automated upstream-update check command if reasonable.
-- [ ] **Improve rust-porting-playbook submodule** if anything generalizable surfaces; prepare upstream PR.
-- [ ] **Commit and push** on `claude/review-python-porting-0i29L`; open draft PR.
+- [x] **Triage and artifact.** Create `docs/sync-artifacts/2026-05-07-sync-v0.6.4-to-v0.6.5.md` with commit table, categorization, and Rust-impact decisions.
+- [x] **Bump submodule.** `cd repos/flowmark && git checkout v0.6.5`.
+- [x] **Refresh fixtures.** `cp repos/flowmark/tests/testdocs/{testdoc.orig.md,testdoc.expected.*.md} tests/testdocs/`.
+- [x] **Bump metadata.** `Cargo.toml`, `.github/workflows/ci.yml`, `python/src/flowmark_dev_tools/cli.py`, `README.md` last-sync, `docs/port-status.md`.
+- [x] **Empirical comrak verification.** Run all 10 new strikethrough cases through `./target/release/flowmark`; record exact outputs in the sync artifact.
+- [x] **Port new tests.** Rust counterparts for: 10 strikethrough flanking, 4 CLI help, 1 packaging entrypoint (or excluded), 2 SKILL/docs, plus tryscript additions where applicable.
+- [x] **Update Rust SKILL.md content** with the VS Code/Cursor run-on-save section.
+- [x] **Re-run discovery + mapping.** `flowmark-dev discover-python --local-path ../repos/flowmark`, `flowmark-dev discover-rust`, `flowmark-dev init-mapping`, `flowmark-dev check-mapping` until exit 0.
+- [x] **Update smoke counts.** `EXPECTED_PYTHON_TEST_COUNT`, `EXPECTED_RUST_TEST_COUNT`, `EXPECTED_MAPPING_COUNT` if changed.
+- [x] **Regenerate Rust README** via `scripts/generate_rust_readme.py`.
+- [x] **Reproduce user churn examples.** Capture exact Python vs Rust output for the user's TODO.md / runbook / performance-notes diffs; classify each.
+- [x] **Validate locally.** `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo test --locked --all-features`, `FLOWMARK_PARITY_PYTHON=1 cargo test --locked --test test_parity_cross_binary`, `pytest python/tests/test_smoke.py -q`, `flowmark-dev check-mapping`, `scripts/generate-parity-golden.sh`, `cargo build --release`, `scripts/corpus-parity-check.sh`.
+- [x] **Improve port-sync docs.** Fix script-name typo in playbook (`generate-rust-readme.py` → `generate_rust_readme.py`), surface submodule init reminder, add automated upstream-update check command if reasonable.
+- [x] **Improve rust-porting-playbook submodule** if anything generalizable surfaces; prepare upstream PR.
+- [x] **Commit and push** on `claude/review-python-porting-0i29L`; open draft PR.
 
 ## Testing Strategy
 
@@ -153,6 +153,28 @@ Single phase (sync release).
 - **Doc parity:** Rust README regeneration is byte-stable on subsequent runs.
 - **Churn examples:** user's three diff snippets produce identical Python and Rust
   output once both binaries are at v0.6.5 / parity.
+
+## Stabilization addendum (post-review)
+
+Deep differential testing during review (full-corpus Python-vs-Rust diff, plus a
+truth-table sweep of every reference-link form against Python v0.6.5 and `main`)
+surfaced two genuine, previously-untested formatter parity gaps. Both are fixed in this
+PR with discriminating tests on the Rust side and verification against Python:
+
+- **D17 — thematic-break spacing (Rust-only bug).** comrak forced blank lines around
+  `* * *`/`---`; Python (both v0.6.5 and `main`) preserves the source's tight spacing.
+  Fixed by extending `render_block_children`'s tight-suppression rules. 5 tests.
+- **D18 — reference-link normalization (upstream issue #45).** A reference link whose
+  text equals its normalized label now renders as the unambiguous collapsed form
+  `[text][]` instead of the fragile shortcut `[text]`; distinct labels render as the
+  full form `[text][label]`. This adopts the upstream fix already released after v0.6.5
+  (commit `0af9e24`) and is an **intentional, documented divergence from released
+  v0.6.5** (see tolerated variations in `docs/port-status.md`). 10 tests + 2 unit tests,
+  verified byte-for-byte against Python `main` (v0.6.6.dev).
+
+Deferred to a future sync (feature-level, not stabilization): upstream `main`'s
+atomic-aware semantic wrapping and table-row-adjacent-to-paragraph handling. Tracked
+separately.
 
 ## Rollout Plan
 

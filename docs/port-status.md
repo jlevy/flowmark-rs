@@ -42,20 +42,25 @@ identical error behavior.**
 - `--help` layout: minor formatting differences between clap (Rust) and argparse
   (Python)
 - `--version` output: Rust includes explicit port/version provenance metadata
-  (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.0)`)
+  (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.5; base v0.2.0)`)
+- Reference-link normalization (upstream flowmark issue #45): a reference link whose
+  text equals its normalized label renders as the unambiguous collapsed form `[text][]`
+  rather than the fragile shortcut `[text]`. Rust adopts the upstream fix (released after
+  v0.6.5, commit `0af9e24`); released v0.6.5 still emits the shortcut form. Rust matches
+  Python `main` (v0.6.6.dev) here. Covered by D18 parity tests.
 
 Everything not on this list is required to be identical.
 
 ### Active Parity Pursuit (Principle 2)
 
-- 15 parity discrepancies discovered (D1-D15), all resolved
+- 18 parity discrepancies discovered (D1-D18), all resolved
 - Every discrepancy had a failing test before the fix
 - Zero parity gaps hidden behind passing tests
 - No passive documentation of gaps — every gap was treated as a severe blocker
 
 ### Tests Always Run in CI (Principle 3)
 
-All 469 tests run in CI on every commit.
+All 501 tests run in CI on every commit.
 No test file is orphaned.
 The CI test job installs all required external tools:
 
@@ -121,9 +126,9 @@ All release channels are live as of v0.2.6:
 | **Error handling** | Complete | Error messages match Python (see tolerated variations above) |
 | **Library crate** | Complete | Public API via `FormatOptions::reformat_text()`, feature-gated CLI |
 | **CI pipeline** | Complete | 12 checks: fmt, clippy, test (Ubuntu+macOS), lib-only, MSRV, deny, docs, coverage, semver, markdown-fmt, check-mapping, readme-sync |
-| **Test coverage** | Complete | 469 tests, 0 ignored, 0 failures |
-| **Test mapping** | Complete | 292 Python tests mapped, 0 excluded, 0 missing |
-| **Parity verification** | Complete | All 15 discrepancies (D1-D15) resolved, 33 parity-specific tests |
+| **Test coverage** | Complete | 501 tests, 0 ignored, 0 failures |
+| **Test mapping** | Complete | 309 Python tests mapped, 0 excluded, 0 missing |
+| **Parity verification** | Complete | All 18 discrepancies (D1-D18) resolved, 48 parity-specific tests |
 | **crates.io** | Live | [crates.io/crates/flowmark](https://crates.io/crates/flowmark) |
 | **PyPI** | Live | [pypi.org/project/flowmark-rs](https://pypi.org/project/flowmark-rs/) (`uvx flowmark-rs`) |
 | **GitHub Releases** | Live | Pre-built binaries for macOS, Linux, Windows |
@@ -147,16 +152,16 @@ All release channels are live as of v0.2.6:
 | Doc tests | Library API usage example |
 | Tryscript golden tests | End-to-end CLI behavior specs |
 | D11 parity tests | Cross-binary comparison (invokes both Python and Rust) |
-| **Total** | **469 tests, 0 ignored, 0 failures** |
+| **Total** | **501 tests, 0 ignored, 0 failures** |
 
 ### Parity Testing
 
-- **33 parity-specific tests** verify exact output match with Python across all
-  discrepancy areas (D1-D15)
+- **48 parity-specific tests** verify exact output match with Python across all
+  discrepancy areas (D1-D18)
 - **5 D11 tests** invoke both Python and Rust binaries, comparing stderr and exit codes
 - **Golden reference document** tested across 4 modes (default, semantic, auto,
   plaintext)
-- **292 Python tests** have verified Rust counterparts (CI-enforced via test mapping)
+- **309 Python tests** have verified Rust counterparts (CI-enforced via test mapping)
 
 For build/test/lint instructions, see [`docs/development.md`](development.md).
 
@@ -229,10 +234,10 @@ This port was built using the
 | Python total LOC | ~12,400 (~4,250 app + ~5,800 test + ~1,770 golden) |
 | Rust total LOC | ~16,150 (~7,250 app + ~7,300 test + ~1,520 golden) |
 | Rust/Python app ratio | ~1.7x |
-| Python test functions | 292 |
-| Rust test functions | 469 |
-| Parity discrepancies found | 15 |
-| Parity discrepancies resolved | 15 (100%) |
+| Python test functions | 309 |
+| Rust test functions | 516 (manifest; 501 cargo-discovered) |
+| Parity discrepancies found | 18 |
+| Parity discrepancies resolved | 18 (100%) |
 | comrak library workarounds | 13 numbered (66 comment references) |
 | Ignored tests | 0 |
 | `unsafe` code | 1 block (SIGPIPE handler, annotated) |

@@ -1,9 +1,10 @@
 //! Parity discrepancy tests: Python flowmark vs Rust flowmark.
 //!
-//! Each test documents a specific discrepancy found during senior review (2026-02-18).
-//! Expected values are derived from Python v0.6.4 output and re-verified against the
-//! current parity baseline (v0.6.5 as of 2026-05-07). All 15 discrepancies (D1-D15)
-//! are resolved — every test passes.
+//! Each test documents a specific discrepancy found during senior review (2026-02-18)
+//! or subsequent stabilization (D17/D18, 2026-05-19). Expected values are derived from
+//! Python output and re-verified against the current parity baseline (v0.6.5 as of
+//! 2026-05-07; D18 additionally tracks upstream issue #45, verified against `main`).
+//! All 18 discrepancies (D1-D18) are resolved — every test passes.
 //!
 //! D11 tests invoke both the Python and Rust binaries and compare error output.
 //! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.6.5`).
@@ -589,6 +590,156 @@ Only use `--no-verify` when absolutely necessary.
         result, python_output,
         "D16: Adjacent empty code blocks should not have extra blank line between them.\nGot:\n{result}"
     );
+}
+
+// =============================================================================
+// D17: Thematic break spacing — extra blank line around `* * *` (fmr-thbreak)
+// Python/marko preserves the source's tight spacing around a thematic break:
+// when a thematic break is adjacent to another block with no blank line in the
+// source, the output stays tight. Comrak's renderer instead forces blank lines
+// on both sides of every thematic break. Mirrors the existing tight-transition
+// handling for HTML comments (Rule 1/2), paragraph→list (Rule 3), and
+// paragraph→code (Rule 4) in render_block_children.
+// Found via corpus parity check (2026-05-19).
+// =============================================================================
+
+#[test]
+fn test_d17_thematic_break_before_heading_tight() {
+    let input = "text\n\n* * *\n## Heading\n\nmore\n";
+    let python_output = "text\n\n* * *\n## Heading\n\nmore\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: tight thematic break → heading should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_after_paragraph_tight() {
+    let input = "para\n* * *\n\nb\n";
+    let python_output = "para\n* * *\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: tight paragraph → thematic break should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_then_paragraph_tight() {
+    let input = "a\n\n* * *\npara\n\nb\n";
+    let python_output = "a\n\n* * *\npara\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: tight thematic break → paragraph should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_consecutive_tight() {
+    let input = "a\n\n* * *\n* * *\n\nb\n";
+    let python_output = "a\n\n* * *\n* * *\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: consecutive tight thematic breaks should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_loose_preserved() {
+    // When the source already has blank lines, they are preserved (no change).
+    let input = "a\n\n* * *\n\n## Heading\n\nb\n";
+    let python_output = "a\n\n* * *\n\n## Heading\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: loose thematic break spacing should be preserved.\nGot:\n{result}"
+    );
+}
+
+// =============================================================================
+// D18: Reference-link normalization (upstream flowmark issue #45)
+// A reference link whose text equals its normalized label must render as the
+// unambiguous collapsed form `[text][]`, NOT the fragile shortcut `[text]`
+// (which merges with a following `(...)` or `[...]`, changing/dropping links).
+// When text != normalized label, the full form `[text][label]` is used.
+//
+// This adopts the upstream fix (already released in Python flowmark > v0.6.5,
+// commit 0af9e24). It is an INTENTIONAL divergence from released v0.6.5, which
+// still emits the buggy shortcut form. Verified against Python main (v0.6.6.dev)
+// and the upstream tests/test_reference_links.py spec.
+// =============================================================================
+
+fn fmt_ref(body: &str) -> String {
+    fmt(&format!("{body}\n\n[foo]: https://example.com/x\n"))
+}
+
+#[test]
+fn test_d18_shortcut_ref_normalized_to_collapsed() {
+    // [foo] (text == label) -> [foo][], not the fragile shortcut [foo].
+    assert_eq!(fmt_ref("Use [foo]"), "Use [foo][]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_collapsed_ref_preserved() {
+    assert_eq!(fmt_ref("Use [foo][]"), "Use [foo][]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_full_ref_label_equals_text_collapsed() {
+    // [foo][foo] (text == label) -> [foo][].
+    assert_eq!(fmt_ref("Use [foo][foo]"), "Use [foo][]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_full_ref_distinct_label_preserved() {
+    // [bar][foo] (text != label) stays a full reference.
+    assert_eq!(fmt_ref("Use [bar][foo]"), "Use [bar][foo]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_uppercase_shortcut_expands_to_full() {
+    // [Unreleased] with def [unreleased]: text "Unreleased" != normalized label
+    // "unreleased", so the full form is emitted (matches v0.6.5 AND main).
+    let input = "## [Unreleased]\n\n[unreleased]: https://example.com/c\n";
+    let expected = "## [Unreleased][unreleased]\n\n[unreleased]: https://example.com/c\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d18_label_normalized_to_lowercase() {
+    // [Foo] with def [Foo]: -> [Foo][foo] (emitted label is normalized lowercase).
+    let input = "[Foo]\n\n[Foo]: https://example.com/x\n";
+    assert_eq!(fmt(input), "[Foo][foo]\n\n[Foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_shortcut_without_definition_unchanged() {
+    // [bar] with no matching definition is left as literal text.
+    assert_eq!(fmt_ref("Use [bar]"), "Use [bar]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_multiple_shortcut_refs_on_one_line() {
+    assert_eq!(
+        fmt_ref("Both [foo] and [foo] here"),
+        "Both [foo][] and [foo][] here\n\n[foo]: https://example.com/x\n"
+    );
+}
+
+#[test]
+fn test_d18_collapsed_form_is_idempotent() {
+    // The collapsed output must be a fixed point.
+    let once = fmt_ref("Use [foo]");
+    assert_eq!(fmt(&once), once, "D18: collapsed reference output must be idempotent");
+}
+
+#[test]
+fn test_d18_inline_link_unaffected() {
+    let input = "See [foo](https://example.com/z) here.\n";
+    assert_eq!(fmt(input), "See [foo](https://example.com/z) here.\n");
 }
 
 // =============================================================================
