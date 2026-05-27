@@ -2,7 +2,31 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [Unreleased][unreleased]
+
+## [0.2.7] (parity: flowmark-py 0.6.5)
+
+Parity sync and stabilization release.
+Bumps the Python parity baseline from `0.6.4` to `0.6.5` and fixes two formatter parity
+gaps found via full-corpus differential testing.
+
+### Formatter behavior changes
+
+- **Thematic-break spacing (D17):** a thematic break (`* * *`, `---`) written tight
+  against a neighbouring block now stays tight, matching Python.
+  Previously the renderer forced blank lines on both sides.
+- **Reference-link normalization (D18):** a reference link whose text equals its
+  normalized label now renders as the unambiguous collapsed form `[text][]` instead of
+  the fragile shortcut `[text]`; distinct labels render as the full form
+  `[text][label]`. This adopts upstream flowmark fix
+  [#45](https://github.com/jlevy/flowmark/issues/45) (an intentional, documented
+  divergence from released Python `0.6.5`, matching upstream `main`).
+
+### Parity
+
+- Python parity baseline updated `0.6.4` → `0.6.5` (GFM tilde flanking and CLI-help
+  footer needed no Rust change; comrak/Rust already conformant — tests ported).
+- 15 new parity tests (D17 ×5, D18 ×10) plus 2 reference-link encoder unit tests.
 
 ## [0.2.6] (parity: flowmark-py 0.6.4)
 
@@ -19,8 +43,8 @@ No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
 ### CI and release process
 
 - Fixed clippy format-arg lint in version metadata build script
-- Added `release_tag` passthrough to `publish.yml` and `pypi.yml` reusable workflows
-  for stable version embedding in CI builds
+- Added `release_tag` passthrough to `publish.yml` and `pypi.yml` reusable workflows for
+  stable version embedding in CI builds
 - Moved completed specs from `active` to `done` and reorganized project docs
 
 ### Testing
@@ -35,8 +59,8 @@ No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
 
 ### Features
 
-- Added PyPI distribution support for `flowmark-rs` via maturin (`pyproject.toml`) and
-  a dedicated GitHub Actions workflow (`pypi.yml`)
+- Added PyPI distribution support for `flowmark-rs` via maturin (`pyproject.toml`) and a
+  dedicated GitHub Actions workflow (`pypi.yml`)
 - Added incremental cache lifecycle/inspection support in the CLI, including
   `--cache-dir`, `--show-cache`, and `--clear-cache`
 
@@ -175,4 +199,5 @@ Early development release.
 [0.2.4]: https://github.com/jlevy/flowmark-rs/compare/v0.2.3...v0.2.4
 [0.2.5]: https://github.com/jlevy/flowmark-rs/compare/v0.2.4...v0.2.5
 [0.2.6]: https://github.com/jlevy/flowmark-rs/compare/v0.2.5...v0.2.6
-[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.6...HEAD
+[0.2.7]: https://github.com/jlevy/flowmark-rs/compare/v0.2.6...v0.2.7
+[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.7...HEAD

@@ -1,8 +1,8 @@
 # Project Status: flowmark-rs
 
-**Last updated:** 2026-05-07
+**Last updated:** 2026-05-19
 
-**Current release:** v0.2.6 ([crates.io](https://crates.io/crates/flowmark),
+**Current release:** v0.2.7 ([crates.io](https://crates.io/crates/flowmark),
 [PyPI](https://pypi.org/project/flowmark-rs/),
 [Homebrew](https://github.com/jlevy/homebrew-flowmark))
 
@@ -114,7 +114,7 @@ references) are documented with `COMRAK-WORKAROUNDn` labels in
 
 ## Release Status
 
-All release channels are live as of v0.2.6:
+All release channels are live as of v0.2.7:
 
 | Area | Status | Details |
 | --- | --- | --- |
