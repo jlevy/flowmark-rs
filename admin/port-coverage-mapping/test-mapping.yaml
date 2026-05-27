@@ -178,6 +178,26 @@
   status: mapped
   rust_file: tests/test_cli_file_discovery.rs
   rust_function: test_stdin_still_works
+- python_file: tests/test_cli_help.py
+  python_function: test_help_includes_agent_guidance
+  status: mapped
+  rust_file: tests/test_cli_help.rs
+  rust_function: test_help_includes_agent_guidance
+- python_file: tests/test_cli_help.py
+  python_function: test_help_includes_brief_common_usage
+  status: mapped
+  rust_file: tests/test_cli_help.rs
+  rust_function: test_help_includes_brief_common_usage
+- python_file: tests/test_cli_help.py
+  python_function: test_help_includes_tagline
+  status: mapped
+  rust_file: tests/test_cli_help.rs
+  rust_function: test_help_includes_tagline
+- python_file: tests/test_cli_help.py
+  python_function: test_help_omits_old_long_epilog
+  status: mapped
+  rust_file: tests/test_cli_help.rs
+  rust_function: test_help_omits_old_long_epilog
 - python_file: tests/test_config.py
   python_function: test_find_config_dot_flowmark_toml_takes_precedence
   status: mapped
@@ -750,6 +770,11 @@
   status: mapped
   rust_file: tests/test_list_spacing.rs
   rust_function: test_tight_list_to_loose
+- python_file: tests/test_packaging_entrypoints.py
+  python_function: test_flowmark_py_alias_entrypoint
+  status: mapped
+  rust_file: tests/test_packaging_entrypoints.rs
+  rust_function: test_flowmark_rs_alias_entrypoint
 - python_file: tests/test_ref_docs.py
   python_function: test_reference_doc_formats
   status: mapped
@@ -767,6 +792,12 @@
   rust_file: tests/test_sentences.rs
   rust_function: test_split_sentences
   notes: Also tested in src/wrapping/sentence.rs::test_split_sentences
+- python_file: tests/test_skill.py
+  python_function: test_docs_content_has_vscode_cursor_setup
+  python_class: TestGetDocsContent
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_docs_content_has_vscode_cursor_setup
 - python_file: tests/test_skill.py
   python_function: test_docs_content_is_readme
   python_class: TestGetDocsContent
@@ -791,6 +822,12 @@
   status: mapped
   rust_file: tests/test_skill.rs
   rust_function: test_skill_content_has_usage
+- python_file: tests/test_skill.py
+  python_function: test_skill_content_has_vscode_cursor_setup
+  python_class: TestGetSkillContent
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_skill_content_has_vscode_cursor_setup
 - python_file: tests/test_skill.py
   python_function: test_skill_content_loads
   python_class: TestGetSkillContent
@@ -1003,10 +1040,60 @@
   rust_file: tests/test_strikethrough.rs
   rust_function: test_single_tilde_strikethrough
 - python_file: tests/test_strikethrough.py
+  python_function: test_strikethrough_after_punctuation
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_strikethrough_after_punctuation
+- python_file: tests/test_strikethrough.py
   python_function: test_strikethrough_in_paragraph
   status: mapped
   rust_file: tests/test_strikethrough.rs
   rust_function: test_strikethrough_in_paragraph
+- python_file: tests/test_strikethrough.py
+  python_function: test_strikethrough_inside_parens
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_strikethrough_inside_parens
+- python_file: tests/test_strikethrough.py
+  python_function: test_strikethrough_with_punctuation_content
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_strikethrough_with_punctuation_content
+- python_file: tests/test_strikethrough.py
+  python_function: test_tilde_before_and_inside_parens
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_before_and_inside_parens
+- python_file: tests/test_strikethrough.py
+  python_function: test_tilde_before_and_inside_parens_fill
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_before_and_inside_parens_fill
+- python_file: tests/test_strikethrough.py
+  python_function: test_tilde_before_parens_no_tilde_inside
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_before_parens_no_tilde_inside
+- python_file: tests/test_strikethrough.py
+  python_function: test_tilde_in_brackets
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_in_brackets
+- python_file: tests/test_strikethrough.py
+  python_function: test_tilde_in_parens_then_outside
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_in_parens_then_outside
+- python_file: tests/test_strikethrough.py
+  python_function: test_tilde_inside_parens_with_text
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_inside_parens_with_text
+- python_file: tests/test_strikethrough.py
+  python_function: test_tilde_only_inside_parens
+  status: mapped
+  rust_file: tests/test_strikethrough.rs
+  rust_function: test_tilde_only_inside_parens
 - python_file: tests/test_strikethrough.py
   python_function: test_tilde_space_after_opener
   status: mapped

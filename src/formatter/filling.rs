@@ -322,6 +322,14 @@ static FULL_REF_LINK: LazyLock<Regex> =
 static COLLAPSED_REF_LINK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\[\]").expect("valid COLLAPSED_REF_LINK regex"));
 
+/// Regex for shortcut reference links: `[text]` not followed by `[`, `(`, or `:`
+/// (which would make it a full/collapsed ref, an inline link, or a definition).
+/// Group 2 captures the trailing char (or end-of-line) to emulate negative
+/// lookahead, which the `regex` crate does not support; it is re-emitted as-is.
+static SHORTCUT_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[([^\]]+)\]([^\[(:]|$)").expect("valid SHORTCUT_REF_LINK regex")
+});
+
 // ===== COMRAK-WORKAROUND12: Output normalization =====
 
 /// Pattern for blank lines with trailing whitespace.
@@ -736,26 +744,47 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
 
     transform_outside_code_fences(text, |line| {
         let mut result = line.to_string();
-        // Replace full reference links: [text][label]
+        // Replace full reference links: [text][label]. Encode the matched
+        // definition's normalized (lowercase) label so rendering can emit the
+        // canonical reference form (see the Link branch in render_inline).
         replace_until_stable(&mut result, &FULL_REF_LINK, |caps: &regex::Captures| {
             let text_part = &caps[1];
-            let label = &caps[2];
-            if labels.contains(&label.to_lowercase()) {
+            let label = caps[2].to_lowercase();
+            if labels.contains(&label) {
                 format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
             } else {
                 caps[0].to_string()
             }
         });
-        // Replace collapsed reference links: [text][]
+        // Replace collapsed reference links: [text][]. The label is the
+        // normalized link text.
         replace_until_stable(&mut result, &COLLAPSED_REF_LINK, |caps: &regex::Captures| {
             let text_part = &caps[1];
-            let label = text_part;
-            if labels.contains(&label.to_lowercase()) {
+            let label = text_part.to_lowercase();
+            if labels.contains(&label) {
                 format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
             } else {
                 caps[0].to_string()
             }
         });
+        // Replace shortcut reference links: [text] not followed by `[`, `(`, or
+        // `:`. The label is the normalized text; only encoded when it matches a
+        // definition. Group 2 captures the trailing char (or end-of-line) and is
+        // re-emitted verbatim. Uses replace_all (single pass) rather than
+        // replace_until_stable because identity-replaced non-matching brackets
+        // would otherwise halt the loop before later matches are reached.
+        result = SHORTCUT_REF_LINK
+            .replace_all(&result, |caps: &regex::Captures| {
+                let text_part = &caps[1];
+                let trailing = &caps[2];
+                let label = text_part.to_lowercase();
+                if labels.contains(&label) {
+                    format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP}){trailing}")
+                } else {
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
         vec![result]
     })
 }
@@ -1101,6 +1130,7 @@ fn render_block_children<'a>(
     let mut prev_was_html_comment = false;
     let mut prev_was_list_or_table = false;
     let mut prev_was_paragraph = false;
+    let mut prev_was_thematic_break = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
@@ -1108,6 +1138,7 @@ fn render_block_children<'a>(
         let child_is_html_comment = is_html_comment_only(child);
         let child_is_list = matches!(child.data.borrow().value, NodeValue::List(_));
         let child_is_code_block = matches!(child.data.borrow().value, NodeValue::CodeBlock(_));
+        let child_is_thematic_break = matches!(child.data.borrow().value, NodeValue::ThematicBreak);
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -1132,6 +1163,7 @@ fn render_block_children<'a>(
         //         following HTML comment)
         // Rule 3: Paragraph → list (tight): suppress separator
         // Rule 4: Paragraph → code block (tight): suppress separator
+        // Rule 5: Thematic break adjacent to any block (tight): suppress separator
         //
         // All other block pairs get the standard blank line separator.
         let suppress_for_tight = if originally_tight {
@@ -1153,6 +1185,12 @@ fn render_block_children<'a>(
                 // Rule 4: Paragraph → code block (tight): suppress (P6)
                 // This handles cases like "**Config**:\n```json\n{}\n```"
                 // Note: same as Rule 3, this is Document-level only.
+                true
+            } else if prev_was_thematic_break || child_is_thematic_break {
+                // Rule 5: Thematic break adjacent to any block (tight): suppress (D17)
+                // Python/marko preserves source tightness around `* * *`, while
+                // comrak forces blank lines on both sides. Symmetric: applies
+                // whether the break precedes or follows the neighboring block.
                 true
             } else {
                 false
@@ -1197,6 +1235,7 @@ fn render_block_children<'a>(
         prev_was_list_or_table =
             matches!(child.data.borrow().value, NodeValue::List(_) | NodeValue::Table(_));
         prev_was_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
+        prev_was_thematic_break = child_is_thematic_break;
         prev_source_end_line = child_source_end;
     }
 
@@ -2105,7 +2144,14 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
             if link.url.starts_with(REF_LABEL_START) {
                 if let Some(sep_pos) = link.url.find(REF_LABEL_SEP) {
                     let label = &link.url[REF_LABEL_START.len_utf8()..sep_pos];
-                    format!("[{inner}][{label}]")
+                    // Issue #45: when the link text equals the normalized label,
+                    // emit the unambiguous collapsed form [text][] rather than a
+                    // fragile shortcut [text]. Otherwise emit the full form.
+                    if inner.as_str() == label {
+                        format!("[{inner}][]")
+                    } else {
+                        format!("[{inner}][{label}]")
+                    }
                 } else {
                     // Malformed PUA marker — strip it and render as inline
                     let url = &link.url[REF_LABEL_START.len_utf8()..];
@@ -2678,6 +2724,27 @@ mod tests {
         let input = "See [Example][] for details.\n";
         let output = encode_ref_links(input, &labels);
         assert!(output.contains(REF_LABEL_START));
+    }
+
+    #[test]
+    fn encode_shortcut_ref_link() {
+        let mut labels = HashSet::new();
+        labels.insert("foo".to_string());
+        let input = "See [foo] for details.\n";
+        let output = encode_ref_links(input, &labels);
+        assert!(output.contains(REF_LABEL_START), "shortcut ref should be encoded");
+        // The trailing space after the shortcut is preserved.
+        assert!(output.contains(") for details."));
+    }
+
+    #[test]
+    fn encode_shortcut_ref_lowercases_label() {
+        let mut labels = HashSet::new();
+        labels.insert("foo".to_string());
+        let input = "See [Foo] here.\n";
+        let output = encode_ref_links(input, &labels);
+        // The encoded label is normalized to lowercase ("foo"), not "Foo".
+        assert!(output.contains(&format!("{REF_LABEL_START}foo{REF_LABEL_SEP}")));
     }
 
     #[test]

@@ -10,7 +10,8 @@ features, fixing parity issues, and maintaining the test mapping.
 Read this before starting any sync or parity work.
 
 For general build/test/lint instructions, see [`docs/development.md`](development.md).
-For the full port overview and release status, see [`docs/port-status.md`](port-status.md).
+For the full port overview and release status, see
+[`docs/port-status.md`](port-status.md).
 
 This document is **flowmark-rs-specific** (fixtures, mapping files, local scripts).
 For reusable process, use the canonical playbook docs first:
@@ -41,7 +42,7 @@ Before doing any porting, parity, or maintenance work, read or load these docume
 | [Test Coverage for Porting](../repos/rust-porting-playbook/guidelines/test-coverage-for-porting.md) | Test strategy, coverage targets, fixture organization, cross-validation | Must read |
 | [Python-to-Rust CLI Porting](../repos/rust-porting-playbook/guidelines/python-to-rust-cli-porting.md) | argparse→clap mapping, SIGPIPE handling, exit codes, I/O parity | Read for CLI work |
 | [Rust General Rules](../repos/rust-porting-playbook/guidelines/rust-general-rules.md) | Edition 2024 changes, ownership patterns, error handling, string safety | Read for Rust coding |
-| [Rust CLI App Patterns](../repos/rust-porting-playbook/guidelines/rust-cli-app-patterns.md) | CLI project structure, logging, progress, config management | Read for CLI work |
+| [Rust CLI App Patterns](../repos/rust-porting-playbook/references/rust-cli-app-patterns.md) | CLI project structure, logging, progress, config management | Read for CLI work |
 | [Rust Project Setup](../repos/rust-porting-playbook/guidelines/rust-project-setup.md) | Cargo.toml, CI/CD, lint config, release workflow, security auditing | Read for infra work |
 
 ### Reference documents
@@ -52,8 +53,8 @@ For deeper context on the porting methodology and decision history:
 | --- | --- |
 | [Python-to-Rust Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-playbook.md) | The complete porting process from assessment through ongoing sync |
 | [Sync Release Workflow](../repos/rust-porting-playbook/playbooks/python-to-rust-sync-release-workflow.md) | Two-stage release refresh: Rust-only stabilization, then upstream sync |
-| [Code Review Checklist](../repos/rust-porting-playbook/playbooks/rust-code-review-checklist.md) | Rust code review checklist for ports |
-| [Mapping Reference](../repos/rust-porting-playbook/playbooks/python-to-rust-mapping-reference.md) | Comprehensive type/project/dependency mapping tables |
+| [Code Review Checklist](../repos/rust-porting-playbook/references/rust-code-review-checklist.md) | Rust code review checklist for ports |
+| [Mapping Reference](../repos/rust-porting-playbook/references/python-to-rust-mapping-reference.md) | Comprehensive type/project/dependency mapping tables |
 | [Test Coverage Playbook](../repos/rust-porting-playbook/playbooks/python-to-rust-test-coverage-playbook.md) | Pre-port test coverage strategy and tooling |
 
 ### Flowmark case study
@@ -93,7 +94,7 @@ The current Python version is tracked in `Cargo.toml`:
 
 ```toml
 [package.metadata.parity]
-version = "0.6.4"
+version = "0.6.5"
 ```
 
 ## Version Convention
@@ -101,18 +102,36 @@ version = "0.6.4"
 Each release documents which Python version it targets, and dev builds include
 commits-ahead and git hash metadata:
 
-> flowmark 0.2.5-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.4; base v0.2.5)
+> flowmark 0.2.5-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.5; base v0.2.5)
 
 The Rust version follows its own semver independently.
-The port note indicates which Python version's behavior is fully covered.
+The port note indicates which Python version’s behavior is fully covered.
 
 ## Initial Setup
 
-After cloning, initialize submodules:
+> **First thing every session:** initialize submodules.
+> Most sync work fails early without them and the failure modes are confusing (missing
+> `repos/flowmark` paths, empty fixtures, “playbook not found”).
 
 ```bash
 git submodule update --init --recursive
 ```
+
+## Checking for Upstream Updates
+
+To check whether the Python upstream has a newer release than the current parity target,
+run:
+
+```bash
+BASELINE=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
+git -C repos/flowmark fetch --tags >/dev/null 2>&1
+LATEST=$(git -C repos/flowmark tag -l 'v[0-9]*' | sort -V | tail -1)
+echo "Current parity target: v${BASELINE}"
+echo "Latest upstream tag:   ${LATEST}"
+```
+
+If `LATEST` is greater than `v${BASELINE}`, run a Mode B sync (below).
+Otherwise, no sync work is needed.
 
 ## Sync Process (Mode B: Upstream baseline change)
 
@@ -165,8 +184,11 @@ For this repo, use these concrete equivalents:
    ```bash
    cp repos/flowmark/tests/testdocs/testdoc.orig.md tests/testdocs/
    cp repos/flowmark/tests/testdocs/testdoc.expected.*.md tests/testdocs/
-   ./scripts/generate-rust-readme.py
+   ./scripts/generate_rust_readme.py
    ```
+
+   The generator pulls `last_sync_date` from `docs/port-status.md` and `parity_version`
+   from `Cargo.toml`, so update those before running it.
 
 5. **Triage mapping gaps early (temp manifest)**
 
@@ -251,7 +273,7 @@ Three YAML files form the mapping system:
 
 | File | Role | Generated by |
 | --- | --- | --- |
-| `admin/port-coverage-mapping/python-tests.yaml` | All Python test functions (292 entries from v0.6.4) | `flowmark-dev discover-python` |
+| `admin/port-coverage-mapping/python-tests.yaml` | All Python test functions (309 entries from v0.6.5) | `flowmark-dev discover-python` |
 | `admin/port-coverage-mapping/rust-tests.yaml` | All Rust test functions (408+ entries) | `flowmark-dev discover-rust` |
 | `admin/port-coverage-mapping/test-mapping.yaml` | Hand-maintained Python→Rust mapping with status | Manual / agent edits |
 

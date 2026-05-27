@@ -6,8 +6,8 @@ Thank you for your interest in contributing to flowmark!
 
 - Rust 1.85+ (see `rust-version` in Cargo.toml for MSRV)
 - cargo (comes with Rust)
-- Python flowmark v0.6.4 — for cross-binary parity tests
-  (`uv tool install flowmark==0.6.4`)
+- Python flowmark v0.6.5 — for cross-binary parity tests
+  (`uv tool install flowmark==0.6.5`)
 - Node.js 22+ and tryscript — for golden CLI tests (`npm install -g tryscript@latest`)
 
 All test dependencies are required.
@@ -28,7 +28,7 @@ cargo build --all-features
 cargo test --all-features
 ```
 
-The full test suite (469 tests) includes unit tests, integration tests, D11 cross-binary
+The full test suite (501 tests) includes unit tests, integration tests, D11 cross-binary
 parity tests (requires Python flowmark), and tryscript golden tests (requires
 tryscript).
 

@@ -65,7 +65,7 @@ unsafe_code = "deny"
 warnings = "deny"
 
 [package.metadata.parity]
-version = "0.6.4"
+version = "0.6.5"
 
 [profile.release]
 opt-level = 3

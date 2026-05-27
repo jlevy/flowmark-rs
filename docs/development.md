@@ -5,8 +5,8 @@ How to build, test, and work on flowmark-rs.
 ## Prerequisites
 
 - **Rust 1.85+** (see `rust-version` in `Cargo.toml` for MSRV)
-- **Python flowmark v0.6.4** — for cross-binary parity tests
-  (`uv tool install flowmark==0.6.4`)
+- **Python flowmark v0.6.5** — for cross-binary parity tests
+  (`uv tool install flowmark==0.6.5`)
 - **Node.js 22+** and **tryscript** — for golden CLI tests
   (`npm install -g tryscript@latest`)
 
@@ -29,7 +29,7 @@ Without it, only the library crate is built.
 cargo test --all-features
 ```
 
-The full suite (469 tests) includes:
+The full suite (501 tests) includes:
 
 | Category | Description |
 | --- | --- |
@@ -103,7 +103,7 @@ The CI runs 12 checks on every push and PR:
 | `coverage` | `cargo-llvm-cov` with Codecov upload |
 | `semver-checks` | API breakage detection (PRs only) |
 | `markdown-fmt` | Markdown formatting consistency |
-| `check-mapping` | Test mapping completeness (292/292 Python tests mapped) |
+| `check-mapping` | Test mapping completeness (309/309 Python tests mapped) |
 | `readme-sync` | README generation stays in sync with template |
 
 ## Configuration

@@ -835,7 +835,7 @@ Use `flowmark --docs` for full documentation.
                 format_ns_as_ms(stats.render_ns),
                 format_ns_as_ms(stats.postprocess_ns),
             );
-            eprintln!("  incremental hits={cache_hits} misses={cache_misses} hit_rate={hit_rate}%",);
+            eprintln!("  incremental hits={cache_hits} misses={cache_misses} hit_rate={hit_rate}%");
         }
         set_fill_perf_stats_enabled(false);
 
