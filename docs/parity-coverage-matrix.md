@@ -140,3 +140,8 @@ When adding or modifying a render branch in the Rust port:
 - [`docs/port-status.md`](port-status.md) — current parity surface and tolerated
   variations
 - [`docs/sync-artifacts/`](sync-artifacts/) — per-sync triage and validation
+- **Planned (tracked as `fmr-i17c`):** CommonMark spec parity gate — runs both
+  binaries over all 655 spec examples and reports the diff set against a baseline.
+  Complements (does not replace) this targeted matrix: the matrix is curated and
+  asserts exact-match per form, the spec gate is exhaustive and tracks divergences
+  against a known-divergences list that shrinks over time.
