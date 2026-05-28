@@ -6,13 +6,13 @@
 
 **Status:** Draft — proposal pending upstream agreement
 
-**Beads:** epic `fmr-bh2b`; tasks `fmr-i66m` (upstream), `fmr-9yd0` (Rust runner), `fmr-krz6` (baseline triage). Supersedes `fmr-i17c`.
+**Tracker:** `fmr-bh2b`.
 
 ## Overview
 
 Stand up a language-neutral parity test corpus that drives both `jlevy/flowmark` (Python upstream) and `jlevy/flowmark-rs` (Rust port) from a single source of truth. Every fixture is added once; both implementations are exercised against the *same* (input, expected) pair; divergences are tracked explicitly against a shrinking baseline file on the Rust side rather than hidden in two parallel test trees.
 
-The corpus lives in upstream Python, vendored at `parity_corpus/`. Rust consumes it via the existing `repos/flowmark` submodule with zero copy-paste.
+The corpus lives in upstream Python, vendored at `tests/parity_corpus/`. Rust consumes it via the existing `repos/flowmark` submodule with zero copy-paste.
 
 ## Goals
 
@@ -45,23 +45,23 @@ The full proposal — including alternatives considered (tryscript extension, JS
 
 ### Approach
 
-Corpus lives in upstream Python at `parity_corpus/`. Two thin runners (one Python, one Rust) iterate the same data. Rust gates additionally on a shrinking known-divergences baseline.
+Corpus lives in upstream Python at `tests/parity_corpus/`. Two thin runners (one Python, one Rust) iterate the same data. Rust gates additionally on a shrinking known-divergences baseline.
 
 ### Components
 
 **Upstream Python (`jlevy/flowmark`):**
 
-- `parity_corpus/spec/spec.txt` — vendored CommonMark 0.31.2 spec, CC-BY-SA 4.0, attribution in `parity_corpus/LICENSE-COMMONMARK`.
-- `parity_corpus/cases/spec/cm-NNN/{input.md,expected.md}` — 655 cases auto-generated from `spec.txt`.
-- `parity_corpus/cases/flowmark/<group>/<case>/{input.md,expected.md}` — hand-curated cases (reference-image forms, badge pattern, D1-D20 reproducers, families mirroring `flowmark-rs/tests/test_syntactic_surface.rs`).
-- `parity_corpus/manifest.toml` — index: id, path, section, source per case.
-- `parity_corpus/README.md` — format spec, runner contract, how to add a case, how to regenerate after a Python flowmark behavior change.
-- `parity_corpus/scripts/seed_spec_cases.py` — re-runnable seed/regeneration script.
+- `tests/parity_corpus/spec/spec.txt` — vendored CommonMark 0.31.2 spec, CC-BY-SA 4.0, attribution in `tests/parity_corpus/LICENSE-COMMONMARK`.
+- `tests/parity_corpus/cases/spec/cm-NNN/{input.md,expected.md}` — 655 cases auto-generated from `spec.txt`.
+- `tests/parity_corpus/cases/flowmark/<group>/<case>/{input.md,expected.md}` — hand-curated cases (reference-image forms, badge pattern, D1-D20 reproducers, families mirroring `flowmark-rs/tests/test_syntactic_surface.rs`).
+- `tests/parity_corpus/manifest.toml` — index: id, path, section, source per case.
+- `tests/parity_corpus/README.md` — format spec, runner contract, how to add a case, how to regenerate after a Python flowmark behavior change.
+- `tests/parity_corpus/scripts/seed_spec_cases.py` — re-runnable seed/regeneration script.
 - `tests/test_parity_corpus.py` — parametrized pytest, ~20 LOC, picked up by `make test`.
 
 **Rust (`jlevy/flowmark-rs`):**
 
-- `tests/test_parity_corpus.rs` — ~120 LOC integration test that reads the corpus from `repos/flowmark/parity_corpus/`, iterates `manifest.toml`, and asserts per case.
+- `tests/test_parity_corpus.rs` — ~120 LOC integration test that reads the corpus from `repos/flowmark/tests/parity_corpus/`, iterates `manifest.toml`, and asserts per case.
 - `tests/parity_corpus_known_divergences.txt` — initial baseline (~69 entries), each `<case_id>  # <rationale or tracker>`.
 - Submodule bump on `repos/flowmark` to a commit containing the corpus.
 - Cross-references in `docs/parity-coverage-matrix.md` (replace the "Planned" pointer to `fmr-i17c` with a live pointer to the runner) and `docs/port-status.md` (note the new gate).
@@ -78,7 +78,7 @@ cases/<group>/<id>/
 
 No per-case metadata files in the common path — the manifest carries structured fields. The two-file pair is chosen over JSON/TOML embedding so cases are individually viewable, diffable, and editable in git without escaping multi-line markdown content.
 
-Manifest schema (`parity_corpus/manifest.toml`):
+Manifest schema (`tests/parity_corpus/manifest.toml`):
 
 ```toml
 schema_version = "1"
@@ -115,32 +115,46 @@ Together these make the baseline monotone-decreasing: it can only shrink.
 
 ## Implementation Plan
 
-### Phase 1: Upstream Python — corpus + runner + seed (`fmr-i66m`)
+### Phase 1: Upstream Python — generate, sanity-check, release
 
-One PR on `jlevy/flowmark`.
+One PR (or PR series) on `jlevy/flowmark`, ending in a minor patch release. Driven by an upstream issue that links to this spec.
 
-- [ ] Vendor `parity_corpus/spec/spec.txt` (CC-BY-SA 4.0) + `parity_corpus/LICENSE-COMMONMARK` attribution; reference from main LICENSE listing.
-- [ ] Write `parity_corpus/scripts/seed_spec_cases.py` — parses `spec.txt`, extracts 655 examples, writes `cases/spec/cm-NNN/input.md`, runs `flowmark_markdown()` to produce `expected.md`, appends to `manifest.toml`.
+Generate the corpus:
+
+- [ ] Vendor `tests/parity_corpus/spec/spec.txt` (CC-BY-SA 4.0) + `tests/parity_corpus/LICENSE-COMMONMARK` attribution; reference from main LICENSE listing.
+- [ ] Write `tests/parity_corpus/scripts/seed_spec_cases.py` — parses `spec.txt`, extracts 655 examples, writes `cases/spec/cm-NNN/input.md`, runs `flowmark_markdown()` with default settings (no semantic / plaintext / width flags) to produce `expected.md`, appends to `manifest.toml`.
 - [ ] Hand-curate `cases/flowmark/` covering: ref-image full/collapsed/shortcut/with-title/spaces-in-label/case-insensitive/empty-alt; badge full-ref/collapsed-ref/shortcut-ref/inline; D1-D20 historical reproducers.
-- [ ] Write `parity_corpus/manifest.toml` (auto-generated section for spec cases, hand-edited section for flowmark cases).
-- [ ] Write `parity_corpus/README.md` documenting the format, runner contract, contributor workflow.
+- [ ] Write `tests/parity_corpus/manifest.toml` (auto-generated section for spec cases, hand-edited section for flowmark cases).
+- [ ] Write `tests/parity_corpus/README.md` documenting the format, runner contract, contributor workflow.
 - [ ] Add `tests/test_parity_corpus.py` (~20 LOC parametrized pytest). Auto-picked up by `pytest` and therefore `make test`.
+
+Sanity-check the generated expecteds — `flowmark_markdown()` is the source of truth, but it is not bug-free:
+
+- [ ] Walk the generated `expected.md` files, especially in spec sections known to be tricky (backslash escapes, blockquoted fenced code, entity refs, indented code, tab handling). Look for outputs that obviously violate the input's intent: dropped content, mangled escapes, lost indentation, broken block structure.
+- [ ] For each suspected bug: minimize a repro, file as a separate Python bug, fix it, regenerate the affected `expected.md` files. The fixed output becomes the new locked baseline.
+- [ ] Do not silently "clean up" outputs that are merely *unusual* — the corpus's job is to pin current behavior, not to enforce taste.
+
+Lock in and release:
+
+- [ ] Commit the corpus + the test runner + any sanity-check fixes.
 - [ ] Verify `make test` passes; runtime increase <10 seconds.
 - [ ] Mention the corpus in the project README as a contributor-visible artifact.
+- [ ] **Cut a minor patch release** (e.g. `0.7.1`) so the Rust side has a tagged commit to pin the submodule to.
 
-### Phase 2: Rust runner + baseline (`fmr-9yd0`)
+### Phase 2: Rust runner + baseline (full porting-playbook pass)
 
-One PR on `jlevy/flowmark-rs` after Phase 1 lands and a flowmark version including the corpus is published (or pin the submodule to a pre-release commit).
+After Phase 1 ships, the Rust side follows the standard `repos/rust-porting-playbook` workflow for picking up a new upstream release: differential cross-validation, port-of-runner with idiomatic Rust, baseline seeding from the differential output.
 
-- [ ] Bump `repos/flowmark` submodule to a commit containing `parity_corpus/`.
+- [ ] Bump `repos/flowmark` submodule to the Phase 1 release tag.
+- [ ] Follow the auto-sync agent step in the playbook: differential corpus sweep between the new Python release and current Rust HEAD. The corpus runner is itself one of the sweep inputs.
 - [ ] Add `toml` to dev-dependencies (verify it's not transitively present already).
-- [ ] Write `tests/test_parity_corpus.rs` (~120 LOC) implementing the bidirectional baseline gate above.
-- [ ] Seed `tests/parity_corpus_known_divergences.txt` — re-run the corpus locally, dump diverging case IDs, annotate each with rationale or tracker bead (some entries will need lookup against existing D-series beads).
-- [ ] Update `docs/parity-coverage-matrix.md` — replace the planned-`fmr-i17c` pointer with a live pointer to the corpus runner. Keep the targeted matrix as the curated complement.
-- [ ] Update `docs/port-status.md` to note the new gate.
+- [ ] Port `tests/test_parity_corpus.rs` (~120 LOC) — same assertion shape as the Python runner, with the added baseline machinery. Per the playbook, idiomatic Rust at every level (no line-for-line translation of the Python runner; the contract is the corpus, not the runner code).
+- [ ] Seed `tests/parity_corpus_known_divergences.txt` from the differential output — each line `<case_id>  # <rationale>`. Empty rationale not allowed.
+- [ ] Update `docs/parity-coverage-matrix.md` — replace the "Planned" pointer with a live pointer to the corpus runner. Keep the targeted matrix as the curated complement.
+- [ ] Update `docs/port-status.md` to note the new gate and link to the playbook step that established it.
 - [ ] Verify all three CI platforms (ubuntu, macos, windows) pass.
 
-### Phase 3: Baseline triage (`fmr-krz6`)
+### Phase 3: Baseline triage
 
 Separate PRs on `jlevy/flowmark-rs`, clustered by spec section. Out of scope for the initial two-PR landing; tracked but not blocking.
 
@@ -159,29 +173,31 @@ Separate PRs on `jlevy/flowmark-rs`, clustered by spec section. Out of scope for
 
 ## Rollout Plan
 
-1. **File the proposal upstream.** Open a feature-request issue on `jlevy/flowmark` referencing this spec and the proposal artifact. Iterate on open questions (corpus location, manifest format, spec-seed scope, license placement) in the issue.
-2. **Land Phase 1 upstream.** One PR; goes through normal review. Tag a flowmark release (or have flowmark-rs pin to the merge commit) so the submodule has something to bump to.
-3. **Land Phase 2 in flowmark-rs.** Submodule bump + runner + baseline. CI gate live.
+1. **File one issue upstream.** Open a single issue on `jlevy/flowmark` describing the corpus, the sanity-check + release process, and linking back to this spec doc as the authoritative design. The upstream issue is a *suggestion*: design is finalized here, upstream agrees and executes Phase 1.
+2. **Upstream executes Phase 1.** Generate the corpus from default-settings `flowmark_markdown()` output, sanity-check the generated expecteds for obvious bugs, fix any found, lock in, cut a minor patch release. The release tag is the handoff point to Phase 2.
+3. **Land Phase 2 in flowmark-rs.** Follow the standard `repos/rust-porting-playbook` workflow: differential sweep against the new Python release, port the corpus runner to idiomatic Rust, seed the baseline from the diff output, document in the matrix.
 4. **Cross-reference docs.** Update `docs/parity-coverage-matrix.md` and `docs/port-status.md` to point at the new gate.
 5. **Phase 3 in parallel.** Cluster PRs shrinking the baseline; ongoing.
 
-## Open Questions
+## Decisions
 
-- **Corpus location:** `parity_corpus/` at upstream repo root (what this spec assumes; more discoverable to Rust as a sibling artifact), or `tests/parity_corpus/` (groups with existing test infra)? Resolve in the upstream issue.
-- **Manifest format:** TOML (stdlib `tomllib` on Python 3.11+) vs JSON (universal, less ergonomic for multi-line). TOML proposed.
-- **Spec-seed scope:** all 655 examples or filter spec cases that are obviously HTML-output-focused? Suggest all 655 initially — extra noise is cheaper than missed coverage.
-- **License surfacing:** the project is MIT; adding a CC-BY-SA file requires the addition be confined to `parity_corpus/` and clearly attributed. Confirm comfort with that arrangement.
-- **Rust seeding cadence:** how often does the Rust side re-seed the baseline against a new Python flowmark release? Suggest: per sync (every `repos/flowmark` submodule bump runs the corpus and updates the baseline).
-- **Format-mode coverage:** the corpus tests `flowmark_markdown()` defaults. Should we also corpus-test alternate modes (semantic, plaintext, width-60, tight/loose lists)? Suggest no for v1 — these are well-covered by `tests/test_parity_discrepancies.rs` and the tryscript golden tests. Revisit if a divergence is found in a non-default mode that the corpus would have caught.
+The following questions came up during design and are resolved as recorded:
+
+- **Corpus location:** `tests/parity_corpus/`. Groups with existing test infrastructure; avoids cluttering the project root with what is fundamentally test data.
+- **Manifest format:** TOML. Python 3.11+ `tomllib` is stdlib; Rust `toml` crate is small and well-maintained. Multi-line content lives in separate `.md` files anyway, so TOML's awkwardness around long strings doesn't bite.
+- **Seed-script location:** `tests/parity_corpus/scripts/seed_spec_cases.py`. Keeps the corpus self-contained and the script's purpose obvious from its path.
+- **Spec-seed scope:** all 655 CommonMark 0.31.2 examples. Filtering "obviously HTML-output-focused" cases would require subjective triage and ongoing maintenance; extra noise is cheaper than missed coverage.
+- **License:** `tests/parity_corpus/LICENSE-COMMONMARK` carries CC-BY-SA 4.0 attribution for the vendored spec, confined to that subdirectory and referenced from the main license listing. The rest of the project stays MIT.
+- **Generation mode:** default `flowmark_markdown()` settings (no semantic / plaintext / width flags). Locks the most-used surface; alternate modes stay with `tests/test_parity_discrepancies.rs` and the tryscript golden tests. Revisit only if a divergence is found in a non-default mode that the corpus would have caught.
+- **Sanity check before locking:** the generated expecteds are reviewed for obvious bugs in Python flowmark — dropped content, mangled escapes, lost indentation. Any bugs found are filed, fixed, and the affected expecteds regenerated *before* the corpus is locked in for release.
+- **Rust seeding cadence:** the Rust baseline is regenerated on every `repos/flowmark` submodule bump as part of the standard auto-sync playbook step; new divergences become explicit baseline additions reviewed in the sync PR.
 
 ## References
 
-- Bead epic: `fmr-bh2b` — Shared parity corpus (Python + Rust, single source of truth)
-- Bead tasks: `fmr-i66m` (upstream PR), `fmr-9yd0` (Rust runner), `fmr-krz6` (baseline triage)
-- Superseded bead: `fmr-i17c` (original Rust-only spec gate)
+- Tracker: `fmr-bh2b`
 - PR #59 — the parity-bugs PR whose review surfaced the structural gap
-- Proposal artifact: `/tmp/parity-corpus-proposal.md` (review draft, to be filed as a `jlevy/flowmark` issue)
 - `docs/parity-coverage-matrix.md` — current curated targeted matrix; will cross-reference the corpus
 - `docs/port-sync-playbook.md` — auto-sync workflow that already bumps `repos/flowmark`
+- `repos/rust-porting-playbook/guidelines/` — the standard porting playbook Phase 2 follows
 - `tests/test_syntactic_surface.rs` — the targeted-matrix backstop; complements (does not replace) the corpus
 - CommonMark spec: https://spec.commonmark.org/0.31.2/
