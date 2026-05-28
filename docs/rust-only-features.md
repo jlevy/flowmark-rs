@@ -1,7 +1,11 @@
 # Rust-Only Features
 
-This page tracks CLI behavior that is currently specific to `flowmark-rs`
-(and not available in the Python `flowmark` CLI).
+> **Doc status:** Rust port-specific by design.
+> Lists the (currently small set of) features the Rust port has that upstream Python
+> does not.
+
+This page tracks CLI behavior that is currently specific to `flowmark-rs` (and not
+available in the Python `flowmark` CLI).
 
 ## Performance-Oriented Features
 

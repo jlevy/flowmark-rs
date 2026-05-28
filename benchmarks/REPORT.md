@@ -8,7 +8,8 @@
 
 - **Platform:** macOS 25.2.0, arm64 (local)
 - **Corpus:** 928 Markdown files (23 MB)
-- **Methodology:** single-corpus measurements using benchmark harness warmup + timed run(s).
+- **Methodology:** single-corpus measurements using benchmark harness warmup + timed
+  run(s).
 - **Fresh-run mode:** `./benchmarks/run_comparison.sh first-run 1`
 - **Cached second-run mode:** `./benchmarks/run_comparison.sh second-run 1`
 
@@ -29,7 +30,8 @@ Scripts to reproduce: `benchmarks/generate_corpus.sh`, `benchmarks/run_compariso
 
 Notes:
 
-- `flowmark-rs` and `dprint` values are from current local reruns on the 928-file corpus.
+- `flowmark-rs` and `dprint` values are from current local reruns on the 928-file
+  corpus.
 - `markdownfmt`, `prettier`, `mdformat`, `flowmark-py` are from the same corpus profile
   suite in this report (retained for cross-formatter ranking continuity).
 
@@ -44,7 +46,8 @@ Interpretation:
 
 - Fresh-run ranking remains unchanged: flowmark-rs is #2 overall.
 - With incremental cache warm, flowmark-rs now drops to ~23ms on this corpus.
-- Fresh-run Rust vs Python headline remains roughly **60-70x faster** (`0.71s` vs `~48s`).
+- Fresh-run Rust vs Python headline remains roughly **60-70x faster** (`0.71s` vs
+  `~48s`).
 
 ### Per-File Throughput
 
@@ -86,36 +89,41 @@ Interpretation:
 magnitude faster than interpreted-language formatters (prettier, flowmark-py,
 mdformat).**
 
-- **dprint** is the fastest — its Rust core with WASM plugin and multi-threaded file
-  processing gives it ~0.37s on 928 files. Note that dprint uses ~3.3s of user CPU time
-  (multi-threaded) for 0.37s wall-clock, indicating heavy parallelism.
-- **flowmark-rs (parallel)** is second at 0.73s — within **2x of dprint** after adding
-  rayon parallelism in v0.3.0. This is a **3.3x improvement** over the v0.2.4
-  sequential version (2.42s). The remaining gap vs dprint is due to flowmark doing more
-  work per file (semantic line breaks, smart quotes, typography, reference link encoding,
+- **dprint** is the fastest, its Rust core with WASM plugin and multi-threaded file
+  processing gives it ~0.37s on 928 files.
+  Note that dprint uses ~3.3s of user CPU time (multi-threaded) for 0.37s wall-clock,
+  indicating heavy parallelism.
+- **flowmark-rs (parallel)** is second at 0.73s, within **2x of dprint** after adding
+  rayon parallelism in v0.3.0. This is a **3.3x improvement** over the v0.2.4 sequential
+  version (2.42s). The remaining gap vs dprint is due to flowmark doing more work per
+  file (semantic line breaks, smart quotes, typography, reference link encoding,
   footnote extraction).
-- **markdownfmt** is third at 0.95s, benefiting from Go's fast compilation model and
-  low per-file overhead. It processes files via `find -exec` with argument batching (not
+- **markdownfmt** is third at 0.95s, benefiting from Go’s fast compilation model and low
+  per-file overhead. It processes files via `find -exec` with argument batching (not
   parallel internally).
 - **prettier** is the fastest interpreted-language formatter, but ~100x slower than
   dprint. Node.js startup and single-threaded JS execution are the main bottlenecks.
-- **flowmark-py** and **mdformat** are the slowest, reflecting Python's interpreter
+- **flowmark-py** and **mdformat** are the slowest, reflecting Python’s interpreter
   overhead. mdformat is slower than flowmark-py despite doing less work, likely due to
   markdown-it-py parsing overhead.
 
 ### Important Caveats
 
-These formatters are **not interchangeable** — they have very different feature sets:
+These formatters are **not interchangeable:** they have very different feature sets:
 
 - **flowmark** (Python and Rust): Semantic line breaks, smart quotes, ellipsis
   typography, reference link encoding, footnote extraction, configurable wrapping modes.
   The most feature-rich formatter.
-- **prettier**: Opinionated reformatting with consistent style. Good ecosystem
-  integration. No semantic line breaks.
-- **dprint**: Fast, parallel, plugin-based. Basic markdown normalization. No typography
-  or semantic features.
-- **mdformat**: Extensible Python formatter with plugin system. CommonMark-focused.
-- **markdownfmt**: Minimal Go formatter. Normalizes headings, lists, and whitespace.
+- **prettier:** Opinionated reformatting with consistent style.
+  Good ecosystem integration.
+  No semantic line breaks.
+- **dprint:** Fast, parallel, plugin-based.
+  Basic markdown normalization.
+  No typography or semantic features.
+- **mdformat:** Extensible Python formatter with plugin system.
+  CommonMark-focused.
+- **markdownfmt:** Minimal Go formatter.
+  Normalizes headings, lists, and whitespace.
   Limited configurability.
 
 The speed differences partially reflect feature complexity: simpler formatters that do
@@ -127,7 +135,7 @@ Source analysis of [dprint/dprint](https://github.com/dprint/dprint) (cloned to
 `attic/dprint`). Key file: `crates/dprint/src/format.rs`.
 
 **Architecture:** Single-threaded tokio `current_thread` runtime for async
-orchestration, with all actual work (file I/O + formatting) dispatched to tokio's
+orchestration, with all actual work (file I/O + formatting) dispatched to tokio’s
 multi-threaded blocking pool via `spawn_blocking()`.
 
 **Parallelism model:**
@@ -135,37 +143,38 @@ multi-threaded blocking pool via `spawn_blocking()`.
 1. **Thread count = CPU cores.** Uses `std::thread::available_parallelism()`,
    overridable via `DPRINT_MAX_THREADS`. Reserves 1 thread per process plugin + 1 for
    the runtime.
-1. **Semaphore-controlled concurrency.** Files are grouped by plugin. Each group gets a
-   custom `Semaphore` with permits proportional to the thread count. A file can only
-   begin formatting when it acquires a permit, capping active concurrent formats at
-   ~core count.
-1. **`spawn_blocking()` for I/O and formatting.** Each file: read (blocking) -> format
-   (blocking or async depending on plugin type) -> write (blocking). The async event
-   loop just orchestrates.
-1. **Adaptive CPU throttling.** A background task monitors CPU usage every 2 seconds. If
-   CPU exceeds a threshold, it removes semaphore permits to reduce parallelism. When CPU
-   drops, it adds permits back. Disabled on CI.
-1. **Work stealing on completion.** When one plugin group finishes, its semaphore
+2. **Semaphore-controlled concurrency.** Files are grouped by plugin.
+   Each group gets a custom `Semaphore` with permits proportional to the thread count.
+   A file can only begin formatting when it acquires a permit, capping active concurrent
+   formats at ~core count.
+3. **`spawn_blocking()` for I/O and formatting.** Each file: read (blocking) -> format
+   (blocking or async depending on plugin type) -> write (blocking).
+   The async event loop just orchestrates.
+4. **Adaptive CPU throttling.** A background task monitors CPU usage every 2 seconds.
+   If CPU exceeds a threshold, it removes semaphore permits to reduce parallelism.
+   When CPU drops, it adds permits back.
+   Disabled on CI.
+5. **Work stealing on completion.** When one plugin group finishes, its semaphore
    permits are redistributed to remaining groups via `SemaphorePermitReleaser::drop`,
    favoring groups with fewer permits.
-1. **Incremental caching.** Hash-based skip for unchanged files (explains the 0.13s with
+6. **Incremental caching.** Hash-based skip for unchanged files (explains the 0.13s with
    caching vs 0.23s with `--incremental=false`).
 
 **Plugin system:** WASM plugins (compiled with Wasmer, run synchronously in-process) and
-process plugins (separate child processes communicating via stdin/stdout). The markdown
-formatter is a WASM plugin.
+process plugins (separate child processes communicating via stdin/stdout).
+The markdown formatter is a WASM plugin.
 
 ### Implemented: Parallel File Processing for flowmark-rs
 
 Parallel file processing was implemented in v0.3.0 using rayon (see Part 3 for full
 results). The sequential loop was replaced with `rayon::par_iter().try_for_each()`,
 achieving a **3.8x wall-clock speedup** on batch workloads and bringing flowmark-rs to
-**within 2x of dprint's performance**.
+**within 2x of dprint’s performance**.
 
-The rayon approach proved simpler and equally effective as dprint's more complex tokio +
+The rayon approach proved simpler and equally effective as dprint’s more complex tokio +
 semaphore architecture, since flowmark-rs has no plugin infrastructure.
 
-______________________________________________________________________
+* * *
 
 ## Part 2: Flowmark Python vs Rust (Detailed)
 
@@ -227,12 +236,12 @@ fill_markdown (entry)                           99.4%   (154.7M)
 ```
 
 The wrapping pipeline (word splitting → paragraph wrapping → line breaking) is the
-dominant cost at ~35% inclusive. Pre- and post-processing workarounds for comrak account
-for another ~30%.
+dominant cost at ~35% inclusive.
+Pre- and post-processing workarounds for comrak account for another ~30%.
 
 ### Self-Time Breakdown (Exclusive Cost)
 
-| Category | % | Instructions | What's happening |
+| Category | % | Instructions | What’s happening |
 | --- | --- | --- | --- |
 | **String searching** (`core::str::pattern`) | **~30%** | ~46.7M | `StrSearcher::new` 15.2%, `TwoWaySearcher::next` 10.4% |
 | **Memory allocation** (malloc/free/realloc) | ~18.5% | ~28.8M | Allocation churn from string operations |
@@ -245,7 +254,7 @@ for another ~30%.
 ### Key Finding
 
 **String pattern searching is the #1 bottleneck at ~30% of total instructions.** This is
-not from the comrak parser or regex — it's from Rust's `str::replace()`,
+not from the comrak parser or regex, it’s from Rust’s `str::replace()`,
 `str::contains()`, and related methods that use `core::str::pattern::StrSearcher`
 (Two-Way string search algorithm).
 
@@ -267,10 +276,10 @@ fn restore_atomic_constructs(tokens: &[String], constructs: &[String], placehold
 }
 ```
 
-For each token, this scans the full string M times (once per placeholder). Each
-`.replace()` call invokes `StrSearcher::new` (builds a Two-Way searcher) and
-`TwoWaySearcher::next` (scans the string). With many tokens and many placeholders, this
-is expensive.
+For each token, this scans the full string M times (once per placeholder).
+Each `.replace()` call invokes `StrSearcher::new` (builds a Two-Way searcher) and
+`TwoWaySearcher::next` (scans the string).
+With many tokens and many placeholders, this is expensive.
 
 ### 2. 32× Sequential `.replace()` for Escape Placeholders
 
@@ -283,16 +292,17 @@ for (escaped, placeholder) in &escape_placeholders {
 ```
 
 This runs 32 `.replace()` calls over the entire document (one per escapable ASCII
-punctuation character). Each call scans the full document and allocates a new `String`.
-The same pattern appears in the pre-processing direction at lines 750–755.
+punctuation character).
+Each call scans the full document and allocates a new `String`. The same pattern appears
+in the pre-processing direction at lines 750–755.
 
 ### 3. Per-Line Character Scanning in `remove_period_escapes_preserving_code`
 
 **File:** `src/formatter/filling.rs:807–850`
 
-Called on every non-fenced line. Character-by-character processing with
-`String::with_capacity` + push. Not algorithmically bad, but the sheer call volume makes
-it visible at 0.5% self-time.
+Called on every non-fenced line.
+Character-by-character processing with `String::with_capacity` + push.
+Not algorithmically bad, but the sheer call volume makes it visible at 0.5% self-time.
 
 ## Optimization Opportunities
 
@@ -305,20 +315,21 @@ it visible at 0.5% self-time.
 
 ## Optimization Experiments
 
-Two optimizations were implemented and tested. All 430 tests pass after each change.
+Two optimizations were implemented and tested.
+All 430 tests pass after each change.
 
 ### Optimization 1: Single-pass `restore_atomic_constructs`
 
 **Change:** Replace the O(N×M) `.replace()` loop in `restore_atomic_constructs`
-(`src/wrapping/text_wrapping.rs`) with a fast-path check: if the token doesn't contain
-the placeholder prefix byte (`\x00`), skip entirely. If the entire token is a
-placeholder (common case), do a HashMap lookup instead of M sequential `.replace()`
-calls.
+(`src/wrapping/text_wrapping.rs`) with a fast-path check: if the token doesn’t contain
+the placeholder prefix byte (`\x00`), skip entirely.
+If the entire token is a placeholder (common case), do a HashMap lookup instead of M
+sequential `.replace()` calls.
 
-**Result (alone):** Within measurement noise — no significant improvement on test
+**Result (alone):** Within measurement noise, no significant improvement on test
 document. This makes sense: the testdoc has relatively few atomic constructs (HTML tags,
-code spans), so the placeholder restoration isn't the dominant contributor. The
-optimization would show more benefit on documents heavy with inline HTML/code.
+code spans), so the placeholder restoration isn’t the dominant contributor.
+The optimization would show more benefit on documents heavy with inline HTML/code.
 
 ### Optimization 2: Single-pass PUA Escape Processing
 
@@ -341,21 +352,21 @@ Benchmarked with `hyperfine` (warmup + 10 runs for single file, 5 for batch).
 
 **Single file (`testdoc.orig.md`, 1,734 lines):**
 
-| | Mean | Range |
+|  | Mean | Range |
 | --- | --- | --- |
 | Before | 31.5 ms +/- 2.2 ms | 28.4 – 39.6 ms |
 | After | 27.3 ms +/- 2.5 ms | 24.2 – 34.9 ms |
-| **Improvement** | **13.3% faster** | |
+| **Improvement** | **13.3% faster** |  |
 
 Verified across 3 independent runs: 27.0, 27.2, 27.4, 27.8 ms (consistent).
 
 **Batch `--auto` (1,080 files):**
 
-| | Mean | Range |
+|  | Mean | Range |
 | --- | --- | --- |
 | Before | 3.21 s +/- 0.11 s | 3.09 – 3.34 s |
 | After | 2.69 s +/- 0.15 s | 2.58 – 3.02 s |
-| **Improvement** | **16.2% faster** | |
+| **Improvement** | **16.2% faster** |  |
 
 Verified across 3 independent runs: 2.71, 2.73, 2.63 s (consistent).
 
@@ -375,29 +386,29 @@ The string searching cost dropped from the dominant bottleneck (30%) to a minor
 contributor (7.4%). All other categories decreased in absolute terms by ~40%, reflecting
 the removal of the unnecessary work that string-search-heavy replace loops were causing.
 
-### What's Left After Optimization
+### What’s Left After Optimization
 
 Post-optimization, the remaining cost is spread across:
 
-1. **Memory allocation** (~19%) — inherent to string manipulation; would require
+1. **Memory allocation** (~19%), inherent to string manipulation; would require
    `Cow<str>` or arena allocation (medium complexity)
-1. **String searching** (~7%) — remaining uses are necessary `.contains()` and `.find()`
+2. **String searching** (~7%), remaining uses are necessary `.contains()` and `.find()`
    calls
-1. **Regex** (~6%) — already well-optimized with `LazyLock`; hybrid DFA is the regex
-   crate's efficient path
-1. **Comrak parser** (~3%) — external dependency, not directly optimizable
-1. **memcpy/memset** (~7%) — inherent to string operations
+3. **Regex** (~6%), already well-optimized with `LazyLock`; hybrid DFA is the regex
+   crate’s efficient path
+4. **Comrak parser** (~3%), external dependency, not directly optimizable
+5. **memcpy/memset** (~7%), inherent to string operations
 
 Further optimization would yield diminishing returns for increasing complexity.
 
 ### Optimization 3: Allocation Reduction
 
-**Status:** Not implemented — the profiling after optimizations 1+2 shows that
-allocation cost dropped 41% in absolute terms (from 28.8M to 16.9M instructions) as a
-side effect of eliminating the string-replace churn. The remaining allocations are
-spread across many small sites in the wrapping pipeline, and reducing them would require
-introducing `Cow<str>` throughout the call chain — medium complexity for an estimated
-3-5% further improvement.
+**Status:** Not implemented, the profiling after optimizations 1+2 shows that allocation
+cost dropped 41% in absolute terms (from 28.8M to 16.9M instructions) as a side effect
+of eliminating the string-replace churn.
+The remaining allocations are spread across many small sites in the wrapping pipeline,
+and reducing them would require introducing `Cow<str>` throughout the call chain, medium
+complexity for an estimated 3-5% further improvement.
 
 ## Updated Headline Numbers (With Optimizations)
 
@@ -410,7 +421,7 @@ After applying optimizations 1+2:
 
 Per-file throughput after optimization: **401 files/sec** in `--auto` mode (was 294).
 
-______________________________________________________________________
+* * *
 
 ## Part 3: Parallel File Processing (v0.3.0)
 
@@ -419,19 +430,20 @@ ______________________________________________________________________
 Two complementary improvements implemented in v0.3.0:
 
 1. **Rayon parallel file processing.** Replaced the sequential `for` loop with
-   `rayon::par_iter().try_for_each()` for inplace formatting. Rayon's work-stealing
-   thread pool automatically sizes to `available_parallelism()`. A `--threads` CLI flag
-   allows overriding (0 = all cores, default). Stdout output remains sequential to
-   preserve file ordering.
+   `rayon::par_iter().try_for_each()` for inplace formatting.
+   Rayon’s work-stealing thread pool automatically sizes to `available_parallelism()`. A
+   `--threads` CLI flag allows overriding (0 = all cores, default).
+   Stdout output remains sequential to preserve file ordering.
 
-1. **Skip-unchanged optimization.** After formatting, if the output matches the input
-   exactly, the file write is skipped entirely. This preserves file modification times
-   (important for build tools that use mtime) and eliminates I/O for already-formatted
-   files.
+2. **Skip-unchanged optimization.** After formatting, if the output matches the input
+   exactly, the file write is skipped entirely.
+   This preserves file modification times (important for build tools that use mtime) and
+   eliminates I/O for already-formatted files.
 
 ### Benchmark Results (928 files, 8.8 MB)
 
-Corpus: 928 Markdown files across a 4–5 level deep directory tree. 3 runs each.
+Corpus: 928 Markdown files across a 4–5 level deep directory tree.
+3 runs each.
 
 #### Fresh Corpus (Files Need Formatting)
 
@@ -469,14 +481,15 @@ Corpus: 928 Markdown files across a 4–5 level deep directory tree. 3 runs each
 | Per-file throughput (fresh) | 338 files/sec | 1,271 files/sec | **3.8x** |
 | Per-file throughput (re-format) | 338 files/sec | 2,442 files/sec | **7.2x** |
 
-**flowmark-rs is now within 2x of dprint's performance** on fresh formatting, and within
-1.5x on re-formatting. The remaining gap is primarily due to flowmark doing significantly
-more work per file (semantic line breaks, smart quotes, typography, reference link
-encoding, footnote extraction) versus dprint's basic markdown normalization.
+**flowmark-rs is now within 2x of dprint’s performance** on fresh formatting, and within
+1.5x on re-formatting.
+The remaining gap is primarily due to flowmark doing significantly more work per file
+(semantic line breaks, smart quotes, typography, reference link encoding, footnote
+extraction) versus dprint’s basic markdown normalization.
 
 ### Note on Thread Scaling
 
 The --threads 2 result (2.71s) is slower than sequential (2.52s). This is expected on
-this benchmark machine — the overhead of rayon's thread pool and synchronization exceeds
+this benchmark machine, the overhead of rayon’s thread pool and synchronization exceeds
 the benefit with only 2 threads and relatively fast per-file formatting (~2.7ms/file).
 Scaling improves at 4+ threads.

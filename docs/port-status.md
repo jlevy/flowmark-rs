@@ -1,5 +1,9 @@
 # Project Status: flowmark-rs
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> Documents the Rust port lifecycle: parity verification, sync workflow, and port
+> history.
+
 **Last updated:** 2026-05-28
 
 **Current release:** v0.3.0 ([crates.io](https://crates.io/crates/flowmark),
@@ -12,7 +16,7 @@
 
 flowmark-rs is a complete Rust port of the Python
 [flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter.
-The port achieves full behavioral parity with Python flowmark v0.7.0 — identical CLI
+The port achieves full behavioral parity with Python flowmark v0.7.0, identical CLI
 interface, identical formatting output across all modes, and identical file discovery
 behavior.
 
@@ -32,8 +36,8 @@ None are hypothetical.
 ### Parity Definition (Principle 1)
 
 Parity is defined as: **the Rust binary is a drop-in replacement for the Python binary
-at the CLI level — identical flags, identical output, identical file discovery,
-identical error behavior.**
+at the CLI level, identical flags, identical output, identical file discovery, identical
+error behavior.**
 
 **Tolerated variations** (closed list):
 
@@ -51,7 +55,7 @@ Everything not on this list is required to be identical.
 - 18 parity discrepancies discovered (D1-D18), all resolved
 - Every discrepancy had a failing test before the fix
 - Zero parity gaps hidden behind passing tests
-- No passive documentation of gaps — every gap was treated as a severe blocker
+- No passive documentation of gaps, every gap was treated as a severe blocker
 
 ### Tests Always Run in CI (Principle 3)
 
@@ -64,7 +68,7 @@ The CI test job installs all required external tools:
 
 ### Tests Never Hide Failures (Principle 4)
 
-- No “graceful skip” logic — tests fail loudly when dependencies are missing
+- No “graceful skip” logic, tests fail loudly when dependencies are missing
 - Golden test expected outputs come from the Python reference implementation
 - No output truncation, path stripping, or assertion weakening
 - D11 cross-binary parity tests invoke both Python and Rust binaries with identical
@@ -214,14 +218,14 @@ This port was built using the
 [rust-porting-playbook](https://github.com/jlevy/rust-porting-playbook), following an
 8-phase methodology:
 
-1. **Analysis** — Understand Python source structure and dependencies
-2. **Scaffolding** — Set up Rust project with matching module structure
-3. **Core porting** — Translate Python logic to idiomatic Rust
-4. **Test porting** — Map all Python tests to Rust equivalents
-5. **Parity verification** — Golden test comparison across all modes
-6. **CI hardening** — 12-check pipeline with coverage and semver checks
-7. **Documentation** — Specs, playbooks, and operational guides
-8. **Publishing** — crates.io metadata, trusted publishing, release workflow
+1. **Analysis:** Understand Python source structure and dependencies
+2. **Scaffolding:** Set up Rust project with matching module structure
+3. **Core porting:** Translate Python logic to idiomatic Rust
+4. **Test porting:** Map all Python tests to Rust equivalents
+5. **Parity verification:** Golden test comparison across all modes
+6. **CI hardening:** 12-check pipeline with coverage and semver checks
+7. **Documentation:** Specs, playbooks, and operational guides
+8. **Publishing:** crates.io metadata, trusted publishing, release workflow
 
 ### Key Metrics
 
@@ -245,7 +249,7 @@ This port was built using the
 
 All work in this port was managed using [tbd](https://github.com/jlevy/get-tbd), a
 git-native issue tracking tool.
-tbd tracks work as “beads” — lightweight, dependency-aware tasks that live alongside the
+tbd tracks work as “beads”, lightweight, dependency-aware tasks that live alongside the
 code in git. Every bug, feature, spec phase, and code review finding was tracked as a
 bead, giving full traceability from requirement to implementation.
 This systematic decomposition was essential for managing a port of this complexity.
@@ -255,57 +259,57 @@ This systematic decomposition was essential for managing a port of this complexi
 
 ### Process Timeline
 
-1. **Foundation and architecture**: Master porting plan established module boundaries,
+1. **Foundation and architecture:** Master porting plan established module boundaries,
    dependencies, and acceptance goals.
-2. **Coverage and parity system**: Cross-language test mapping tooling created for
+2. **Coverage and parity system:** Cross-language test mapping tooling created for
    Python→Rust provenance and CI enforcement.
-3. **Exact parity delivery**: High-priority output mismatches fixed (P and D discrepancy
+3. **Exact parity delivery:** High-priority output mismatches fixed (P and D discrepancy
    tracks), ending in byte-for-byte parity claims with broad test backing.
-4. **Code review hardening**: External review findings converted into concrete
+4. **Code review hardening:** External review findings converted into concrete
    engineering tasks and lint policy tightening.
-5. **CI and release engineering**: Build and publish workflows matured from crate-only
+5. **CI and release engineering:** Build and publish workflows matured from crate-only
    to full multi-channel release orchestration.
-6. **CLI and docs polish**: Help/usage UX improved and documentation synchronization
+6. **CLI and docs polish:** Help/usage UX improved and documentation synchronization
    tightened.
-7. **Performance phase**: Baseline profiling quantified bottlenecks; parallel processing
+7. **Performance phase:** Baseline profiling quantified bottlenecks; parallel processing
    delivered major throughput gains; incremental cache implemented as follow-on
    optimization.
-8. **Ecosystem and playbook feedback**: Porting lessons were fed back into reusable
+8. **Ecosystem and playbook feedback:** Porting lessons were fed back into reusable
    playbook guidance and process templates.
 
 ### Workstreams
 
-**Port architecture and core formatter** — Established Rust module architecture
+**Port architecture and core formatter:** Established Rust module architecture
 (`formatter`, `wrapping`, `parser`, `transform`, `typography`, `file_resolver`,
 `skills`). Reimplemented behavior on top of `comrak` with custom rendering and
 parity-oriented post-processing.
 Preserved CLI/library split with feature-gated CLI and strict lint posture.
 
-**Parity and correctness** — Implemented cross-language test mapping lifecycle and CI
+**Parity and correctness:** Implemented cross-language test mapping lifecycle and CI
 checks. Closed discrepancy tracks across plaintext, list spacing, blockquote/footnote,
 wrapping edge cases, and CLI error compatibility.
 Eliminated test masking patterns so gaps fail visibly instead of hiding behind weak
 assertions. Expanded tryscript/golden strategy as executable parity contract.
 
-**Engineering quality and CI discipline** — Adopted strict lint policy (`warnings=deny`,
+**Engineering quality and CI discipline:** Adopted strict lint policy (`warnings=deny`,
 pedantic clippy posture).
 Enforced formatter consistency and warning-free builds in CI. Added/strengthened checks:
 docs build, coverage, semver checks, dependency audit, workflow script tests,
 multi-platform test matrix.
 
-**Packaging and release operations** — Crates.io trusted publishing path established.
+**Packaging and release operations:** Crates.io trusted publishing path established.
 GitHub Release artifact packaging/checksum flow implemented.
 Homebrew tap flow established and codified.
 PyPI/maturin wheel+sdist distribution path integrated.
 Release orchestration moved to reusable workflows plus script-driven planning logic.
 
-**Performance and scalability** — Baseline profiling measured major speedups vs Python
+**Performance and scalability:** Baseline profiling measured major speedups vs Python
 and identified string/alloc-heavy hotspots.
 Parallel file processing added (rayon + threading controls + skip-unchanged behavior).
 Incremental cache architecture implemented with invalidation/fingerprint behavior and
 supporting tests.
 
-**Documentation and playbook sync** — Port status and planning docs evolved from active
+**Documentation and playbook sync:** Port status and planning docs evolved from active
 execution to completed record.
 Playbook sync spec captured lessons learned and transformed them into reusable guidance.
 Publishing process consolidated into a canonical operational runbook.
@@ -324,12 +328,12 @@ Publishing process consolidated into a canonical operational runbook.
 1. **Parser/rendering semantics mismatch** (Marko vs comrak): Addressed by targeted
    rendering logic, explicit discrepancy tracking, and parity tests for each discovered
    gap.
-2. **Hidden parity drift risk**: Addressed by forbidding masking patterns and requiring
+2. **Hidden parity drift risk:** Addressed by forbidding masking patterns and requiring
    failing tests per known gap.
-3. **Multi-channel release complexity**: Addressed by script-driven workflow planning,
+3. **Multi-channel release complexity:** Addressed by script-driven workflow planning,
    idempotent channel behavior, orchestrated release flows, and explicit manual Homebrew
    checkpoint.
-4. **Documentation/status drift**: Addressed by moving specs to done and consolidating
+4. **Documentation/status drift:** Addressed by moving specs to done and consolidating
    process docs.
 
 ### Key Takeaways
@@ -431,15 +435,15 @@ fmr-8yos      P1  ○ open   [epic] Build, CI hardening, and publishing improvem
 └── fmr-4h35      P2  ✓ closed  [task] 5.3: Add reference projects comparison table to playbook
 ├── fmr-rj25      P3  ○ open   [task] CI: Consider cargo-nextest for faster parallel test execution
 └── fmr-l15v      P3  ○ open   [task] Add Codecov integration: configure CODECOV_TOKEN secret and restore badge
-fmr-7mmt      P1  ✓ closed  [epic] Phase 10: CLI & Feature Parity — exact drop-in replacement for Python flowmark
+fmr-7mmt      P1  ✓ closed  [epic] Phase 10: CLI & Feature Parity, exact drop-in replacement for Python flowmark
 └── fmr-5u8i      P3  ○ open   [bug] Python plaintext mode uses html_md_word_splitter instead of simple_word_splitter
 fmr-t834      P1  ✓ closed  [task] 10.1: Port file resolver module (31 tests)
-fmr-z8j5      P1  ✓ closed  [task] 10.2: Port config loading — TOML, three-way merge (20 tests)
-fmr-4sc5      P1  ✓ closed  [task] 10.3: CLI flag parity — add 11 missing flags (19 tests)
-fmr-qa6p      P1  ✓ closed  [task] 10.3b: Port skill system — --skill, --install-skill, --docs (9 tests)
-fmr-t3va      P1  ✓ closed  [task] 10.4: Tryscript CLI golden tests — baseline against Python, replicate for Rust
-fmr-v2de      P1  ✓ closed  [task] 10.5: Update test mapping and CI — 281 mapped, 0 excluded, tryscript CI job
-fmr-h01s      P1  ✓ closed  [task] 10.7: Final acceptance — review all 281+ mappings, sign off on completeness
+fmr-z8j5      P1  ✓ closed  [task] 10.2: Port config loading, TOML, three-way merge (20 tests)
+fmr-4sc5      P1  ✓ closed  [task] 10.3: CLI flag parity, add 11 missing flags (19 tests)
+fmr-qa6p      P1  ✓ closed  [task] 10.3b: Port skill system, --skill, --install-skill, --docs (9 tests)
+fmr-t3va      P1  ✓ closed  [task] 10.4: Tryscript CLI golden tests, baseline against Python, replicate for Rust
+fmr-v2de      P1  ✓ closed  [task] 10.5: Update test mapping and CI, 281 mapped, 0 excluded, tryscript CI job
+fmr-h01s      P1  ✓ closed  [task] 10.7: Final acceptance, review all 281+ mappings, sign off on completeness
 fmr-fvw7      P1  ✓ closed  [task] Senior engineering review: code quality and correctness issues
 fmr-he1d      P1  ✓ closed  [bug] Regex compiled in loop in min_fence_length (filling.rs:961)
 fmr-86se      P1  ✓ closed  [bug] usize underflow in fill_text width calculation (text_filling.rs:103)
@@ -502,7 +506,7 @@ fmr-rqwl      P2  ✓ closed  [task] Extract repeated lines.last().expect() call
 fmr-b035      P2  ✓ closed  [task] CI: Add CARGO_PROFILE_TEST_DEBUG=0 to reduce cache size
 fmr-hj6z      P2  ✓ closed  [task] CI: Add code coverage job with cargo-llvm-cov
 fmr-8un1      P2  ✓ closed  [task] CI: Add cargo-semver-checks job to prevent accidental API breakage
-fmr-03xy      P2  ✓ closed  [task] 10.6: Upstream contributions — PR tryscript tests to Python flowmark repo
+fmr-03xy      P2  ✓ closed  [task] 10.6: Upstream contributions, PR tryscript tests to Python flowmark repo
 fmr-aq8o      P2  ✓ closed  [task] Add performance benchmarks comparing Rust vs Python flowmark
 fmr-afg0      P2  ✓ closed  [bug] Smart quotes char-boundary redistribution is fragile (filling.rs:1107)
 fmr-myhs      P2  ✓ closed  [bug] Column off-by-one in sentence wrapper (line_wrappers.rs:103)
@@ -531,7 +535,7 @@ fmr-hwji      P2  ✓ closed  [epic] Spec: Comprehensive Tryscript Golden Test S
 └── fmr-iusl      P2  ✓ closed  [task] Add tryscript CI integration and retire old test file
 fmr-8vfd      P2  ○ open   [feature] Implement signposts format (SP/0.1) for knowledge flow maps
 fmr-4fn7      P2  ✓ closed  [epic] Code quality improvements from parity fixes review
-fmr-59h1      P2  ✓ closed  [bug] Replace LinkRefDef struct with HashSet<String> — dead fields never read
+fmr-59h1      P2  ✓ closed  [bug] Replace LinkRefDef struct with HashSet<String>, dead fields never read
 fmr-77g8      P2  ✓ closed  [bug] Use collision-resistant marker prefixes for REFDEF/FNDEF HTML comments
 fmr-37nt      P2  ✓ closed  [task] Add unit tests for extract_link_ref_defs, extract_footnote_defs, encode_ref_links
 fmr-g5j4      P2  ✓ closed  [bug] GAP5: Email addresses inside template tags get linkified
@@ -544,7 +548,7 @@ fmr-n69j      P2  ✓ closed  [bug] D1: Plaintext mode collapses code blocks ins
 fmr-r9k6      P2  ✓ closed  [bug] D4: Tight list spacing inserts extra blank lines between nested sublists
 fmr-3i50      P2  ✓ closed  [bug] D6: Nested blockquotes get extra blank separator lines
 fmr-yjc0      P2  ✓ closed  [bug] Fix clippy inefficient_to_string in protect_autolinks (4 instances)
-fmr-dihn      P2  ✓ closed  [bug] D9: Empty/whitespace input produces no output — Python outputs trailing newline
+fmr-dihn      P2  ✓ closed  [bug] D9: Empty/whitespace input produces no output, Python outputs trailing newline
 fmr-gocw      P2  ✓ closed  [bug] D10: HTML entities decoded by comrak instead of preserved (&amp; → &)
 fmr-oyj6      P2  ✓ closed  [task] Run hyperfine benchmarks: Rust vs Python on --list-files and --auto formatting
 fmr-e38z      P2  ✓ closed  [bug] P7: Blockquote blank continuation line loses > prefix
@@ -585,7 +589,7 @@ fmr-vpg4      P3  ✓ closed  [bug] D5: Loose list spacing missing blank lines i
 fmr-el2i      P3  ✓ closed  [bug] P9: Smart quote conversion after inline code backtick
 fmr-jcsj      P4  ✓ closed  [task] simple_word_split is pub but unused in production (text_wrapping.rs:75)
 fmr-wonk      P4  ✓ closed  [task] first_sentence/first_sentences appear unused (sentence.rs:61)
-fmr-kqxb      P4  ✓ closed  [task] in_heading threaded as mut bool through deep call chain — use context struct
+fmr-kqxb      P4  ✓ closed  [task] in_heading threaded as mut bool through deep call chain, use context struct
 fmr-m7o8      P4  ✓ closed  [bug] markdown_escape_word uses byte indexing, fragile if regex broadened
 
 235 issues: 225 closed, 10 open

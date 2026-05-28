@@ -1,19 +1,25 @@
 # Publishing (Canonical Hybrid Rust/Python)
 
+> **Doc status:** Parallel to upstream
+> [`docs/publishing.md`](https://github.com/jlevy/flowmark/blob/main/docs/publishing.md).
+> Both cover the same role; content differs because the Rust toolchain (cargo,
+> multi-channel release) and the Python toolchain (uv, PyPI-only) require different
+> commands and steps.
+
 This file is the canonical release runbook for `flowmark-rs` and the template baseline
 for future hybrid Rust/Python projects.
 
 ## Release Invariants
 
-1. Complex workflow logic must live in testable scripts (`scripts/*.py`), not long inline
-   bash in Actions YAML.
-1. A release tag (`vX.Y.Z`) must flow into build env (`FLOWMARK_RELEASE_TAG`) so built
+1. Complex workflow logic must live in testable scripts (`scripts/*.py`), not long
+   inline bash in Actions YAML.
+2. A release tag (`vX.Y.Z`) must flow into build env (`FLOWMARK_RELEASE_TAG`) so built
    binaries/wheels embed the stable version, not `dev.unknown`.
-1. Release steps must be rerun-safe:
+3. Release steps must be rerun-safe:
    - crates publishes are skip-safe when version already exists
    - PyPI publishes are skip-safe via `uv publish --check-url`
    - GitHub release updates are idempotent
-1. Homebrew tap updates remain explicit and auditable (manual commit in tap repo).
+4. Homebrew tap updates remain explicit and auditable (manual commit in tap repo).
 
 ## Variables
 
@@ -27,14 +33,14 @@ TAG=v${VERSION}
 ## One-Time Setup
 
 1. `gh auth status` succeeds for the maintainer account.
-1. crates.io trusted publisher is configured for this repo.
+2. crates.io trusted publisher is configured for this repo.
    - Current working path can be `publish.yml` (crate-first flow).
    - If you want fully one-step release from `release.yml`, add that workflow in crates
      trusted publisher settings too.
-1. PyPI trusted publisher is configured for project `flowmark-rs`, workflow `pypi.yml`,
+3. PyPI trusted publisher is configured for project `flowmark-rs`, workflow `pypi.yml`,
    environment blank.
-1. Homebrew tap access is configured for `jlevy/homebrew-flowmark` (maintainer account or
-   token with push access).
+4. Homebrew tap access is configured for `jlevy/homebrew-flowmark` (maintainer account
+   or token with push access).
 
 ## Phase 0: Preflight
 
@@ -43,8 +49,8 @@ TAG=v${VERSION}
    - `Cargo.lock`
    - `CHANGELOG.md`
    - README/docs sync updates
-1. Confirm local checkout is clean and on current `main`.
-1. Run required dry-run orchestration:
+2. Confirm local checkout is clean and on current `main`.
+3. Run required dry-run orchestration:
 
 ```bash
 gh workflow run release.yml --repo "$REPO" -r main \
@@ -76,9 +82,9 @@ curl -fsSL "https://crates.io/api/v1/crates/flowmark/${VERSION}" >/dev/null
 
 ### 1B. Run orchestrated tagged release
 
-This publishes PyPI and creates/updates the GitHub release. The workflow passes
-`release_tag` through to reusable publish workflows so compiled artifacts embed the stable
-version string.
+This publishes PyPI and creates/updates the GitHub release.
+The workflow passes `release_tag` through to reusable publish workflows so compiled
+artifacts embed the stable version string.
 
 ```bash
 gh workflow run release.yml --repo "$REPO" -r main \
@@ -92,8 +98,8 @@ gh run watch --repo "$REPO" <run-id>
 
 Expected:
 1. crates job skips as already published
-1. PyPI publishes
-1. GitHub release/tag is created or updated
+2. PyPI publishes
+3. GitHub release/tag is created or updated
 
 ## Phase 2: Verify Outputs
 
@@ -136,7 +142,7 @@ gh repo clone "$TAP_REPO" "$workdir/homebrew-flowmark"
 
 Update `Formula/flowmark.rb`:
 1. Set `version` to `${VERSION}`.
-1. Update the four `sha256` values from `SHA256SUMS`:
+2. Update the four `sha256` values from `SHA256SUMS`:
    - `aarch64-apple-darwin`
    - `x86_64-apple-darwin`
    - `aarch64-unknown-linux-musl`
@@ -163,25 +169,27 @@ flowmark --version
 
 ## Failure Handling and Partial Success
 
-Cross-channel publishing is not atomic. Treat release as a controlled two-phase process:
+Cross-channel publishing is not atomic.
+Treat release as a controlled two-phase process:
 1. Publish immutable registries first (crates, PyPI).
-1. Update Homebrew only after registries and GitHub release are confirmed good.
+2. Update Homebrew only after registries and GitHub release are confirmed good.
 
 If a channel fails:
 1. Fix the issue.
-1. Rerun the same workflow/tag.
-1. Verify channel state before proceeding.
+2. Rerun the same workflow/tag.
+3. Verify channel state before proceeding.
 
 Current channel behavior:
 1. crates: already-published versions are detected and skipped.
-1. PyPI: `uv publish --check-url` avoids duplicate uploads.
-1. Homebrew: push a corrective follow-up formula commit if needed.
+2. PyPI: `uv publish --check-url` avoids duplicate uploads.
+3. Homebrew: push a corrective follow-up formula commit if needed.
 
 ## Template Guidance (For Upstream Playbook)
 
 Use this as the baseline pattern for hybrid Rust/Python projects:
 1. `release.yml` orchestrates packaging + checksums + announce.
-1. Reusable channel workflows (`publish.yml`, `pypi.yml`) do channel-specific publish.
-1. Workflow decision logic is delegated to tested `scripts/*.py`.
-1. Script tests run in CI (`python3 -m unittest discover -s scripts/tests -p 'test_*.py'`).
-1. Naming conventions stay consistent (`snake_case.py` for Python scripts).
+2. Reusable channel workflows (`publish.yml`, `pypi.yml`) do channel-specific publish.
+3. Workflow decision logic is delegated to tested `scripts/*.py`.
+4. Script tests run in CI
+   (`python3 -m unittest discover -s scripts/tests -p 'test_*.py'`).
+5. Naming conventions stay consistent (`snake_case.py` for Python scripts).
