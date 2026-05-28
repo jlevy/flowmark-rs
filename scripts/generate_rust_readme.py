@@ -87,6 +87,27 @@ def rewrite_perspective_for_rust_repo(markdown: str) -> str:
     return markdown.replace(PERSPECTIVE_FLIP_OLD, PERSPECTIVE_FLIP_NEW)
 
 
+# Match `**Term**:` followed by space or end-of-line and rewrite as `**Term:**`,
+# moving the colon inside the bold marker. Used for both the spliced upstream
+# shared body and the Rust wrapper output, so the generated README has one
+# consistent definition-label style throughout. A complementary upstream PR to
+# fix the convention at source in jlevy/flowmark would let us drop this
+# transform; until then it normalizes on the Rust side.
+BOLD_COLON_RE = re.compile(r"\*\*([^*\n]+?)\*\*:(?=[ \n])")
+
+
+def normalize_bold_colon_style(markdown: str) -> str:
+    """Move colons inside the bold marker: `**Term**:` -> `**Term:**`.
+
+    The Rust port's convention (and the convention used implicitly throughout the
+    tbd writing-style guidelines' own examples) is `**Term:**`. Upstream Python
+    flowmark's shared README body still has a few `**Term**:` instances; normalize
+    them as the body flows through the generator so the generated README is
+    internally consistent.
+    """
+    return BOLD_COLON_RE.sub(lambda m: f"**{m.group(1)}:**", markdown)
+
+
 def read_msrv(repo_root: Path) -> str:
     """Read rust-version from Cargo.toml for the MSRV badge."""
     cargo_toml = repo_root / "Cargo.toml"
@@ -168,6 +189,7 @@ def main() -> int:
     shared_docs_body = shared_docs_path.read_text(encoding="utf-8").rstrip() + "\n"
     shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
     shared_docs_body = rewrite_perspective_for_rust_repo(shared_docs_body)
+    shared_docs_body = normalize_bold_colon_style(shared_docs_body)
     rendered = render_readme(
         template_path,
         shared_docs_body,
