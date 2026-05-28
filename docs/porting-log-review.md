@@ -244,10 +244,10 @@ differences across 4 bug categories.
 
 | ID | Title | What PR #17 Did Wrong | Lesson |
 | --- | --- | --- | --- |
-| D12b | Mixed loose/tight list code fences (P6) | Test only covered standalone para-to-fence, not mixed lists | **L3**: Test the edge case |
-| D13r | Blockquote blank line indentation (P7) | Test checked `!contains("\n\n>")` --- too weak, missed indent | **L2**: Use `assert_eq!` with exact output |
-| D15r | Smart quote after inline code (P9) | Test asserted Python does NOT convert --- Python DOES for word chars | **L1**: Verify Python’s actual bytes |
-| D16 | Empty code blocks get spurious blank line | Never tested at all | **L3**: Test the edge case |
+| D12b | Mixed loose/tight list code fences (P6) | Test only covered standalone para-to-fence, not mixed lists | **L3:** Test the edge case |
+| D13r | Blockquote blank line indentation (P7) | Test checked `!contains("\n\n>")` --- too weak, missed indent | **L2:** Use `assert_eq!` with exact output |
+| D15r | Smart quote after inline code (P9) | Test asserted Python does NOT convert --- Python DOES for word chars | **L1:** Verify Python’s actual bytes |
+| D16 | Empty code blocks get spurious blank line | Never tested at all | **L3:** Test the edge case |
 
 ### Current Work: Fix PR #17’s 4 False-Parity Bugs
 

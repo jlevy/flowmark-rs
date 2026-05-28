@@ -70,7 +70,7 @@ Everything else in this repo is Rust-port-specific.
 
 ## What is *not* mirrored (and why)
 
-- **`development.md`, `publishing.md`**: covered by Parallel status above.
+- **`development.md`, `publishing.md`:** covered by Parallel status above.
   The Rust toolchain (cargo, crates.io, maturin/PyPI, Homebrew) is different enough from
   Python (uv, PyPI) that mirroring would produce a doc full of “for Rust, ignore the
   previous five lines and do this instead” interjections.

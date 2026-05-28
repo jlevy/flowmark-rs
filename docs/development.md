@@ -11,9 +11,9 @@ How to build, test, and work on flowmark-rs.
 ## Prerequisites
 
 - **Rust 1.85+** (see `rust-version` in `Cargo.toml` for MSRV)
-- **Python flowmark v0.7.0**: for cross-binary parity tests
+- **Python flowmark v0.7.0:** for cross-binary parity tests
   (`uv tool install flowmark==0.7.0`)
-- **Node.js 22+** and **tryscript**: for golden CLI tests
+- **Node.js 22+** and **tryscript:** for golden CLI tests
   (`npm install -g tryscript@latest`)
 
 All test dependencies are required.
@@ -83,14 +83,14 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 
 Key design decisions:
 
-- **Feature-gated CLI**: library usable without clap/anyhow via `--no-default-features`
-- **Zero `unsafe` code**: `unsafe_code = "deny"` (1 exception: SIGPIPE handler in
+- **Feature-gated CLI:** library usable without clap/anyhow via `--no-default-features`
+- **Zero `unsafe` code:** `unsafe_code = "deny"` (1 exception: SIGPIPE handler in
   `main.rs`)
-- **No `unwrap()` in library**: `unwrap_used = "deny"`; all errors use `?` or `expect()`
+- **No `unwrap()` in library:** `unwrap_used = "deny"`; all errors use `?` or `expect()`
   with messages
-- **Pedantic clippy at deny level**: catches issues locally, not just in CI
-- **Atomic file writes**: tempfile + persist pattern prevents corruption
-- **13 comrak workarounds**: each tagged `COMRAK-WORKAROUNDn` in
+- **Pedantic clippy at deny level:** catches issues locally, not just in CI
+- **Atomic file writes:** tempfile + persist pattern prevents corruption
+- **13 comrak workarounds:** each tagged `COMRAK-WORKAROUNDn` in
   `src/formatter/filling.rs`
 
 ## CI Pipeline

@@ -109,20 +109,20 @@ mdformat).**
 
 ### Important Caveats
 
-These formatters are **not interchangeable**: they have very different feature sets:
+These formatters are **not interchangeable:** they have very different feature sets:
 
 - **flowmark** (Python and Rust): Semantic line breaks, smart quotes, ellipsis
   typography, reference link encoding, footnote extraction, configurable wrapping modes.
   The most feature-rich formatter.
-- **prettier**: Opinionated reformatting with consistent style.
+- **prettier:** Opinionated reformatting with consistent style.
   Good ecosystem integration.
   No semantic line breaks.
-- **dprint**: Fast, parallel, plugin-based.
+- **dprint:** Fast, parallel, plugin-based.
   Basic markdown normalization.
   No typography or semantic features.
-- **mdformat**: Extensible Python formatter with plugin system.
+- **mdformat:** Extensible Python formatter with plugin system.
   CommonMark-focused.
-- **markdownfmt**: Minimal Go formatter.
+- **markdownfmt:** Minimal Go formatter.
   Normalizes headings, lists, and whitespace.
   Limited configurability.
 
