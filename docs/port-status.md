@@ -1,5 +1,9 @@
 # Project Status: flowmark-rs
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> Documents the Rust port lifecycle: parity verification, sync workflow, and port
+> history.
+
 **Last updated:** 2026-05-28
 
 **Current release:** v0.3.0 ([crates.io](https://crates.io/crates/flowmark),

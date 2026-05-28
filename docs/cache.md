@@ -1,8 +1,12 @@
 # Incremental Cache (Developer Notes)
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> The incremental cache is a Rust-only feature; see
+> [`docs/rust-only-features.md`](rust-only-features.md) for the full Rust-only list.
+
 Flowmark uses a persistent incremental cache for unchanged-file fast paths when
-formatting in place (`--auto` or `--inplace`).
-This cache behavior is currently specific to the Rust CLI.
+formatting in place (`--auto` or `--inplace`). This cache behavior is currently specific
+to the Rust CLI.
 
 ## Cache Root Resolution
 
@@ -12,8 +16,8 @@ Default cache root is a **shared user cache**. Resolution order is:
 2. `dirs::home_dir()/.flowmark-cache/flowmark` (fallback, with warning)
 3. `std::env::temp_dir()/flowmark-cache/flowmark` (last resort, with warning)
 
-Flowmark no longer falls back to a cache directory under the current working
-directory by default.
+Flowmark no longer falls back to a cache directory under the current working directory
+by default.
 
 ### How the OS cache path is determined
 
@@ -23,9 +27,9 @@ directory by default.
 - Linux: typically `$XDG_CACHE_HOME` or `~/.cache`
 - Windows: typically `%LOCALAPPDATA%`
 
-If this lookup returns `None` (for example, unusual runtime environments with
-missing user/home metadata), Flowmark falls back to the next resolution step
-and prints a warning.
+If this lookup returns `None` (for example, unusual runtime environments with missing
+user/home metadata), Flowmark falls back to the next resolution step and prints a
+warning.
 
 ## Cache Layout
 
@@ -48,15 +52,14 @@ The manifest stores:
 - `--incremental[=true|false]`
   - explicit enable/disable form
 - `--show-cache`
-  - print resolved cache directory, file count, total size, total manifest
-    count, current project manifest path, and current project entry count
+  - print resolved cache directory, file count, total size, total manifest count,
+    current project manifest path, and current project entry count
 - `--clear-cache`
   - non-interactively delete the resolved cache directory (idempotent)
 
 ## Config File Keys
 
-Supported in `flowmark.toml`, `.flowmark.toml`, or `pyproject.toml`
-(`tool.flowmark`):
+Supported in `flowmark.toml`, `.flowmark.toml`, or `pyproject.toml` (`tool.flowmark`):
 
 ```toml
 [performance]

@@ -1,5 +1,9 @@
 # Porting Log: Bugs, Fixes, and Lessons Learned
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> Documents the Rust port lifecycle: parity verification, sync workflow, and port
+> history.
+
 All bugs, parity issues, and process failures encountered during the Python-to-Rust
 flowmark port. Each entry records what went wrong, how it was fixed, and the reusable
 lesson.
@@ -28,7 +32,7 @@ full mapping.
 | Corpus parity bugs (P6-P9) | 4 | #17 |
 | Tryscript golden test gaps (D1-D15 wrapping) | 15 | #13 |
 | PR #17 false-parity bugs (D12b, D13r, D15r, D16) | 4 | (this PR) |
-| **Total distinct bugs** | **~68** | |
+| **Total distinct bugs** | **~68** |  |
 
 ## Key Lessons
 
@@ -100,10 +104,10 @@ implementations produce identical results, with three equally strong variations:
 1. **Run both and assert equivalent:** Execute both implementations on the same input in
    the test harness and assert `rs_output == py_output` directly.
    The D11 CLI tests do this.
-1. **Run both and auto-compare saved results:** Execute both implementations separately,
+2. **Run both and auto-compare saved results:** Execute both implementations separately,
    save their outputs, and have an automatic process (e.g., `diff -rq`) assert they are
    identical. This is how corpus validation works (L5).
-1. **Shared golden test script:** Maintain a shared input corpus and a test script that
+3. **Shared golden test script:** Maintain a shared input corpus and a test script that
    runs on both codebases, so the same test definition validates both implementations.
 
 All three forms are fundamentally stronger than static assertions because the parity
@@ -280,16 +284,16 @@ The claim was false --- 4 bugs remained.
    Python actually DOES convert them when the code ends with a word character.
    The agent never ran Python to verify.
 
-1. **Tests used weak assertions.** The D13 test checked `!result.contains("\n\n>")` (no
+2. **Tests used weak assertions.** The D13 test checked `!result.contains("\n\n>")` (no
    bare blank lines) but didn’t check that the blank lines had the correct indentation.
    An `assert_eq!` with exact Python output would have caught this.
 
-1. **Tests didn’t cover edge cases.** The D12/P6 tests only covered the simple case
+3. **Tests didn’t cover edge cases.** The D12/P6 tests only covered the simple case
    (standalone paragraph before code fence).
    Mixed loose/tight lists --- where comrak’s classification differs from Python’s ---
    were not tested.
 
-1. **No corpus-level verification.** The claim of “exact parity” was based solely on
+4. **No corpus-level verification.** The claim of “exact parity” was based solely on
    unit tests. Running both formatters on a real-world corpus would have revealed the
    remaining differences immediately.
 
@@ -349,7 +353,7 @@ They have two gaps:
    This is a fundamentally different validation method that catches bugs targeted tests
    miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
 
-1. **Static vs dynamic assertions.** P8 says “expected output comes from the Python
+2. **Static vs dynamic assertions.** P8 says “expected output comes from the Python
    reference” but does not distinguish between a static hand-copied string literal and a
    dynamic assertion that runs both programs.
    A static assertion tests one expected behavior; a dynamic assertion tests that two
@@ -388,10 +392,10 @@ When fixing a parity bug, follow the red/green process (**L10**):
 1. **Red:** Extract a minimal reproducer from the corpus diff.
    Add it to `tests/corpus-regressions/` (**L9**) and/or as a test case.
    Confirm the test **fails** against current code.
-1. **Fix:** Implement the fix.
-1. **Green:** Confirm the new test passes, all existing tests still pass, and the full
+2. **Fix:** Implement the fix.
+3. **Green:** Confirm the new test passes, all existing tests still pass, and the full
    corpus diff is clean (`uvx flowmark@0.6.4`, not `@latest` --- **L1**).
-1. **Log:** Add an entry to the relevant PR section (or create a new section) with:
+4. **Log:** Add an entry to the relevant PR section (or create a new section) with:
 
 ```markdown
 | ID | Bead | Title | Root Cause | Fix | Lesson |

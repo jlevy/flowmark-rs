@@ -1,5 +1,9 @@
 # Port Sync Playbook
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> Documents the Rust port lifecycle: parity verification, sync workflow, and port
+> history.
+
 How to keep flowmark-rs in sync with the Python flowmark source, maintain exact parity,
 and fix issues as they are discovered.
 

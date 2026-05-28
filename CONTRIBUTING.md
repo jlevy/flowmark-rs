@@ -1,5 +1,10 @@
 # Contributing to flowmark
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> Upstream Python contributing guidance is folded into
+> [`docs/development.md`](https://github.com/jlevy/flowmark/blob/main/docs/development.md);
+> the Rust port keeps this file separate for the Rust contributor onboarding flow.
+
 Thank you for your interest in contributing to flowmark!
 
 ## Prerequisites

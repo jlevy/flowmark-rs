@@ -1,5 +1,11 @@
 # Development
 
+> **Doc status:** Parallel to upstream
+> [`docs/development.md`](https://github.com/jlevy/flowmark/blob/main/docs/development.md).
+> Both cover the same role; content differs because the Rust toolchain (cargo,
+> multi-channel release) and the Python toolchain (uv, PyPI-only) require different
+> commands and steps.
+
 How to build, test, and work on flowmark-rs.
 
 ## Prerequisites
