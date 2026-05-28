@@ -6,12 +6,12 @@ Thank you for your interest in contributing to flowmark!
 
 - Rust 1.85+ (see `rust-version` in Cargo.toml for MSRV)
 - cargo (comes with Rust)
-- Python flowmark v0.6.5 — for cross-binary parity tests
-  (`uv tool install flowmark==0.6.5`)
-- Node.js 22+ and tryscript — for golden CLI tests (`npm install -g tryscript@latest`)
+- Python flowmark v0.7.0, for cross-binary parity tests
+  (`uv tool install flowmark==0.7.0`)
+- Node.js 22+ and tryscript, for golden CLI tests (`npm install -g tryscript@latest`)
 
 All test dependencies are required.
-Tests fail loudly when a dependency is missing — there is no skip logic.
+Tests fail loudly when a dependency is missing, there is no skip logic.
 See
 [Principle 6](repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
 of the porting playbook.
