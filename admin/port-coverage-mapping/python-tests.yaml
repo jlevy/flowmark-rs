@@ -532,6 +532,16 @@
   function: test_normalize_markdown
   test_type: integration
   line_number: 226
+- file: tests/test_filling.py
+  function: test_standalone_wide_table
+  test_type: integration
+  line_number: 320
+  doc_string: Test that a standalone wide table (properly parsed by GFM) continues to work.
+- file: tests/test_filling.py
+  function: test_wide_table_adjacent_to_paragraph
+  test_type: integration
+  line_number: 282
+  doc_string: Test that a wide table row immediately following paragraph text (no blank line)
 - file: tests/test_frontmatter.py
   function: test_has_frontmatter
   test_type: unit
@@ -689,11 +699,142 @@
   test_type: unit
   line_number: 14
   doc_string: Both flowmark and flowmark-py should point to the same CLI entrypoint.
+- file: tests/test_public_inline_api.py
+  function: test_angle_autolink_and_bare_url_extraction
+  test_type: unit
+  line_number: 99
+- file: tests/test_public_inline_api.py
+  function: test_atomic_pattern_constructs_with_name_and_pattern_only
+  test_type: unit
+  line_number: 26
+- file: tests/test_public_inline_api.py
+  function: test_atomic_span_name_distinguishes_link_from_code
+  test_type: unit
+  line_number: 142
+- file: tests/test_public_inline_api.py
+  function: test_autolink_pattern_matches_angle_url_and_email
+  test_type: unit
+  line_number: 37
+- file: tests/test_public_inline_api.py
+  function: test_bare_url_pattern_excludes_trailing_sentence_punctuation
+  test_type: unit
+  line_number: 45
+- file: tests/test_public_inline_api.py
+  function: test_duplicate_link_text_yields_separate_links
+  test_type: unit
+  line_number: 107
+- file: tests/test_public_inline_api.py
+  function: test_email_autolink_text_is_display_not_destination
+  test_type: unit
+  line_number: 89
+- file: tests/test_public_inline_api.py
+  function: test_empty_link_title_is_preserved_distinct_from_none
+  test_type: unit
+  line_number: 94
+- file: tests/test_public_inline_api.py
+  function: test_escaped_brackets_are_not_a_link
+  test_type: unit
+  line_number: 78
+- file: tests/test_public_inline_api.py
+  function: test_extract_collapsed_and_shortcut_references
+  test_type: unit
+  line_number: 65
+- file: tests/test_public_inline_api.py
+  function: test_extract_inline_link_with_title
+  test_type: unit
+  line_number: 55
+- file: tests/test_public_inline_api.py
+  function: test_extract_reference_link_resolves_destination
+  test_type: unit
+  line_number: 60
+- file: tests/test_public_inline_api.py
+  function: test_images_excluded_by_default_included_on_request
+  test_type: unit
+  line_number: 83
+- file: tests/test_public_inline_api.py
+  function: test_iter_atomic_spans_empty_patterns_yields_single_nonatomic_span
+  test_type: unit
+  line_number: 153
+- file: tests/test_public_inline_api.py
+  function: test_iter_atomic_spans_round_trip_and_offsets
+  test_type: unit
+  line_number: 134
+- file: tests/test_public_inline_api.py
+  function: test_iter_atomic_words_glues_atomic_and_keeps_offsets
+  test_type: unit
+  line_number: 160
+- file: tests/test_public_inline_api.py
+  function: test_link_syntax_inside_code_span_is_not_a_link
+  test_type: unit
+  line_number: 112
+- file: tests/test_public_inline_api.py
+  function: test_markdown_inline_patterns_includes_links_and_urls
+  test_type: unit
+  line_number: 31
+- file: tests/test_public_inline_api.py
+  function: test_nested_inline_markup_in_link_text
+  test_type: unit
+  line_number: 70
+- file: tests/test_public_inline_api.py
+  function: test_sentence_span_never_bisects_a_link_with_spaces
+  test_type: unit
+  line_number: 174
+- file: tests/test_public_inline_api.py
+  function: test_split_sentences_atomic_does_not_break_inside_link_with_period
+  test_type: unit
+  line_number: 182
+- file: tests/test_public_inline_api.py
+  function: test_split_sentences_with_spans_are_verbatim
+  test_type: unit
+  line_number: 167
+- file: tests/test_public_inline_api.py
+  function: test_walk_elements_is_read_only
+  test_type: unit
+  line_number: 127
+- file: tests/test_public_inline_api.py
+  function: test_walk_elements_yields_code_block_text_but_extract_links_excludes_it
+  test_type: unit
+  line_number: 117
 - file: tests/test_ref_docs.py
   function: test_reference_doc_formats
   test_type: golden
   line_number: 9
   doc_string: Test that the reference document is formatted correctly with both plain and semantic formats.
+- file: tests/test_reference_links.py
+  function: test_full_reference_with_distinct_label_preserved
+  test_type: unit
+  line_number: 28
+  doc_string: '[text][label] with text != label stays a full reference (the ''fm'' case).'
+- file: tests/test_reference_links.py
+  function: test_idempotent_on_collapsed_reference
+  test_type: unit
+  line_number: 56
+  doc_string: 'Formatting is stable: collapsed reference output is a fixed point.'
+- file: tests/test_reference_links.py
+  function: test_issue_45_link_survives_round_trip
+  test_type: unit
+  line_number: 46
+  doc_string: The reformatted output must still parse to the same link as the input.
+- file: tests/test_reference_links.py
+  function: test_label_equals_text_followed_by_parens_keeps_link
+  test_type: unit
+  line_number: 71
+  doc_string: '[flowmark][flowmark](/path): collapsing to shortcut would steal the parens.'
+- file: tests/test_reference_links.py
+  function: test_label_equals_text_followed_by_reference_keeps_both_links
+  test_type: unit
+  line_number: 84
+  doc_string: '[flowmark][flowmark][ref2]: collapsing to shortcut would drop the first link.'
+- file: tests/test_reference_links.py
+  function: test_label_equals_text_not_collapsed_to_shortcut
+  test_type: unit
+  line_number: 35
+  doc_string: '[flowmark][flowmark] must not become a bare [flowmark] shortcut.'
+- file: tests/test_reference_links.py
+  function: test_shortcut_input_normalized_to_collapsed_reference
+  test_type: unit
+  line_number: 64
+  doc_string: A shortcut reference [flowmark] is normalized to the explicit [flowmark][].
 - file: tests/test_sentences.py
   function: test_first_sentence
   test_type: unit
@@ -1211,27 +1352,27 @@
 - file: tests/test_wrapping.py
   function: test_adjacent_html_comment_tags_no_space
   test_type: unit
-  line_number: 975
+  line_number: 1080
   doc_string: Test that adjacent HTML comment tags stay adjacent (no space inserted).
 - file: tests/test_wrapping.py
   function: test_adjacent_jinja_comment_tags_no_space
   test_type: unit
-  line_number: 1028
+  line_number: 1133
   doc_string: Test that adjacent Jinja comment tags stay adjacent.
 - file: tests/test_wrapping.py
   function: test_adjacent_jinja_tags_no_space
   test_type: unit
-  line_number: 942
+  line_number: 1047
   doc_string: Test that adjacent Jinja tags stay adjacent (no space inserted).
 - file: tests/test_wrapping.py
   function: test_adjacent_jinja_variable_tags_no_space
   test_type: unit
-  line_number: 1007
+  line_number: 1112
   doc_string: Test that adjacent Jinja variable tags stay adjacent.
 - file: tests/test_wrapping.py
   function: test_adjacent_tags_full_pipeline
   test_type: integration
-  line_number: 1049
+  line_number: 1154
   doc_string: Test adjacent tags through the full Markdown processing pipeline.
 - file: tests/test_wrapping.py
   function: test_backslash_in_tag_attributes
@@ -1241,17 +1382,17 @@
 - file: tests/test_wrapping.py
   function: test_block_heuristics_blank_line_normalization
   test_type: unit
-  line_number: 754
+  line_number: 859
   doc_string: Test that block content between tags gets exactly one blank line at boundaries.
 - file: tests/test_wrapping.py
   function: test_block_heuristics_list_items
   test_type: unit
-  line_number: 690
+  line_number: 785
   doc_string: Test that list items inside tags have their newlines preserved.
 - file: tests/test_wrapping.py
   function: test_block_heuristics_mixed_content
   test_type: unit
-  line_number: 731
+  line_number: 836
   doc_string: Test block heuristics with mixed content (text + block elements).
 - file: tests/test_wrapping.py
   function: test_block_heuristics_only_with_tags
@@ -1259,14 +1400,19 @@
   line_number: 712
   doc_string: Test that block heuristics only apply when tags are present.
 - file: tests/test_wrapping.py
+  function: test_block_heuristics_only_with_tags_for_lists
+  test_type: unit
+  line_number: 807
+  doc_string: Test that list heuristics only apply when tags are present.
+- file: tests/test_wrapping.py
   function: test_block_heuristics_preserves_existing_blank_lines
   test_type: unit
-  line_number: 796
+  line_number: 901
   doc_string: Test that if there are already blank lines, we don't add extras.
 - file: tests/test_wrapping.py
   function: test_block_heuristics_table_blank_lines
   test_type: unit
-  line_number: 779
+  line_number: 884
   doc_string: Test blank line normalization specifically for tables.
 - file: tests/test_wrapping.py
   function: test_block_heuristics_table_rows
@@ -1276,7 +1422,7 @@
 - file: tests/test_wrapping.py
   function: test_closing_tag_spacing_function
   test_type: unit
-  line_number: 1170
+  line_number: 1275
   doc_string: Test the _fix_closing_tag_spacing function directly.
 - file: tests/test_wrapping.py
   function: test_html_comments_kept_together
@@ -1305,7 +1451,7 @@
 - file: tests/test_wrapping.py
   function: test_list_content_gets_blank_lines
   test_type: unit
-  line_number: 1108
+  line_number: 1213
   doc_string: Test that list content between tags DOES get blank lines.
 - file: tests/test_wrapping.py
   function: test_long_html_tags
@@ -1329,7 +1475,7 @@
 - file: tests/test_wrapping.py
   function: test_mixed_content_blank_lines_correct
   test_type: unit
-  line_number: 1151
+  line_number: 1256
   doc_string: Test that mixed content (text followed by list) gets correct blank lines.
 - file: tests/test_wrapping.py
   function: test_mixed_html_and_template_tags
@@ -1364,32 +1510,32 @@
 - file: tests/test_wrapping.py
   function: test_paragraph_only_content_various_tags
   test_type: unit
-  line_number: 1246
+  line_number: 1351
   doc_string: Test paragraph-only content with various tag types.
 - file: tests/test_wrapping.py
   function: test_paragraph_text_no_extra_blank_lines
   test_type: unit
-  line_number: 1077
+  line_number: 1182
   doc_string: Test that paragraph text between tags does NOT get extra blank lines.
 - file: tests/test_wrapping.py
   function: test_self_closing_html_comment_tags
   test_type: unit
-  line_number: 859
+  line_number: 964
   doc_string: Test self-closing HTML comment tags (comments without a closing counterpart).
 - file: tests/test_wrapping.py
   function: test_self_closing_jinja_comment_tags
   test_type: unit
-  line_number: 920
+  line_number: 1025
   doc_string: 'Test Jinja comment tags {# ... #} which are always self-closing.'
 - file: tests/test_wrapping.py
   function: test_self_closing_jinja_tags
   test_type: unit
-  line_number: 824
+  line_number: 929
   doc_string: Test self-closing Jinja tags (tags without a separate closing tag).
 - file: tests/test_wrapping.py
   function: test_self_closing_jinja_variable_tags
   test_type: unit
-  line_number: 893
+  line_number: 998
   doc_string: Test Jinja variable tags {{ ... }} which are always self-closing.
 - file: tests/test_wrapping.py
   function: test_single_word_inline_code_not_coalesced
@@ -1403,8 +1549,23 @@
 - file: tests/test_wrapping.py
   function: test_table_content_gets_blank_lines
   test_type: unit
-  line_number: 1130
+  line_number: 1235
   doc_string: Test that table content between tags DOES get blank lines.
+- file: tests/test_wrapping.py
+  function: test_table_rows_only_no_surrounding_text
+  test_type: unit
+  line_number: 768
+  doc_string: Test that table-only content (no surrounding text, no tags) is preserved.
+- file: tests/test_wrapping.py
+  function: test_table_rows_preserved_without_tags
+  test_type: unit
+  line_number: 690
+  doc_string: Test that table rows are preserved on their own lines even without tags.
+- file: tests/test_wrapping.py
+  function: test_table_rows_with_semantic_wrapping
+  test_type: unit
+  line_number: 745
+  doc_string: Test that table rows are preserved with semantic (sentence-based) wrapping.
 - file: tests/test_wrapping.py
   function: test_tag_with_list_items
   test_type: unit
@@ -1423,8 +1584,13 @@
 - file: tests/test_wrapping.py
   function: test_various_tag_types_with_tables
   test_type: unit
-  line_number: 1217
+  line_number: 1322
   doc_string: Test tables with various tag types (Jinja, HTML comments, variables).
+- file: tests/test_wrapping.py
+  function: test_wide_table_rows_not_wrapped
+  test_type: unit
+  line_number: 713
+  doc_string: Test that table rows wider than the wrap width are NOT broken across lines.
 - file: tests/test_wrapping.py
   function: test_wrap_paragraph_lines_markdown_escaping
   test_type: unit

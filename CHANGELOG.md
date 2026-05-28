@@ -4,7 +4,38 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased][unreleased]
 
-## [0.2.7] (parity: flowmark-py 0.6.5)
+## [0.3.0][] (parity: flowmark-py 0.7.0)
+
+Minor release adopting the Python flowmark v0.7.0 parity surface.
+Includes the atomic-aware semantic line wrapping feature and the tag/table block-spacing
+rework from upstream.
+
+### Formatter behavior changes
+
+- **Atomic-aware semantic wrapping:** sentence-boundary detection now treats Markdown
+  links, code spans, autolinks, and bare URLs as opaque atomic spans.
+  A sentence is never broken inside a link (e.g. `[St. John's...](url)` stays whole) and
+  a `.` inside an atomic span no longer trips end-of-sentence detection.
+  Matches upstream commit `c9bc36f`.
+- **Tag block spacing:** HTML-comment-delimited tags wrapping block content (lists,
+  tables) now get the same blank-line treatment as Jinja/Markdoc tags.
+- **Paragraph → table tight transition:** a table written directly against the preceding
+  paragraph (no blank line) now stays tight, matching upstream `#36` ("Wide Table
+  Adjacent to Paragraph" fixture).
+- **Reference-link normalization:** the issue #45 fix (`[label][]` collapsed form when
+  text equals label) is now exact parity with released Python v0.7.0, no longer an
+  intentional divergence.
+
+### Parity
+
+- Python parity baseline updated `0.6.5` → `0.7.0`.
+- 38 new Python tests tracked: 14 mapped (reference links → existing D18; wide table +
+  atomic wrapping → `test_ref_docs`), 24 excluded (`test_public_inline_api` — Python
+  library API for inline-Markdown introspection with no Rust equivalent yet; the
+  CLI/formatter behavior these patterns drive IS covered).
+- Cross-binary parity tests now run against `flowmark@0.7.0`.
+
+## [0.2.7][] (parity: flowmark-py 0.6.5)
 
 Parity sync and stabilization release.
 Bumps the Python parity baseline from `0.6.4` to `0.6.5` and fixes two formatter parity
@@ -28,7 +59,7 @@ gaps found via full-corpus differential testing.
   footer needed no Rust change; comrak/Rust already conformant — tests ported).
 - 15 new parity tests (D17 ×5, D18 ×10) plus 2 reference-link encoder unit tests.
 
-## [0.2.6] (parity: flowmark-py 0.6.4)
+## [0.2.6][] (parity: flowmark-py 0.6.4)
 
 Release infrastructure and documentation hardening release.
 No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
@@ -52,7 +83,7 @@ No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
 - Retired legacy `cli-golden.tryscript.md` test without coverage loss (replaced by
   focused `file-discovery` and `stdin` tryscript tests)
 
-## [0.2.5] (parity: flowmark-py 0.6.4)
+## [0.2.5][] (parity: flowmark-py 0.6.4)
 
 First multi-channel release: crates.io, PyPI, GitHub Releases, and Homebrew.
 No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
@@ -70,7 +101,7 @@ No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
 - Hardened PyPI smoke tests to install only locally built wheels (`--no-index`), and
   restricted PyPI publish job execution to release-triggered runs
 
-## [0.2.4] (parity: flowmark-py 0.6.4)
+## [0.2.4][] (parity: flowmark-py 0.6.4)
 
 Release process and documentation hardening release.
 No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
@@ -95,7 +126,7 @@ No formatter behavior changes; parity remains pinned to Python flowmark `0.6.4`.
 - Bumped `tempfile` to `3.26.0`
 - Bumped `anyhow` to `1.0.102`
 
-## [0.2.3] (parity: flowmark-py 0.6.4)
+## [0.2.3][] (parity: flowmark-py 0.6.4)
 
 Fixes release workflow for cross-compiled Linux ARM64 binaries.
 
@@ -106,7 +137,7 @@ Fixes release workflow for cross-compiled Linux ARM64 binaries.
 - Release workflow now uses `fail-fast: false` so one target failure doesn’t cancel all
   other builds
 
-## [0.2.2] (parity: flowmark-py 0.6.4)
+## [0.2.2][] (parity: flowmark-py 0.6.4)
 
 Infrastructure release adding pre-built binaries for all major platforms.
 
@@ -122,7 +153,7 @@ Infrastructure release adding pre-built binaries for all major platforms.
 - Fixed CRLF line-ending handling in golden tests for Windows compatibility
 - Tryscript integration tests now correctly skip on Windows (bash-only)
 
-## [0.2.1] (parity: flowmark-py 0.6.4)
+## [0.2.1][] (parity: flowmark-py 0.6.4)
 
 Patch release fixing four formatting parity bugs discovered by corpus-wide comparison
 against Python flowmark on 623 real-world files, plus new systematic parity testing
@@ -149,7 +180,7 @@ infrastructure.
 - Parity verification scripts (`scripts/corpus-parity-check.sh`,
   `scripts/generate-parity-golden.sh`) for corpus-wide regression testing
 
-## [0.2.0] (parity: flowmark-py 0.6.4)
+## [0.2.0][] (parity: flowmark-py 0.6.4)
 
 First formal release.
 Complete Rust port with full behavioral parity to Python flowmark v0.6.4.
@@ -187,7 +218,7 @@ Complete Rust port with full behavioral parity to Python flowmark v0.6.4.
 - Cross-platform testing (Ubuntu + macOS)
 - Supply chain security via `deny.toml`
 
-## [0.1.3] - 2025-11-01
+## [0.1.3][] - 2025-11-01
 
 Early development release.
 
@@ -200,4 +231,5 @@ Early development release.
 [0.2.5]: https://github.com/jlevy/flowmark-rs/compare/v0.2.4...v0.2.5
 [0.2.6]: https://github.com/jlevy/flowmark-rs/compare/v0.2.5...v0.2.6
 [0.2.7]: https://github.com/jlevy/flowmark-rs/compare/v0.2.6...v0.2.7
-[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.2.7...HEAD
+[0.3.0]: https://github.com/jlevy/flowmark-rs/compare/v0.2.7...v0.3.0
+[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.3.0...HEAD

@@ -14,7 +14,7 @@ use std::io::Write;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-/// Python flowmark uvx package spec, e.g. `"flowmark@0.6.5"`.
+/// Python flowmark uvx package spec, e.g. `"flowmark@0.7.0"`.
 /// Version is read at compile time from `[package.metadata.parity]` in Cargo.toml.
 fn flowmark_uvx_spec() -> String {
     format!("flowmark@{}", env!("PARITY_VERSION"))

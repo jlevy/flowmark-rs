@@ -608,6 +608,16 @@
   status: mapped
   rust_file: tests/test_filling.rs
   rust_function: test_normalize_markdown
+- python_file: tests/test_filling.py
+  python_function: test_standalone_wide_table
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: test_reference_doc_formats
+- python_file: tests/test_filling.py
+  python_function: test_wide_table_adjacent_to_paragraph
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: test_reference_doc_formats
 - python_file: tests/test_frontmatter.py
   python_function: test_has_frontmatter
   status: mapped
@@ -775,11 +785,238 @@
   status: mapped
   rust_file: tests/test_packaging_entrypoints.rs
   rust_function: test_flowmark_rs_alias_entrypoint
+- python_file: tests/test_public_inline_api.py
+  python_function: test_angle_autolink_and_bare_url_extraction
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_atomic_pattern_constructs_with_name_and_pattern_only
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_atomic_span_name_distinguishes_link_from_code
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_autolink_pattern_matches_angle_url_and_email
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_bare_url_pattern_excludes_trailing_sentence_punctuation
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_duplicate_link_text_yields_separate_links
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_email_autolink_text_is_display_not_destination
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_empty_link_title_is_preserved_distinct_from_none
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_escaped_brackets_are_not_a_link
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_extract_collapsed_and_shortcut_references
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_extract_inline_link_with_title
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_extract_reference_link_resolves_destination
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_images_excluded_by_default_included_on_request
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_iter_atomic_spans_empty_patterns_yields_single_nonatomic_span
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_iter_atomic_spans_round_trip_and_offsets
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_iter_atomic_words_glues_atomic_and_keeps_offsets
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_link_syntax_inside_code_span_is_not_a_link
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_markdown_inline_patterns_includes_links_and_urls
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_nested_inline_markup_in_link_text
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_sentence_span_never_bisects_a_link_with_spaces
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_split_sentences_atomic_does_not_break_inside_link_with_period
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_split_sentences_with_spans_are_verbatim
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_walk_elements_is_read_only
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_walk_elements_yields_code_block_text_but_extract_links_excludes_it
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
 - python_file: tests/test_ref_docs.py
   python_function: test_reference_doc_formats
   status: mapped
   rust_file: tests/test_ref_docs.rs
   rust_function: test_reference_doc_formats
+- python_file: tests/test_reference_links.py
+  python_function: test_full_reference_with_distinct_label_preserved
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_distinct_label_preserved
+- python_file: tests/test_reference_links.py
+  python_function: test_idempotent_on_collapsed_reference
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_collapsed_form_is_idempotent
+- python_file: tests/test_reference_links.py
+  python_function: test_issue_45_link_survives_round_trip
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_collapsed_form_is_idempotent
+- python_file: tests/test_reference_links.py
+  python_function: test_label_equals_text_followed_by_parens_keeps_link
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_label_equals_text_collapsed
+- python_file: tests/test_reference_links.py
+  python_function: test_label_equals_text_followed_by_reference_keeps_both_links
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_label_equals_text_collapsed
+- python_file: tests/test_reference_links.py
+  python_function: test_label_equals_text_not_collapsed_to_shortcut
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_label_equals_text_collapsed
+- python_file: tests/test_reference_links.py
+  python_function: test_shortcut_input_normalized_to_collapsed_reference
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_shortcut_ref_normalized_to_collapsed
 - python_file: tests/test_sentences.py
   python_function: test_first_sentence
   status: mapped
@@ -1383,6 +1620,11 @@
   rust_function: test_block_heuristics_only_with_tags
   notes: No Rust equivalent; tests that block heuristics only apply when tags are present
 - python_file: tests/test_wrapping.py
+  python_function: test_block_heuristics_only_with_tags_for_lists
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: test_reference_doc_formats
+- python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_preserves_existing_blank_lines
   status: mapped
   rust_file: tests/test_wrapping.rs
@@ -1556,6 +1798,21 @@
   rust_function: test_table_content_gets_blank_lines
   notes: No Rust equivalent; tests that table content between tags DOES get blank lines
 - python_file: tests/test_wrapping.py
+  python_function: test_table_rows_only_no_surrounding_text
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: test_reference_doc_formats
+- python_file: tests/test_wrapping.py
+  python_function: test_table_rows_preserved_without_tags
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: test_reference_doc_formats
+- python_file: tests/test_wrapping.py
+  python_function: test_table_rows_with_semantic_wrapping
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: test_reference_doc_formats
+- python_file: tests/test_wrapping.py
   python_function: test_tag_with_list_items
   status: mapped
   rust_file: tests/test_wrapping.rs
@@ -1577,6 +1834,11 @@
   rust_file: tests/test_wrapping.rs
   rust_function: test_various_tag_types_with_tables
   notes: No Rust equivalent; tests tables with various tag types (Jinja, HTML comments, variables)
+- python_file: tests/test_wrapping.py
+  python_function: test_wide_table_rows_not_wrapped
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: test_reference_doc_formats
 - python_file: tests/test_wrapping.py
   python_function: test_wrap_paragraph_lines_markdown_escaping
   status: mapped

@@ -10,15 +10,15 @@ tags:
 ## Test document
 
 This is a simple test document to verify Flowmark usage.
-It’s sort of a “transparent box” test of the Flowmark auto-formatter.
+It's sort of a "transparent box" test of the Flowmark auto-formatter.
 Re-run Flowmark and compare output.
 
 *[Everything is Free](https://open.spotify.com/track/0H8ukN2MIW2iNvqJP1kb4O?si=PWBwK6QgS8Siksuwbt4K0A)
 by Gillian Welch*
 
-The dangers of ‘culture fit’.
+The dangers of 'culture fit'.
 
-> The dangers of ‘culture fit’.
+> The dangers of 'culture fit'.
 
 The [ways equity can be granted](#how-equity-is-granted) as compensation—including
 restricted stock, stock options, and restricted stock units—are **notoriously complex**.
@@ -57,41 +57,41 @@ high-stakes decisions for those who give and *receive it*. Blah blah blah and bl
 
 - Additional parameters become options (e.g., `model=gpt-4o`, `language=en`)
 
-[^uptimenote]: In engineering, “counting nines” traditionally refers to *service
+[^uptimenote]: In engineering, "counting nines" traditionally refers to *service
     availability* (uptime)—99.99% uptime means ≤ 52 minutes of downtime per year.
 
 ## Some apostrophes and quotes--and dashes, too
 
-“Hello,” he said! “What’s … your specialty?”
+"Hello," he said! "What's... your specialty?"
 he enquired (in an idle tone).
 
-He read the multiline quote: “This is line one and this is line two and finally line
-three.” It was beautiful.
+He read the multiline quote: "This is line one and this is line two and finally line
+three." It was beautiful.
 
-She whispered ‘Remember this important message’ softly.
+She whispered 'Remember this important message' softly.
 
-The stated reason—“I’m working on myself”—may be sincere on one level.
+The stated reason—"I’m working on myself"—may be sincere on one level.
 
 * **From his Autobiography (1967-69):**
 
-  + **On His Life’s Vision ("Reflections on My Eightieth Birthday"):** “I have lived in
+  + **On His Life’s Vision ("Reflections on My Eightieth Birthday"):** "I have lived in
     the pursuit of a vision, both personal and social.
     Personal: to care for what is noble, for what is beautiful, for what is gentle; to
     allow moments of insight to give wisdom at more mundane times.
     Social: to see in imagination the society that is to be created, where individuals
     grow freely, and where hate and greed and envy die because there is nothing to
     nourish them. These things I believe, and the world, for all its horrors, has left me
-    unshaken”.
+    unshaken".
 
-Cas’ surprise at John’s question hung over them both for a brief moment, like a thinly
+Cas' surprise at John's question hung over them both for a brief moment, like a thinly
 disguised sack of potatoes.
-“From 2002-2004 I specialized in the Sarbanes-Oxley Act (Pub.L. 107–204, 116 Stat.
-745, enacted July 30, 2002), which was known (in the House) as the ‘Corporate and
-Auditing Accountability, Responsibility, and Transparency Act’ and--” But here he cut
+"From 2002-2004 I specialized in the Sarbanes-Oxley Act (Pub.L. 107–204, 116 Stat.
+745, enacted July 30, 2002), which was known (in the House) as the 'Corporate and
+Auditing Accountability, Responsibility, and Transparency Act' and--" But here he cut
 her off! And who could blame him?
 He had spoken with the FBI. There was no time to lose.
 
-These companies add (or “issue”) stock.
+These companies add (or "issue") stock.
 
 Dash--dash. Dash -- dash.
 Dash -- dash.
@@ -197,9 +197,9 @@ first grade. By age seven, he received his first formal training in English at a
 school in London; his first and second languages were Spanish and French.
 As a boy, Buckley developed a love for music, sailing, horses, hunting, and skiing.
 All of these interests would be reflected in his later writings.
-Just before World War II, at age 12–13, he attended the Catholic preparatory school [St.
-John’s Beaumont School](https://en.wikipedia.org/wiki/St_John%27s_Beaumont_School) in
-England.
+Just before World War II, at age 12–13, he attended the Catholic preparatory school
+[St. John's Beaumont School](https://en.wikipedia.org/wiki/St_John%27s_Beaumont_School)
+in England.
 
 The U.S. holds 50% of the global startup investment pool, down from 95% in the 1990s.
 (This data is
@@ -223,7 +223,7 @@ So writing with the assumption that each reader could be both has a variety of
 advantages:
 
 - Assuming 100% ignorance will help people who think they know a lot about a subject
-  understand **what they didn’t know they didn’t know**, and fill in the gaps in their
+  understand **what they didn't know they didn't know**, and fill in the gaps in their
   knowledge. It encourages contribution from experts and people with practical
   experience.
 - Assuming 100% intelligence makes readers feel respected, and feel proud to be
@@ -239,9 +239,9 @@ advantages:
 * ☁️ SaaS / paid services
 * 🚪 Alternatives to the option being discussed
 * 💸 Cost or expense issues, discussion, and gotchas
-* 🕍 A mild warning attached to “full solution” or opinionated frameworks (the cathedral
+* 🕍 A mild warning attached to "full solution" or opinionated frameworks (the cathedral
   is a nod to
-  [Raymond’s metaphor](https://en.wikipedia.org/wiki/The_Cathedral_and_the_Bazaar))
+  [Raymond's metaphor](https://en.wikipedia.org/wiki/The_Cathedral_and_the_Bazaar))
 * 🍺 Open source / free software
 
 - For well-known people, places, things, and events, prefer linking to the **Wikipedia
@@ -253,10 +253,10 @@ advantages:
     Google to find it. It will also help with our search and web page snippet features,
     since the mouseovers on the links will be better quality than for those on marketing
     pages or poorly organized or out-of-date official websites.
-    - Example: “The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
+    - Example: "The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
       [California](https://en.wikipedia.org/wiki/California) is home to both
       [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-      [Google](https://en.wikipedia.org/wiki/Google).”
+      [Google](https://en.wikipedia.org/wiki/Google)."
 
 A lot has changed in the last decade.
 We’re currently in a
@@ -295,7 +295,7 @@ to $24,000, which means the tax benefit of buying is
   want to sound desperate or pushy: *“I know that you’re not likely to give me a strong
   indication at this meeting, but I’d love to know if this is the* sort *of opportunity
   you could imagine taking.
-  I’ll happily put in the work to persuade you over time!
+  I'll happily put in the work to persuade you over time!
   But would I be better off focusing my attention on other VCs?”*
   [[Mark Suster, Upfront Ventures](https://bothsidesofthetable.com/how-to-develop-your-fundraising-strategy-58c2f0b22d6d)]
 
@@ -318,14 +318,14 @@ eye on.
   marginal tax rate, but effectively is **35%** for some ranges, meaning it is
   [higher than ordinary income tax for some incomes and lower for others](http://www.forbes.com/sites/feeonlyplanner/2011/12/16/the-alternative-minimum-tax-sweet-spot/).
   AMT rules are so complicated you often need professional tax help if they might apply
-  to you. The IRS’s
+  to you. The IRS's
   [AMT Assistant](https://www.irs.gov/Businesses/Small-Businesses-&-Self-Employed/Alternative-Minimum-Tax-(AMT)-Assistant-for-Individuals)
   might also help.
 
 - ❗ If you do get an offer, you need to understand the value of the equity component.
   You need quite a bit of information to figure this out, and should just ask.
   If the company trusts you enough to be giving you an offer, and still doesn’t want to
-  answer these questions about your offer, it’s **a warning sign**. (There are many
+  answer these questions about your offer, it's **a warning sign**. (There are many
   [resources](https://blog.wealthfront.com/stock-options-14-crucial-questions/) out
   there with more details about
   [questions](http://www.inc.com/atish-davda/5-questions-you-should-ask-before-taking-a-start-up-job-offer.html)
@@ -344,11 +344,11 @@ eye on.
   discussed below.
 
 - ❗ It may not be common, but some companies retain a right to repurchase (buy back)
-  vested shares. It’s simple enough to ask, "Does the company have any repurchase right
+  vested shares. It's simple enough to ask, "Does the company have any repurchase right
   to *vested* shares?”
   (Note repurchasing *unvested* shares that were purchased via early exercise is
   different, and helps you.)
-  If you don’t want to ask, the fair market value repurchase right should be included in
+  If you don't want to ask, the fair market value repurchase right should be included in
   the documents you are being asked to sign or acknowledge that you have read and
   understood. (Skype had a
   [complex](https://www.quora.com/Which-valley-startups-have-a-Skype-like-repurchase-right)
@@ -361,7 +361,7 @@ eye on.
 Venture capital firms fund companies-commonly referred to as startups-that have
 ambitious goals of being dominant high-value businesses in their target market
 ([market caps](https://www.investopedia.com/terms/m/marketcapitalization.asp) of >$1B
-and margins of >50%). These firms seek to make investments early in a company’s life
+and margins of >50%). These firms seek to make investments early in a company's life
 when stock is cheap, in hopes of holding through periods of hyper-growth in order to
 realize abnormally large returns (200%+).
 
@@ -507,12 +507,12 @@ And enumerations:
    Currently DOCX, HTML, and Markdown foramt work.
    (PDF coming soon!)
 
-5. **View locally:** You’ll see from the above output both an `.md` and an `.html` file.
+5. **View locally:** You'll see from the above output both an `.md` and an `.html` file.
    You can look at these locally and do what you want with them.
 
 6. **Publish:** Publish the file with:
 
-### 3.6 Comparative Features Matrix
+### **3.6 Comparative Features Matrix**
 
 This line has a two-space line break.\
 And this is a regular line.
@@ -531,12 +531,12 @@ evaluated against the core requirements:
 | **Programmatic Invalidation API** | Automatic / Limited | Automatic / Limited | Yes (Cloudflare API) | Yes (CloudFront API) 15-16 |
 | **Basic Cost Model** | Per User / Usage 5 | Per User / Usage 5 | Generous Free Tier / Usage | Usage-Based Components 20-64 |
 
-## 3. Platform\-Specific Mechanisms
+## **3. Platform\-Specific Mechanisms**
 
 Each major operating system provides its own set of system calls, APIs, and conventions
 for managing temporary files and directories.
 
-### 3.1. Linux
+### **3.1. Linux**
 
 Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
 
@@ -563,7 +563,7 @@ Linux offers a rich set of POSIX\-compliant and Linux\-specific mechanisms.
      + Create the temporary file in the destination directory: temp\_file =
        tempfile.NamedTemporaryFile(mode='w', dir=dest\_dir, delete=False) (use
        appropriate mode, e.g., wb for binary).
-     + Use a try … finally block to ensure cleanup:\
+     + Use a try...finally block to ensure cleanup:\
        Python\
        temp\_file = None\
        try:\
@@ -830,7 +830,7 @@ or em*phases* or **bold**face or *em*phases or bold**face** or em*phases* or
 **bold**face or *em*phases or bold**face** or em*phases* or **bold**face or *em*phases
 or bold**face** or em*phases* or **bold**face or *em*phases or bold**face** or
 em*phases* or **bold**face or *em*phases or bold**face** or em*phases* can flow on and
-on …
+on...
 
 *blah blah* *blah blah* *blah blah* *blah blah* *blah blah* *blah blah* *blah blah*
 *blah blah* *blah blah* *blah blah* *blah blah* *blah blah* *blah blah* *blah blah*
@@ -838,14 +838,14 @@ on …
 *blah blah*
 
 The same is true for links.
-“The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
+"The [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google).” “The
+[Google](https://en.wikipedia.org/wiki/Google)." "The
 [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
-[Google](https://en.wikipedia.org/wiki/Google).” (The
+[Google](https://en.wikipedia.org/wiki/Google)." (The
 [Bay Area](https://en.wikipedia.org/wiki/San_Francisco_Bay_Area) in
 [California](https://en.wikipedia.org/wiki/California) is home to both
 [Apple](https://en.wikipedia.org/wiki/Apple_Inc.) and
@@ -947,7 +947,7 @@ not complaining)[^urbanthowt.wy49lp].
 ❗️️️ Having multiple automatic conversion thresholds can give the investor with a higher
 threshold leverage to block an IPO.[^210]
 
-1. **Initial Scan with -X importtime:** Run the application with python -X importtime …
+1. **Initial Scan with -X importtime:** Run the application with python -X importtime...
    \> import.log. Visualize the output using tuna import.log.<sup>42</sup> Look for
    modules with large *cumulative* times at the top level or deep in the call stack.
    These are the primary candidates for further investigation.<sup>1</sup>
@@ -965,7 +965,7 @@ threshold leverage to block an IPO.[^210]
 [^210]: FM16, p. 80
 
 Links like these underline ones come up from some exports.
-And let’s try some links with angle brackets.
+And let's try some links with angle brackets.
 
 [^52]: [[https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com]{.underline}](https://www.vox.com/2014/3/5/11624228/how-a-startup-created-the-no-1-rated-mattress-on-amazon-com)
 
@@ -980,7 +980,7 @@ And let’s try some links with angle brackets.
 
 [^217]: Testing - : Is Ketamine Contraindicated in Patients with Psychiatric Disorders?
     - REBEL EM - more words - accessed April 24, 2025,
-      <https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/>
+    <https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/>
 
 [^multiline]: The distinction between “hiring” and “recruiting” isn’t universally agreed
     upon. Some people think of hiring as a superset of recruiting, some consider it to be
@@ -989,7 +989,7 @@ And let’s try some links with angle brackets.
     the value proposition of a company and ensuring the alignment of interests between
     the two parties.
 
-[^multiparagraph]: This is an even longer footnote …
+[^multiparagraph]: This is an even longer footnote...
 
     Paragraph 1.
 
@@ -1048,7 +1048,7 @@ Test: Three asterisks with spaces should stay as `* * *` not become `-----`.
 
 ## 2. Numbered Heading Escaping
 
-Numbered headings like “## 1. Introduction” should not have the period escaped.
+Numbered headings like "## 1. Introduction" should not have the period escaped.
 
 ### 1. First Section
 
@@ -1407,7 +1407,7 @@ Single-word inline code should NOT be incorrectly coalesced with following text:
 - Convex actions access env vars via `getRequiredEnv()` and must live in files with
   `"use node"`.
 
-The word before inline code (like “via”) should not wrap to a new line leaving the code
+The word before inline code (like "via") should not wrap to a new line leaving the code
 on the next line. Single-word inline code like `foo()` and `bar` should stay atomic but
 not consume following words.
 
@@ -1677,9 +1677,9 @@ And ~~more deleted words~~ in another sentence.
 
 Multiple ~~first~~ and ~~second~~ strikethroughs on one line work fine.
 
-### Tildes as “approximately” (not strikethrough)
+### Tildes as "approximately" (not strikethrough)
 
-Tildes before numbers are commonly used to mean “approximately” and must not be treated
+Tildes before numbers are commonly used to mean "approximately" and must not be treated
 as strikethrough:
 
 Target: ~60 seconds, ~130 words total
@@ -1713,21 +1713,33 @@ This section tests smart quoting in various container types.
 
 | Description | Command |
 | --- | --- |
-| “There’s a bug where …” | `tbd create "..." --type=bug` |
-| “Create a task” | `tbd create "..." --type=task` or `--type=feature` |
+| "There's a bug where ..." | `tbd create "..." --type=bug` |
+| "Create a task" | `tbd create "..." --type=task` or `--type=feature` |
 
 ### Blockquote with Quotes Spanning Code Spans
 
-> **Tell the user:** “First, I’ll make sure the `markform` command is installed.”
+> **Tell the user:** "First, I'll make sure the `markform` command is installed."
 
 ### Strikethrough with Quotes
 
-Here is ~~“deleted” and don’t~~ some text.
+Here is ~~"deleted" and don't~~ some text.
 
 ### Quotes Spanning Emphasis and Links
 
-He said “this is *really* important.”
-She read “the [documentation](https://example.com) first.”
+He said "this is *really* important."
+She read "the [documentation](https://example.com) first."
+
+## Wide Table Adjacent to Paragraph
+
+This tests that table rows are not broken by line wrapping when they directly follow
+paragraph text without a blank line separator.
+When Marko's GFM parser sees a table directly after paragraph text, it may parse the
+table rows as paragraph content rather than a table element.
+The line wrapper must still preserve each table row on its own line.
+| Quarter | Revenue ($M) | YoY % | QoQ % | Segment A % | Segment B % | Geo: US % | Geo: Intl % |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Q1 2025 | 125.3 | +12% | +3% | 45% | 55% | 60% | 40% |
+| Q2 2025 | 131.7 | +15% | +5% | 46% | 54% | 58% | 42% |
 
 ## Summary
 

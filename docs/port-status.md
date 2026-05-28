@@ -1,18 +1,18 @@
 # Project Status: flowmark-rs
 
-**Last updated:** 2026-05-19
+**Last updated:** 2026-05-28
 
-**Current release:** v0.2.7 ([crates.io](https://crates.io/crates/flowmark),
+**Current release:** v0.3.0 ([crates.io](https://crates.io/crates/flowmark),
 [PyPI](https://pypi.org/project/flowmark-rs/),
 [Homebrew](https://github.com/jlevy/homebrew-flowmark))
 
-**Python parity target:** flowmark v0.6.5
+**Python parity target:** flowmark v0.7.0
 
 ## Overview
 
 flowmark-rs is a complete Rust port of the Python
 [flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter.
-The port achieves full behavioral parity with Python flowmark v0.6.5 — identical CLI
+The port achieves full behavioral parity with Python flowmark v0.7.0 — identical CLI
 interface, identical formatting output across all modes, and identical file discovery
 behavior.
 
@@ -42,13 +42,7 @@ identical error behavior.**
 - `--help` layout: minor formatting differences between clap (Rust) and argparse
   (Python)
 - `--version` output: Rust includes explicit port/version provenance metadata
-  (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.6.5; base v0.2.0)`)
-- Reference-link normalization (upstream flowmark issue #45): a reference link whose
-  text equals its normalized label renders as the unambiguous collapsed form `[text][]`
-  rather than the fragile shortcut `[text]`. Rust adopts the upstream fix (released
-  after v0.6.5, commit `0af9e24`); released v0.6.5 still emits the shortcut form.
-  Rust matches Python `main` (v0.6.6.dev) here.
-  Covered by D18 parity tests.
+  (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.7.0; base v0.2.0)`)
 
 Everything not on this list is required to be identical.
 
@@ -65,7 +59,7 @@ All 501 tests run in CI on every commit.
 No test file is orphaned.
 The CI test job installs all required external tools:
 
-- Python flowmark v0.6.5 (via `uv tool install`)
+- Python flowmark v0.7.0 (via `uv tool install`)
 - tryscript (via `npm install -g`)
 
 ### Tests Never Hide Failures (Principle 4)
@@ -86,7 +80,7 @@ The CI test job installs all required external tools:
 
 **Required test dependencies** (all installed in CI):
 
-- Python flowmark v0.6.5 (`uv tool install flowmark==0.6.5`)
+- Python flowmark v0.7.0 (`uv tool install flowmark==0.7.0`)
 - tryscript (`npm install -g tryscript@latest`)
 - Node.js 22+ (for tryscript)
 
@@ -114,7 +108,7 @@ references) are documented with `COMRAK-WORKAROUNDn` labels in
 
 ## Release Status
 
-All release channels are live as of v0.2.7:
+All release channels are live as of v0.3.0:
 
 | Area | Status | Details |
 | --- | --- | --- |
@@ -128,7 +122,7 @@ All release channels are live as of v0.2.7:
 | **Library crate** | Complete | Public API via `FormatOptions::reformat_text()`, feature-gated CLI |
 | **CI pipeline** | Complete | 12 checks: fmt, clippy, test (Ubuntu+macOS), lib-only, MSRV, deny, docs, coverage, semver, markdown-fmt, check-mapping, readme-sync |
 | **Test coverage** | Complete | 501 tests, 0 ignored, 0 failures |
-| **Test mapping** | Complete | 309 Python tests mapped, 0 excluded, 0 missing |
+| **Test mapping** | Complete | 323 Python tests mapped, 24 excluded (Python library API), 0 missing |
 | **Parity verification** | Complete | All 18 discrepancies (D1-D18) resolved, 48 parity-specific tests |
 | **crates.io** | Live | [crates.io/crates/flowmark](https://crates.io/crates/flowmark) |
 | **PyPI** | Live | [pypi.org/project/flowmark-rs](https://pypi.org/project/flowmark-rs/) (`uvx flowmark-rs`) |
@@ -162,7 +156,8 @@ All release channels are live as of v0.2.7:
 - **5 D11 tests** invoke both Python and Rust binaries, comparing stderr and exit codes
 - **Golden reference document** tested across 4 modes (default, semantic, auto,
   plaintext)
-- **309 Python tests** have verified Rust counterparts (CI-enforced via test mapping)
+- **347 Python tests** tracked (323 mapped, 24 excluded as Python library API;
+  CI-enforced)
 
 For build/test/lint instructions, see [`docs/development.md`](development.md).
 
@@ -235,7 +230,7 @@ This port was built using the
 | Python total LOC | ~12,400 (~4,250 app + ~5,800 test + ~1,770 golden) |
 | Rust total LOC | ~16,150 (~7,250 app + ~7,300 test + ~1,520 golden) |
 | Rust/Python app ratio | ~1.7x |
-| Python test functions | 309 |
+| Python test functions | 347 |
 | Rust test functions | 516 (manifest; 501 cargo-discovered) |
 | Parity discrepancies found | 18 |
 | Parity discrepancies resolved | 18 (100%) |

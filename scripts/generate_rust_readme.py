@@ -59,6 +59,34 @@ def rewrite_upstream_local_docs_links(markdown: str) -> str:
     )
 
 
+PERSPECTIVE_FLIP_OLD = (
+    "Flowmark comes in two flavors: this Python reference implementation and an "
+    "auto-synced\n[Rust port (flowmark-rs)](https://github.com/jlevy/flowmark-rs)."
+)
+PERSPECTIVE_FLIP_NEW = (
+    "Flowmark comes in two flavors: the "
+    "[Python reference implementation](https://github.com/jlevy/flowmark) and this "
+    "auto-synced Rust port (flowmark-rs)."
+)
+
+
+def rewrite_perspective_for_rust_repo(markdown: str) -> str:
+    """Flip Python-perspective phrasing in the shared source to Rust-perspective.
+
+    The shared docs live in the Python repo and refer to themselves as "this Python
+    reference implementation"; in the Rust repo's README "this" refers to the Rust
+    port, so the sentence is rephrased to keep the same fact from the Rust side.
+    Raises if the upstream phrasing drifts — better to fail loudly than silently
+    publish the wrong perspective.
+    """
+    if PERSPECTIVE_FLIP_OLD not in markdown:
+        raise ValueError(
+            "shared docs no longer contain the expected Python-perspective sentence; "
+            "update PERSPECTIVE_FLIP_OLD in scripts/generate_rust_readme.py"
+        )
+    return markdown.replace(PERSPECTIVE_FLIP_OLD, PERSPECTIVE_FLIP_NEW)
+
+
 def read_msrv(repo_root: Path) -> str:
     """Read rust-version from Cargo.toml for the MSRV badge."""
     cargo_toml = repo_root / "Cargo.toml"
@@ -139,6 +167,7 @@ def main() -> int:
 
     shared_docs_body = shared_docs_path.read_text(encoding="utf-8").rstrip() + "\n"
     shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
+    shared_docs_body = rewrite_perspective_for_rust_repo(shared_docs_body)
     rendered = render_readme(
         template_path,
         shared_docs_body,

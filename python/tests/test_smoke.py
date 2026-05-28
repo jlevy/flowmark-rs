@@ -122,7 +122,7 @@ class TestDiscoveryCounts:
 
     def test_python_test_count(self) -> None:
         records = load_python_tests_yaml(PYTHON_YAML)
-        assert len(records) == 309, f"Expected 309 Python tests, got {len(records)}"
+        assert len(records) == 347, f"Expected 347 Python tests, got {len(records)}"
 
     def test_rust_test_count(self) -> None:
         records = load_rust_tests_yaml(RUST_YAML)
@@ -130,7 +130,7 @@ class TestDiscoveryCounts:
 
     def test_mapping_count(self) -> None:
         records = load_mapping_yaml(MAPPING_YAML)
-        assert len(records) == 309, f"Expected 309 mapping entries, got {len(records)}"
+        assert len(records) == 347, f"Expected 347 mapping entries, got {len(records)}"
 
 
 class TestMappingCompleteness:

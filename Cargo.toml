@@ -1,6 +1,6 @@
 [package]
 name = "flowmark"
-version = "0.2.7"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
@@ -65,7 +65,7 @@ unsafe_code = "deny"
 warnings = "deny"
 
 [package.metadata.parity]
-version = "0.6.5"
+version = "0.7.0"
 
 [profile.release]
 opt-level = 3
