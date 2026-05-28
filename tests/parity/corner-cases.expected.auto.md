@@ -25,8 +25,9 @@ End of D1 section.
 
 ## D2: Plaintext word splitting treats markdown links as atomic
 
-The school is [St. John’s Beaumont
-School](https://en.wikipedia.org/wiki/St_John%27s_Beaumont_School) in the area.
+The school is
+[St. John’s Beaumont School](https://en.wikipedia.org/wiki/St_John%27s_Beaumont_School)
+in the area.
 
 ## D3: Narrow width wrapping around sup tags
 

@@ -93,8 +93,9 @@ pub(crate) static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         r"````[\s\S]*?````",
         // Triple-backtick fences/spans: ```content``` (lazy match)
         r"```[\s\S]*?```",
-        // Double-backtick code spans: ``code``
-        r"``[^`]+``",
+        // Double-backtick code spans: ``code`` (lazy; allows embedded single
+        // backticks like ``` ``foo `bar` baz`` ```, which CommonMark permits).
+        r"``.+?``",
         // Single-backtick code spans: `code`
         r"`[^`]+`",
         // Markdown links: [text](url) or [text][ref] or [text]
@@ -121,4 +122,33 @@ pub(crate) static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
     // Use (?s) for DOTALL mode
     Regex::new(&format!("(?s){}", patterns.join("|")))
         .expect("valid ATOMIC_CONSTRUCT_PATTERN regex")
+});
+
+/// Markdown-inline subset used for atomic-aware sentence splitting (v0.7.0).
+///
+/// Ported from Python `MARKDOWN_INLINE_PATTERNS` in `atomic_patterns.py`.
+/// Covers only the Markdown inline constructs that must not be split when
+/// detecting sentence boundaries: code spans, `[text](url)` links, autolinks,
+/// and bare URLs. Excludes the HTML/Jinja templating patterns from the full
+/// wrapping set so that, e.g., a sentence ending immediately before a tag
+/// boundary is still detected.
+pub(crate) static MARKDOWN_INLINE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    let patterns = [
+        // Code spans (longest fence first).
+        r"````[\s\S]*?````",
+        r"```[\s\S]*?```",
+        // Double-backtick (lazy, allows embedded single backticks).
+        r"``.+?``",
+        r"`[^`]+`",
+        // Markdown link: [text](url). Bracketed text + parenthesized URL.
+        r"\[[^\]]*\]\([^)]*\)",
+        // Angle-bracket autolink: <scheme:...>
+        r"<[A-Za-z][A-Za-z0-9+.\-]*:[^\s<>]*>",
+        // Angle-bracket email autolink: <local@host>
+        r"<[^\s<>@]+@[^\s<>]+>",
+        // Bare URL (GFM autolink): final char excludes sentence-trailing punctuation
+        // so a closing `.`, `,`, `)` etc. is not swallowed into the URL.
+        r#"(?:https?://|www\.)[^\s<>]*[^\s<>?!.,:;*_~'")\]]"#,
+    ];
+    Regex::new(&format!("(?s){}", patterns.join("|"))).expect("valid MARKDOWN_INLINE_PATTERN regex")
 });

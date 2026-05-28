@@ -22,7 +22,7 @@ scripts/generate_rust_readme.py.
 > CLI usage and formatting behavior.
 > It is now the recommended version for CLI and IDE usage.
 > 
-> Last sync: **2026-05-19** against **Python v0.6.5**
+> Last sync: **2026-05-28** against **Python v0.7.0**
 > 
 > For more on the **automated porting methodology** used to build flowmark-rs, see the
 > [**port status report**](docs/port-status.md) and the
@@ -132,6 +132,14 @@ Normalizing Markdown formatting greatly improves collaborative editing and LLM
 workflows, especially when committing documents to git repositories.
 
 You can use Flowmark as a CLI, as an autoformatter in your IDE, or as a Python library.
+
+Flowmark comes in two flavors: this Python reference implementation and an auto-synced
+[Rust port (flowmark-rs)](https://github.com/jlevy/flowmark-rs).
+For CLI auto-formatting either works and produces the same output — the Rust port is a
+fast single native binary, while the Python version is the reference and is sometimes
+ahead on the newest features.
+Pick whichever fits your environment; for heavy or latency-sensitive formatting the Rust
+binary is the faster choice.
 
 ## Comparison With Other Formatters
 

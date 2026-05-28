@@ -1139,6 +1139,7 @@ fn render_block_children<'a>(
         let child_is_list = matches!(child.data.borrow().value, NodeValue::List(_));
         let child_is_code_block = matches!(child.data.borrow().value, NodeValue::CodeBlock(_));
         let child_is_thematic_break = matches!(child.data.borrow().value, NodeValue::ThematicBreak);
+        let child_is_table = matches!(child.data.borrow().value, NodeValue::Table(_));
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -1191,6 +1192,12 @@ fn render_block_children<'a>(
                 // Python/marko preserves source tightness around `* * *`, while
                 // comrak forces blank lines on both sides. Symmetric: applies
                 // whether the break precedes or follows the neighboring block.
+                true
+            } else if child_is_table && prev_was_paragraph {
+                // Rule 6: Paragraph → table (tight): suppress (v0.7.0 #36).
+                // The "Wide Table Adjacent to Paragraph" fixture exercises this —
+                // a table written tight against the preceding paragraph stays
+                // tight, matching Python flowmark v0.7.0.
                 true
             } else {
                 false
@@ -2487,8 +2494,17 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
                         ' '
                     });
                 }
-                NodeValue::HtmlInline(_) | NodeValue::SoftBreak => {
+                NodeValue::HtmlInline(_) => {
                     concatenated.push(' ');
+                }
+                NodeValue::SoftBreak => {
+                    // Preserve as '\n' (not ' ') so the smart-quote regex's
+                    // multiline `^` anchor can match the start of a following
+                    // sentence's opening quote. Matches Python flowmark which
+                    // coalesces RawText across soft line breaks while keeping
+                    // the newline character intact. Single char either way, so
+                    // char_boundaries are unaffected.
+                    concatenated.push('\n');
                 }
                 _ => {
                     // Recurse into emphasis, strong, link, etc.
