@@ -1,7 +1,14 @@
 <!-- Generated from shared docs source
 (repos/flowmark/docs/shared/flowmark-readme-shared.md) via
 scripts/generate_rust_readme.py.
--->
+
+Doc status: Rust port-specific.
+This file is a generator INPUT, not a standalone doc.
+It supplies the Rust wrapper around the upstream shared body, which is spliced in from
+`repos/flowmark/docs/shared/flowmark-readme-shared.md`. See `docs/docs-overview.md` for
+the full mirror map.
+Do not edit the generated `README.md` directly; edit this file (or the upstream shared
+source) and regenerate via `scripts/generate_rust_readme.py`. -->
 
 # flowmark-rs
 
