@@ -711,9 +711,10 @@ fn test_d18_uppercase_shortcut_expands_to_full() {
 
 #[test]
 fn test_d18_label_normalized_to_lowercase() {
-    // [Foo] with def [Foo]: -> [Foo][foo] (emitted label is normalized lowercase).
+    // [Foo] with def [Foo]: -> [Foo][foo] (link label normalized to lowercase).
+    // The def line is also lowercased on render, matching Python: see D20.
     let input = "[Foo]\n\n[Foo]: https://example.com/x\n";
-    assert_eq!(fmt(input), "[Foo][foo]\n\n[Foo]: https://example.com/x\n");
+    assert_eq!(fmt(input), "[Foo][foo]\n\n[foo]: https://example.com/x\n");
 }
 
 #[test]
@@ -724,7 +725,7 @@ fn test_d18_collapsed_ref_label_with_spaces_and_apostrophe() {
     // and the full form is emitted because text "St. John's School"
     // differs from normalized "st. john's school".
     let input = "See [St. John's School][] here.\n\n[St. John's School]: https://example.com/x\n";
-    let expected = "See [St. John's School][st. john's school] here.\n\n[St. John's School]: https://example.com/x\n";
+    let expected = "See [St. John's School][st. john's school] here.\n\n[st. john's school]: https://example.com/x\n";
     assert_eq!(fmt(input), expected);
 }
 
@@ -732,7 +733,7 @@ fn test_d18_collapsed_ref_label_with_spaces_and_apostrophe() {
 fn test_d18_shortcut_ref_label_with_spaces_and_apostrophe() {
     // Same case for the shortcut form.
     let input = "See [St. John's School] here.\n\n[St. John's School]: https://example.com/x\n";
-    let expected = "See [St. John's School][st. john's school] here.\n\n[St. John's School]: https://example.com/x\n";
+    let expected = "See [St. John's School][st. john's school] here.\n\n[st. john's school]: https://example.com/x\n";
     assert_eq!(fmt(input), expected);
 }
 
@@ -743,6 +744,121 @@ fn test_d18_collapsed_ref_label_lowercase_with_spaces_emits_collapsed() {
     // form `[text][]` per issue #45 — even though the label contains spaces.
     let input = "See [an example][] here.\n\n[an example]: https://example.com/x\n";
     let expected = "See [an example][] here.\n\n[an example]: https://example.com/x\n";
+    assert_eq!(fmt(input), expected);
+}
+
+// =============================================================================
+// D19: Reference-image inlining (parity bug surfaced by PR #54)
+// Python flowmark always renders reference images as INLINE form:
+// `![alt][label]`, `![alt][]`, and shortcut `![alt]` all become
+// `![alt](url)` (or `![alt](url "title")`) on render, with the matched
+// link reference definition's destination/title substituted in.
+// The Rust port was leaking the COMRAK-WORKAROUND1 PUA marker into the
+// rendered URL because the Image render branch didn't decode it, and after
+// the hex-encoded label fix in v0.7.0 the leak became hex strings like
+// `![alt](696d67)`. Fix: inline image references during pre-parse so comrak
+// parses them as proper inline images with the actual URL.
+// =============================================================================
+
+#[test]
+fn test_d19_image_full_ref_inlined() {
+    let input = "![alt][img]\n\n[img]: https://example.com/img.png\n";
+    let expected = "![alt](https://example.com/img.png)\n\n[img]: https://example.com/img.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_collapsed_ref_inlined() {
+    let input = "![alt][]\n\n[alt]: https://example.com/img.png\n";
+    let expected = "![alt](https://example.com/img.png)\n\n[alt]: https://example.com/img.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_shortcut_ref_inlined() {
+    let input = "![alt]\n\n[alt]: https://example.com/img.png\n";
+    let expected = "![alt](https://example.com/img.png)\n\n[alt]: https://example.com/img.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_with_title_inlined() {
+    let input = "![alt][img]\n\n[img]: https://example.com/img.png \"My title\"\n";
+    let expected =
+        "![alt](https://example.com/img.png \"My title\")\n\n[img]: https://example.com/img.png \"My title\"\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_label_with_spaces_inlined() {
+    // Label with spaces must round-trip cleanly (no PUA/hex leak).
+    let input = "![Logo][company logo]\n\n[company logo]: https://example.com/logo.png\n";
+    let expected =
+        "![Logo](https://example.com/logo.png)\n\n[company logo]: https://example.com/logo.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_badge_pattern_image_inside_link() {
+    // The classic GitHub-badge shape: reference image nested inside a reference
+    // link. The image inlines; the OUTER link stays as a reference link.
+    let input = "[![alt][img]][url]\n\n[img]: https://example.com/img.png\n[url]: https://example.com/page\n";
+    let expected = "[![alt](https://example.com/img.png)][url]\n\n[img]: https://example.com/img.png\n[url]: https://example.com/page\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_no_def_unchanged() {
+    // No matching definition: leave the markdown as-is (comrak will render it
+    // as literal text since defs are extracted from comrak's view).
+    let input = "Some ![alt][missing] text here.\n";
+    let result = fmt(input);
+    assert!(
+        !result.contains('\u{F000}') && !result.contains("696d67"),
+        "no-def image must not leak PUA or hex: {result}"
+    );
+}
+
+// =============================================================================
+// D20: Link reference definition label lowercased on render (PR #57 follow-up)
+// Python flowmark stores reference labels in normalized (lowercase) form and
+// emits them lowercased on render: `[Logo]: url` -> `[logo]: url`. The Rust
+// port was preserving the original case. Both match the same link (CommonMark
+// def matching is case-insensitive), but exact-parity requires matching
+// Python's output form.
+// =============================================================================
+
+#[test]
+fn test_d20_def_label_lowercased_on_render() {
+    let input = "[Logo][]\n\n[Logo]: https://example.com/logo.png\n";
+    // Both the link's label (full form) and the def line emit the lowercased
+    // label. The link text "Logo" preserves its original case.
+    let expected =
+        "[Logo][logo]\n\n[logo]: https://example.com/logo.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d20_def_label_with_spaces_lowercased() {
+    let input = "[Company Logo][]\n\n[Company Logo]: https://example.com/logo.png\n";
+    let expected =
+        "[Company Logo][company logo]\n\n[company logo]: https://example.com/logo.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d20_def_label_already_lowercase_unchanged() {
+    let input = "[link][example]\n\n[example]: https://example.com/page\n";
+    let expected =
+        "[link][example]\n\n[example]: https://example.com/page\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d20_def_label_with_title_preserved_lowercased() {
+    let input = "[Page][Home]\n\n[Home]: https://example.com \"Welcome home\"\n";
+    let expected =
+        "[Page][home]\n\n[home]: https://example.com \"Welcome home\"\n";
     assert_eq!(fmt(input), expected);
 }
 

@@ -45,11 +45,19 @@
 //! The original label is lost, making round-tripping impossible.
 //!
 //! **Fix:** Before parsing, extract `[label]: url` definitions and
-//! replace `[text][label]` with `[text](\u{F000}label\u{F001})`.
-//! During rendering, detect the PUA prefix and emit `[text][label]`.
-//! Definitions are stashed as REFDEF HTML comment markers (see W3).
+//! replace `[text][label]` with `[text](\u{F000}HEX(label)\u{F001})`.
+//! The label is hex-encoded so the payload is URL-safe through comrak's
+//! parser (labels can contain spaces and punctuation like
+//! `"St. John's School"`, which would otherwise break URL parsing).
+//! During rendering, detect the PUA prefix, hex-decode the label, and
+//! emit `[text][label]`. Definitions are stashed as REFDEF HTML
+//! comment markers and re-emitted with the label lowercased to match
+//! Python's marko normalization. Reference *images* (`![alt][label]`,
+//! `![alt][]`, `![alt]`) are inlined to `![alt](url)` in pre-parse,
+//! mirroring Python's `render_image` which always inlines.
 //!
-//! **Functions:** `extract_link_ref_defs`, `encode_ref_links`
+//! **Functions:** `extract_link_ref_defs`, `inline_image_refs`,
+//! `encode_ref_links`
 //!
 //! ### COMRAK-WORKAROUND2: Footnote definition preservation
 //!
@@ -195,7 +203,7 @@
 //! `collapse_blank_lines_outside_code`)
 
 use regex::Regex;
-use std::collections::HashSet;
+use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{LazyLock, Mutex};
@@ -318,6 +326,29 @@ static LINK_REF_DEF: LazyLock<Regex> = LazyLock::new(|| {
 static FULL_REF_LINK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\[([^\]]+)\]").expect("valid FULL_REF_LINK regex"));
 
+/// Regex for badge-pattern reference links: `[![alt](url)][label]`. The
+/// outer link's text is an inline image, which contains a `]` that the
+/// generic `FULL_REF_LINK` regex can't span (its text group rejects `]`).
+/// Must run before `FULL_REF_LINK` so the inner `[alt](url)` isn't picked
+/// off as a stray match.
+static BADGE_FULL_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[(!\[[^\]]*\]\([^)]*\))\]\[([^\]]+)\]")
+        .expect("valid BADGE_FULL_REF_LINK regex")
+});
+
+/// Regex for badge-pattern collapsed reference links: `[![alt](url)][]`.
+static BADGE_COLLAPSED_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[(!\[[^\]]*\]\([^)]*\))\]\[\]")
+        .expect("valid BADGE_COLLAPSED_REF_LINK regex")
+});
+
+/// Regex for badge-pattern shortcut reference links: `[![alt](url)]` not
+/// followed by `[`, `(`, or `:`. Group 2 captures the trailing char.
+static BADGE_SHORTCUT_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[(!\[[^\]]*\]\([^)]*\))\]([^\[(:]|$)")
+        .expect("valid BADGE_SHORTCUT_REF_LINK regex")
+});
+
 /// Regex for collapsed reference links: `[text][]`
 static COLLAPSED_REF_LINK: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\[([^\]]+)\]\[\]").expect("valid COLLAPSED_REF_LINK regex"));
@@ -328,6 +359,21 @@ static COLLAPSED_REF_LINK: LazyLock<Regex> =
 /// lookahead, which the `regex` crate does not support; it is re-emitted as-is.
 static SHORTCUT_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\[([^\]]+)\]([^\[(:]|$)").expect("valid SHORTCUT_REF_LINK regex")
+});
+
+/// Regex for full reference images: `![alt][label]`.
+static IMAGE_FULL_REF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"!\[([^\]]*)\]\[([^\]]+)\]").expect("valid IMAGE_FULL_REF regex"));
+
+/// Regex for collapsed reference images: `![alt][]`.
+static IMAGE_COLLAPSED_REF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"!\[([^\]]+)\]\[\]").expect("valid IMAGE_COLLAPSED_REF regex")
+});
+
+/// Regex for shortcut reference images: `![alt]` not followed by `[`, `(`, or
+/// `:`. Group 2 captures the trailing char (or end-of-line); re-emitted as-is.
+static IMAGE_SHORTCUT_REF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"!\[([^\]]+)\]([^\[(:]|$)").expect("valid IMAGE_SHORTCUT_REF regex")
 });
 
 // ===== COMRAK-WORKAROUND12: Output normalization =====
@@ -620,11 +666,13 @@ static FOOTNOTE_DEF_START: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// COMRAK-WORKAROUND1: Extract link reference definitions from source text (outside
-/// code fences). Returns the set of lowercase labels and the text with definitions
-/// replaced by HTML comment markers. These markers survive comrak parsing as
-/// `HtmlBlock` nodes, preserving the original position of each definition in the AST.
-fn extract_link_ref_defs(text: &str) -> (HashSet<String>, String) {
-    let mut labels: HashSet<String> = HashSet::new();
+/// code fences). Returns a map of lowercase label → formatted destination (`url` or
+/// `url "title"`) and the text with definitions replaced by HTML comment markers.
+/// These markers survive comrak parsing as `HtmlBlock` nodes, preserving the original
+/// position of each definition in the AST. The destination map drives reference-image
+/// inlining (see `inline_image_refs`).
+fn extract_link_ref_defs(text: &str) -> (HashMap<String, String>, String) {
+    let mut defs: HashMap<String, String> = HashMap::new();
     let result = transform_outside_code_fences(text, |line| {
         if let Some(caps) = LINK_REF_DEF.captures(line) {
             let label = &caps[1];
@@ -632,13 +680,41 @@ fn extract_link_ref_defs(text: &str) -> (HashSet<String>, String) {
             if label.starts_with('^') {
                 return vec![line.to_string()];
             }
-            labels.insert(label.to_lowercase());
+            let url = caps.get(2).map_or("", |m| m.as_str());
+            let title = caps
+                .get(3)
+                .or_else(|| caps.get(4))
+                .or_else(|| caps.get(5))
+                .map_or("", |m| m.as_str());
+            let destination = if title.is_empty() {
+                url.to_string()
+            } else {
+                format!("{url} \"{title}\"")
+            };
+            defs.insert(label.to_lowercase(), destination);
             vec![format!("{REFDEF_MARKER_PREFIX}{line} -->")]
         } else {
             vec![line.to_string()]
         }
     });
-    (labels, result)
+    (defs, result)
+}
+
+/// COMRAK-WORKAROUND1: Lowercase the `[label]` portion of a link reference
+/// definition line for emission. The URL, title, and surrounding whitespace
+/// are preserved verbatim. Returns the input unchanged when it does not parse
+/// as a ref-def (defensive: REFDEF markers only wrap matched lines).
+fn lowercase_refdef_label(def: &str) -> String {
+    if let Some(caps) = LINK_REF_DEF.captures(def)
+        && let Some(label) = caps.get(1)
+    {
+        let mut result = String::with_capacity(def.len());
+        result.push_str(&def[..label.start()]);
+        result.push_str(&label.as_str().to_lowercase());
+        result.push_str(&def[label.end()..]);
+        return result;
+    }
+    def.to_string()
 }
 
 /// COMRAK-WORKAROUND2: HTML comment marker for footnote definition placeholders.
@@ -733,6 +809,15 @@ where
     }
 }
 
+/// COMRAK-WORKAROUND1: Extract the lowercase alt text from a badge text
+/// segment like `![alt](url)`. Used as the label for collapsed/shortcut
+/// badge reference links. Returns `None` when the segment doesn't parse.
+fn badge_alt_lowercase(image_markdown: &str) -> Option<String> {
+    let stripped = image_markdown.strip_prefix("![")?;
+    let alt_end = stripped.find(']')?;
+    Some(stripped[..alt_end].to_lowercase())
+}
+
 /// COMRAK-WORKAROUND1: Hex-encode a label so the PUA-bounded payload only
 /// contains URL-safe ASCII (`[0-9a-f]`). Natural Markdown labels like
 /// `"St. John's School"` contain spaces/apostrophes, which break comrak's
@@ -771,20 +856,66 @@ fn decode_hex_label(hex: &str) -> Option<String> {
 /// label content. During rendering, the PUA prefix is detected and the label is
 /// hex-decoded to re-emit `[text][label]` (or the collapsed `[text][]` when the
 /// rendered text equals the label per issue #45).
-fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
-    if labels.is_empty() {
+fn encode_ref_links(text: &str, defs: &HashMap<String, String>) -> String {
+    if defs.is_empty() {
         return text.to_string();
     }
 
     transform_outside_code_fences(text, |line| {
         let mut result = line.to_string();
+        // Badge pattern first: [![alt](url)][label]. The image text contains
+        // `]` which the generic FULL_REF_LINK regex cannot span, and without
+        // this dedicated handler the trailing `[label]` would be misparsed
+        // as a shortcut ref (preceded by `]`).
+        result = BADGE_FULL_REF_LINK
+            .replace_all(&result, |caps: &regex::Captures| {
+                let text_part = &caps[1];
+                let label = caps[2].to_lowercase();
+                if defs.contains_key(&label) {
+                    let hex = encode_hex_label(&label);
+                    format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
+                } else {
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
+        result = BADGE_COLLAPSED_REF_LINK
+            .replace_all(&result, |caps: &regex::Captures| {
+                let text_part = &caps[1];
+                // Collapsed label is the image alt text — extract from `![alt](...)`.
+                let label = badge_alt_lowercase(text_part);
+                if let Some(label) = label
+                    && defs.contains_key(&label)
+                {
+                    let hex = encode_hex_label(&label);
+                    format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
+                } else {
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
+        result = BADGE_SHORTCUT_REF_LINK
+            .replace_all(&result, |caps: &regex::Captures| {
+                let text_part = &caps[1];
+                let trailing = &caps[2];
+                let label = badge_alt_lowercase(text_part);
+                if let Some(label) = label
+                    && defs.contains_key(&label)
+                {
+                    let hex = encode_hex_label(&label);
+                    format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP}){trailing}")
+                } else {
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
         // Replace full reference links: [text][label]. Encode the matched
         // definition's normalized (lowercase) label so rendering can emit the
         // canonical reference form (see the Link branch in render_inline).
         replace_until_stable(&mut result, &FULL_REF_LINK, |caps: &regex::Captures| {
             let text_part = &caps[1];
             let label = caps[2].to_lowercase();
-            if labels.contains(&label) {
+            if defs.contains_key(&label) {
                 let hex = encode_hex_label(&label);
                 format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
             } else {
@@ -796,7 +927,7 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
         replace_until_stable(&mut result, &COLLAPSED_REF_LINK, |caps: &regex::Captures| {
             let text_part = &caps[1];
             let label = text_part.to_lowercase();
-            if labels.contains(&label) {
+            if defs.contains_key(&label) {
                 let hex = encode_hex_label(&label);
                 format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
             } else {
@@ -814,9 +945,64 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
                 let text_part = &caps[1];
                 let trailing = &caps[2];
                 let label = text_part.to_lowercase();
-                if labels.contains(&label) {
+                if defs.contains_key(&label) {
                     let hex = encode_hex_label(&label);
                     format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP}){trailing}")
+                } else {
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
+        vec![result]
+    })
+}
+
+/// COMRAK-WORKAROUND1: Inline reference images (`![alt][label]`, `![alt][]`,
+/// `![alt]`) by substituting the matched definition's destination directly,
+/// producing `![alt](url)` or `![alt](url "title")`. This mirrors Python
+/// flowmark's `render_image`, which always emits the inline image form
+/// regardless of the source syntax. Inlining at the pre-parse stage avoids
+/// PUA encoding for image URLs (where comrak's parser would otherwise leak
+/// the marker into the rendered output).
+fn inline_image_refs(text: &str, defs: &HashMap<String, String>) -> String {
+    if defs.is_empty() {
+        return text.to_string();
+    }
+
+    transform_outside_code_fences(text, |line| {
+        let mut result = line.to_string();
+        // Full: ![alt][label] → ![alt](dest)
+        result = IMAGE_FULL_REF
+            .replace_all(&result, |caps: &regex::Captures| {
+                let alt = &caps[1];
+                let label = caps[2].to_lowercase();
+                if let Some(dest) = defs.get(&label) {
+                    format!("![{alt}]({dest})")
+                } else {
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
+        // Collapsed: ![alt][] → ![alt](dest) where label is lowercase(alt)
+        result = IMAGE_COLLAPSED_REF
+            .replace_all(&result, |caps: &regex::Captures| {
+                let alt = &caps[1];
+                let label = alt.to_lowercase();
+                if let Some(dest) = defs.get(&label) {
+                    format!("![{alt}]({dest})")
+                } else {
+                    caps[0].to_string()
+                }
+            })
+            .into_owned();
+        // Shortcut: ![alt] (not followed by `[`, `(`, or `:`) → ![alt](dest)
+        result = IMAGE_SHORTCUT_REF
+            .replace_all(&result, |caps: &regex::Captures| {
+                let alt = &caps[1];
+                let trailing = &caps[2];
+                let label = alt.to_lowercase();
+                if let Some(dest) = defs.get(&label) {
+                    format!("![{alt}]({dest}){trailing}")
                 } else {
                     caps[0].to_string()
                 }
@@ -1535,11 +1721,15 @@ fn render_block<'a>(
             let literal = &html.literal;
             let trimmed = literal.trim();
 
-            // COMRAK-WORKAROUND1: Re-emit reference definition from REFDEF marker.
+            // COMRAK-WORKAROUND1: Re-emit reference definition from REFDEF
+            // marker. The label is lowercased to match Python flowmark, which
+            // emits `element.label` (marko normalizes ref-def labels to
+            // lowercase). The URL and any title are preserved verbatim.
             if let Some(rest) = trimmed.strip_prefix(REFDEF_MARKER_PREFIX) {
                 if let Some(def_text) = rest.strip_suffix("-->") {
                     let def_text = def_text.trim();
-                    let _ = writeln!(output, "{prefix}{def_text}");
+                    let lowered = lowercase_refdef_label(def_text);
+                    let _ = writeln!(output, "{prefix}{lowered}");
                     return output;
                 }
             }
@@ -2385,11 +2575,13 @@ pub fn fill_markdown(
     // COMRAK-WORKAROUND6: Ensure proper blank lines around block content within tags.
     text = preprocess_tag_block_spacing(&text);
 
-    // COMRAK-WORKAROUND1: Extract link reference definitions and encode reference
-    // links with PUA markers. Must happen before escape placeholder substitution,
-    // which would mangle `\[` etc.
-    let (ref_labels, text_without_defs) = extract_link_ref_defs(&text);
-    text = encode_ref_links(&text_without_defs, &ref_labels);
+    // COMRAK-WORKAROUND1: Extract link reference definitions, inline reference
+    // images (Python flowmark always emits the inline image form), and encode
+    // reference *links* with PUA markers. Must happen before escape placeholder
+    // substitution, which would mangle `\[` etc.
+    let (ref_defs, text_without_defs) = extract_link_ref_defs(&text);
+    text = inline_image_refs(&text_without_defs, &ref_defs);
+    text = encode_ref_links(&text, &ref_defs);
 
     // COMRAK-WORKAROUND2: Extract footnote definitions and replace with FNDEF
     // HTML comment markers (preserved as HtmlBlock nodes at original positions).
@@ -2627,8 +2819,8 @@ mod tests {
     #[test]
     fn extract_ref_defs_basic() {
         let input = "Hello\n\n[foo]: https://example.com\n\nWorld\n";
-        let (labels, output) = extract_link_ref_defs(input);
-        assert!(labels.contains("foo"));
+        let (defs, output) = extract_link_ref_defs(input);
+        assert_eq!(defs.get("foo").map(String::as_str), Some("https://example.com"));
         // Original bare definition line is replaced by a marker wrapping the text
         assert!(output.contains(REFDEF_MARKER_PREFIX));
         assert!(output.contains("https://example.com"));
@@ -2638,16 +2830,16 @@ mod tests {
     #[test]
     fn extract_ref_defs_case_insensitive() {
         let input = "[Foo]: https://example.com\n";
-        let (labels, _) = extract_link_ref_defs(input);
-        assert!(labels.contains("foo"));
-        assert!(!labels.contains("Foo"));
+        let (defs, _) = extract_link_ref_defs(input);
+        assert!(defs.contains_key("foo"));
+        assert!(!defs.contains_key("Foo"));
     }
 
     #[test]
     fn extract_ref_defs_inside_code_fence_ignored() {
         let input = "```\n[foo]: https://example.com\n```\n";
-        let (labels, output) = extract_link_ref_defs(input);
-        assert!(labels.is_empty());
+        let (defs, output) = extract_link_ref_defs(input);
+        assert!(defs.is_empty());
         assert!(output.contains("[foo]:"));
         assert!(!output.contains(REFDEF_MARKER_PREFIX));
     }
@@ -2655,18 +2847,23 @@ mod tests {
     #[test]
     fn extract_ref_defs_with_title() {
         let input = "[bar]: https://example.com \"A title\"\n";
-        let (labels, output) = extract_link_ref_defs(input);
-        assert!(labels.contains("bar"));
+        let (defs, output) = extract_link_ref_defs(input);
+        // Destination map captures the title so reference-image inlining can
+        // round-trip `![alt][bar]` → `![alt](url "A title")`.
+        assert_eq!(
+            defs.get("bar").map(String::as_str),
+            Some("https://example.com \"A title\"")
+        );
         assert!(output.contains(REFDEF_MARKER_PREFIX));
     }
 
     #[test]
     fn extract_ref_defs_multiple() {
         let input = "[a]: https://a.com\n[b]: https://b.com\n";
-        let (labels, _) = extract_link_ref_defs(input);
-        assert_eq!(labels.len(), 2);
-        assert!(labels.contains("a"));
-        assert!(labels.contains("b"));
+        let (defs, _) = extract_link_ref_defs(input);
+        assert_eq!(defs.len(), 2);
+        assert!(defs.contains_key("a"));
+        assert!(defs.contains_key("b"));
     }
 
     #[test]
@@ -2675,11 +2872,11 @@ mod tests {
         // They must NOT be treated as ref defs (REFDEF markers), since they are
         // handled separately by extract_footnote_defs.
         let input = "[normal]: https://example.com\n[^note]: https://another.com\n";
-        let (labels, output) = extract_link_ref_defs(input);
-        assert!(labels.contains("normal"), "Normal ref def should be extracted");
+        let (defs, output) = extract_link_ref_defs(input);
+        assert!(defs.contains_key("normal"), "Normal ref def should be extracted");
         assert!(
-            !labels.contains("^note") && !labels.contains("note"),
-            "Footnote label should NOT be in ref def labels"
+            !defs.contains_key("^note") && !defs.contains_key("note"),
+            "Footnote label should NOT be in ref def map"
         );
         // Normal ref def is wrapped in REFDEF marker
         assert!(output.contains(REFDEF_MARKER_PREFIX));
@@ -2765,12 +2962,15 @@ mod tests {
 
     // ---- encode_ref_links ----
 
+    fn refdef_map(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs.iter().map(|(k, v)| ((*k).to_string(), (*v).to_string())).collect()
+    }
+
     #[test]
     fn encode_full_ref_link() {
-        let mut labels = HashSet::new();
-        labels.insert("foo".to_string());
+        let defs = refdef_map(&[("foo", "https://example.com")]);
         let input = "See [click here][foo] for details.\n";
-        let output = encode_ref_links(input, &labels);
+        let output = encode_ref_links(input, &defs);
         assert!(output.contains(REF_LABEL_START));
         assert!(output.contains(REF_LABEL_SEP));
         assert!(!output.contains("[foo]"));
@@ -2778,19 +2978,17 @@ mod tests {
 
     #[test]
     fn encode_collapsed_ref_link() {
-        let mut labels = HashSet::new();
-        labels.insert("example".to_string());
+        let defs = refdef_map(&[("example", "https://example.com")]);
         let input = "See [Example][] for details.\n";
-        let output = encode_ref_links(input, &labels);
+        let output = encode_ref_links(input, &defs);
         assert!(output.contains(REF_LABEL_START));
     }
 
     #[test]
     fn encode_shortcut_ref_link() {
-        let mut labels = HashSet::new();
-        labels.insert("foo".to_string());
+        let defs = refdef_map(&[("foo", "https://example.com")]);
         let input = "See [foo] for details.\n";
-        let output = encode_ref_links(input, &labels);
+        let output = encode_ref_links(input, &defs);
         assert!(output.contains(REF_LABEL_START), "shortcut ref should be encoded");
         // The trailing space after the shortcut is preserved.
         assert!(output.contains(") for details."));
@@ -2798,10 +2996,9 @@ mod tests {
 
     #[test]
     fn encode_shortcut_ref_lowercases_label() {
-        let mut labels = HashSet::new();
-        labels.insert("foo".to_string());
+        let defs = refdef_map(&[("foo", "https://example.com")]);
         let input = "See [Foo] here.\n";
-        let output = encode_ref_links(input, &labels);
+        let output = encode_ref_links(input, &defs);
         // The encoded label is normalized to lowercase ("foo") and then
         // hex-encoded (`66 6f 6f` → "666f6f") so the URL payload is URL-safe.
         let expected_payload = encode_hex_label("foo");
@@ -2835,28 +3032,109 @@ mod tests {
 
     #[test]
     fn encode_unknown_label_unchanged() {
-        let mut labels = HashSet::new();
-        labels.insert("known".to_string());
+        let defs = refdef_map(&[("known", "https://example.com")]);
         let input = "See [text][unknown] for details.\n";
-        let output = encode_ref_links(input, &labels);
+        let output = encode_ref_links(input, &defs);
         assert_eq!(input, output);
     }
 
     #[test]
     fn encode_empty_labels_passthrough() {
-        let labels = HashSet::new();
+        let defs: HashMap<String, String> = HashMap::new();
         let input = "See [text][foo] for details.\n";
-        let output = encode_ref_links(input, &labels);
+        let output = encode_ref_links(input, &defs);
         assert_eq!(input, output);
     }
 
     #[test]
     fn encode_inside_code_fence_unchanged() {
-        let mut labels = HashSet::new();
-        labels.insert("foo".to_string());
+        let defs = refdef_map(&[("foo", "https://example.com")]);
         let input = "```\n[text][foo]\n```\n";
-        let output = encode_ref_links(input, &labels);
+        let output = encode_ref_links(input, &defs);
         assert!(output.contains("[text][foo]"));
+    }
+
+    // ---- inline_image_refs ----
+
+    #[test]
+    fn inline_image_full_ref() {
+        let defs = refdef_map(&[("img", "https://example.com/img.png")]);
+        let input = "![alt][img]\n";
+        let output = inline_image_refs(input, &defs);
+        assert_eq!(output, "![alt](https://example.com/img.png)\n");
+    }
+
+    #[test]
+    fn inline_image_collapsed_ref() {
+        let defs = refdef_map(&[("alt", "https://example.com/img.png")]);
+        let input = "![alt][]\n";
+        let output = inline_image_refs(input, &defs);
+        assert_eq!(output, "![alt](https://example.com/img.png)\n");
+    }
+
+    #[test]
+    fn inline_image_shortcut_ref() {
+        let defs = refdef_map(&[("alt", "https://example.com/img.png")]);
+        let input = "![alt]\n";
+        let output = inline_image_refs(input, &defs);
+        assert_eq!(output, "![alt](https://example.com/img.png)\n");
+    }
+
+    #[test]
+    fn inline_image_with_title() {
+        let defs = refdef_map(&[("img", "https://example.com/img.png \"My title\"")]);
+        let input = "![alt][img]\n";
+        let output = inline_image_refs(input, &defs);
+        assert_eq!(output, "![alt](https://example.com/img.png \"My title\")\n");
+    }
+
+    #[test]
+    fn inline_image_label_lowercased_lookup() {
+        // Label match is case-insensitive (defs map is keyed by lowercase).
+        let defs = refdef_map(&[("img", "https://example.com/img.png")]);
+        let input = "![Alt][IMG]\n";
+        let output = inline_image_refs(input, &defs);
+        assert_eq!(output, "![Alt](https://example.com/img.png)\n");
+    }
+
+    #[test]
+    fn inline_image_no_def_unchanged() {
+        let defs: HashMap<String, String> = HashMap::new();
+        let input = "![alt][missing]\n";
+        let output = inline_image_refs(input, &defs);
+        assert_eq!(output, input);
+    }
+
+    #[test]
+    fn inline_image_inside_code_fence_unchanged() {
+        let defs = refdef_map(&[("img", "https://example.com/img.png")]);
+        let input = "```\n![alt][img]\n```\n";
+        let output = inline_image_refs(input, &defs);
+        assert!(output.contains("![alt][img]"));
+    }
+
+    // ---- lowercase_refdef_label ----
+
+    #[test]
+    fn lowercase_refdef_label_basic() {
+        assert_eq!(
+            lowercase_refdef_label("[Foo]: https://example.com"),
+            "[foo]: https://example.com"
+        );
+    }
+
+    #[test]
+    fn lowercase_refdef_label_preserves_title() {
+        assert_eq!(
+            lowercase_refdef_label("[Foo Bar]: https://example.com \"A Title\""),
+            "[foo bar]: https://example.com \"A Title\""
+        );
+    }
+
+    #[test]
+    fn lowercase_refdef_label_passthrough_when_no_match() {
+        // Defensive path: non-ref-def input is returned unchanged.
+        assert_eq!(lowercase_refdef_label("not a refdef"), "not a refdef");
     }
 
     // ---- replace_until_stable ----
