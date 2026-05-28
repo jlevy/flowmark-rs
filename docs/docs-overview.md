@@ -34,6 +34,7 @@ The three categories:
 | [`rust-only-features.md`](rust-only-features.md) | Rust port-specific | The (currently small) set of features the Rust port has that upstream does not. |
 | [`port-status.md`](port-status.md) | Rust port-specific | Current parity target, release status, tolerated variations, and porting principles compliance. |
 | [`port-sync-playbook.md`](port-sync-playbook.md) | Rust port-specific | How to sync flowmark-rs with upstream Python releases (Mode B workflow). |
+| [`parity-coverage-matrix.md`](parity-coverage-matrix.md) | Rust port-specific | Per-AST-node × syntactic-form matrix mapped to the tests that prove parity for each row. Structural backstop against inheriting upstream test gaps. |
 | [`porting-log-review.md`](porting-log-review.md) | Rust port-specific | Historical review log from the initial port. |
 | [`templates/rust-readme-wrapper.md`](templates/rust-readme-wrapper.md) | Rust port-specific | Wrapper template the README generator splices around `{{ shared_docs_body }}`. |
 
