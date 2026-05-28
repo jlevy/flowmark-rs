@@ -733,10 +733,44 @@ where
     }
 }
 
+/// COMRAK-WORKAROUND1: Hex-encode a label so the PUA-bounded payload only
+/// contains URL-safe ASCII (`[0-9a-f]`). Natural Markdown labels like
+/// `"St. John's School"` contain spaces/apostrophes, which break comrak's
+/// `[text](url)` parsing (spaces terminate the URL token unless angle-bracketed).
+/// Hex-encoding the label sidesteps the URL syntax entirely.
+fn encode_hex_label(label: &str) -> String {
+    use std::fmt::Write;
+    let mut out = String::with_capacity(label.len() * 2);
+    for b in label.as_bytes() {
+        let _ = write!(out, "{b:02x}");
+    }
+    out
+}
+
+/// COMRAK-WORKAROUND1: Inverse of [`encode_hex_label`]. Returns `None` if the
+/// payload is not valid hex or not valid UTF-8 (e.g. a legacy plain-text label
+/// from before the hex-encoding switch — the caller can fall back).
+fn decode_hex_label(hex: &str) -> Option<String> {
+    if hex.is_empty() || hex.len() % 2 != 0 {
+        return None;
+    }
+    let mut bytes = Vec::with_capacity(hex.len() / 2);
+    for chunk in hex.as_bytes().chunks(2) {
+        let high = (chunk[0] as char).to_digit(16)?;
+        let low = (chunk[1] as char).to_digit(16)?;
+        // `to_digit(16)` returns 0..=15, so `(high << 4) | low` is always 0..=255.
+        let byte = u8::try_from((high << 4) | low).ok()?;
+        bytes.push(byte);
+    }
+    String::from_utf8(bytes).ok()
+}
+
 /// COMRAK-WORKAROUND1: Encode reference link labels in PUA markers.
-/// `[text][label]` → `[text](\u{F000}label\u{F001})`. Only the label is encoded
-/// (not the real URL), avoiding breakage in table cells where titles contain `|`.
-/// During rendering, the PUA prefix is detected and `[text][label]` is re-emitted.
+/// `[text][label]` → `[text](\u{F000}HEX(label)\u{F001})`. The label is
+/// hex-encoded so the payload is URL-safe through comrak's parser regardless of
+/// label content. During rendering, the PUA prefix is detected and the label is
+/// hex-decoded to re-emit `[text][label]` (or the collapsed `[text][]` when the
+/// rendered text equals the label per issue #45).
 fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
     if labels.is_empty() {
         return text.to_string();
@@ -751,7 +785,8 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
             let text_part = &caps[1];
             let label = caps[2].to_lowercase();
             if labels.contains(&label) {
-                format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
+                let hex = encode_hex_label(&label);
+                format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
             } else {
                 caps[0].to_string()
             }
@@ -762,7 +797,8 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
             let text_part = &caps[1];
             let label = text_part.to_lowercase();
             if labels.contains(&label) {
-                format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
+                let hex = encode_hex_label(&label);
+                format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
             } else {
                 caps[0].to_string()
             }
@@ -779,7 +815,8 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
                 let trailing = &caps[2];
                 let label = text_part.to_lowercase();
                 if labels.contains(&label) {
-                    format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP}){trailing}")
+                    let hex = encode_hex_label(&label);
+                    format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP}){trailing}")
                 } else {
                     caps[0].to_string()
                 }
@@ -2150,7 +2187,13 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
             // COMRAK-WORKAROUND1: Detect PUA-encoded reference link.
             if link.url.starts_with(REF_LABEL_START) {
                 if let Some(sep_pos) = link.url.find(REF_LABEL_SEP) {
-                    let label = &link.url[REF_LABEL_START.len_utf8()..sep_pos];
+                    // Label is hex-encoded inside the PUA markers so the URL
+                    // contains only ASCII hex digits — preventing comrak from
+                    // breaking on spaces/punctuation in natural labels like
+                    // "St. John's School". Decode back to the original label.
+                    let hex = &link.url[REF_LABEL_START.len_utf8()..sep_pos];
+                    let decoded = decode_hex_label(hex);
+                    let label = decoded.as_deref().unwrap_or(hex);
                     // Issue #45: when the link text equals the normalized label,
                     // emit the unambiguous collapsed form [text][] rather than a
                     // fragile shortcut [text]. Otherwise emit the full form.
@@ -2759,8 +2802,35 @@ mod tests {
         labels.insert("foo".to_string());
         let input = "See [Foo] here.\n";
         let output = encode_ref_links(input, &labels);
-        // The encoded label is normalized to lowercase ("foo"), not "Foo".
-        assert!(output.contains(&format!("{REF_LABEL_START}foo{REF_LABEL_SEP}")));
+        // The encoded label is normalized to lowercase ("foo") and then
+        // hex-encoded (`66 6f 6f` → "666f6f") so the URL payload is URL-safe.
+        let expected_payload = encode_hex_label("foo");
+        assert_eq!(expected_payload, "666f6f");
+        assert!(
+            output.contains(&format!("{REF_LABEL_START}{expected_payload}{REF_LABEL_SEP}")),
+            "expected hex-encoded label in output: {output:?}"
+        );
+    }
+
+    #[test]
+    fn hex_label_round_trip_handles_spaces_and_punctuation() {
+        for label in ["foo", "st. john's school", "an example", "café"] {
+            let hex = encode_hex_label(label);
+            // Hex payload is URL-safe (ASCII hex only).
+            assert!(
+                hex.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f')),
+                "hex payload must be URL-safe: {hex:?}"
+            );
+            assert_eq!(decode_hex_label(&hex).as_deref(), Some(label));
+        }
+    }
+
+    #[test]
+    fn decode_hex_label_rejects_invalid() {
+        // Empty, odd length, and non-hex chars are not valid encodings.
+        assert!(decode_hex_label("").is_none());
+        assert!(decode_hex_label("abc").is_none());
+        assert!(decode_hex_label("xy").is_none());
     }
 
     #[test]

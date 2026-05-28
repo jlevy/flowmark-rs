@@ -2,12 +2,13 @@
 //!
 //! Each test documents a specific discrepancy found during senior review (2026-02-18)
 //! or subsequent stabilization (D17/D18, 2026-05-19). Expected values are derived from
-//! Python output and re-verified against the current parity baseline (v0.6.5 as of
-//! 2026-05-07; D18 additionally tracks upstream issue #45, verified against `main`).
-//! All 18 discrepancies (D1-D18) are resolved — every test passes.
+//! Python output and re-verified against the current parity baseline (v0.7.0 as of
+//! 2026-05-28; D18 tracks upstream issue #45 which is now released in v0.7.0, so it
+//! is exact parity, not an intentional divergence). All 18 discrepancies (D1-D18) are
+//! resolved — every test passes.
 //!
 //! D11 tests invoke both the Python and Rust binaries and compare error output.
-//! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.6.5`).
+//! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.7.0`).
 //!
 //! See: docs/project/specs/done/plan-2026-02-18-parity-discrepancies.md
 #![allow(clippy::unwrap_used)]
@@ -713,6 +714,36 @@ fn test_d18_label_normalized_to_lowercase() {
     // [Foo] with def [Foo]: -> [Foo][foo] (emitted label is normalized lowercase).
     let input = "[Foo]\n\n[Foo]: https://example.com/x\n";
     assert_eq!(fmt(input), "[Foo][foo]\n\n[Foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_collapsed_ref_label_with_spaces_and_apostrophe() {
+    // Reviewer's reproducer: collapsed reference link whose label contains
+    // spaces and an apostrophe must round-trip cleanly — no leaked PUA
+    // marker, no inline-link fallback. The label is normalized to lowercase
+    // and the full form is emitted because text "St. John's School"
+    // differs from normalized "st. john's school".
+    let input = "See [St. John's School][] here.\n\n[St. John's School]: https://example.com/x\n";
+    let expected = "See [St. John's School][st. john's school] here.\n\n[St. John's School]: https://example.com/x\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d18_shortcut_ref_label_with_spaces_and_apostrophe() {
+    // Same case for the shortcut form.
+    let input = "See [St. John's School] here.\n\n[St. John's School]: https://example.com/x\n";
+    let expected = "See [St. John's School][st. john's school] here.\n\n[St. John's School]: https://example.com/x\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d18_collapsed_ref_label_lowercase_with_spaces_emits_collapsed() {
+    // When the link text already matches the normalized label exactly (the
+    // text is all lowercase with the same whitespace), emit the collapsed
+    // form `[text][]` per issue #45 — even though the label contains spaces.
+    let input = "See [an example][] here.\n\n[an example]: https://example.com/x\n";
+    let expected = "See [an example][] here.\n\n[an example]: https://example.com/x\n";
+    assert_eq!(fmt(input), expected);
 }
 
 #[test]
