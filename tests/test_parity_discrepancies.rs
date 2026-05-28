@@ -784,8 +784,7 @@ fn test_d19_image_shortcut_ref_inlined() {
 #[test]
 fn test_d19_image_with_title_inlined() {
     let input = "![alt][img]\n\n[img]: https://example.com/img.png \"My title\"\n";
-    let expected =
-        "![alt](https://example.com/img.png \"My title\")\n\n[img]: https://example.com/img.png \"My title\"\n";
+    let expected = "![alt](https://example.com/img.png \"My title\")\n\n[img]: https://example.com/img.png \"My title\"\n";
     assert_eq!(fmt(input), expected);
 }
 
@@ -833,32 +832,28 @@ fn test_d20_def_label_lowercased_on_render() {
     let input = "[Logo][]\n\n[Logo]: https://example.com/logo.png\n";
     // Both the link's label (full form) and the def line emit the lowercased
     // label. The link text "Logo" preserves its original case.
-    let expected =
-        "[Logo][logo]\n\n[logo]: https://example.com/logo.png\n";
+    let expected = "[Logo][logo]\n\n[logo]: https://example.com/logo.png\n";
     assert_eq!(fmt(input), expected);
 }
 
 #[test]
 fn test_d20_def_label_with_spaces_lowercased() {
     let input = "[Company Logo][]\n\n[Company Logo]: https://example.com/logo.png\n";
-    let expected =
-        "[Company Logo][company logo]\n\n[company logo]: https://example.com/logo.png\n";
+    let expected = "[Company Logo][company logo]\n\n[company logo]: https://example.com/logo.png\n";
     assert_eq!(fmt(input), expected);
 }
 
 #[test]
 fn test_d20_def_label_already_lowercase_unchanged() {
     let input = "[link][example]\n\n[example]: https://example.com/page\n";
-    let expected =
-        "[link][example]\n\n[example]: https://example.com/page\n";
+    let expected = "[link][example]\n\n[example]: https://example.com/page\n";
     assert_eq!(fmt(input), expected);
 }
 
 #[test]
 fn test_d20_def_label_with_title_preserved_lowercased() {
     let input = "[Page][Home]\n\n[Home]: https://example.com \"Welcome home\"\n";
-    let expected =
-        "[Page][home]\n\n[home]: https://example.com \"Welcome home\"\n";
+    let expected = "[Page][home]\n\n[home]: https://example.com \"Welcome home\"\n";
     assert_eq!(fmt(input), expected);
 }
 

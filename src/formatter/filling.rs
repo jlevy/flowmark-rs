@@ -332,14 +332,12 @@ static FULL_REF_LINK: LazyLock<Regex> =
 /// Must run before `FULL_REF_LINK` so the inner `[alt](url)` isn't picked
 /// off as a stray match.
 static BADGE_FULL_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\[(!\[[^\]]*\]\([^)]*\))\]\[([^\]]+)\]")
-        .expect("valid BADGE_FULL_REF_LINK regex")
+    Regex::new(r"\[(!\[[^\]]*\]\([^)]*\))\]\[([^\]]+)\]").expect("valid BADGE_FULL_REF_LINK regex")
 });
 
 /// Regex for badge-pattern collapsed reference links: `[![alt](url)][]`.
 static BADGE_COLLAPSED_REF_LINK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\[(!\[[^\]]*\]\([^)]*\))\]\[\]")
-        .expect("valid BADGE_COLLAPSED_REF_LINK regex")
+    Regex::new(r"\[(!\[[^\]]*\]\([^)]*\))\]\[\]").expect("valid BADGE_COLLAPSED_REF_LINK regex")
 });
 
 /// Regex for badge-pattern shortcut reference links: `[![alt](url)]` not
@@ -366,9 +364,8 @@ static IMAGE_FULL_REF: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"!\[([^\]]*)\]\[([^\]]+)\]").expect("valid IMAGE_FULL_REF regex"));
 
 /// Regex for collapsed reference images: `![alt][]`.
-static IMAGE_COLLAPSED_REF: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"!\[([^\]]+)\]\[\]").expect("valid IMAGE_COLLAPSED_REF regex")
-});
+static IMAGE_COLLAPSED_REF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"!\[([^\]]+)\]\[\]").expect("valid IMAGE_COLLAPSED_REF regex"));
 
 /// Regex for shortcut reference images: `![alt]` not followed by `[`, `(`, or
 /// `:`. Group 2 captures the trailing char (or end-of-line); re-emitted as-is.
@@ -686,11 +683,8 @@ fn extract_link_ref_defs(text: &str) -> (HashMap<String, String>, String) {
                 .or_else(|| caps.get(4))
                 .or_else(|| caps.get(5))
                 .map_or("", |m| m.as_str());
-            let destination = if title.is_empty() {
-                url.to_string()
-            } else {
-                format!("{url} \"{title}\"")
-            };
+            let destination =
+                if title.is_empty() { url.to_string() } else { format!("{url} \"{title}\"") };
             defs.insert(label.to_lowercase(), destination);
             vec![format!("{REFDEF_MARKER_PREFIX}{line} -->")]
         } else {
@@ -705,14 +699,14 @@ fn extract_link_ref_defs(text: &str) -> (HashMap<String, String>, String) {
 /// are preserved verbatim. Returns the input unchanged when it does not parse
 /// as a ref-def (defensive: REFDEF markers only wrap matched lines).
 fn lowercase_refdef_label(def: &str) -> String {
-    if let Some(caps) = LINK_REF_DEF.captures(def)
-        && let Some(label) = caps.get(1)
-    {
-        let mut result = String::with_capacity(def.len());
-        result.push_str(&def[..label.start()]);
-        result.push_str(&label.as_str().to_lowercase());
-        result.push_str(&def[label.end()..]);
-        return result;
+    if let Some(caps) = LINK_REF_DEF.captures(def) {
+        if let Some(label) = caps.get(1) {
+            let mut result = String::with_capacity(def.len());
+            result.push_str(&def[..label.start()]);
+            result.push_str(&label.as_str().to_lowercase());
+            result.push_str(&def[label.end()..]);
+            return result;
+        }
     }
     def.to_string()
 }
@@ -883,14 +877,12 @@ fn encode_ref_links(text: &str, defs: &HashMap<String, String>) -> String {
             .replace_all(&result, |caps: &regex::Captures| {
                 let text_part = &caps[1];
                 // Collapsed label is the image alt text — extract from `![alt](...)`.
-                let label = badge_alt_lowercase(text_part);
-                if let Some(label) = label
-                    && defs.contains_key(&label)
-                {
-                    let hex = encode_hex_label(&label);
-                    format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
-                } else {
-                    caps[0].to_string()
+                match badge_alt_lowercase(text_part) {
+                    Some(label) if defs.contains_key(&label) => {
+                        let hex = encode_hex_label(&label);
+                        format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP})")
+                    }
+                    _ => caps[0].to_string(),
                 }
             })
             .into_owned();
@@ -898,14 +890,12 @@ fn encode_ref_links(text: &str, defs: &HashMap<String, String>) -> String {
             .replace_all(&result, |caps: &regex::Captures| {
                 let text_part = &caps[1];
                 let trailing = &caps[2];
-                let label = badge_alt_lowercase(text_part);
-                if let Some(label) = label
-                    && defs.contains_key(&label)
-                {
-                    let hex = encode_hex_label(&label);
-                    format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP}){trailing}")
-                } else {
-                    caps[0].to_string()
+                match badge_alt_lowercase(text_part) {
+                    Some(label) if defs.contains_key(&label) => {
+                        let hex = encode_hex_label(&label);
+                        format!("[{text_part}]({REF_LABEL_START}{hex}{REF_LABEL_SEP}){trailing}")
+                    }
+                    _ => caps[0].to_string(),
                 }
             })
             .into_owned();
@@ -2850,10 +2840,7 @@ mod tests {
         let (defs, output) = extract_link_ref_defs(input);
         // Destination map captures the title so reference-image inlining can
         // round-trip `![alt][bar]` → `![alt](url "A title")`.
-        assert_eq!(
-            defs.get("bar").map(String::as_str),
-            Some("https://example.com \"A title\"")
-        );
+        assert_eq!(defs.get("bar").map(String::as_str), Some("https://example.com \"A title\""));
         assert!(output.contains(REFDEF_MARKER_PREFIX));
     }
 
