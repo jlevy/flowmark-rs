@@ -35,7 +35,7 @@ DEFAULT_PYTHON_YAML = f"{DEFAULT_MAPPING_DIR}/python-tests.yaml"
 DEFAULT_RUST_YAML = f"{DEFAULT_MAPPING_DIR}/rust-tests.yaml"
 DEFAULT_MAPPING_YAML = f"{DEFAULT_MAPPING_DIR}/test-mapping.yaml"
 DEFAULT_REPO_URL = "https://github.com/jlevy/flowmark"
-DEFAULT_REF = "v0.6.5"
+DEFAULT_REF = "v0.7.0"
 
 
 def _resolve_root() -> Path:
