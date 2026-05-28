@@ -370,22 +370,22 @@ File discovery flags:
 When you pass a directory to Flowmark (e.g., `flowmark --auto .`), it recursively
 discovers files using a smart filter pipeline:
 
-1. **Default includes:** Only `*.md` files by default.
+1. **Default includes**: Only `*.md` files by default.
    Use `--extend-include "*.mdx"` to add patterns.
 
-2. **Default exclusions:** ~45 directories are automatically skipped, including `.git`,
+2. **Default exclusions**: ~45 directories are automatically skipped, including `.git`,
    `node_modules`, `.venv`, `venv`, `__pycache__`, `build`, `dist`, `.tox`, `.nox`,
    `.idea`, `.vscode`, `vendor`, `third_party`, and more.
    These directories are pruned during traversal for performance.
 
-3. **`.gitignore` integration:** Enabled by default.
+3. **`.gitignore` integration**: Enabled by default.
    Reads `.gitignore` at every directory level during traversal.
    Disable with `--no-respect-gitignore`.
 
-4. **`.flowmarkignore`:** A tool-specific ignore file using gitignore syntax.
+4. **`.flowmarkignore`**: A tool-specific ignore file using gitignore syntax.
    Place it in your project root to exclude paths specific to Flowmark formatting.
 
-5. **Max file size:** Files over 1 MiB are skipped by default.
+5. **Max file size**: Files over 1 MiB are skipped by default.
    Change with `--files-max-size` (0 = no limit).
 
 ### Customizing Includes and Excludes
