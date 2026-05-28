@@ -201,6 +201,73 @@ pub fn first_sentence(text: &str, min_length: usize) -> String {
 mod tests {
     use super::*;
 
+    // -- split_sentences_atomic: atomic-span coverage (v0.7.0) --
+    //
+    // These guard against breaking a sentence inside an atomic span. The
+    // sentence-boundary heuristic fires on "word ending in lowercase letter +
+    // sentence punctuation", so any abbreviation like "St." inside a link/code
+    // span is a strong trigger if the splitter misses the atom.
+
+    #[test]
+    fn atomic_inline_link_keeps_period_inside() {
+        let text = "He went to [St. John's School](https://example.com) in England.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "inline link with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_full_reference_link_keeps_period_inside() {
+        let text = "He went to [St. John's School][school] in England.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "full reference link `[text][ref]` with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_collapsed_reference_link_keeps_period_inside() {
+        let text = "He visited [St. John's][] last week.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "collapsed reference link `[text][]` with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_shortcut_reference_link_keeps_period_inside() {
+        let text = "He visited [St. John's] last week.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "shortcut reference link `[text]` with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_code_span_keeps_period_inside() {
+        let text = "Configure `client.send()` before calling `client.close()` afterwards.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(sentences.len(), 1, "code spans with `.` must not split: {sentences:?}");
+    }
+
+    #[test]
+    fn atomic_splitter_still_breaks_at_real_sentence_end() {
+        let text = "He went to [St. John's School](https://example.com). Then he left.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(sentences.len(), 2, "real sentence break after link must fire: {sentences:?}");
+        assert!(sentences[0].ends_with("(https://example.com)."));
+        assert_eq!(sentences[1], "Then he left.");
+    }
+
     #[test]
     fn test_heuristic_end_of_sentence() {
         assert!(heuristic_end_of_sentence("word."));

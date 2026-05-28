@@ -140,8 +140,13 @@ pub(crate) static MARKDOWN_INLINE_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         // Double-backtick (lazy, allows embedded single backticks).
         r"``.+?``",
         r"`[^`]+`",
-        // Markdown link: [text](url). Bracketed text + parenthesized URL.
-        r"\[[^\]]*\]\([^)]*\)",
+        // Markdown links: inline `[text](url)`, full `[text][ref]`, collapsed
+        // `[text][]`, and shortcut `[text]` — matching the shape used in
+        // ATOMIC_CONSTRUCT_PATTERN and Python's MARKDOWN_LINK. Crucially, a
+        // shortcut/reference link whose text contains a `.` (e.g.
+        // `[St. John's School][school]`) must stay atomic so the sentence-
+        // boundary heuristic doesn't bisect it.
+        r"\[[^\]]*\](?:\([^)]*\)|\[[^\]]*\])?",
         // Angle-bracket autolink: <scheme:...>
         r"<[A-Za-z][A-Za-z0-9+.\-]*:[^\s<>]*>",
         // Angle-bracket email autolink: <local@host>
