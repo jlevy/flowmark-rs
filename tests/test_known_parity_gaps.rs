@@ -112,15 +112,15 @@ fn gap_e_inline_code_backtick() {
     assert_matches_python_golden("gapE_inline_code_backtick", &["-w", "88", "-"], "fmr-e51l");
 }
 
-/// ESCALATED Python-bug divergence (fmr-e51l): when a line contains the
-/// escaped-backtick span `` `\`` ``, Python/marko mis-pairs the *subsequent*
-/// backticks and strips the spaces around later code spans
-/// (`` `x`status from`y` `` instead of `` `x` status from `y` ``). Rust (comrak)
-/// produces the correct, space-preserving output. Matching Python here would mean
-/// reproducing a marko parser bug and emitting broken markdown, so this is
-/// surfaced for a maintainer decision rather than "fixed". The golden holds
-/// Python's (buggy) output, so this test is RED until the divergence is resolved
-/// upstream or accepted as a tolerated variation.
+// ESCALATED Python-bug divergence (fmr-e51l): when a line contains an
+// escaped-backtick inline-code span, Python/marko mis-pairs the SUBSEQUENT
+// backticks and strips the spaces around later code spans on the same line
+// (it joins "code-span + word + code-span" with no spaces). Rust (comrak)
+// produces the correct, space-preserving output. Matching Python here would mean
+// reproducing a marko parser bug and emitting broken markdown, so this is
+// surfaced for a maintainer decision rather than "fixed". The golden holds
+// Python's (buggy) output, so this test is RED until the divergence is resolved
+// upstream or accepted as a tolerated variation.
 #[test]
 fn gap_e2_python_backtick_space_bug_escalated() {
     assert_matches_python_golden("gapE2_python_backtick_space_bug", &["-w", "88", "-"], "fmr-e51l");
