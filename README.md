@@ -29,7 +29,7 @@ source) and regenerate via `scripts/generate_rust_readme.py`. -->
 > CLI usage and formatting behavior.
 > It is now the recommended version for CLI and IDE usage.
 > 
-> Last sync: **2026-05-28** against **Python v0.7.0**
+> Last sync: **2026-05-29** against **Python v0.7.0**
 > 
 > For more on the **automated porting methodology** used to build flowmark-rs, see the
 > [**port status report**](docs/port-status.md) and the
