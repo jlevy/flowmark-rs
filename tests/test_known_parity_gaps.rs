@@ -112,18 +112,16 @@ fn gap_e_inline_code_backtick() {
     assert_matches_python_golden("gapE_inline_code_backtick", &["-w", "88", "-"], "fmr-e51l");
 }
 
-// ESCALATED Python-bug divergence (fmr-e51l): when a line contains an
-// escaped-backtick inline-code span, Python/marko mis-pairs the SUBSEQUENT
-// backticks and strips the spaces around later code spans on the same line
-// (it joins "code-span + word + code-span" with no spaces). Rust (comrak)
-// produces the correct, space-preserving output. Matching Python here would mean
-// reproducing a marko parser bug and emitting broken markdown, so this is
-// surfaced for a maintainer decision rather than "fixed". The golden holds
-// Python's (buggy) output, so this test is RED until the divergence is resolved
-// upstream or accepted as a tolerated variation.
+// Regression guard for the CORRECT behavior of an escaped-backtick code span
+// followed by other code spans on the same line: spaces around the later spans are
+// preserved. Rust (comrak) does this correctly; UPSTREAM Python/marko has a bug
+// (fmr-qmd8) where the escaped backtick mis-pairs subsequent backticks and strips
+// those spaces. The golden is the correct, space-preserving output (what fixed
+// Python will also produce). This is the only known place Rust output is *more*
+// correct than current Python; the divergence is tracked upstream, not shimmed.
 #[test]
-fn gap_e2_python_backtick_space_bug_escalated() {
-    assert_matches_python_golden("gapE2_python_backtick_space_bug", &["-w", "88", "-"], "fmr-e51l");
+fn gap_e2_escaped_backtick_preserves_spaces() {
+    assert_matches_python_golden("gapE2_python_backtick_space_bug", &["-w", "88", "-"], "fmr-qmd8");
 }
 
 #[test]
