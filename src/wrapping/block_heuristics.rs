@@ -2,9 +2,51 @@
 //!
 //! Ported from Python: `flowmark/linewrapping/block_heuristics.py`
 
+use regex::Regex;
+use std::sync::LazyLock;
+
+/// GFM table separator row, e.g. `|---|---|` or `| :--- | ---: |`.
+static TABLE_SEPARATOR_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\|(\s*:?-+:?\s*\|)+\s*$").expect("valid TABLE_SEPARATOR_RE"));
+
 /// Check if a line looks like a GFM table row.
 pub(crate) fn line_is_table_row(line: &str) -> bool {
     line.trim_start().starts_with('|')
+}
+
+/// Check if a line is a GFM table separator row (e.g. `|---|---|`).
+pub(crate) fn line_is_table_separator(line: &str) -> bool {
+    TABLE_SEPARATOR_RE.is_match(line.trim())
+}
+
+/// Normalize a table separator row to exactly 3 dashes per cell, preserving
+/// alignment colons (e.g. `|---------|:----|` -> `| --- | :--- |`). Returns the
+/// line unchanged if it is not a separator row.
+pub(crate) fn normalize_table_separator(line: &str) -> String {
+    if !line_is_table_separator(line) {
+        return line.to_string();
+    }
+    let stripped = line.trim();
+    // Remove leading `|` and optional trailing `|`, then split into cells.
+    let mut inner = &stripped[1..];
+    if let Some(rest) = inner.strip_suffix('|') {
+        inner = rest;
+    }
+    let cells: Vec<String> = inner
+        .split('|')
+        .map(|cell| {
+            let cell = cell.trim();
+            let left = cell.starts_with(':');
+            let right = cell.ends_with(':');
+            match (left, right) {
+                (true, true) => ":---:".to_string(),
+                (true, false) => ":---".to_string(),
+                (false, true) => "---:".to_string(),
+                (false, false) => "---".to_string(),
+            }
+        })
+        .collect();
+    format!("| {} |", cells.join(" | "))
 }
 
 /// Check if a line looks like a `CommonMark` list item.
