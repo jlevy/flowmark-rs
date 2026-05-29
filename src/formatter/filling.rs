@@ -2131,12 +2131,21 @@ fn item_needs_child_spacing<'a>(
             if !parent_is_tight {
                 return true;
             }
-            // For tight preserved lists, only add spacing if there are multiple paragraphs
-            let para_count = children
-                .iter()
-                .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
-                .count();
-            para_count > 1
+            // fmr-fle0: For tight preserved lists, preserve SOURCE spacing — add
+            // within-item spacing only where two children were originally separated
+            // by a blank line. The previous `para_count > 1` heuristic wrongly added
+            // blank lines around a fenced code block written tight between two
+            // paragraphs (the paragraphs are separated by the code block, not a
+            // blank), where Python/marko keeps the whole item tight.
+            let mut prev_end: usize = 0;
+            for c in &children {
+                let start = c.data.borrow().sourcepos.start.line;
+                if prev_end > 0 && start > prev_end + 1 {
+                    return true;
+                }
+                prev_end = last_content_line(c);
+            }
+            false
         }
         ListSpacing::Tight => {
             // Python's tight mode adds within-item spacing for items with:
