@@ -62,6 +62,12 @@ jobs:
       - run: cargo test --locked --all-features
         env:
           RUSTFLAGS: "-D warnings"
+          # fmr-gkas: enable the cross-binary + golden-drift parity tests
+          # (tests/test_parity_cross_binary.rs) so CI actually gates parity and
+          # detects golden drift against Python flowmark. Scoped to Linux: those
+          # tests compare Python vs Rust output byte-for-byte and would fail on
+          # Windows CRLF; parity is platform-independent, so one runner suffices.
+          FLOWMARK_PARITY_PYTHON: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
 
   test-lib-only:
     name: Test library (no default features)

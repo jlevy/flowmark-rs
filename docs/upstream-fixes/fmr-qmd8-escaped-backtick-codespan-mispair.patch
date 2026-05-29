@@ -1,0 +1,90 @@
+From 7fdf7a0f8666a278be3bbd45f1cd5923d67236f3 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Fri, 29 May 2026 06:43:13 +0000
+Subject: [PATCH] fix: escaped-backtick code span mis-pairs subsequent
+ backticks, stripping spaces
+
+A line containing an escaped-backtick inline code span (`\``) caused marko's
+code-span matcher to treat the backtick in \` as a span delimiter, mis-pairing every
+following backtick on the same line and stripping the spaces around later code spans:
+
+  `\`` and `x` status from `y`   ->   `\`` and `x`status from`y`
+
+Protect backslash-escaped backticks with a Private Use Area placeholder before
+parsing and restore after rendering, so code-span pairing is unaffected. Adds a
+regression test (test_filling.py). Reported by the flowmark-rs port (fmr-qmd8), where
+the comrak-based parser already handles this via the same escape-protection approach.
+
+Co-authored-by: flowmark-rs parity review
+---
+ src/flowmark/linewrapping/markdown_filling.py | 16 ++++++++++++++++
+ tests/test_filling.py                         | 15 +++++++++++++++
+ 2 files changed, 31 insertions(+)
+
+diff --git a/src/flowmark/linewrapping/markdown_filling.py b/src/flowmark/linewrapping/markdown_filling.py
+index 94828db..b188c45 100644
+--- a/src/flowmark/linewrapping/markdown_filling.py
++++ b/src/flowmark/linewrapping/markdown_filling.py
+@@ -27,6 +27,10 @@ from flowmark.transforms.doc_transforms import rewrite_text_across_inlines, rewr
+ from flowmark.typography.ellipses import ellipses as apply_ellipses
+ from flowmark.typography.smartquotes import smart_quotes
+ 
++# Private Use Area stand-in for the backtick in a `\`` escape, used to hide it from
++# marko's code-span matcher during parsing (see fill_markdown). U+E000 + ord("`").
++_ESCAPED_BACKTICK_PLACEHOLDER = chr(0xE060)
++
+ 
+ def fill_markdown(
+     markdown_text: str,
+@@ -84,6 +88,15 @@ def fill_markdown(
+     # from incorrectly merging tags with lists/tables.
+     markdown_text = preprocess_tag_block_spacing(markdown_text)
+ 
++    # Protect backslash-escaped backticks before parsing. Otherwise marko's code-span
++    # matcher treats the backtick in `\`` as a span delimiter, which mis-pairs the
++    # *following* backticks on the same line and strips the spaces around later code
++    # spans (e.g. `\`` and `x` status from `y`  ->  `\`` and `x`status from`y`). The
++    # placeholder is a non-backtick character so code-span pairing is unaffected; it is
++    # restored verbatim after rendering. (Matches the flowmark-rs port's escape
++    # protection.)
++    markdown_text = markdown_text.replace("\\`", "\\" + _ESCAPED_BACKTICK_PLACEHOLDER)
++
+     # Parse and render.
+     marko = flowmark_markdown(line_wrapper, list_spacing)
+     document = marko.parse(markdown_text)
+@@ -95,6 +108,9 @@ def fill_markdown(
+         rewrite_text_content(document, apply_ellipses, coalesce_lines=True)
+     result = marko.render(document)
+ 
++    # Restore protected escaped backticks.
++    result = result.replace("\\" + _ESCAPED_BACKTICK_PLACEHOLDER, "\\`")
++
+     # Reattach frontmatter if it was present
+     if frontmatter:
+         result = frontmatter + result
+diff --git a/tests/test_filling.py b/tests/test_filling.py
+index e328a6d..0bc4cfa 100644
+--- a/tests/test_filling.py
++++ b/tests/test_filling.py
+@@ -342,3 +342,18 @@ def test_standalone_wide_table():
+     result_lines = result.strip().split("\n")
+     table_lines = [line for line in result_lines if line.startswith("|")]
+     assert len(table_lines) == 4  # header + separator + 2 data rows
++
++
++def test_escaped_backtick_preserves_following_code_span_spaces():
++    """
++    Regression: an escaped-backtick inline code span (`` `\\`` ``) must not cause the
++    following backticks on the same line to be mis-paired, which would strip the spaces
++    around later code spans.
++
++    Without protection, marko's code-span matcher treats the backtick in `\\`` as a
++    delimiter, shifting every later code-span boundary by one:
++    "`\\`` and `x` status from `y`" -> "`\\`` and `x`status from`y`".
++    See flowmark-rs fmr-qmd8.
++    """
++    src = "See `\\`` and `x` status from `y`.\n"
++    assert fill_markdown(src) == src
+-- 
+2.43.0
+

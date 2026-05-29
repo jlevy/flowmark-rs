@@ -1245,7 +1245,12 @@ fn remove_period_escapes_preserving_code(line: &str) -> String {
 fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
     let data = node.data.borrow();
     match &data.value {
-        NodeValue::List(_) | NodeValue::Item(_) => {
+        // fmr-rscu: TaskItem must recurse like Item. comrak reports a task-list
+        // item's own sourcepos as extending through the trailing blank line
+        // (e.g. `- [ ] b\n\n* * *` ends the item at the blank), so falling through
+        // to the `_` arm over-counts the list's end and wrongly marks the
+        // following thematic break as originally-tight (dropping its blank).
+        NodeValue::List(_) | NodeValue::Item(_) | NodeValue::TaskItem(_) => {
             drop(data);
             if let Some(last_child) = node.children().last() {
                 last_content_line(last_child)
@@ -1253,6 +1258,17 @@ fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
                 let sp = node.data.borrow().sourcepos;
                 if sp.end.line >= sp.start.line { sp.end.line } else { sp.start.line }
             }
+        }
+        // fmr-5vyd: comrak reports an *indented* code block's end line as including
+        // trailing blank lines, which makes the `originally_tight` check treat a
+        // following block as tight even when the source separated them with a blank.
+        // Compute the true last content line from the literal (start + content lines
+        // minus trailing blanks). Fenced blocks report an accurate end line (the
+        // closing fence), so leave those to the default arm.
+        NodeValue::CodeBlock(cb) if !cb.fenced => {
+            let sp = data.sourcepos;
+            let content_lines = cb.literal.trim_end_matches('\n').lines().count();
+            if content_lines == 0 { sp.start.line } else { sp.start.line + content_lines - 1 }
         }
         _ => {
             let sp = data.sourcepos;
@@ -1344,6 +1360,8 @@ fn render_block_children<'a>(
     let mut prev_was_list_or_table = false;
     let mut prev_was_paragraph = false;
     let mut prev_was_thematic_break = false;
+    let mut prev_was_code_block = false;
+    let mut prev_was_list = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
@@ -1351,8 +1369,10 @@ fn render_block_children<'a>(
         let child_is_html_comment = is_html_comment_only(child);
         let child_is_list = matches!(child.data.borrow().value, NodeValue::List(_));
         let child_is_code_block = matches!(child.data.borrow().value, NodeValue::CodeBlock(_));
+        let child_is_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
         let child_is_thematic_break = matches!(child.data.borrow().value, NodeValue::ThematicBreak);
         let child_is_table = matches!(child.data.borrow().value, NodeValue::Table(_));
+        let child_is_blockquote = matches!(child.data.borrow().value, NodeValue::BlockQuote);
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -1412,6 +1432,37 @@ fn render_block_children<'a>(
                 // a table written tight against the preceding paragraph stays
                 // tight, matching Python flowmark v0.7.0.
                 true
+            } else if child_is_blockquote && prev_was_paragraph {
+                // Rule 7: Paragraph → blockquote (tight): suppress (fmr-iblt).
+                // A blockquote written directly under a paragraph (e.g. a bold
+                // label line "**Current text:**\n> [quote]") stays tight, matching
+                // Python/marko. comrak otherwise forces a blank separator.
+                true
+            } else if child_is_paragraph && prev_was_code_block {
+                // Rule 8: Code block → paragraph (tight): suppress (fmr-h5u3).
+                // The reverse of Rule 4 — a paragraph written directly after a
+                // closing code fence stays tight, matching Python/marko.
+                true
+            } else if child_is_list && (prev_was_list || prev_was_code_block) {
+                // Rule 9: list → list and code block → list (tight): suppress
+                // (fmr-27ba / fmr-5vyd). Adjacent lists (e.g. an ordered list
+                // interrupted by a bullet sublist) and a list written directly after
+                // a code block stay tight, matching Python/marko. Relies on the
+                // `last_content_line` fix for indented code blocks so a blank-
+                // separated code block + list is not mis-detected as tight.
+                true
+            } else if child_is_blockquote && prev_was_list {
+                // Rule 10: list → blockquote (tight): suppress (fmr-27ba).
+                true
+            } else if child_is_code_block && prev_was_list {
+                // Rule 11: list → code block (tight): suppress (fmr-27ba). A fenced
+                // code block written directly after a list stays tight, matching
+                // Python/marko.
+                true
+            } else if child_is_code_block && prev_was_code_block {
+                // Rule 12: code block → code block (tight): suppress (fmr-27ba).
+                // Adjacent fenced code blocks stay tight, matching Python/marko.
+                true
             } else {
                 false
             }
@@ -1456,6 +1507,8 @@ fn render_block_children<'a>(
             matches!(child.data.borrow().value, NodeValue::List(_) | NodeValue::Table(_));
         prev_was_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
         prev_was_thematic_break = child_is_thematic_break;
+        prev_was_code_block = child_is_code_block;
+        prev_was_list = child_is_list;
         prev_source_end_line = child_source_end;
     }
 
@@ -1940,13 +1993,40 @@ fn render_block<'a>(
                 && trimmed.chars().filter(|&c| c == '<').count() > 0;
 
             if has_text_content && trimmed.len() > 40 {
-                // Collapse internal whitespace and wrap as text
-                // Join all lines into a single line first
-                let single_line: String =
-                    literal.lines().map(str::trim).collect::<Vec<_>>().join(" ").trim().to_string();
-                let wrapped = line_wrapper(&single_line, prefix, subsequent_prefix);
-                output.push_str(&wrapped);
-                output.push('\n');
+                // fmr-8vy3: Preserve blank-line-separated paragraphs within the HTML
+                // block. Python/marko reflows each paragraph independently and keeps
+                // the blank line between them; collapsing the whole block onto one
+                // logical line (the previous behavior) lost internal blank lines in
+                // multi-paragraph HTML comments (e.g. generated-file banners).
+                let mut paragraphs: Vec<String> = Vec::new();
+                let mut cur: Vec<&str> = Vec::new();
+                for line in literal.lines() {
+                    if line.trim().is_empty() {
+                        if !cur.is_empty() {
+                            paragraphs
+                                .push(cur.iter().map(|s| s.trim()).collect::<Vec<_>>().join(" "));
+                            cur.clear();
+                        }
+                    } else {
+                        cur.push(line);
+                    }
+                }
+                if !cur.is_empty() {
+                    paragraphs.push(cur.iter().map(|s| s.trim()).collect::<Vec<_>>().join(" "));
+                }
+                for (pi, para) in paragraphs.iter().enumerate() {
+                    if pi > 0 {
+                        // blank line between paragraphs
+                        output.push('\n');
+                    }
+                    let (p, sp) = if pi == 0 {
+                        (prefix, subsequent_prefix)
+                    } else {
+                        (subsequent_prefix, subsequent_prefix)
+                    };
+                    output.push_str(&line_wrapper(para.trim(), p, sp));
+                    output.push('\n');
+                }
             } else {
                 // Short or non-wrappable HTML: pass through as-is
                 output.push_str(prefix);
@@ -2067,20 +2147,18 @@ fn render_block<'a>(
 
 /// Check if a list item needs blank lines between its children.
 ///
-/// In Loose mode or when the list is natively loose (Preserve + `!tight`):
-/// always add blank lines between children.
+/// In Loose mode: always add blank lines between children.
 ///
 /// In Tight mode: Python makes the list loose between ITEMS (handled by
 /// `is_tight`), but within each item only adds spacing when the item has
 /// code blocks, multiple paragraphs, or complex sublists (sublists with
 /// deeper nesting). Simple para+sublist items stay tight within.
 ///
-/// In Preserve mode with tight list: only add spacing for multiple paragraphs.
-fn item_needs_child_spacing<'a>(
-    node: &'a AstNode<'a>,
-    parent_is_tight: bool,
-    list_spacing: ListSpacing,
-) -> bool {
+/// In Preserve mode: preserve the item's OWN source spacing — add a blank
+/// between two children only where they were originally separated by a blank
+/// line — independent of whether the enclosing list is loose (`fmr-fle0`,
+/// `fmr-n49e`).
+fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, list_spacing: ListSpacing) -> bool {
     let children: Vec<_> = node.children().collect();
     if children.len() <= 1 {
         return false;
@@ -2089,15 +2167,23 @@ fn item_needs_child_spacing<'a>(
     match list_spacing {
         ListSpacing::Loose => true,
         ListSpacing::Preserve => {
-            if !parent_is_tight {
-                return true;
+            // fmr-fle0 / fmr-n49e: In Preserve mode, within-item spacing follows the
+            // item's OWN source structure — add a blank between two children only
+            // where they were originally separated by a blank line — independent of
+            // whether the enclosing list is loose. (The previous code blanket-added
+            // spacing to every item of a loose list, and earlier still used a
+            // `para_count > 1` heuristic that mis-spaced a code block written tight
+            // between two paragraphs. Python/marko keeps each item's source
+            // tightness regardless of inter-item looseness.)
+            let mut prev_end: usize = 0;
+            for c in &children {
+                let start = c.data.borrow().sourcepos.start.line;
+                if prev_end > 0 && start > prev_end + 1 {
+                    return true;
+                }
+                prev_end = last_content_line(c);
             }
-            // For tight preserved lists, only add spacing if there are multiple paragraphs
-            let para_count = children
-                .iter()
-                .filter(|c| matches!(c.data.borrow().value, NodeValue::Paragraph))
-                .count();
-            para_count > 1
+            false
         }
         ListSpacing::Tight => {
             // Python's tight mode adds within-item spacing for items with:
@@ -2202,7 +2288,7 @@ fn render_list_item<'a>(
         }
     });
 
-    let needs_spacing = item_needs_child_spacing(node, parent_is_tight, list_spacing);
+    let needs_spacing = item_needs_child_spacing(node, list_spacing);
 
     for (i, child) in children.iter().enumerate() {
         let (p, sp) = if first_child {
@@ -2339,8 +2425,25 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
         NodeValue::Text(text) => text.to_string(),
 
         NodeValue::Code(code) => {
+            // fmr-e51l: match marko's render_code_span — content that starts or ends
+            // with a backtick is fenced with `` `` `` + single-space padding, else a
+            // single backtick.
+            //
+            // Two complications vs. marko:
+            //  1. The literal may carry PUA escape placeholders (e.g. `\`` encoded as
+            //     U+E060 + U+E100) that the global restore pass turns back into real
+            //     backticks AFTER rendering — so the boundary check must use the
+            //     decoded form, not the raw literal.
+            //  2. comrak parses an ambiguous single-backtick span whose escaped
+            //     content "ends" with a backtick (`` `\`x\`` ``) as ONE span, whereas
+            //     marko fragments it into single-backtick pieces. Gating the
+            //     double-backtick form on `num_backticks >= 2` (the source actually
+            //     used a multi-backtick delimiter) reproduces marko's output in both
+            //     cases: double-backtick sources stay `` `` … `` ``, single-backtick
+            //     sources stay `` `…` ``.
             let text = &code.literal;
-            if text.starts_with('`') || text.ends_with('`') {
+            let decoded = restore_pua_escape_placeholders(text);
+            if code.num_backticks >= 2 && (decoded.starts_with('`') || decoded.ends_with('`')) {
                 format!("`` {text} ``")
             } else {
                 format!("`{text}`")

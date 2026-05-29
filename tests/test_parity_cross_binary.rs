@@ -21,7 +21,11 @@ fn flowmark_uvx_spec() -> String {
 }
 
 fn parity_python_enabled() -> bool {
-    std::env::var("FLOWMARK_PARITY_PYTHON").is_ok()
+    // Value-based (not just presence) so CI can disable on non-Linux runners by
+    // setting `0`: these tests compare Python vs Rust output byte-for-byte and would
+    // spuriously fail on Windows CRLF. Parity is platform-independent, so gating on
+    // one runner (ubuntu) is sufficient.
+    std::env::var("FLOWMARK_PARITY_PYTHON").as_deref() == Ok("1")
 }
 
 fn python_flowmark_available() -> bool {
