@@ -143,6 +143,12 @@ fn gap_h_list_code_tight() {
 }
 
 #[test]
+fn gap_h_code_code_tight() {
+    // fmr-27ba
+    assert_matches_python_golden("gapH_code_code_tight", &["-w", "88", "-"], "fmr-27ba");
+}
+
+#[test]
 fn gap_h_list_blockquote_tight() {
     // fmr-27ba
     assert_matches_python_golden("gapH_list_blockquote_tight", &["-w", "88", "-"], "fmr-27ba");

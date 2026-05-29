@@ -1459,6 +1459,10 @@ fn render_block_children<'a>(
                 // code block written directly after a list stays tight, matching
                 // Python/marko.
                 true
+            } else if child_is_code_block && prev_was_code_block {
+                // Rule 12: code block → code block (tight): suppress (fmr-27ba).
+                // Adjacent fenced code blocks stay tight, matching Python/marko.
+                true
             } else {
                 false
             }
