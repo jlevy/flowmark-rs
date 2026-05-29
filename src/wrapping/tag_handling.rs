@@ -366,10 +366,8 @@ pub(crate) fn add_tag_newline_handling(
             let is_first = i == 0;
             let cur_initial_indent = if is_first { initial_indent } else { subsequent_indent };
             let segment_lines: Vec<&str> = segment.split('\n').collect();
-            let all_table_rows = segment_lines
-                .iter()
-                .filter(|l| !l.trim().is_empty())
-                .all(|l| line_is_table_row(l));
+            let all_table_rows =
+                segment_lines.iter().filter(|l| !l.trim().is_empty()).all(|l| line_is_table_row(l));
             let wrapped = if all_table_rows {
                 segment_lines
                     .iter()
