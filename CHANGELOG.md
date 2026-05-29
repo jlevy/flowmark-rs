@@ -29,9 +29,9 @@ rework from upstream.
 ### Parity bug fixes
 
 A real-world corpus sweep (playbook + upstream docs) surfaced edge-case CLI divergences
-the curated fixtures missed. All were fixed (not tolerated) and each is backed by a
-discriminating test in `tests/test_known_parity_gaps.rs`, generated from the Python
-v0.7.0 reference:
+the curated fixtures missed.
+All were fixed (not tolerated) and each is backed by a discriminating test in
+`tests/test_known_parity_gaps.rs`, generated from the Python v0.7.0 reference:
 
 - **Block tightness preservation:** adjacent blocks written tight in the source
   (list→list, list→code, code→list, code→code, list→blockquote, code→paragraph,
@@ -41,28 +41,25 @@ v0.7.0 reference:
   longer collapsed onto one line.
 - **List/tasklist → thematic break:** the blank line before a `* * *` following a task
   list is preserved.
-- **`--plaintext` tag-newline:** adjacent `{% %}` / Markform tags are wrapped instead
-  of glued; paired-tag atomic patterns accept a non-letter first char.
-- **Inline code-span backtick fence:** code-span fence matching now follows marko's
+- **`--plaintext` tag-newline:** adjacent `{% %}` / Markform tags are wrapped instead of
+  glued; paired-tag atomic patterns accept a non-letter first char.
+- **Inline code-span backtick fence:** code-span fence matching now follows marko’s
   `num_backticks` gating.
-- **Malformed GFM table reflow:** ports flowmark's table-row preservation and separator
+- **Malformed GFM table reflow:** ports flowmark’s table-row preservation and separator
   normalization into the wrap path.
-- **Reference-image inlining (D19):** `![alt][label]`, `![alt][]`, and shortcut
-  `![alt]` now inline to `![alt](url)` (or `![alt](url "title")`) during
-  pre-parse, matching Python's `render_image` which always emits the inline
-  form.
-  Previously the COMRAK-WORKAROUND1 PUA marker leaked into the image URL,
-  producing literal `\u{F000}HEX\u{F001}` (or the legacy plain-text label)
-  in the rendered output.
+- **Reference-image inlining (D19):** `![alt][label]`, `![alt][]`, and shortcut `![alt]`
+  now inline to `![alt](url)` (or `![alt](url "title")`) during pre-parse, matching
+  Python’s `render_image` which always emits the inline form.
+  Previously the COMRAK-WORKAROUND1 PUA marker leaked into the image URL, producing
+  literal `\u{F000}HEX\u{F001}` (or the legacy plain-text label) in the rendered output.
   Surfaced by the closed PR #54 reproducer.
-- **Badge-pattern reference links:** `[![alt][img]][url]` (image as the text
-  of a reference link, the classic GitHub-badge shape) now round-trips
-  cleanly.
-  Previously the trailing `[url]` was misread as a shortcut ref due to the
-  inner `]`, appending a stray `[]` to the rendered output.
-- **Ref-def label lowercasing (D20):** `[Foo]: url` is emitted as
-  `[foo]: url` to match Python flowmark's `render_link_ref_def`, which
-  uses `element.label` (marko normalizes ref-def labels to lowercase).
+- **Badge-pattern reference links:** `[![alt][img]][url]` (image as the text of a
+  reference link, the classic GitHub-badge shape) now round-trips cleanly.
+  Previously the trailing `[url]` was misread as a shortcut ref due to the inner `]`,
+  appending a stray `[]` to the rendered output.
+- **Ref-def label lowercasing (D20):** `[Foo]: url` is emitted as `[foo]: url` to match
+  Python flowmark’s `render_link_ref_def`, which uses `element.label` (marko normalizes
+  ref-def labels to lowercase).
   Definition URL and title are preserved verbatim.
 
 > One escaped-backtick code-span case (`fmr-qmd8`) remains where this port is *more*

@@ -23,8 +23,8 @@ plaintext modes, and across every supported flag combination.
 > All were fixed (corpus now 24 lines / 2 files); the only remaining divergence is a
 > single **upstream Python/marko bug** (`fmr-qmd8`, filed as
 > [jlevy/flowmark#58](https://github.com/jlevy/flowmark/issues/58)) where Rust’s output
-> is the more-correct one. See
-> [Parity gaps](#parity-gaps--found-and-resolved-2026-05-29-deep-parity-push) below.
+> is the more-correct one.
+> See [Parity gaps](#parity-gaps--found-and-resolved-2026-05-29-deep-parity-push) below.
 
 This is one of the first fully automated ports of a complex Python program to Rust,
 managed through a systematic
@@ -88,8 +88,11 @@ skipped). Remaining process item: implement the planned CommonMark spec gate (`f
 ### Remaining divergence — one upstream Python/marko bug
 
 `fmr-qmd8` — filed upstream as
-[jlevy/flowmark#58](https://github.com/jlevy/flowmark/issues/58): on a line containing an escaped-backtick code span
-(` `\` ``), Python/marko mis-pairs the subsequent backticks and **strips the spaces** around later code spans on that line. **Rust (comrak) is correct** — space-preserving. The 24 remaining corpus diff lines (`plan-2026-02-17-exact-parity.md`, `2026-05-28-sync-*.md`) are this Python bug, not a Rust deficiency. Per the porting playbook, the fix belongs upstream; the issue carries the repro, a suggested fix, and its regression test. This port already produces the correct output and asserts it in `gap_e2_escaped_backtick_preserves_spaces` — when the upstream fix lands the two sides become byte-identical and the regression tests stay synchronized.
+[jlevy/flowmark#58](https://github.com/jlevy/flowmark/issues/58): on a line containing
+an escaped-backtick code span
+(` `\` ``), Python/marko mis-pairs the subsequent backticks and **strips the spaces** around later code spans on that line. **Rust (comrak) is correct** — space-preserving. The 24 remaining corpus diff lines (`plan-2026-02-17-exact-parity.md`, `2026-05-28-sync-*.md`) are this Python bug, not a Rust deficiency. Per the porting playbook, the fix belongs upstream; the issue carries the repro, a suggested fix, and its regression test. This port already produces the correct output and asserts it in `gap_e2_escaped_backtick_preserves_spaces`
+— when the upstream fix lands the two sides become byte-identical and the regression
+tests stay synchronized.
 
 ### Active Parity Pursuit (Principle 2)
 
