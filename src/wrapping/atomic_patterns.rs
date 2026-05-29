@@ -101,15 +101,19 @@ pub(crate) static ATOMIC_CONSTRUCT_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
         // Markdown links: [text](url) or [text][ref] or [text]
         r"\[[^\]]*\](?:\([^)]*\)|\[[^\]]*\])?",
         // Paired Jinja tags: {% tag %}...{% /tag %}
-        // The opening tag must start with a letter (not `/`) to avoid
-        // matching two closing tags as a pair.
-        r"\{%\s+[a-zA-Z][^%]*%\}\s*\{%\s*/[^%]*%\}",
+        // The opening tag's first content char must not be `/` (or whitespace),
+        // approximating Python's `(?!\s*/)` lookahead so two closing tags aren't
+        // matched as a pair. Any other first char is allowed, including Markform
+        // anchors like `{% #poor %}` (fmr-ktp9). The `\s*` between the tags matches
+        // a source newline, so a closing tag on its own line stays atomic with the
+        // preceding tag (newline preserved), matching Python.
+        r"\{%\s*[^/%\s][^%]*%\}\s*\{%\s*/[^%]*%\}",
         // Paired Jinja comments: {# tag #}...{# /tag #}
-        r"\{#\s*[a-zA-Z][^#]*#\}\s*\{#\s*/[^#]*#\}",
+        r"\{#\s*[^/#\s][^#]*#\}\s*\{#\s*/[^#]*#\}",
         // Paired Jinja vars: {{ tag }}...{{ /tag }}
-        r"\{\{\s*[a-zA-Z][^}]*\}\}\s*\{\{\s*/[^}]*\}\}",
+        r"\{\{\s*[^/}\s][^}]*\}\}\s*\{\{\s*/[^}]*\}\}",
         // Paired HTML comments: <!-- tag -->...<!-- /tag -->
-        r"<!--\s*[a-zA-Z:][^-]*(?:-[^-]+)*-->\s*<!--\s*/[^-]*(?:-[^-]+)*-->",
+        r"<!--\s*[^/\-\s][^-]*(?:-[^-]+)*-->\s*<!--\s*/[^-]*(?:-[^-]+)*-->",
         // Single Jinja tags
         SINGLE_JINJA_TAG.pattern,
         SINGLE_JINJA_COMMENT.pattern,
