@@ -1350,6 +1350,7 @@ fn render_block_children<'a>(
     let mut prev_was_paragraph = false;
     let mut prev_was_thematic_break = false;
     let mut prev_was_code_block = false;
+    let mut prev_was_list = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
@@ -1431,6 +1432,19 @@ fn render_block_children<'a>(
                 // The reverse of Rule 4 — a paragraph written directly after a
                 // closing code fence stays tight, matching Python/marko.
                 true
+            } else if child_is_list && prev_was_list {
+                // Rule 9: list → list (tight): suppress (fmr-27ba). Adjacent lists
+                // (e.g. an ordered list interrupted by a bullet sublist) stay tight,
+                // matching Python/marko.
+                // NOTE: code block → list is intentionally NOT handled here — the
+                // `originally_tight` check over-counts an *indented* code block's end
+                // line (it includes trailing blank lines), so suppressing here would
+                // wrongly drop the blank when the source actually separated them.
+                // Tracked in fmr-27ba pending a last_content_line audit for code blocks.
+                true
+            } else if child_is_blockquote && prev_was_list {
+                // Rule 10: list → blockquote (tight): suppress (fmr-27ba).
+                true
             } else {
                 false
             }
@@ -1476,6 +1490,7 @@ fn render_block_children<'a>(
         prev_was_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
         prev_was_thematic_break = child_is_thematic_break;
         prev_was_code_block = child_is_code_block;
+        prev_was_list = child_is_list;
         prev_source_end_line = child_source_end;
     }
 
