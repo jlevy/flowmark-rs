@@ -117,3 +117,9 @@ fn gap_f_paragraph_blockquote_tight() {
     // fmr-iblt
     assert_matches_python_golden("gapF_paragraph_blockquote_tight", &["-w", "88", "-"], "fmr-iblt");
 }
+
+#[test]
+fn gap_g_codeblock_paragraph_tight() {
+    // fmr-h5u3
+    assert_matches_python_golden("gapG_codeblock_paragraph_tight", &["-w", "88", "-"], "fmr-h5u3");
+}

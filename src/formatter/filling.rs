@@ -1349,6 +1349,7 @@ fn render_block_children<'a>(
     let mut prev_was_list_or_table = false;
     let mut prev_was_paragraph = false;
     let mut prev_was_thematic_break = false;
+    let mut prev_was_code_block = false;
 
     for child in node.children() {
         let child_is_block = is_block_element(child);
@@ -1356,6 +1357,7 @@ fn render_block_children<'a>(
         let child_is_html_comment = is_html_comment_only(child);
         let child_is_list = matches!(child.data.borrow().value, NodeValue::List(_));
         let child_is_code_block = matches!(child.data.borrow().value, NodeValue::CodeBlock(_));
+        let child_is_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
         let child_is_thematic_break = matches!(child.data.borrow().value, NodeValue::ThematicBreak);
         let child_is_table = matches!(child.data.borrow().value, NodeValue::Table(_));
         let child_is_blockquote = matches!(child.data.borrow().value, NodeValue::BlockQuote);
@@ -1424,6 +1426,11 @@ fn render_block_children<'a>(
                 // label line "**Current text:**\n> [quote]") stays tight, matching
                 // Python/marko. comrak otherwise forces a blank separator.
                 true
+            } else if child_is_paragraph && prev_was_code_block {
+                // Rule 8: Code block → paragraph (tight): suppress (fmr-h5u3).
+                // The reverse of Rule 4 — a paragraph written directly after a
+                // closing code fence stays tight, matching Python/marko.
+                true
             } else {
                 false
             }
@@ -1468,6 +1475,7 @@ fn render_block_children<'a>(
             matches!(child.data.borrow().value, NodeValue::List(_) | NodeValue::Table(_));
         prev_was_paragraph = matches!(child.data.borrow().value, NodeValue::Paragraph);
         prev_was_thematic_break = child_is_thematic_break;
+        prev_was_code_block = child_is_code_block;
         prev_source_end_line = child_source_end;
     }
 
