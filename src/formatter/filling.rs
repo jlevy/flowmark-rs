@@ -2425,8 +2425,25 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
         NodeValue::Text(text) => text.to_string(),
 
         NodeValue::Code(code) => {
+            // fmr-e51l: match marko's render_code_span — content that starts or ends
+            // with a backtick is fenced with `` `` `` + single-space padding, else a
+            // single backtick.
+            //
+            // Two complications vs. marko:
+            //  1. The literal may carry PUA escape placeholders (e.g. `\`` encoded as
+            //     U+E060 + U+E100) that the global restore pass turns back into real
+            //     backticks AFTER rendering — so the boundary check must use the
+            //     decoded form, not the raw literal.
+            //  2. comrak parses an ambiguous single-backtick span whose escaped
+            //     content "ends" with a backtick (`` `\`x\`` ``) as ONE span, whereas
+            //     marko fragments it into single-backtick pieces. Gating the
+            //     double-backtick form on `num_backticks >= 2` (the source actually
+            //     used a multi-backtick delimiter) reproduces marko's output in both
+            //     cases: double-backtick sources stay `` `` … `` ``, single-backtick
+            //     sources stay `` `…` ``.
             let text = &code.literal;
-            if text.starts_with('`') || text.ends_with('`') {
+            let decoded = restore_pua_escape_placeholders(text);
+            if code.num_backticks >= 2 && (decoded.starts_with('`') || decoded.ends_with('`')) {
                 format!("`` {text} ``")
             } else {
                 format!("`{text}`")
