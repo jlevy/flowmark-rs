@@ -2114,20 +2114,18 @@ fn render_block<'a>(
 
 /// Check if a list item needs blank lines between its children.
 ///
-/// In Loose mode or when the list is natively loose (Preserve + `!tight`):
-/// always add blank lines between children.
+/// In Loose mode: always add blank lines between children.
 ///
 /// In Tight mode: Python makes the list loose between ITEMS (handled by
 /// `is_tight`), but within each item only adds spacing when the item has
 /// code blocks, multiple paragraphs, or complex sublists (sublists with
 /// deeper nesting). Simple para+sublist items stay tight within.
 ///
-/// In Preserve mode with tight list: only add spacing for multiple paragraphs.
-fn item_needs_child_spacing<'a>(
-    node: &'a AstNode<'a>,
-    parent_is_tight: bool,
-    list_spacing: ListSpacing,
-) -> bool {
+/// In Preserve mode: preserve the item's OWN source spacing — add a blank
+/// between two children only where they were originally separated by a blank
+/// line — independent of whether the enclosing list is loose (`fmr-fle0`,
+/// `fmr-n49e`).
+fn item_needs_child_spacing<'a>(node: &'a AstNode<'a>, list_spacing: ListSpacing) -> bool {
     let children: Vec<_> = node.children().collect();
     if children.len() <= 1 {
         return false;
@@ -2136,15 +2134,14 @@ fn item_needs_child_spacing<'a>(
     match list_spacing {
         ListSpacing::Loose => true,
         ListSpacing::Preserve => {
-            if !parent_is_tight {
-                return true;
-            }
-            // fmr-fle0: For tight preserved lists, preserve SOURCE spacing — add
-            // within-item spacing only where two children were originally separated
-            // by a blank line. The previous `para_count > 1` heuristic wrongly added
-            // blank lines around a fenced code block written tight between two
-            // paragraphs (the paragraphs are separated by the code block, not a
-            // blank), where Python/marko keeps the whole item tight.
+            // fmr-fle0 / fmr-n49e: In Preserve mode, within-item spacing follows the
+            // item's OWN source structure — add a blank between two children only
+            // where they were originally separated by a blank line — independent of
+            // whether the enclosing list is loose. (The previous code blanket-added
+            // spacing to every item of a loose list, and earlier still used a
+            // `para_count > 1` heuristic that mis-spaced a code block written tight
+            // between two paragraphs. Python/marko keeps each item's source
+            // tightness regardless of inter-item looseness.)
             let mut prev_end: usize = 0;
             for c in &children {
                 let start = c.data.borrow().sourcepos.start.line;
@@ -2258,7 +2255,7 @@ fn render_list_item<'a>(
         }
     });
 
-    let needs_spacing = item_needs_child_spacing(node, parent_is_tight, list_spacing);
+    let needs_spacing = item_needs_child_spacing(node, list_spacing);
 
     for (i, child) in children.iter().enumerate() {
         let (p, sp) = if first_child {
