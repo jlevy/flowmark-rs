@@ -2347,7 +2347,13 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
 
         NodeValue::Code(code) => {
             let text = &code.literal;
-            if text.starts_with('`') || text.ends_with('`') {
+            // fmr-0lz1: the literal may contain PUA escape placeholders (U+E000+x
+            // with a U+E100 filler) that the global restore pass turns back into
+            // real characters — including backticks — AFTER rendering. Decide the
+            // fence from the decoded form so a content backtick gets the safe
+            // `` `` `` + padding fence rather than collapsing to a single backtick.
+            let decoded = restore_pua_escape_placeholders(text);
+            if decoded.starts_with('`') || decoded.ends_with('`') {
                 format!("`` {text} ``")
             } else {
                 format!("`{text}`")
