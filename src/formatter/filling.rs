@@ -1454,6 +1454,11 @@ fn render_block_children<'a>(
             } else if child_is_blockquote && prev_was_list {
                 // Rule 10: list → blockquote (tight): suppress (fmr-27ba).
                 true
+            } else if child_is_code_block && prev_was_list {
+                // Rule 11: list → code block (tight): suppress (fmr-27ba). A fenced
+                // code block written directly after a list stays tight, matching
+                // Python/marko.
+                true
             } else {
                 false
             }
