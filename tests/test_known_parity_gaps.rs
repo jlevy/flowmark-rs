@@ -33,7 +33,8 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
 fn rust_binary() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug/flowmark")
+    let name = if cfg!(windows) { "flowmark.exe" } else { "flowmark" };
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug").join(name)
 }
 
 fn run_rust_stdin(args: &[&str], input: &str) -> String {
@@ -64,13 +65,22 @@ fn run_rust_stdin(args: &[&str], input: &str) -> String {
 
 /// Run the Rust CLI over `<stem>.md` and assert byte-identity with the Python-reference
 /// golden `<stem>.expected.md`. Diverging output (the gap) makes this fail.
+/// Line endings are normalized to `\n` so the goldens behave identically regardless of
+/// the checkout's autocrlf setting (matching `tests/test_ref_docs.rs`).
 fn assert_matches_python_golden(stem: &str, args: &[&str], issue: &str) {
+    fn norm(s: &str) -> String {
+        s.replace("\r\n", "\n")
+    }
     let dir = Path::new("tests/parity/known-gaps");
-    let input = std::fs::read_to_string(dir.join(format!("{stem}.md")))
-        .unwrap_or_else(|e| panic!("read {stem}.md: {e}"));
-    let expected = std::fs::read_to_string(dir.join(format!("{stem}.expected.md")))
-        .unwrap_or_else(|e| panic!("read {stem}.expected.md: {e}"));
-    let actual = run_rust_stdin(args, &input);
+    let input = norm(
+        &std::fs::read_to_string(dir.join(format!("{stem}.md")))
+            .unwrap_or_else(|e| panic!("read {stem}.md: {e}")),
+    );
+    let expected = norm(
+        &std::fs::read_to_string(dir.join(format!("{stem}.expected.md")))
+            .unwrap_or_else(|e| panic!("read {stem}.expected.md: {e}")),
+    );
+    let actual = norm(&run_rust_stdin(args, &input));
     assert_eq!(
         actual, expected,
         "\nKNOWN PARITY GAP ({issue}): Rust output differs from Python v0.7.0 reference \

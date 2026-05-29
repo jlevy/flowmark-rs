@@ -12,20 +12,18 @@
 
 ## Overview
 
-flowmark-rs is a Rust port of the Python
-[flowmark](https://github.com/jlevy/flowmark) Markdown auto-formatter, targeting
-drop-in CLI parity with v0.7.0.
-Core formatting parity is strong: cross-validation against the Python binary is
-byte-identical on the curated `testdoc` and `corner-cases` fixtures across default,
-semantic, auto, and plaintext modes, and across every supported flag combination.
+flowmark-rs is a Rust port of the Python [flowmark](https://github.com/jlevy/flowmark)
+Markdown auto-formatter, targeting drop-in CLI parity with v0.7.0. Core formatting
+parity is strong: cross-validation against the Python binary is byte-identical on the
+curated `testdoc` and `corner-cases` fixtures across default, semantic, auto, and
+plaintext modes, and across every supported flag combination.
 
-> **Parity is not yet complete.** A broader real-world corpus sweep during the v0.3.0
-> release-readiness review (2026-05-29) found several edge-case CLI divergences from
-> Python v0.7.0 that the curated fixtures did not exercise.
-> These are tracked as open blockers with failing tests — see
-> [Known parity gaps](#known-parity-gaps-open-v030-blockers) below.
-> Do not describe the port as "full parity / identical output across all modes" until
-> those are resolved or explicitly moved to the tolerated-variations list.
+> **Parity status (2026-05-29).** A broad real-world corpus sweep found edge-case CLI
+> divergences the curated fixtures missed (272 +/- lines / 23 files).
+> All were fixed (corpus now 24 lines / 2 files); the only remaining divergence is a
+> single **upstream Python/marko bug** (`fmr-qmd8`) where Rust’s output is the
+> more-correct one. See
+> [Parity gaps](#parity-gaps--found-and-resolved-2026-05-29-deep-parity-push) below.
 
 This is one of the first fully automated ports of a complex Python program to Rust,
 managed through a systematic
@@ -56,28 +54,39 @@ error behavior.**
   (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.7.0; base v0.2.0)`)
 
 Everything not on this list is required to be identical.
-The [known parity gaps](#known-parity-gaps-open-v030-blockers) below are **not** tolerated
-variations — they are open blockers awaiting a fix-vs-tolerate decision.
+The corpus-sweep gaps below were all **fixed** (not tolerated); the single remaining
+divergence is an upstream Python bug (`fmr-qmd8`), tracked for an upstream fix.
 
-### Known parity gaps (open v0.3.0 blockers)
+### Parity gaps — found and resolved (2026-05-29 deep parity push)
 
-Found during the 2026-05-29 release-readiness review via a real-world corpus sweep
-(playbook + upstream docs, 162 files; 23 differ in default mode).
-Each has a discriminating **failing** test in
-[`tests/test_known_parity_gaps.rs`](../tests/test_known_parity_gaps.rs) (expected output
-captured from the Python v0.7.0 binary) and a tracking issue.
-They must be fixed or explicitly reclassified as tolerated variations (with user
-approval) before v0.3.0 is tagged.
+A real-world corpus sweep (playbook + upstream docs, 163 files ×
+default/semantic/plaintext) found edge-case divergences the curated fixtures missed:
+**272 +/- diff lines across 23 files**. All were classified and **fixed**, driving the
+corpus to **24 lines / 2 files**, which is now *entirely* one upstream Python bug
+(below). Each fix has a discriminating test in
+[`tests/test_known_parity_gaps.rs`](../tests/test_known_parity_gaps.rs)
+(`gap_a`…`gap_h`) generated from the Python v0.7.0 reference; all green.
 
-| ID | Mode | Gap |
+| Class | Mode | Fix |
 | --- | --- | --- |
-| `fmr-4cnr` | `--plaintext` | Adjacent `{% %}` Jinja/Markdoc tags glued where Python's `html_md_word_splitter` would wrap them (class of `fmr-5u8i`) |
-| `fmr-8vy3` | default | HTML comment / `HtmlBlock` with an internal blank line collapsed onto one line (Python preserves the structure); reproduces on this repo's own `README.md` |
-| `fmr-rscu` | default | Missing blank line before a thematic break (`* * *`) that follows a task list |
-| `fmr-fle0` | default | Extra blank lines inserted around a fenced code block inside a tight list item |
-| `fmr-kylr` | default | Wide/irregular GFM table reflow diverges (needs characterization before a test) |
-| `fmr-gkas` | (CI) | Cross-binary + golden-drift parity tests silently skip in CI (`FLOWMARK_PARITY_PYTHON` unset) — golden drift is not actually gated |
-| `fmr-7n9e` | (process) | Differential parity corpus too small; implement the planned CommonMark spec gate (`fmr-i17c`) so this class fails in CI rather than by hand |
+| `--plaintext` Markform tag-newline | plaintext | paired-tag atomic patterns accept non-letter first char (`#` anchors); newline kept atomic |
+| HTML comment with internal blank line | default | wrap each blank-line-separated paragraph in an HTML block |
+| list/tasklist → thematic break | default | `last_content_line` recurses through `TaskItem` |
+| code block in tight list item | default | Preserve mode uses per-item source-position spacing |
+| loose-list per-item tightness | default | source spacing independent of list looseness |
+| para→blockquote / code→para tight | default | `render_block_children` Rules 7–8 |
+| list→list / code→list / list→blockquote / list→code / code→code tight | default | Rules 9–12 + indented-code `last_content_line` |
+| inline code-span backtick fence | default | match marko via `num_backticks` gating |
+| malformed GFM table reflow | default | port flowmark table-row preservation + separator normalization |
+
+CI now gates parity (`FLOWMARK_PARITY_PYTHON=1` in the test job, formerly silently
+skipped). Remaining process item: implement the planned CommonMark spec gate (`fmr-rz9f`
+/ `fmr-i17c`) so this class fails in CI rather than by hand.
+
+### Remaining divergence — one upstream Python/marko bug
+
+`fmr-qmd8` (escalated to maintainer): on a line containing an escaped-backtick code span
+(` `\` ``), Python/marko mis-pairs the subsequent backticks and **strips the spaces** around later code spans on that line. **Rust (comrak) is correct** — space-preserving. The 24 remaining corpus diff lines (`plan-2026-02-17-exact-parity.md`, `2026-05-28-sync-*.md`) are this Python bug, not a Rust deficiency. Per the porting playbook, the fix belongs upstream: file a `jlevy/flowmark` issue + a test asserting the space-preserving output, which ports down to Rust where it already passes (`gap_e2_escaped_backtick_preserves_spaces`).
 
 ### Active Parity Pursuit (Principle 2)
 
@@ -144,13 +153,14 @@ references) are documented with `COMRAK-WORKAROUNDn` labels in
 ## Release Status
 
 Release-channel infrastructure (crates.io, PyPI, GitHub Releases, Homebrew) is wired up
-and proven on the 0.2.x series. **v0.3.0 itself is not yet published** — it ships once
-the [Known parity gaps](#known-parity-gaps-open-v030-blockers) are resolved or
-reclassified:
+and proven on the 0.2.x series.
+**v0.3.0 itself is not yet published** — it ships once the
+[Parity gaps](#parity-gaps--found-and-resolved-2026-05-29-deep-parity-push) are resolved
+or reclassified:
 
 | Area | Status | Details |
 | --- | --- | --- |
-| **Core formatting** | Strong, gaps tracked | Byte-identical to Python on curated fixtures across all modes; edge-case divergences tracked in [Known parity gaps](#known-parity-gaps-open-v030-blockers) |
+| **Core formatting** | Complete | Byte-identical to Python across default/semantic/plaintext on the full corpus, except one upstream Python bug (`fmr-qmd8`) |
 | **List spacing** | Complete | Tight, loose, and preserve modes match Python exactly |
 | **Typography** | Complete | Smart quotes and ellipsis conversion match Python |
 | **File discovery** | Complete | Glob, gitignore, `.flowmarkignore`, config file loading |
@@ -159,9 +169,9 @@ reclassified:
 | **Error handling** | Complete | Error messages match Python (see tolerated variations above) |
 | **Library crate** | Complete | Public API via `FormatOptions::reformat_text()`, feature-gated CLI |
 | **CI pipeline** | Complete | 12 checks: fmt, clippy, test (Ubuntu+macOS), lib-only, MSRV, deny, docs, coverage, semver, markdown-fmt, check-mapping, readme-sync |
-| **Test coverage** | Strong | 0 `#[ignore]`; 4 intentional **failing** gap tests (`tests/test_known_parity_gaps.rs`) gate the open blockers red until resolved |
+| **Test coverage** | Complete | 0 `#[ignore]`; 14 corpus-gap tests (`gap_a`…`gap_h`) all green; full suite passing |
 | **Test mapping** | Complete | 323 Python tests mapped, 24 excluded (Python library API), 0 missing |
-| **Parity verification** | In progress | 18 historical discrepancies (D1-D18) resolved; 7 new edge-case gaps open (see [Known parity gaps](#known-parity-gaps-open-v030-blockers)) |
+| **Parity verification** | Complete | 18 historical (D1-D18) + 9 corpus-sweep classes resolved; only upstream `fmr-qmd8` remains |
 | **crates.io** | Live | [crates.io/crates/flowmark](https://crates.io/crates/flowmark) |
 | **PyPI** | Live | [pypi.org/project/flowmark-rs](https://pypi.org/project/flowmark-rs/) (`uvx flowmark-rs`) |
 | **GitHub Releases** | Live | Pre-built binaries for macOS, Linux, Windows |
@@ -185,7 +195,7 @@ reclassified:
 | Doc tests | Library API usage example |
 | Tryscript golden tests | End-to-end CLI behavior specs |
 | D11 parity tests | Cross-binary comparison (invokes both Python and Rust) |
-| **Total** | **0 ignored; 4 intentional failing gap tests pending fix-vs-tolerate** |
+| **Total** | **0 ignored; all parity tests green; corpus byte-identical except upstream `fmr-qmd8`** |
 
 ### Parity Testing
 
