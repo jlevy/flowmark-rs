@@ -1947,13 +1947,40 @@ fn render_block<'a>(
                 && trimmed.chars().filter(|&c| c == '<').count() > 0;
 
             if has_text_content && trimmed.len() > 40 {
-                // Collapse internal whitespace and wrap as text
-                // Join all lines into a single line first
-                let single_line: String =
-                    literal.lines().map(str::trim).collect::<Vec<_>>().join(" ").trim().to_string();
-                let wrapped = line_wrapper(&single_line, prefix, subsequent_prefix);
-                output.push_str(&wrapped);
-                output.push('\n');
+                // fmr-8vy3: Preserve blank-line-separated paragraphs within the HTML
+                // block. Python/marko reflows each paragraph independently and keeps
+                // the blank line between them; collapsing the whole block onto one
+                // logical line (the previous behavior) lost internal blank lines in
+                // multi-paragraph HTML comments (e.g. generated-file banners).
+                let mut paragraphs: Vec<String> = Vec::new();
+                let mut cur: Vec<&str> = Vec::new();
+                for line in literal.lines() {
+                    if line.trim().is_empty() {
+                        if !cur.is_empty() {
+                            paragraphs
+                                .push(cur.iter().map(|s| s.trim()).collect::<Vec<_>>().join(" "));
+                            cur.clear();
+                        }
+                    } else {
+                        cur.push(line);
+                    }
+                }
+                if !cur.is_empty() {
+                    paragraphs.push(cur.iter().map(|s| s.trim()).collect::<Vec<_>>().join(" "));
+                }
+                for (pi, para) in paragraphs.iter().enumerate() {
+                    if pi > 0 {
+                        // blank line between paragraphs
+                        output.push('\n');
+                    }
+                    let (p, sp) = if pi == 0 {
+                        (prefix, subsequent_prefix)
+                    } else {
+                        (subsequent_prefix, subsequent_prefix)
+                    };
+                    output.push_str(&line_wrapper(para.trim(), p, sp));
+                    output.push('\n');
+                }
             } else {
                 // Short or non-wrappable HTML: pass through as-is
                 output.push_str(prefix);
