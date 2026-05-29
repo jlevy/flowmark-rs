@@ -21,8 +21,9 @@ plaintext modes, and across every supported flag combination.
 > **Parity status (2026-05-29).** A broad real-world corpus sweep found edge-case CLI
 > divergences the curated fixtures missed (272 +/- lines / 23 files).
 > All were fixed (corpus now 24 lines / 2 files); the only remaining divergence is a
-> single **upstream Python/marko bug** (`fmr-qmd8`) where Rust’s output is the
-> more-correct one. See
+> single **upstream Python/marko bug** (`fmr-qmd8`, filed as
+> [jlevy/flowmark#58](https://github.com/jlevy/flowmark/issues/58)) where Rust’s output
+> is the more-correct one. See
 > [Parity gaps](#parity-gaps--found-and-resolved-2026-05-29-deep-parity-push) below.
 
 This is one of the first fully automated ports of a complex Python program to Rust,
@@ -55,7 +56,8 @@ error behavior.**
 
 Everything not on this list is required to be identical.
 The corpus-sweep gaps below were all **fixed** (not tolerated); the single remaining
-divergence is an upstream Python bug (`fmr-qmd8`), tracked for an upstream fix.
+divergence is an upstream Python bug (`fmr-qmd8`), filed as
+[jlevy/flowmark#58](https://github.com/jlevy/flowmark/issues/58).
 
 ### Parity gaps — found and resolved (2026-05-29 deep parity push)
 
@@ -85,8 +87,9 @@ skipped). Remaining process item: implement the planned CommonMark spec gate (`f
 
 ### Remaining divergence — one upstream Python/marko bug
 
-`fmr-qmd8` (escalated to maintainer): on a line containing an escaped-backtick code span
-(` `\` ``), Python/marko mis-pairs the subsequent backticks and **strips the spaces** around later code spans on that line. **Rust (comrak) is correct** — space-preserving. The 24 remaining corpus diff lines (`plan-2026-02-17-exact-parity.md`, `2026-05-28-sync-*.md`) are this Python bug, not a Rust deficiency. Per the porting playbook, the fix belongs upstream: file a `jlevy/flowmark` issue + a test asserting the space-preserving output, which ports down to Rust where it already passes (`gap_e2_escaped_backtick_preserves_spaces`).
+`fmr-qmd8` — filed upstream as
+[jlevy/flowmark#58](https://github.com/jlevy/flowmark/issues/58): on a line containing an escaped-backtick code span
+(` `\` ``), Python/marko mis-pairs the subsequent backticks and **strips the spaces** around later code spans on that line. **Rust (comrak) is correct** — space-preserving. The 24 remaining corpus diff lines (`plan-2026-02-17-exact-parity.md`, `2026-05-28-sync-*.md`) are this Python bug, not a Rust deficiency. Per the porting playbook, the fix belongs upstream; the issue carries the repro, a suggested fix, and its regression test. This port already produces the correct output and asserts it in `gap_e2_escaped_backtick_preserves_spaces` — when the upstream fix lands the two sides become byte-identical and the regression tests stay synchronized.
 
 ### Active Parity Pursuit (Principle 2)
 
