@@ -1268,11 +1268,7 @@ fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
         NodeValue::CodeBlock(cb) if !cb.fenced => {
             let sp = data.sourcepos;
             let content_lines = cb.literal.trim_end_matches('\n').lines().count();
-            if content_lines == 0 {
-                sp.start.line
-            } else {
-                sp.start.line + content_lines - 1
-            }
+            if content_lines == 0 { sp.start.line } else { sp.start.line + content_lines - 1 }
         }
         _ => {
             let sp = data.sourcepos;
