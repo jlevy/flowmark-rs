@@ -129,6 +129,9 @@ fn gap_e_inline_code_backtick() {
 // those spaces. The golden is the correct, space-preserving output (what fixed
 // Python will also produce). This is the only known place Rust output is *more*
 // correct than current Python; the divergence is tracked upstream, not shimmed.
+// Upstream issue (with repro + suggested fix): jlevy/flowmark#58. When that lands,
+// Python and this port become byte-identical here and the two regression tests stay
+// synchronized.
 #[test]
 fn gap_e2_escaped_backtick_preserves_spaces() {
     assert_matches_python_golden("gapE2_python_backtick_space_bug", &["-w", "88", "-"], "fmr-qmd8");
