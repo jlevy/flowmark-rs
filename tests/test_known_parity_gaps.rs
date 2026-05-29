@@ -15,11 +15,16 @@
 //! into `tests/parity/known-gaps/*.expected.md` via the Python binary. The Rust side is
 //! the built CLI binary, so both sides share the same (CLI) output convention.
 //!
-//! Tracking:
+//! Tracking (epic fmr-4o6y — exact parity with Python flowmark v0.7.0):
 //! - gap A  -> fmr-4cnr (class of fmr-5u8i): `--plaintext` glues adjacent `{% %}` tags
 //! - gap B  -> fmr-8vy3: HTML comment with internal blank line collapsed
-//! - gap C1 -> fmr-rscu: missing blank line before thematic break after a task list
+//! - gap C1 -> fmr-rscu: missing blank line before thematic break after a list
 //! - gap C2 -> fmr-fle0: extra blank lines around code block in a tight list item
+//! - gap E  -> fmr-0lz1: inline code span with backtick renders with wrong delimiter
+//! - gap F  -> fmr-iblt: paragraph→blockquote (tight in source) gets an inserted blank
+//!
+//! (gap D, fmr-kylr, wide/irregular table reflow — needs characterization first, no
+//! test here yet.)
 #![allow(clippy::unwrap_used)]
 #![cfg(feature = "cli")]
 
@@ -99,4 +104,16 @@ fn gap_c1_tasklist_thematic_break() {
 fn gap_c2_listitem_codeblock() {
     // fmr-fle0
     assert_matches_python_golden("gapC2_listitem_codeblock", &["-w", "88", "-"], "fmr-fle0");
+}
+
+#[test]
+fn gap_e_inline_code_backtick() {
+    // fmr-0lz1
+    assert_matches_python_golden("gapE_inline_code_backtick", &["-w", "88", "-"], "fmr-0lz1");
+}
+
+#[test]
+fn gap_f_paragraph_blockquote_tight() {
+    // fmr-iblt
+    assert_matches_python_golden("gapF_paragraph_blockquote_tight", &["-w", "88", "-"], "fmr-iblt");
 }

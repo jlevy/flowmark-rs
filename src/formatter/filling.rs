@@ -1353,6 +1353,7 @@ fn render_block_children<'a>(
         let child_is_code_block = matches!(child.data.borrow().value, NodeValue::CodeBlock(_));
         let child_is_thematic_break = matches!(child.data.borrow().value, NodeValue::ThematicBreak);
         let child_is_table = matches!(child.data.borrow().value, NodeValue::Table(_));
+        let child_is_blockquote = matches!(child.data.borrow().value, NodeValue::BlockQuote);
 
         // Check if current child is a hard-break heading
         let child_is_hard_break_heading =
@@ -1411,6 +1412,12 @@ fn render_block_children<'a>(
                 // The "Wide Table Adjacent to Paragraph" fixture exercises this —
                 // a table written tight against the preceding paragraph stays
                 // tight, matching Python flowmark v0.7.0.
+                true
+            } else if child_is_blockquote && prev_was_paragraph {
+                // Rule 7: Paragraph → blockquote (tight): suppress (fmr-iblt).
+                // A blockquote written directly under a paragraph (e.g. a bold
+                // label line "**Current text:**\n> [quote]") stays tight, matching
+                // Python/marko. comrak otherwise forces a blank separator.
                 true
             } else {
                 false
