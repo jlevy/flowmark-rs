@@ -1259,6 +1259,21 @@ fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
                 if sp.end.line >= sp.start.line { sp.end.line } else { sp.start.line }
             }
         }
+        // fmr-5vyd: comrak reports an *indented* code block's end line as including
+        // trailing blank lines, which makes the `originally_tight` check treat a
+        // following block as tight even when the source separated them with a blank.
+        // Compute the true last content line from the literal (start + content lines
+        // minus trailing blanks). Fenced blocks report an accurate end line (the
+        // closing fence), so leave those to the default arm.
+        NodeValue::CodeBlock(cb) if !cb.fenced => {
+            let sp = data.sourcepos;
+            let content_lines = cb.literal.trim_end_matches('\n').lines().count();
+            if content_lines == 0 {
+                sp.start.line
+            } else {
+                sp.start.line + content_lines - 1
+            }
+        }
         _ => {
             let sp = data.sourcepos;
             if sp.end.line >= sp.start.line { sp.end.line } else { sp.start.line }
@@ -1432,15 +1447,13 @@ fn render_block_children<'a>(
                 // The reverse of Rule 4 — a paragraph written directly after a
                 // closing code fence stays tight, matching Python/marko.
                 true
-            } else if child_is_list && prev_was_list {
-                // Rule 9: list → list (tight): suppress (fmr-27ba). Adjacent lists
-                // (e.g. an ordered list interrupted by a bullet sublist) stay tight,
-                // matching Python/marko.
-                // NOTE: code block → list is intentionally NOT handled here — the
-                // `originally_tight` check over-counts an *indented* code block's end
-                // line (it includes trailing blank lines), so suppressing here would
-                // wrongly drop the blank when the source actually separated them.
-                // Tracked in fmr-27ba pending a last_content_line audit for code blocks.
+            } else if child_is_list && (prev_was_list || prev_was_code_block) {
+                // Rule 9: list → list and code block → list (tight): suppress
+                // (fmr-27ba / fmr-5vyd). Adjacent lists (e.g. an ordered list
+                // interrupted by a bullet sublist) and a list written directly after
+                // a code block stay tight, matching Python/marko. Relies on the
+                // `last_content_line` fix for indented code blocks so a blank-
+                // separated code block + list is not mis-detected as tight.
                 true
             } else if child_is_blockquote && prev_was_list {
                 // Rule 10: list → blockquote (tight): suppress (fmr-27ba).

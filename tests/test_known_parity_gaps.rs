@@ -130,8 +130,11 @@ fn gap_h_list_list_tight() {
     assert_matches_python_golden("gapH_list_list_tight", &["-w", "88", "-"], "fmr-27ba");
 }
 
-// NOTE: code-block → list tightness (gapH_code_list) is deferred under fmr-27ba —
-// it needs a last_content_line fix for indented code blocks first.
+#[test]
+fn gap_h_code_list_tight() {
+    // fmr-27ba / fmr-5vyd
+    assert_matches_python_golden("gapH_code_list_tight", &["-w", "88", "-"], "fmr-5vyd");
+}
 
 #[test]
 fn gap_h_list_blockquote_tight() {
