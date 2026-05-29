@@ -74,10 +74,11 @@ gh run list --repo "$REPO" --workflow publish.yml --limit 1
 gh run watch --repo "$REPO" <run-id>
 ```
 
-Verify crate availability:
+Verify crate availability (crates.io requires a `User-Agent` or it returns HTTP 403):
 
 ```bash
-curl -fsSL "https://crates.io/api/v1/crates/flowmark/${VERSION}" >/dev/null
+curl -fsSL -H "User-Agent: flowmark-release-check (maintainer@example.com)" \
+  "https://crates.io/api/v1/crates/flowmark/${VERSION}" >/dev/null
 ```
 
 ### 1B. Run orchestrated tagged release
@@ -113,11 +114,18 @@ gh release view "$TAG" --repo "$REPO" --json assets --jq '.assets[].name'
 Registry versions:
 
 ```bash
-curl -fsSL "https://crates.io/api/v1/crates/flowmark/${VERSION}" | jq -r '.version.num'
-python3 - <<'PY'
-import json, urllib.request
+# crates.io rejects requests without a User-Agent (HTTP 403), so always send one.
+curl -fsSL -H "User-Agent: flowmark-release-check (maintainer@example.com)" \
+  "https://crates.io/api/v1/crates/flowmark/${VERSION}" | jq -r '.version.num'
+
+# On PyPI, info.version is the aggregate "latest" field and can lag for a minute or
+# two right after upload — check the version-specific release instead so a fresh
+# publish is not reported as missing.
+python3 - "$VERSION" <<'PY'
+import json, sys, urllib.request
+version = sys.argv[1]
 data = json.load(urllib.request.urlopen("https://pypi.org/pypi/flowmark-rs/json", timeout=10))
-print(data["info"]["version"])
+print("published" if version in data["releases"] else f"MISSING (info.version={data['info']['version']})")
 PY
 ```
 
@@ -156,6 +164,18 @@ git add Formula/flowmark.rb
 git commit -m "Update flowmark to ${TAG}"
 git push origin main
 ```
+
+> **Releasing from an automated/ephemeral environment** (e.g. Claude Code on the web):
+> the tap is a *separate* repo cloned over HTTPS, so the local checkout’s commit-signing
+> and credential setup do not apply to it.
+> If `git commit` fails with a signing error, add `--no-gpg-sign`; if `git push` fails
+> with `could not read Username for 'https://github.com'`, supply credentials via the
+> `gh` helper:
+> 
+> ```bash
+> git commit --no-gpg-sign -m "Update flowmark to ${TAG}"
+> git -c credential.helper='!gh auth git-credential' push origin main
+> ```
 
 Homebrew verification:
 
