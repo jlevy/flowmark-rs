@@ -1245,7 +1245,12 @@ fn remove_period_escapes_preserving_code(line: &str) -> String {
 fn last_content_line<'a>(node: &'a AstNode<'a>) -> usize {
     let data = node.data.borrow();
     match &data.value {
-        NodeValue::List(_) | NodeValue::Item(_) => {
+        // fmr-rscu: TaskItem must recurse like Item. comrak reports a task-list
+        // item's own sourcepos as extending through the trailing blank line
+        // (e.g. `- [ ] b\n\n* * *` ends the item at the blank), so falling through
+        // to the `_` arm over-counts the list's end and wrongly marks the
+        // following thematic break as originally-tight (dropping its blank).
+        NodeValue::List(_) | NodeValue::Item(_) | NodeValue::TaskItem(_) => {
             drop(data);
             if let Some(last_child) = node.children().last() {
                 last_content_line(last_child)
