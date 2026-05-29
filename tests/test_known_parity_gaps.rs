@@ -162,6 +162,19 @@ fn gap_h_code_code_tight() {
     assert_matches_python_golden("gapH_code_code_tight", &["-w", "88", "-"], "fmr-27ba");
 }
 
+// ESCALATED parser divergence (fmr-lkk9): a MALFORMED GFM table (pipes with a
+// broken/wrapped delimiter row, e.g. inside a list item) is parsed differently by
+// comrak (one Paragraph with soft breaks -> reflowed) and marko (lenient table-ish
+// rows -> line structure preserved). Reproducing marko's lenient mis-parse of broken
+// markdown would require parser-level changes (forking comrak or fragile pre-parse
+// heuristics) for degenerate input. Surfaced for a maintainer decision. The golden
+// holds Python's output, so this is RED until resolved or accepted as a tolerated
+// variation. Only known to affect one corpus file (a doc with a pre-mangled table).
+#[test]
+fn gap_d_malformed_table_escalated() {
+    assert_matches_python_golden("gapD_malformed_table", &["-w", "88", "-"], "fmr-lkk9");
+}
+
 #[test]
 fn gap_h_list_blockquote_tight() {
     // fmr-27ba
