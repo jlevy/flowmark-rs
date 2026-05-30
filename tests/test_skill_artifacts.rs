@@ -18,15 +18,20 @@ fn discovery_copy_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("skills/flowmark/SKILL.md")
 }
 
+/// Read the committed discovery copy, normalizing CRLF → LF so the line-ending-sensitive
+/// comparisons below hold on Windows (the repo carries no `.gitattributes`, so git may
+/// check the file out with CRLF; the generator output is always LF).
 fn discovery_copy() -> String {
-    std::fs::read_to_string(discovery_copy_path()).expect("read committed discovery copy")
+    std::fs::read_to_string(discovery_copy_path())
+        .expect("read committed discovery copy")
+        .replace("\r\n", "\n")
 }
 
 #[test]
 fn test_discovery_copy_matches_generator() {
     assert_eq!(
         discovery_copy(),
-        discovery_skill_text(),
+        discovery_skill_text().replace("\r\n", "\n"),
         "committed skills/flowmark/SKILL.md drifted from discovery_skill_text(); regenerate it"
     );
 }

@@ -59,6 +59,10 @@ def rewrite_upstream_local_docs_links(markdown: str) -> str:
     )
 
 
+# Runner-pin placeholder in the shared docs (the `uvx --from flowmark==...` examples).
+# Substituted with the Python parity version, matching upstream generate-python-readme.py.
+VERSION_PLACEHOLDER = "__FLOWMARK_VERSION__"
+
 PERSPECTIVE_FLIP_OLD = (
     "Flowmark comes in two flavors: this Python reference implementation and an "
     "auto-synced\n[Rust port (flowmark-rs)](https://github.com/jlevy/flowmark-rs)."
@@ -69,22 +73,37 @@ PERSPECTIVE_FLIP_NEW = (
     "auto-synced Rust port (flowmark-rs)."
 )
 
+# As of upstream flowmark v0.7.2 the shared README intro was rewritten to neutral,
+# third-person phrasing that names both implementations directly ("written in Python
+# with an auto-synced Rust port"), so there is no Python-first-person sentence left to
+# flip. This anchor confirms we are looking at that (or a newer) neutral intro, so the
+# no-flip path stays guarded against genuine drift rather than silently passing anything.
+NEUTRAL_INTRO_ANCHOR = (
+    "Flowmark is a Markdown auto-formatter, written\n"
+    "[in Python](https://github.com/jlevy/flowmark) with an auto-synced\n"
+    "[Rust port](https://github.com/jlevy/flowmark-rs)"
+)
+
 
 def rewrite_perspective_for_rust_repo(markdown: str) -> str:
-    """Flip Python-perspective phrasing in the shared source to Rust-perspective.
+    """Flip any Python-perspective phrasing in the shared source to Rust-perspective.
 
-    The shared docs live in the Python repo and refer to themselves as "this Python
-    reference implementation"; in the Rust repo's README "this" refers to the Rust
-    port, so the sentence is rephrased to keep the same fact from the Rust side.
-    Raises if the upstream phrasing drifts — better to fail loudly than silently
-    publish the wrong perspective.
+    Older shared docs referred to themselves as "this Python reference implementation";
+    in the Rust repo's README "this" refers to the Rust port, so that sentence was
+    rephrased. Newer (v0.7.2+) shared docs are already perspective-neutral and need no
+    flip. Raises if neither the old flippable sentence nor the new neutral intro is
+    present — better to fail loudly than silently publish the wrong perspective.
     """
-    if PERSPECTIVE_FLIP_OLD not in markdown:
-        raise ValueError(
-            "shared docs no longer contain the expected Python-perspective sentence; "
-            "update PERSPECTIVE_FLIP_OLD in scripts/generate_rust_readme.py"
-        )
-    return markdown.replace(PERSPECTIVE_FLIP_OLD, PERSPECTIVE_FLIP_NEW)
+    if PERSPECTIVE_FLIP_OLD in markdown:
+        return markdown.replace(PERSPECTIVE_FLIP_OLD, PERSPECTIVE_FLIP_NEW)
+    if NEUTRAL_INTRO_ANCHOR in markdown:
+        # Already perspective-neutral; nothing to rewrite.
+        return markdown
+    raise ValueError(
+        "shared docs match neither the legacy Python-perspective sentence nor the "
+        "neutral intro anchor; update PERSPECTIVE_FLIP_OLD / NEUTRAL_INTRO_ANCHOR in "
+        "scripts/generate_rust_readme.py"
+    )
 
 
 def read_msrv(repo_root: Path) -> str:
@@ -165,14 +184,22 @@ def main() -> int:
     if not template_path.exists():
         raise FileNotFoundError(f"missing wrapper template at {template_path}")
 
+    parity_version = read_parity_version(repo_root)
     shared_docs_body = shared_docs_path.read_text(encoding="utf-8").rstrip() + "\n"
     shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
     shared_docs_body = rewrite_perspective_for_rust_repo(shared_docs_body)
+    # The shared docs pin the Python runner with a `__FLOWMARK_VERSION__` placeholder
+    # (the `uvx --from flowmark==... flowmark` examples reference the Python package).
+    # Substitute the parity version so the examples are runnable, mirroring the upstream
+    # generate-python-readme.py; fail loudly if any placeholder survives.
+    shared_docs_body = shared_docs_body.replace(VERSION_PLACEHOLDER, parity_version)
+    if VERSION_PLACEHOLDER in shared_docs_body:
+        raise ValueError(f"{VERSION_PLACEHOLDER} still present after substitution")
     rendered = render_readme(
         template_path,
         shared_docs_body,
         read_msrv(repo_root),
-        read_parity_version(repo_root),
+        parity_version,
         read_last_sync_date(repo_root),
     )
     write_atomic(output_path, rendered)
