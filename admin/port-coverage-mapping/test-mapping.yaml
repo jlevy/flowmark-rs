@@ -2441,4 +2441,7 @@
   status: mapped
   rust_file: tests/tryscript/verbose-docs.tryscript.md
   rust_function: verbose-docs
-  notes: Binary-agnostic tryscript golden test (5 scenarios). Identical file in both repos.
+  notes: Tryscript golden test (14 scenarios). V1-V12 mirror upstream (skill output + cross-agent --surfaces install). V2
+    is adapted to the Rust port's own --docs README headings. V13-V14 add installed-content verification (read the installed
+    SKILL.md / AGENTS.md to assert content + location, not just existence); proposed upstream as jlevy/flowmark#61 to keep
+    both repos in sync.
