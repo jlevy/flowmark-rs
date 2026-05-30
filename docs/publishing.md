@@ -21,6 +21,36 @@ for future hybrid Rust/Python projects.
    - GitHub release updates are idempotent
 4. Homebrew tap updates remain explicit and auditable (manual commit in tap repo).
 
+## Execution Defaults (for agents — no clarification needed)
+
+When asked to “publish the release” / “do the release” / “follow the release process”,
+treat that as full authorization to run this runbook end-to-end with these defaults.
+Do **not** stop to ask about any of the following — they are pre-decided:
+
+1. **Drive the whole flow.** The agent prepares the release-prep change (version +
+   `CHANGELOG.md`), opens the PR, waits for CI green, **merges it to `main`**, then runs
+   the publish workflows.
+   Merging the agent’s own release-prep PR is part of the process.
+2. **Version = current `Cargo.toml` version.** If `CHANGELOG.md` lacks that version’s
+   section, add it (that is the release-prep change).
+   Never bump the version number without explicit instruction.
+3. **Publishing is authorized and runs without pausing.** crates.io + PyPI are
+   immutable, but “publish the release” is the go-ahead.
+   Run the **dry-run gate first**; if it is green, proceed straight through
+   `publish.yml` (crates) and `release.yml` (PyPI + GitHub release) without asking
+   again. If the dry-run **fails**, stop and report.
+4. **Homebrew (Phase 3): the agent does it** via `gh` credentials
+   (`git commit --no-gpg-sign`,
+   `git -c credential.helper='!gh auth git-credential' push`), after the GitHub release
+   publishes `SHA256SUMS`. Only escalate if tap auth genuinely fails.
+5. **CI status checks:** a `DeepSource` check reporting `failure` with body “Analysis in
+   progress…” is a transient placeholder, not a real finding — wait for it to flip
+   rather than treating it as a blocker.
+   All first-party gates (fmt, clippy, tests, parity, semver, README/markdown) must be
+   genuinely green.
+6. **Stop only for:** a failed dry-run, a real (non-placeholder) CI failure, a genuine
+   secret/security finding, or a registry/tag collision (version already published).
+
 ## Variables
 
 ```bash
