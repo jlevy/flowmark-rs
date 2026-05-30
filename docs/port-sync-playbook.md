@@ -261,6 +261,41 @@ For this repo, use these concrete equivalents:
 
    Then follow [`docs/publishing.md`](publishing.md) to cut the Rust release.
 
+### Sync gotchas (lessons folded back from past syncs)
+
+Recurring traps this runbook’s steps don’t otherwise surface.
+Recorded as playbook observations in
+[`repos/rust-porting-playbook/case-studies/flowmark/flowmark-sync-observations-v0.7.2.md`](../repos/rust-porting-playbook/case-studies/flowmark/flowmark-sync-observations-v0.7.2.md).
+
+- **Re-run the doc generators after the submodule bump.**
+  `scripts/generate_rust_readme.py` embeds upstream shared-doc text; when upstream
+  rewrites that text or adds a `__FLOWMARK_VERSION__`-style placeholder, the generator
+  fails (anchored-string or leftover-placeholder).
+  It needs Python 3.14 (`uv run --python 3.14 --script`), so it only fails in the
+  “README generation sync” CI job unless you run it locally.
+- **Line endings: `.gitattributes` enforces LF.** The binary embeds `SKILL.md` via
+  `include_str!`; without LF enforcement a Windows checkout (CRLF) breaks `\n`-anchored
+  assertions — silently, Linux-green.
+  Keep `.gitattributes` (`* text=auto eol=lf`).
+- **Public-API change vs.
+  the published crate.** If the sync changes the public Rust API, check the published
+  baseline (`cargo search flowmark`) and run `cargo semver-checks` early.
+  A breaking change against an already-published version needs a maintainer call: bump
+  the version, or allow the specific lint in `Cargo.toml`
+  (`[package.metadata.cargo-semver-checks.lints]`).
+- **Smoke counts change every sync.** `python/tests/test_smoke.py` asserts hard-coded
+  python/rust/mapping counts; update them after `discover-python`/`discover-rust`.
+- **Corpus gate needs the external corpus.** `scripts/corpus-parity-check.sh` reads
+  `attic/test-docs`, which is not checked in.
+  When absent, substitute a repo-Markdown spot-check (Rust vs Python over `docs/**`,
+  default/semantic/auto) and say so.
+- **Port new golden suites for new CLI surfaces.** When upstream adds tryscript
+  scenarios (e.g. for a new flag), port them; prefer asserting installed **content +
+  location**, not just `test -f` existence.
+- **Record observations at the end.** Per the playbook’s Codified Auto-Sync Process
+  (step 9) and closure loop, record categorized observations and a
+  `_meta/playbook-improvement-log.md` entry — do not end the sync without them.
+
 ## Test Mapping and Parity Verification
 
 The [admin/port-coverage-mapping/](../admin/port-coverage-mapping/) directory contains a
