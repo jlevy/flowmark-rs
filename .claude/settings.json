@@ -19,6 +19,16 @@
             "command": "bash .claude/scripts/tbd-session.sh"
           }
         ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/scripts/port-sync-check.py",
+            "timeout": 15
+          }
+        ]
       }
     ],
     "PostToolUse": [
