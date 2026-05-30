@@ -4,16 +4,16 @@
 > Documents the Rust port lifecycle: parity verification, sync workflow, and port
 > history.
 
-**Last updated:** 2026-05-29
+**Last updated:** 2026-05-30
 
 **Release status:** v0.3.0 **not yet published** — stabilizing toward release.
 
-**Python parity target:** flowmark v0.7.0
+**Python parity target:** flowmark v0.7.2
 
 ## Overview
 
 flowmark-rs is a Rust port of the Python [flowmark](https://github.com/jlevy/flowmark)
-Markdown auto-formatter, targeting drop-in CLI parity with v0.7.0. Core formatting
+Markdown auto-formatter, targeting drop-in CLI parity with v0.7.2. Core formatting
 parity is strong: cross-validation against the Python binary is byte-identical on the
 curated `testdoc` and `corner-cases` fixtures across default, semantic, auto, and
 plaintext modes, and across every supported flag combination.

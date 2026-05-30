@@ -112,3 +112,27 @@ fn test_very_small_width_does_not_panic() {
     );
     assert!(!result.is_empty(), "fill_markdown with width=3 should not panic");
 }
+
+// ===== Issue #42: task-list items must not accumulate spaces after the checkbox =====
+// Ported from test_width_options.py. Comrak already renders the checkbox correctly; these
+// pin the no-double-space + idempotency contract.
+
+#[test]
+fn test_task_list_idempotent_semantic_width0() {
+    let text = "- [ ] Unchecked item one\n- [x] Checked item one\n- Normal list item\n";
+    let once = reformat_text(text, 0, false, true, false, false, false, ListSpacing::Preserve);
+    let twice = reformat_text(&once, 0, false, true, false, false, false, ListSpacing::Preserve);
+    assert_eq!(once, twice);
+    assert!(once.contains("- [ ] Unchecked item one"));
+    assert!(once.contains("- [x] Checked item one"));
+    assert!(!once.contains("]  "), "no double space after the checkbox");
+}
+
+#[test]
+fn test_task_list_idempotent_semantic_default_width() {
+    let text = "- [ ] First task\n- [x] Second task\n";
+    let once = reformat_text(text, 88, false, true, false, false, false, ListSpacing::Preserve);
+    let twice = reformat_text(&once, 88, false, true, false, false, false, ListSpacing::Preserve);
+    assert_eq!(once, twice);
+    assert!(!once.contains("]  "));
+}

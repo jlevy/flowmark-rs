@@ -4,6 +4,7 @@
 //!
 //! These tests require the `cli` feature (they run the flowmark binary).
 #![cfg(feature = "cli")]
+#![allow(clippy::unwrap_used)]
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -452,4 +453,144 @@ fn test_explicit_flag_detection_with_default_value() {
         explicit_out, config_out,
         "explicit --width 88 should override config width=72, producing different output"
     );
+}
+
+// --- Issue #43: exclusions apply to explicitly-named files (not just dirs/globs) ---
+// Ported from test_cli_file_discovery.py.
+
+/// Content long enough that `--auto` would reflow it (so a change is observable).
+fn overlong() -> String {
+    let words = vec!["word"; 30].join(" ");
+    format!("# H\n\n{words}\n")
+}
+
+#[test]
+fn test_force_exclude_explicit_file_skips_formatting() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let f = dir.path().join("t.md");
+    fs::write(&f, overlong()).unwrap();
+    let out = Command::new(flowmark_bin())
+        .args(["--auto", "--force-exclude", "--extend-exclude", "t.md", "t.md"])
+        .current_dir(dir.path())
+        .output()
+        .expect("run");
+    assert!(out.status.success());
+    assert_eq!(fs::read_to_string(&f).unwrap(), overlong(), "untouched");
+}
+
+#[test]
+fn test_explicit_file_overrides_flowmarkignore_by_default() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let f = dir.path().join("t.md");
+    fs::write(&f, overlong()).unwrap();
+    fs::write(dir.path().join(".flowmarkignore"), "t.md\n").unwrap();
+    let out = Command::new(flowmark_bin())
+        .args(["--auto", "t.md"])
+        .current_dir(dir.path())
+        .output()
+        .expect("run");
+    assert!(out.status.success());
+    assert_ne!(fs::read_to_string(&f).unwrap(), overlong(), "explicit name wins without the flag");
+}
+
+#[test]
+fn test_flowmarkignore_applies_to_explicit_file_with_force_exclude() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let f = dir.path().join("t.md");
+    fs::write(&f, overlong()).unwrap();
+    fs::write(dir.path().join(".flowmarkignore"), "t.md\n").unwrap();
+    let out = Command::new(flowmark_bin())
+        .args(["--auto", "--force-exclude", "t.md"])
+        .current_dir(dir.path())
+        .output()
+        .expect("run");
+    assert!(out.status.success());
+    assert_eq!(fs::read_to_string(&f).unwrap(), overlong(), "untouched");
+}
+
+#[test]
+fn test_force_exclude_explicit_multicomponent_pattern() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let api = dir.path().join("docs").join("api");
+    fs::create_dir_all(&api).unwrap();
+    let f = api.join("notes.md");
+    fs::write(&f, overlong()).unwrap();
+    let out = Command::new(flowmark_bin())
+        .args(["--auto", "--force-exclude", "--extend-exclude", "docs/api/", "docs/api/notes.md"])
+        .current_dir(dir.path())
+        .output()
+        .expect("run");
+    assert!(out.status.success());
+    assert_eq!(fs::read_to_string(&f).unwrap(), overlong(), "untouched");
+}
+
+#[test]
+fn test_explicit_file_without_exclusions_is_formatted() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let f = dir.path().join("plain.md");
+    fs::write(&f, overlong()).unwrap();
+    let out = Command::new(flowmark_bin())
+        .args(["--auto", "plain.md"])
+        .current_dir(dir.path())
+        .output()
+        .expect("run");
+    assert!(out.status.success());
+    assert_ne!(fs::read_to_string(&f).unwrap(), overlong(), "reformatted (wrapped)");
+}
+
+// --- Issue #44: --check mode (no writes; non-zero exit if a file would change) ---
+
+#[test]
+fn test_check_reports_and_does_not_write() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let f = dir.path().join("needs.md");
+    fs::write(&f, overlong()).unwrap();
+    let out = Command::new(flowmark_bin()).args(["--check"]).arg(&f).output().expect("run");
+    assert_eq!(out.status.code(), Some(1));
+    assert_eq!(fs::read_to_string(&f).unwrap(), overlong(), "not written");
+    assert!(String::from_utf8_lossy(&out.stderr).contains("Would reformat"));
+}
+
+#[test]
+fn test_check_clean_file_exits_zero() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let f = dir.path().join("clean.md");
+    fs::write(&f, "# Title\n\nShort clean line.\n").unwrap();
+    let out = Command::new(flowmark_bin()).args(["--check"]).arg(&f).output().expect("run");
+    assert_eq!(out.status.code(), Some(0));
+    assert_eq!(String::from_utf8_lossy(&out.stderr), "");
+}
+
+#[test]
+fn test_check_multiple_files_reports_only_dirty() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let clean = dir.path().join("clean.md");
+    fs::write(&clean, "# Title\n\nShort clean line.\n").unwrap();
+    let dirty = dir.path().join("dirty.md");
+    fs::write(&dirty, overlong()).unwrap();
+    let out = Command::new(flowmark_bin())
+        .args(["--check"])
+        .arg(&clean)
+        .arg(&dirty)
+        .output()
+        .expect("run");
+    assert_eq!(out.status.code(), Some(1));
+    let err = String::from_utf8_lossy(&out.stderr);
+    assert!(err.contains("dirty.md"));
+    assert!(!err.contains("clean.md"));
+}
+
+#[test]
+fn test_auto_check_validates_auto_formatting() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let f = dir.path().join("smart.md");
+    // Smart quotes + ellipses only change under --auto; plain --check would miss them.
+    fs::write(&f, "# H\n\n\"hello\"...\n").unwrap();
+    let plain = Command::new(flowmark_bin()).args(["--check"]).arg(&f).output().expect("run");
+    assert_eq!(plain.status.code(), Some(0));
+    let auto =
+        Command::new(flowmark_bin()).args(["--auto", "--check"]).arg(&f).output().expect("run");
+    assert_eq!(auto.status.code(), Some(1));
+    assert_eq!(fs::read_to_string(&f).unwrap(), "# H\n\n\"hello\"...\n");
+    assert!(String::from_utf8_lossy(&auto.stderr).contains("Would reformat"));
 }

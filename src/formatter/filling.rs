@@ -1328,6 +1328,28 @@ fn is_html_comment_only(node: &AstNode) -> bool {
     }
 }
 
+/// True if `trimmed` is a single HTML comment spanning multiple lines with no internal
+/// blank line. Its interior formatting is intentional (structured metadata / form-field
+/// definitions) and must be preserved verbatim rather than reflowed (issue #35).
+///
+/// Multi-*paragraph* comments (with internal blank lines) are excluded: Python disables
+/// marko's `HTMLBlock` and parses those as separate paragraphs that each reflow, so the
+/// existing multi-paragraph reflow path (fmr-8vy3) handles them.
+fn is_multiline_html_comment_block(trimmed: &str) -> bool {
+    if !trimmed.contains('\n') {
+        return false;
+    }
+    if !(trimmed.starts_with("<!--") && trimmed.ends_with("-->")) {
+        return false;
+    }
+    // Only one comment: the sole `-->` is the trailing one.
+    if trimmed.find("-->") != Some(trimmed.len() - "-->".len()) {
+        return false;
+    }
+    // No internal blank line (those split into separate paragraphs under Python).
+    !trimmed.lines().any(|l| l.trim().is_empty())
+}
+
 /// COMRAK-WORKAROUND1: Check if a node is a REFDEF marker (link reference
 /// definition). Consecutive refdefs are grouped tightly (no blank line between
 /// them). Footnote definition markers (FNDEF) are NOT included here because
@@ -1984,6 +2006,22 @@ fn render_block<'a>(
                         return output;
                     }
                 }
+            }
+
+            // A standalone multi-line HTML comment keeps its internal line breaks
+            // verbatim (issue #35). comrak parses block-level `<!-- ... -->` as an
+            // HtmlBlock, so the verbatim preservation Python applies at the paragraph
+            // wrapper must be replicated here, prefixing continuation lines with
+            // `subsequent_prefix` so the comment stays inside its container.
+            if is_multiline_html_comment_block(trimmed) {
+                // Each line is trimmed to match Python: marko parses the comment as a
+                // paragraph and strips leading/trailing whitespace per continuation line,
+                // whereas comrak's HtmlBlock literal keeps it verbatim.
+                for (i, line) in trimmed.split('\n').enumerate() {
+                    let p = if i == 0 { prefix } else { subsequent_prefix };
+                    let _ = writeln!(output, "{p}{}", line.trim());
+                }
+                return output;
             }
 
             // Check if this HTML block has wrappable text content

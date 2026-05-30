@@ -91,25 +91,48 @@ impl FileResolver {
     }
 
     /// Check if an explicitly-named file should be included.
+    ///
+    /// Files named explicitly on the command line override exclusions by default
+    /// (matching Black/Ruff). Under `force_exclude` — the flag pre-commit hooks set —
+    /// both configured/default patterns and a tool ignore file (`.flowmarkignore`)
+    /// apply to explicit files too.
     fn should_include_explicit(&self, path: &Path) -> bool {
         if self.config.force_exclude {
-            if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                if matches_any_pattern(&self.exclude_patterns, name) {
-                    return false;
-                }
+            if spec_matches_path(&self.exclude_patterns, path) {
+                return false;
             }
-            // Check directory components only (skip the last component which is the filename).
-            if let Some(parent) = path.parent() {
-                for component in parent.components() {
-                    let part = component.as_os_str().to_string_lossy();
-                    let dir_with_slash = format!("{part}/");
-                    if matches_any_pattern(&self.exclude_patterns, &dir_with_slash) {
-                        return false;
-                    }
+            if let Some(tool_ignore) = self.load_tool_ignore(path) {
+                if spec_matches_path(&tool_ignore, path) {
+                    return false;
                 }
             }
         }
         !self.exceeds_max_size(path)
+    }
+
+    /// Walk up from the file's directory looking for `.{tool_name}ignore` and return its
+    /// gitignore-style pattern lines (comments and blanks stripped). Mirrors Python
+    /// `load_tool_ignore`.
+    fn load_tool_ignore(&self, path: &Path) -> Option<Vec<String>> {
+        let ignore_name = format!(".{}ignore", self.config.tool_name);
+        let mut current = canonicalize_or_absolute(path.parent()?);
+        loop {
+            let candidate = current.join(&ignore_name);
+            if candidate.is_file() {
+                let text = std::fs::read_to_string(&candidate).ok()?;
+                let patterns: Vec<String> = text
+                    .lines()
+                    .map(str::trim)
+                    .filter(|l| !l.is_empty() && !l.starts_with('#'))
+                    .map(String::from)
+                    .collect();
+                return if patterns.is_empty() { None } else { Some(patterns) };
+            }
+            match current.parent() {
+                Some(p) => current = p.to_path_buf(),
+                None => return None,
+            }
+        }
     }
 
     /// Walk a directory tree using `ignore::WalkBuilder` for efficient traversal.
@@ -232,6 +255,54 @@ impl FileResolver {
             Err(_) => false,
         }
     }
+}
+
+/// Match an explicitly-named file against a gitignore-style pattern list, checking the
+/// basename, the path relative to cwd (so multi-component patterns like `docs/api/`
+/// work), and each ancestor directory component. Mirrors Python `_spec_matches_path`.
+fn spec_matches_path(patterns: &[String], path: &Path) -> bool {
+    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+        if matches_any_pattern(patterns, name) {
+            return true;
+        }
+    }
+    if let Ok(cwd) = std::env::current_dir() {
+        let abs = canonicalize_or_absolute(path);
+        let cwd_abs = canonicalize_or_absolute(&cwd);
+        if let Ok(rel) = abs.strip_prefix(&cwd_abs) {
+            let rel_posix = rel.to_string_lossy().replace('\\', "/");
+            if matches_relative_path(patterns, &rel_posix) {
+                return true;
+            }
+        }
+    }
+    if let Some(parent) = path.parent() {
+        for component in parent.components() {
+            let part = component.as_os_str().to_string_lossy();
+            if matches_any_pattern(patterns, &format!("{part}/")) {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// Match a cwd-relative POSIX path against gitignore-style patterns. Directory patterns
+/// (e.g. `docs/api/`) match the directory and everything beneath it; other patterns are
+/// glob-matched against the whole relative path.
+fn matches_relative_path(patterns: &[String], rel_posix: &str) -> bool {
+    for pattern in patterns {
+        if let Some(dir) = pattern.strip_suffix('/') {
+            if rel_posix == dir || rel_posix.starts_with(&format!("{dir}/")) {
+                return true;
+            }
+        } else if let Ok(gp) = glob::Pattern::new(pattern) {
+            if gp.matches(rel_posix) {
+                return true;
+            }
+        }
+    }
+    false
 }
 
 /// Check if a name matches any of the given gitignore-style patterns.
