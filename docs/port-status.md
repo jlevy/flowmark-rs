@@ -6,7 +6,8 @@
 
 **Last updated:** 2026-05-30
 
-**Release status:** v0.3.0 **not yet published** — stabilizing toward release.
+**Release status:** v0.3.1 **not yet published** (v0.3.0 is on crates.io) — stabilizing
+toward release.
 
 **Python parity target:** flowmark v0.7.2
 
