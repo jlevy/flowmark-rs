@@ -508,6 +508,26 @@ fn test_flowmarkignore_applies_to_explicit_file_with_force_exclude() {
     assert_eq!(fs::read_to_string(&f).unwrap(), overlong(), "untouched");
 }
 
+/// Regression (PR #65 review, P2): a root-anchored `.flowmarkignore` entry (`/docs/api/`)
+/// must exclude an explicitly-named file under `--force-exclude`, matching gitignore /
+/// pathspec semantics and the directory-discovery path (`ignore::WalkBuilder`).
+#[test]
+fn test_force_exclude_explicit_root_anchored_flowmarkignore_pattern() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let api = dir.path().join("docs").join("api");
+    fs::create_dir_all(&api).unwrap();
+    let f = api.join("notes.md");
+    fs::write(&f, overlong()).unwrap();
+    fs::write(dir.path().join(".flowmarkignore"), "/docs/api/\n").unwrap();
+    let out = Command::new(flowmark_bin())
+        .args(["--auto", "--force-exclude", "docs/api/notes.md"])
+        .current_dir(dir.path())
+        .output()
+        .expect("run");
+    assert!(out.status.success());
+    assert_eq!(fs::read_to_string(&f).unwrap(), overlong(), "untouched (root-anchored)");
+}
+
 #[test]
 fn test_force_exclude_explicit_multicomponent_pattern() {
     let dir = tempfile::tempdir().expect("temp dir");

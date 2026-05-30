@@ -96,10 +96,29 @@ fn pin_or_discovery(installed: &str, discovery: &str) -> String {
     if is_pypi_release(installed) { installed.to_string() } else { discovery.to_string() }
 }
 
+/// Choose the flowmark-rs runner pin. A *dev build* (commits ahead of the last release
+/// tag) reports the `Cargo.toml` version, which is not yet on `PyPI` — pinning it would make
+/// `uvx --from flowmark-rs==<pin>` fail to resolve — so fall back to the published
+/// discovery release. Only a build that is *not* a dev build is trusted to report a real
+/// published version (and is still range-checked by `pin_or_discovery`).
+fn resolve_rs_pin(is_dev_build: bool, package_version: &str, discovery: &str) -> String {
+    if is_dev_build {
+        return discovery.to_string();
+    }
+    pin_or_discovery(package_version, discovery)
+}
+
 /// The flowmark-rs version to pin in the recommended `uvx --from flowmark-rs==<pin>`
 /// bootstrap line. Falls back to `FLOWMARK_RS_DISCOVERY_VERSION` for dev/local builds.
+///
+/// `FLOWMARK_GIT_COMMITS_AHEAD` (set by `build.rs`) is the same dev-vs-stable signal
+/// `--version` uses: `> 0` means a dev build whose `CARGO_PKG_VERSION` is unpublished,
+/// while `0`/`unknown` is a real release tag or a published-source build (e.g. crates.io,
+/// `uvx`), where the package version is the correct pin.
 pub fn flowmark_rs_version() -> String {
-    pin_or_discovery(env!("CARGO_PKG_VERSION"), FLOWMARK_RS_DISCOVERY_VERSION)
+    let is_dev_build =
+        env!("FLOWMARK_GIT_COMMITS_AHEAD").parse::<u64>().is_ok_and(|ahead| ahead > 0);
+    resolve_rs_pin(is_dev_build, env!("CARGO_PKG_VERSION"), FLOWMARK_RS_DISCOVERY_VERSION)
 }
 
 /// The authored SKILL.md template (still contains the version placeholders).
@@ -417,6 +436,22 @@ mod tests {
     fn pin_or_discovery_falls_back_on_dev_version() {
         assert_eq!(pin_or_discovery("0.3.0.dev29+c40ee1b", "0.3.0"), "0.3.0");
         assert_eq!(pin_or_discovery("garbage", "0.3.0"), "0.3.0");
+    }
+
+    #[test]
+    fn resolve_rs_pin_uses_discovery_for_dev_build() {
+        // A dev build (commits ahead) reports an unpublished Cargo version like 0.3.1
+        // while only 0.3.0 is on PyPI; the runner pin must be the published discovery
+        // release so `uvx --from flowmark-rs==<pin>` resolves.
+        assert_eq!(resolve_rs_pin(true, "0.3.1", "0.3.0"), "0.3.0");
+    }
+
+    #[test]
+    fn resolve_rs_pin_trusts_release_build() {
+        // A non-dev build (release tag or published source) reports a real version.
+        assert_eq!(resolve_rs_pin(false, "0.3.1", "0.3.0"), "0.3.1");
+        // Still range-checked: a non-dev build reporting a non-release falls back.
+        assert_eq!(resolve_rs_pin(false, "0.3.1.dev1", "0.3.0"), "0.3.0");
     }
 
     #[test]

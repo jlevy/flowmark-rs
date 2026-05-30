@@ -289,9 +289,12 @@ fn spec_matches_path(patterns: &[String], path: &Path) -> bool {
 
 /// Match a cwd-relative POSIX path against gitignore-style patterns. Directory patterns
 /// (e.g. `docs/api/`) match the directory and everything beneath it; other patterns are
-/// glob-matched against the whole relative path.
+/// glob-matched against the whole relative path. A leading `/` anchors a pattern to the
+/// ignore-file/cwd root — for our already-cwd-relative path that is equivalent to the
+/// slash-stripped form, matching gitignore/pathspec semantics (`/docs/api/`).
 fn matches_relative_path(patterns: &[String], rel_posix: &str) -> bool {
     for pattern in patterns {
+        let pattern = pattern.strip_prefix('/').unwrap_or(pattern);
         if let Some(dir) = pattern.strip_suffix('/') {
             if rel_posix == dir || rel_posix.starts_with(&format!("{dir}/")) {
                 return true;
@@ -342,4 +345,34 @@ fn canonicalize_or_absolute(path: &Path) -> PathBuf {
             std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")).join(path)
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::matches_relative_path;
+
+    fn pats(p: &[&str]) -> Vec<String> {
+        p.iter().map(|s| (*s).to_string()).collect()
+    }
+
+    #[test]
+    fn directory_pattern_matches_nested_path() {
+        assert!(matches_relative_path(&pats(&["docs/api/"]), "docs/api/notes.md"));
+        assert!(matches_relative_path(&pats(&["docs/api/"]), "docs/api"));
+    }
+
+    #[test]
+    fn root_anchored_directory_pattern_matches_nested_path() {
+        // Regression: a leading `/` anchors to the ignore-file/cwd root; for an already
+        // cwd-relative path this is equivalent to the slash-stripped form.
+        assert!(matches_relative_path(&pats(&["/docs/api/"]), "docs/api/notes.md"));
+        assert!(matches_relative_path(&pats(&["/docs/api/"]), "docs/api"));
+        assert!(matches_relative_path(&pats(&["/t.md"]), "t.md"));
+    }
+
+    #[test]
+    fn non_matching_pattern_does_not_match() {
+        assert!(!matches_relative_path(&pats(&["/docs/api/"]), "docs/other/notes.md"));
+        assert!(!matches_relative_path(&pats(&["docs/api/"]), "docs/apidocs/notes.md"));
+    }
 }
