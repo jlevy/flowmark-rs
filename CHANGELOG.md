@@ -4,6 +4,54 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased][unreleased]
 
+## [0.3.1][] (parity: flowmark-py 0.7.2)
+
+Patch release syncing the Python flowmark parity surface from v0.7.0 to v0.7.2 (upstream
+patch releases v0.7.1 + v0.7.2) and porting the cross-agent agent-skill install.
+CLI formatting stays byte-identical to the Python reference.
+
+### Formatter behavior changes
+
+- **Multi-line HTML comments preserved (upstream #35):** a standalone `<!-- ... -->`
+  block that spans multiple lines keeps its interior line breaks verbatim instead of
+  being reflowed onto one line, including inside blockquotes and list items.
+- **`--width 0` whitespace normalization:** the no-wrap path now collapses internal runs
+  of whitespace to single spaces (matching the `width > 0` path), so repeated formatting
+  at `--width 0` is idempotent.
+
+### CLI changes
+
+- **`--check` flag:** validate-only mode that writes nothing and exits non-zero if any
+  file would be reformatted, printing `Would reformat: <file>` to stderr.
+  Useful for CI and pre-commit.
+  Honors `--auto` (checks the full auto-format transform).
+- **`--force-exclude` applies to explicitly-named files:** exclusion patterns (including
+  multi-component and root-anchored `.flowmarkignore` entries like `/docs/api/`) now
+  apply to files named directly on the command line, matching Black/Ruff and the Python
+  reference. Explicitly-named files still override exclusions by default (without the
+  flag).
+- **Cross-agent skill install (`--install-skill --surfaces`):** installs the flowmark
+  agent skill project-locally across `.agents/skills/` (portable), `.claude/skills/`
+  (Claude Code), and an `AGENTS.md` block by default; `--surfaces` selects a subset
+  (`portable`, `claude`, `agents-md`, `all`). Installed artifacts are byte-identical to
+  the Python build’s.
+
+### Fixes
+
+- **Task-list checkbox spacing:** no double space after `- [ ]` / `- [x]`; idempotent
+  under repeated formatting (upstream #42).
+- **Reference-image inlining:** every reference-image form (`![alt][label]`, `![alt][]`,
+  `![alt]`, and badge patterns) renders as the inline `![alt](url)` form, pinned by
+  tests.
+- **Skill runner pin on dev builds:** `--skill` / `--install-skill` pin the published
+  `flowmark-rs` discovery release on unpublished dev builds rather than an unresolvable
+  `Cargo.toml` version.
+
+### Dependencies
+
+- comrak 0.50 → 0.51, clap 4.5 → 4.6, libc → 0.2.183, tempfile → 3.27, toml → 1.0.7.
+- CI: codecov-action v5 → v6, action-gh-release v2 → v3.
+
 ## [0.3.0][] (parity: flowmark-py 0.7.0)
 
 Minor release adopting the Python flowmark v0.7.0 parity surface.
@@ -275,4 +323,5 @@ Early development release.
 [0.2.6]: https://github.com/jlevy/flowmark-rs/compare/v0.2.5...v0.2.6
 [0.2.7]: https://github.com/jlevy/flowmark-rs/compare/v0.2.6...v0.2.7
 [0.3.0]: https://github.com/jlevy/flowmark-rs/compare/v0.2.7...v0.3.0
-[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.3.0...HEAD
+[0.3.1]: https://github.com/jlevy/flowmark-rs/compare/v0.3.0...v0.3.1
+[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.3.1...HEAD
