@@ -353,7 +353,14 @@ fn run_cli_stdin(bin: &str, args: &[&str], stdin: &str) -> (String, i32) {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .unwrap_or_else(|e| panic!("Failed to run {bin}: {e}"));
-    child.stdin.take().unwrap().write_all(stdin.as_bytes()).unwrap();
+    // The child may reject its arguments and exit before reading stdin (e.g.
+    // `--inplace -`), closing the read end of the pipe. The resulting broken-pipe write
+    // is expected and benign here — we assert on the child's stderr and exit code, not on
+    // the write succeeding — so ignore the error instead of `.unwrap()`ing it (which
+    // races against process teardown and flakes intermittently, especially on Windows).
+    if let Some(mut stdin_pipe) = child.stdin.take() {
+        let _ = stdin_pipe.write_all(stdin.as_bytes());
+    }
     let output = child.wait_with_output().unwrap();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     let code = output.status.code().unwrap_or(-1);

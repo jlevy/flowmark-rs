@@ -29,7 +29,7 @@ source) and regenerate via `scripts/generate_rust_readme.py`. -->
 > CLI usage and formatting behavior.
 > It is now the recommended version for CLI and IDE usage.
 > 
-> Last sync: **2026-05-29** against **Python v0.7.0**
+> Last sync: **2026-05-30** against **Python v0.7.2**
 > 
 > For more on the **automated porting methodology** used to build flowmark-rs, see the
 > [**port status report**](docs/port-status.md) and the
@@ -125,7 +125,7 @@ If you only want the CLI tool, just install `flowmark-rs`: you don’t need the 
 
 * * *
 
-## Why Use Flowmark?
+## What Is Flowmark?
 
 Flowmark is a Markdown auto-formatter, written
 [in Python](https://github.com/jlevy/flowmark) with an auto-synced
@@ -133,44 +133,92 @@ Flowmark is a Markdown auto-formatter, written
 workflows**, **clean git diffs**, and **flexible use from CLI, from IDEs, or as a
 library**.
 
-With AI tools increasingly using Markdown, having consistent, diff-friendly formatting
-has become essential for modern writing, editing, and document processing workflows.
-Normalizing Markdown formatting greatly improves collaborative editing and LLM
-workflows, especially when committing documents to git repositories.
+With AI tools increasingly producing Markdown, consistent and diff-friendly formatting
+has become essential.
+It improves collaborative editing and LLM workflows, especially when committing
+documents to git repositories.
 
-You can use Flowmark as a CLI, as an autoformatter in your IDE, or as a Python library.
+For CLI auto-formatting, the Python and Rust builds produce identical output: the Rust
+port is a fast single native binary, while the Python version is the reference and is
+sometimes ahead on the newest features.
+Pick whichever fits your environment; for heavy or latency-sensitive formatting, choose
+the Rust binary.
 
-Flowmark comes in two flavors: the [Python reference implementation](https://github.com/jlevy/flowmark) and this auto-synced Rust port (flowmark-rs).
-For CLI auto-formatting either works and produces the same output — the Rust port is a
-fast single native binary, while the Python version is the reference and is sometimes
-ahead on the newest features.
-Pick whichever fits your environment; for heavy or latency-sensitive formatting the Rust
-binary is the faster choice.
+## Quick Start
 
-## Comparison With Other Formatters
+Both Python and Rust versions are best installed with
+[**uv**](https://github.com/astral-sh/uv).
+
+### Run With `uvx`
+
+No install needed for one-off usage:
+
+```shell
+uvx flowmark-rs --help                  # For native-binary Rust
+uvx flowmark-rs --auto somefile.md
+uvx flowmark --help                     # For Python
+uvx flowmark --auto somefile.md
+```
+
+### Install as a Global CLI
+
+```shell
+uv tool install --upgrade flowmark-rs   # For native-binary Rust
+uv tool install --upgrade flowmark      # For Python
+flowmark --auto somefile.md             # One file
+flowmark --auto .                       # Whole tree (respects .gitignore / .flowmarkignore)
+```
+
+Run `flowmark --help`, `flowmark --docs`, or `flowmark --skill` for more.
+
+### Set Up with Any Coding Agent
+
+Hand your agent this one instruction:
+
+> Set up Flowmark to keep this project’s Markdown auto-formatted.
+> Run `uvx --from flowmark==0.7.2 flowmark --skill` for details.
+
+Or run `uvx --from flowmark==0.7.2 flowmark --install-skill` to manually
+install the skill into `.agents/`, `.claude/`, and `AGENTS.md` (see
+[How to Install the Skill](#how-to-install-the-skill)).
+
+For consistency across users and supply chain security, it’s recommended to pin the
+version when installing within a skill or project build.
+
+## Why Another Markdown Auto-Formatter?
 
 Flowmark supports both [CommonMark](https://spec.commonmark.org/0.31.2/) and
 [GitHub-Flavored Markdown (GFM)](https://github.github.com/gfm/) via
 [Marko](https://github.com/frostming/marko).
 
-The key differences from [other Markdown formatters](#why-another-markdown-formatter):
+The key differences from
+[other Markdown formatters](#how-does-flowmark-compare-to-other-markdown-auto-formatters):
 
 - Carefully chosen default formatting rules that are effective for use in editors/IDEs,
-  in LLM pipelines, and also when paging through docs in a terminal.
-  It parses and normalizes standard links and special characters, headings, tables,
-  footnotes, and horizontal rules and performing Markdown-aware line wrapping.
+  in agent pipelines, and also when paging through docs in a terminal.
 
-- “Just works” support for GFM-style tables, footnotes, YAML frontmatter, template tags
-  (Markdoc, Jinja, Nunjucks), and inline HTML comments.
+- Extensive Markdown feature support.
+  “Just works” support including **GFM-style tables**, **footnotes**, **YAML
+  frontmatter**, **template tags** (Markdoc, Jinja, Nunjucks), and **inline HTML** and
+  HTML comments.
 
-- Advanced and customizable line-wrapping capabilities, including
+- All line wrapping is Markdown-aware.
+  Flowmark offers advanced and customizable line-wrapping capabilities, including
   [semantic line breaks](#semantic-line-breaks), a feature that is especially helpful in
-  allowing collaborative edits on a Markdown document while avoiding git conflicts.
+  managing diffs and allowing collaborative edits on a Markdown document while avoiding
+  git conflicts.
 
-- Optional [automatic smart quotes](#smart-quote-support) for professional-looking
-  typography.
+- Optional typographic fixes such as [automatic smart quotes](#smart-quote-support) for
+  professional-looking typography.
 
-General philosophy:
+- Full-featured globbing, including git-ignore support.
+
+- A **fast, exact Rust port** of the Python reference implementation, compiled to a
+  single native binary.
+  With the Rust port’s caching feature, it can auto-format thousands of documents in
+  milliseconds.
+
+Some general philosophy:
 
 - Be conservative about changes so that it is safe to run automatically on save or after
   any stage of a document pipeline.
@@ -180,11 +228,7 @@ General philosophy:
   And if you are using it as a library, you can fully control anything you want
   (including more complex things like custom line wrapping for HTML).
 
-- Be as small and simple as possible, with few dependencies:
-  [`marko`](https://github.com/frostming/marko),
-  [`pathspec`](https://pypi.org/project/pathspec/),
-  [`regex`](https://pypi.org/project/regex/), and
-  [`strif`](https://github.com/jlevy/strif).
+- Be as small and simple as possible, with few dependencies.
 
 ## Use Cases
 
@@ -351,6 +395,7 @@ The main flags:
 | `--list-spacing` | Control list spacing: `preserve`, `loose`, `tight` |
 | `-i, --inplace` | Edit in place |
 | `--nobackup` | Skip `.orig` backup with `--inplace` |
+| `--check` | Don’t write; exit non-zero if any file would be reformatted (for CI / pre-commit) |
 | `--auto` | All auto-formatting: `--inplace --nobackup --semantic --cleanups --smartquotes --ellipses`. Requires file/directory args (use `.` for current directory) |
 
 File discovery flags:
@@ -362,7 +407,7 @@ File discovery flags:
 | `--exclude PATTERN` | Replace all default exclusions |
 | `--extend-exclude PATTERN` | Add to default exclusions (e.g., `drafts/`) |
 | `--no-respect-gitignore` | Disable `.gitignore` integration |
-| `--force-exclude` | Apply exclusions to explicitly-named files |
+| `--force-exclude` | Apply exclusions (incl. `.flowmarkignore`) to explicitly-named files too (for pre-commit) |
 | `--files-max-size BYTES` | Skip files larger than this (default: 1 MiB) |
 
 ## File Discovery
@@ -385,8 +430,38 @@ discovers files using a smart filter pipeline:
 4. **`.flowmarkignore`**: A tool-specific ignore file using gitignore syntax.
    Place it in your project root to exclude paths specific to Flowmark formatting.
 
+Exclusions (default patterns, `--exclude`/`--extend-exclude`, `.gitignore`, and
+`.flowmarkignore`) apply when Flowmark discovers files by walking a directory or glob.
+Files named **explicitly** on the command line override exclusions by default (matching
+Black and Ruff), so `flowmark README.md` always formats that file.
+Pass `--force-exclude` to apply exclusions to explicitly-named files too — this is what
+the pre-commit hooks set, since pre-commit passes every changed file by name.
+
 5. **Max file size**: Files over 1 MiB are skipped by default.
    Change with `--files-max-size` (0 = no limit).
+
+### Explicitly-Named Files and `--force-exclude`
+
+The exclusions above apply when Flowmark **discovers** files (you pass a directory or
+glob). But when you name a file **explicitly** on the command line, Flowmark formats it
+by default *even if it matches an exclusion* — naming a file is taken as “I mean this
+one”.
+
+This matches how
+[Black](https://black.readthedocs.io/en/stable/usage_and_configuration/the_basics.html#command-line-options)
+and [Ruff](https://docs.astral.sh/ruff/settings/#force-exclude) behave, and it exists
+for the same reason: tools like **pre-commit pass every changed file as an explicit
+argument**, so a formatter that always honored exclusions on explicit files would be
+surprising on the command line, while one that never did would reformat files you
+deliberately ignored in pre-commit.
+
+The `--force-exclude` flag resolves this: with it, all exclusion sources
+(`.flowmarkignore`, `--exclude`/`--extend-exclude`, and the built-in defaults) are
+applied to explicitly-named files too.
+This is why Flowmark’s [published pre-commit hooks](#3-run-on-pre-commit) set
+`--force-exclude` — exactly as
+[`ruff-pre-commit`](https://github.com/astral-sh/ruff-pre-commit) does — so your
+`.flowmarkignore` is respected on the staged files pre-commit hands the hook.
 
 ### Customizing Includes and Excludes
 
@@ -483,6 +558,66 @@ are always read from config regardless of `--auto`.
 When not using `--auto`, all formatting settings can be configured via the config file
 and overridden by explicit CLI flags.
 
+## Library Usage
+
+Flowmark is a flexible Python library, not just a CLI. Add it with `uv add flowmark` (or
+`pip install flowmark`) and use the high-level helpers or the lower-level building
+blocks.
+
+**Format Markdown text or files** with the same engine as the CLI:
+
+```python
+from flowmark import reformat_text, reformat_file
+
+# Normalize a Markdown string (semantic line breaks on by default; opt into typography)
+clean = reformat_text(messy_markdown, smartquotes=True, ellipses=True)
+
+# Reformat a file in place, atomically (pass output=None with inplace=True)
+reformat_file("README.md", None, inplace=True, semantic=True)
+```
+
+**Use it as a smarter `textwrap`.** `wrap_paragraph` / `wrap_paragraph_lines` (with the
+`Wrap` enum) generalize the stdlib `textwrap` with control over initial vs.
+subsequent indentation and pluggable word splitters that never break inside Markdown
+links, code spans, HTML/template tags, or URLs.
+
+**Inspect Markdown inline structure** with the public inline API (new in v0.7.0),
+exposed so downstream tools can reuse Flowmark’s own primitives instead of
+re-implementing them:
+
+```python
+from flowmark import flowmark_markdown, extract_links
+
+doc = flowmark_markdown().parse(markdown_text)
+for link in extract_links(doc):   # -> list[Link(text, url, title)], reference links resolved
+    print(link.text, link.url)
+```
+
+- `flowmark.markdown_ast`: `walk_elements`, `extract_links`, the `Link` type, and
+  `block_span` for AST-aware inspection of a parsed document.
+- `flowmark.atomic_spans`: the atomic-construct patterns Flowmark uses internally (code
+  spans, links, autolinks, bare URLs, HTML/Jinja tags), the offset-preserving tokenizers
+  `iter_atomic_spans` / `iter_atomic_words`, and the atomic-aware sentence splitter
+  `split_sentences_with_spans` / `split_sentences_atomic`.
+
+**Map parsed blocks back to source.** Every block element produced by
+`flowmark_markdown().parse(text)` carries an authoritative `element.span = (start, end)`
+half-open offset pair, recorded straight from marko’s parser state (no regex, no
+heuristic) at every nesting level.
+Offsets index the source after marko’s `\r\n -> \n` normalization, so slice against an
+LF-normalized copy of the input:
+
+```python
+from flowmark import flowmark_markdown
+from flowmark.markdown_ast import block_span
+
+source = markdown_text.replace("\r\n", "\n")
+doc = flowmark_markdown().parse(source)
+for block in doc.children:
+    start, end = block_span(block)
+    print(type(block).__name__, source[start:end])
+```
+
 ## Use in VSCode/Cursor
 
 You can use Flowmark to auto-format Markdown on save in VSCode or Cursor.
@@ -505,36 +640,177 @@ The `--auto` option is just the same as
 
 For batch formatting an entire project, use `flowmark --auto .` from the terminal.
 
-## Agent Use (Claude Code and Other AI Coding Agents)
+## Recommended Project Setup
 
-Flowmark can be installed as a skill for Claude Code and other AI coding agents,
-enabling automatic Markdown formatting in agent workflows.
+To keep a repo’s Markdown consistently formatted across contributors and CI, **pin a
+flowmark version** and wire it into your existing build/hook plumbing.
+The same pattern works whether you reach for the Python build or the Rust port.
 
-### Install the Skill
+### 1. Pick a pinned invocation
 
-```bash
-# Install globally (available to all projects)
-flowmark --install-skill
+Avoid unpinned `flowmark@latest`: different contributors then silently run different
+versions and produce noisy diffs.
 
-# Or install to current project only
-flowmark --install-skill --agent-base ./.claude
+- **Rust port (fastest)**: install the
+  [`flowmark-rs`](https://github.com/jlevy/flowmark-rs) binary at a specific release.
+  Identical formatting to the Python version; great when speed matters in hooks/CI.
+- **Python via `uvx` (zero-install)**: invoke as
+  `uvx --from flowmark==<X.Y.Z> flowmark --auto`. First call caches the wheel;
+  subsequent calls are fast.
+- **Python tool install**: `uv tool install flowmark==<X.Y.Z>` (or
+  `pip install flowmark==<X.Y.Z>` in a venv) puts `flowmark` on `PATH`.
+
+### 2. Add one project entry point
+
+A single command everyone (and CI) runs.
+Makefile target:
+
+```makefile
+FLOWMARK := uvx --from flowmark==0.7.2 flowmark
+
+format-docs:
+	$(FLOWMARK) --auto .
 ```
 
-After installation, Claude Code will automatically recognize when to use Flowmark for
-Markdown formatting tasks.
+Or as an npm script in `package.json`:
+
+```json
+{
+  "scripts": {
+    "format:docs": "uvx --from flowmark==0.7.2 flowmark --auto ."
+  }
+}
+```
+
+### 3. Run on pre-commit
+
+[lefthook](https://lefthook.dev) example (`lefthook.yml`):
+
+```yaml
+pre-commit:
+  commands:
+    flowmark:
+      glob: "*.{md,mdc,markdown}"
+      run: uvx --from flowmark==0.7.2 flowmark --auto {staged_files}
+      stage_fixed: true
+```
+
+Flowmark also ships [pre-commit](https://pre-commit.com) hooks, so you can use it
+directly from your `.pre-commit-config.yaml` without writing a `local` hook:
+
+```yaml
+repos:
+  - repo: https://github.com/jlevy/flowmark
+    rev: v0.7.2
+    hooks:
+      - id: flowmark          # auto-format Markdown in place
+      # - id: flowmark-check  # or: check only, fail if files would change (for CI)
+```
+
+These run via the [pre-commit](https://pre-commit.com) framework (not GitHub-specific):
+install it once with `pre-commit install`, and it builds Flowmark in an isolated
+environment on first use — no global install or extra dependency needed.
+Both hooks pass `--force-exclude`, so your `.flowmarkignore` and other exclusions are
+respected on the staged files pre-commit hands them (the same approach `ruff-pre-commit`
+uses); the `flowmark-check` hook also mirrors `--auto` so it validates exactly what the
+auto-fix hook would write.
+
+A `husky` setup works the same way; the key is the pinned invocation.
+
+### 4. Add a CI check
+
+Use `--check` (or the `flowmark-check` pre-commit hook) to fail if anything would
+change, without writing.
+Pair it with `--auto` so CI validates the same formatting the auto-fix path applies:
+
+```yaml
+- run: uvx --from flowmark==0.7.2 flowmark --auto --check .
+```
+
+### 5. Exclude generated and vendored Markdown
+
+Add a `.flowmarkignore` (same syntax as `.gitignore`) so batch formatting only touches
+files you own:
+
+```
+docs/api/_generated/
+attic/
+third_party/
+```
+
+`flowmark --auto .` always respects `.flowmarkignore` and `.gitignore`. For editor-side
+on-save formatting, see [Use in VSCode/Cursor](#use-in-vscodecursor) above.
+
+## Agent Use (Claude Code and Other AI Coding Agents)
+
+Flowmark is built to be the **default Markdown auto-formatter for agent workflows**. Its
+deterministic, diff-friendly output and semantic line breaks keep LLM-generated and
+LLM-edited Markdown clean in git, and the Rust port makes it fast enough to run on every
+save or every agent turn.
+It works with any agent that can run a shell command, and ships a
+[SKILL.md](https://agentskills.io) so capable agents discover when to use it on their
+own.
+
+### How to Install the Skill
+
+There are three install paths, ordered by what most users want first:
+
+**1. Cross-agent package manager (no flowmark prerequisite).** If you just want the
+skill on disk for any supported agent and don’t already have flowmark, use the
+`skills.sh` installer.
+It copies the published discovery copy into `.agents/skills/` and symlinks it into each
+agent’s native location (Claude Code, Codex, Cursor, Copilot, Gemini, …). The discovery
+copy bootstraps its own pinned `uvx` invocation, so no prior flowmark install is
+required:
+
+```bash
+npx skills add jlevy/flowmark
+```
+
+**2. Direct install via the flowmark CLI (recommended once you have flowmark).** Run
+from the repo root.
+By default this writes all three project-local surfaces: the portable
+`.agents/skills/flowmark/` (read by Codex, Gemini CLI, pi, and others), the
+`.claude/skills/flowmark/` mirror (Claude Code reads only that path), and a compact
+marker-bounded block in `AGENTS.md`:
+
+```bash
+flowmark --install-skill                              # all three surfaces (default)
+flowmark --install-skill --surfaces=portable,agents-md  # skip the Claude mirror
+flowmark --install-skill --surfaces=claude            # only the Claude mirror
+flowmark --install-skill --agent-base ~/.claude       # single explicit base (global)
+```
+
+The `--surfaces` flag is a comma-separated subset of `portable`, `claude`, `agents-md`,
+or the `all` alias. Installs are idempotent (re-running an up-to-date install changes
+nothing), version-pinned to the installed flowmark, and generated files are marked
+`DO NOT EDIT`. A forward-compat guard refuses to clobber any artifact stamped with a
+newer format than this build understands.
+
+**3. Manual copy from the public discovery copy.** Every release publishes a
+spec-compliant `SKILL.md` at the repo root:
+[`skills/flowmark/SKILL.md`](https://github.com/jlevy/flowmark/blob/main/skills/flowmark/SKILL.md).
+You can drop it into your project at `.agents/skills/flowmark/SKILL.md` (and mirror to
+`.claude/skills/flowmark/SKILL.md` for Claude Code).
+Useful in air-gapped or no-Node-no-Python environments.
+
+Flowmark is also indexed automatically by GitHub-scraping skill discoverers (SkillsMP,
+ClaudeSkills.info, LobeHub, claudemarketplaces) just by being a public repo with a
+`SKILL.md`, with no extra setup.
 
 ### Agent Skill Options
 
 | Flag | Description |
 | --- | --- |
-| `--skill` | Print skill instructions (SKILL.md content) |
-| `--install-skill` | Install Claude Code skill for flowmark |
-| `--agent-base DIR` | Agent config directory (default: ~/.claude) |
+| `--skill` | Print the composed skill (SKILL.md content) |
+| `--install-skill` | Install the flowmark skill (project-local cross-agent by default) |
+| `--surfaces LIST` | Subset of `portable`, `claude`, `agents-md`, or `all` (default) |
+| `--agent-base DIR` | Install to a single explicit base dir (e.g. `~/.claude`); incompatible with `--surfaces` |
 | `--docs` | Print full documentation |
 
 ### Manual Usage in Agents
 
-If you prefer to use Flowmark manually within agent sessions:
+Any agent with a shell can call Flowmark directly, no skill required:
 
 ```bash
 # Format with all auto-formatting options
@@ -547,9 +823,25 @@ flowmark README.md
 echo "$llm_output" | flowmark --semantic -
 ```
 
-## Why Another Markdown Formatter?
+In ephemeral or cloud agent environments where nothing is installed, run it via a
+**version-pinned** zero-install runner (pin the version so the agent can’t silently pull
+a newer release):
 
-There are several other Markdown auto-formatters:
+```bash
+uvx --from flowmark==<version> flowmark --auto README.md   # Python
+# or use the Rust binary (flowmark-rs) for maximum speed
+```
+
+## How Does Flowmark Compare to Other Markdown Auto-Formatters?
+
+There are several other Markdown auto-formatters.
+All of these are worth looking at, but none offer the more advanced line-breaking
+features of Flowmark or have the “just works” CLI defaults and library usage I found
+most useful.
+
+- [dprint-plugin-markdown](https://github.com/dprint/dprint-plugin-markdown) is a
+  Markdown plugin for dprint, the fast Rust/WASM engine.
+  It is a good, modern option but does not auto-apply semantic line breaks.
 
 - [markdownfmt](https://github.com/shurcooL/markdownfmt) is one of the oldest and most
   popular Markdown formatters and works well for basic formatting.
@@ -560,10 +852,7 @@ There are several other Markdown auto-formatters:
   auto-apply them as Flowmark does and has somewhat different features.
 
 - [Prettier](https://prettier.io/blog/2017/11/07/1.8.0) is the ubiquitous Node formatter
-  that handles Markdown/MDX
-
-- [dprint-plugin-markdown](https://github.com/dprint/dprint-plugin-markdown) is a
-  Markdown plugin for dprint, the fast Rust/WASM engine
+  that handles Markdown/MDX.
 
 - Rule-based linters like
   [markdownlint-cli2](https://github.com/DavidAnson/markdownlint-cli2) catch violations
@@ -575,13 +864,22 @@ There are several other Markdown auto-formatters:
   You can build auto-formatters with it but there isn’t one that’s broadly used as a CLI
   tool.
 
-All of these are worth looking at, but none offer the more advanced line breaking
-features of Flowmark or seemed to have the “just works” CLI defaults and library usage I
-found most useful.
+On speed, Flowmark’s auto-synced
+[Rust port (flowmark-rs)](https://github.com/jlevy/flowmark-rs) compiles to a single
+native binary and is among the fastest Markdown formatters available, in the same
+performance class as Rust-based tools like dprint, while keeping the same formatting
+behavior as the Python reference implementation.
+So you get Flowmark’s formatting either way: the Python library/CLI for flexibility and
+embedding, or the Rust binary when you want maximum CLI speed (large repos, hot paths,
+latency-sensitive agent loops).
 
 ## Project Docs
 
 For development workflows, see [development.md](docs/development.md).
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->
 
 
 Rust-specific docs:

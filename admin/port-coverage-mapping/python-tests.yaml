@@ -76,10 +76,95 @@
   test_type: integration
   line_number: 97
   doc_string: 'CRITICAL: Unknown/custom alert types must NOT cause quote formatting to be stripped.'
+- file: tests/test_block_spans.py
+  function: test_blank_only_document_has_full_span
+  test_type: unit
+  line_number: 234
+- file: tests/test_block_spans.py
+  function: test_block_span_helper_reads_the_span_attribute
+  test_type: unit
+  line_number: 217
+- file: tests/test_block_spans.py
+  function: test_blockquote_children_have_spans
+  test_type: unit
+  line_number: 166
+- file: tests/test_block_spans.py
+  function: test_crlf_input_normalized_to_lf_for_spans
+  test_type: unit
+  line_number: 240
+- file: tests/test_block_spans.py
+  function: test_document_has_full_span
+  test_type: unit
+  line_number: 211
+- file: tests/test_block_spans.py
+  function: test_empty_document_has_zero_span
+  test_type: unit
+  line_number: 227
+- file: tests/test_block_spans.py
+  function: test_every_block_element_in_realistic_doc_has_a_valid_span
+  test_type: unit
+  line_number: 254
+- file: tests/test_block_spans.py
+  function: test_every_block_in_golden_testdoc_has_a_span
+  test_type: unit
+  line_number: 329
+- file: tests/test_block_spans.py
+  function: test_fenced_code_span_includes_internal_blank_lines
+  test_type: unit
+  line_number: 119
+- file: tests/test_block_spans.py
+  function: test_footnote_definition_has_span
+  test_type: unit
+  line_number: 188
+- file: tests/test_block_spans.py
+  function: test_gfm_table_has_span
+  test_type: unit
+  line_number: 179
+- file: tests/test_block_spans.py
+  function: test_html_block_input_falls_back_to_paragraph_with_a_span
+  test_type: unit
+  line_number: 199
+- file: tests/test_block_spans.py
+  function: test_inline_elements_do_not_have_spans
+  test_type: unit
+  line_number: 345
+- file: tests/test_block_spans.py
+  function: test_nested_block_spans_include_container_markers
+  test_type: unit
+  line_number: 359
+- file: tests/test_block_spans.py
+  function: test_nested_list_item_and_sublist_have_spans
+  test_type: unit
+  line_number: 137
+- file: tests/test_block_spans.py
+  function: test_paragraph_immediately_after_heading_has_correct_span
+  test_type: unit
+  line_number: 93
+- file: tests/test_block_spans.py
+  function: test_setext_heading_span_covers_text_and_underline
+  test_type: unit
+  line_number: 109
+- file: tests/test_block_spans.py
+  function: test_spans_are_idempotent_under_repeated_parsing
+  test_type: unit
+  line_number: 380
+- file: tests/test_block_spans.py
+  function: test_spans_cover_golden_testdoc_without_gaps_or_overlaps_at_top_level
+  test_type: unit
+  line_number: 309
+- file: tests/test_block_spans.py
+  function: test_top_level_block_spans_are_exact_and_authoritative
+  test_type: unit
+  line_number: 54
 - file: tests/test_cleanups.py
   function: test_unbold_headings
   test_type: unit
   line_number: 55
+- file: tests/test_cli_file_discovery.py
+  function: test_auto_check_validates_auto_formatting
+  test_type: infrastructure
+  line_number: 324
+  doc_string: The advertised check path (--auto --check) must flag files --auto would rewrite.
 - file: tests/test_cli_file_discovery.py
   function: test_auto_list_files_no_args_errors
   test_type: infrastructure
@@ -100,9 +185,31 @@
   test_type: infrastructure
   line_number: 154
 - file: tests/test_cli_file_discovery.py
+  function: test_check_clean_file_exits_zero
+  test_type: infrastructure
+  line_number: 304
+- file: tests/test_cli_file_discovery.py
+  function: test_check_multiple_files_reports_only_dirty
+  test_type: infrastructure
+  line_number: 311
+- file: tests/test_cli_file_discovery.py
+  function: test_check_reports_and_does_not_write
+  test_type: infrastructure
+  line_number: 294
+- file: tests/test_cli_file_discovery.py
+  function: test_explicit_file_overrides_flowmarkignore_by_default
+  test_type: infrastructure
+  line_number: 240
+  doc_string: Explicit naming overrides .flowmarkignore by default (Black/Ruff semantics).
+- file: tests/test_cli_file_discovery.py
   function: test_explicit_file_still_works
   test_type: infrastructure
   line_number: 137
+- file: tests/test_cli_file_discovery.py
+  function: test_explicit_file_without_exclusions_is_formatted
+  test_type: infrastructure
+  line_number: 280
+  doc_string: 'Control: with no exclusions in play, an explicit file is still reformatted.'
 - file: tests/test_cli_file_discovery.py
   function: test_explicit_flag_detection_with_default_value
   test_type: infrastructure
@@ -112,6 +219,21 @@
   function: test_flowmarkignore
   test_type: infrastructure
   line_number: 162
+- file: tests/test_cli_file_discovery.py
+  function: test_flowmarkignore_applies_to_explicit_file_with_force_exclude
+  test_type: infrastructure
+  line_number: 252
+  doc_string: --force-exclude makes .flowmarkignore apply to explicitly-named files too.
+- file: tests/test_cli_file_discovery.py
+  function: test_force_exclude_explicit_file_skips_formatting
+  test_type: infrastructure
+  line_number: 229
+  doc_string: --force-exclude must apply to an explicit file path, even without --list-files.
+- file: tests/test_cli_file_discovery.py
+  function: test_force_exclude_explicit_multicomponent_pattern
+  test_type: infrastructure
+  line_number: 264
+  doc_string: Multi-component exclude patterns (e.g. docs/api/) match explicit nested paths.
 - file: tests/test_cli_file_discovery.py
   function: test_list_files_directory
   test_type: infrastructure
@@ -223,7 +345,7 @@
 - file: tests/test_config.py
   function: test_load_config_malformed_toml
   test_type: infrastructure
-  line_number: 240
+  line_number: 243
   doc_string: Malformed TOML should return empty config, not crash (fm-lbku).
 - file: tests/test_config.py
   function: test_load_config_partial
@@ -236,36 +358,36 @@
 - file: tests/test_config.py
   function: test_merge_auto_mode_overrides_formatting
   test_type: infrastructure
-  line_number: 190
+  line_number: 193
 - file: tests/test_config.py
   function: test_merge_auto_mode_width_from_config
   test_type: infrastructure
-  line_number: 208
+  line_number: 211
 - file: tests/test_config.py
   function: test_merge_config_overrides_defaults
   test_type: infrastructure
-  line_number: 175
+  line_number: 178
 - file: tests/test_config.py
   function: test_merge_explicit_cli_overrides_config
   test_type: infrastructure
-  line_number: 183
+  line_number: 186
 - file: tests/test_config.py
   function: test_merge_extend_include_from_config
   test_type: infrastructure
-  line_number: 232
+  line_number: 235
   doc_string: Config extend_include should be applied when not explicitly set (fm-p6x5).
 - file: tests/test_config.py
   function: test_merge_file_discovery_from_config
   test_type: infrastructure
-  line_number: 224
+  line_number: 227
 - file: tests/test_config.py
   function: test_merge_no_config
   test_type: infrastructure
-  line_number: 168
+  line_number: 171
 - file: tests/test_config.py
   function: test_parse_config_warns_unknown_keys
   test_type: infrastructure
-  line_number: 250
+  line_number: 253
   doc_string: Unknown keys in config should produce a warning (fm-y9cx).
 - file: tests/test_ellipses.py
   function: test_ellipses
@@ -697,8 +819,13 @@
 - file: tests/test_packaging_entrypoints.py
   function: test_flowmark_py_alias_entrypoint
   test_type: unit
-  line_number: 14
+  line_number: 17
   doc_string: Both flowmark and flowmark-py should point to the same CLI entrypoint.
+- file: tests/test_packaging_entrypoints.py
+  function: test_pre_commit_hooks_manifest_is_valid
+  test_type: unit
+  line_number: 27
+  doc_string: Guard the published .pre-commit-hooks.yaml against shipping malformed.
 - file: tests/test_public_inline_api.py
   function: test_angle_autolink_and_bare_url_extraction
   test_type: unit
@@ -800,6 +927,71 @@
   test_type: golden
   line_number: 9
   doc_string: Test that the reference document is formatted correctly with both plain and semantic formats.
+- file: tests/test_reference_images.py
+  function: test_badge_collapsed_ref_image_in_full_ref_link
+  test_type: unit
+  line_number: 111
+  doc_string: '[![alt][]][url] — collapsed-image variant of the badge pattern.'
+- file: tests/test_reference_images.py
+  function: test_badge_full_ref_image_in_full_ref_link
+  test_type: unit
+  line_number: 95
+  doc_string: '[![alt][img]][url] inlines the image; outer ref link is preserved.'
+- file: tests/test_reference_images.py
+  function: test_badge_full_ref_image_in_full_ref_link_idempotent
+  test_type: unit
+  line_number: 156
+  doc_string: The badge pattern's rendered output is a fixed point.
+- file: tests/test_reference_images.py
+  function: test_badge_inline_image_in_full_ref_link
+  test_type: unit
+  line_number: 135
+  doc_string: '[![alt](url)][label] — fully inlined image inside an outer ref link.'
+- file: tests/test_reference_images.py
+  function: test_badge_shortcut_ref_image_in_full_ref_link
+  test_type: unit
+  line_number: 123
+  doc_string: '[![alt]][url] — shortcut-image variant of the badge pattern.'
+- file: tests/test_reference_images.py
+  function: test_collapsed_ref_image_inlined
+  test_type: unit
+  line_number: 36
+  doc_string: '![alt][] with a matching def for label=alt → ![alt](url).'
+- file: tests/test_reference_images.py
+  function: test_full_ref_image_empty_alt
+  test_type: unit
+  line_number: 81
+  doc_string: Empty alt text round-trips.
+- file: tests/test_reference_images.py
+  function: test_full_ref_image_idempotent
+  test_type: unit
+  line_number: 148
+  doc_string: Formatting reference images is stable across a second pass.
+- file: tests/test_reference_images.py
+  function: test_full_ref_image_inlined
+  test_type: unit
+  line_number: 28
+  doc_string: '![alt][img] with a matching def → ![alt](url).'
+- file: tests/test_reference_images.py
+  function: test_full_ref_image_label_case_insensitive
+  test_type: unit
+  line_number: 73
+  doc_string: marko normalizes labels to lowercase; the def line is emitted lowercase.
+- file: tests/test_reference_images.py
+  function: test_full_ref_image_label_with_spaces
+  test_type: unit
+  line_number: 63
+  doc_string: Labels with internal whitespace resolve correctly.
+- file: tests/test_reference_images.py
+  function: test_full_ref_image_with_title
+  test_type: unit
+  line_number: 52
+  doc_string: Title from the def is included in the rendered inline form.
+- file: tests/test_reference_images.py
+  function: test_shortcut_ref_image_inlined
+  test_type: unit
+  line_number: 44
+  doc_string: '![alt] (shortcut) with a matching def → ![alt](url).'
 - file: tests/test_reference_links.py
   function: test_full_reference_with_distinct_label_preserved
   test_type: unit
@@ -844,34 +1036,127 @@
   test_type: unit
   line_number: 14
 - file: tests/test_skill.py
+  function: test_block_is_flowmark_auto_stable
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 258
+  doc_string: A flowmark format pass over a host AGENTS.md must leave the block unchanged.
+- file: tests/test_skill.py
+  function: test_block_is_marker_bounded_with_format
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 251
+- file: tests/test_skill.py
+  function: test_install_skill_creates_directories
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 332
+  doc_string: Skill installation creates necessary directories.
+- file: tests/test_skill.py
+  function: test_install_skill_custom_base
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 320
+  doc_string: Skill installs to custom agent base directory.
+- file: tests/test_skill.py
+  function: test_install_skill_overwrites_existing
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 341
+  doc_string: Skill installation overwrites existing SKILL.md.
+- file: tests/test_skill.py
+  function: test_update_collapses_duplicate_stale_blocks
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 293
+  doc_string: Multiple stale flowmark blocks collapse to one current block on re-run.
+- file: tests/test_skill.py
+  function: test_update_creates_and_preserves_user_content
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 264
+- file: tests/test_skill.py
+  function: test_update_guard_blocks_newer_format
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 310
+- file: tests/test_skill.py
+  function: test_update_is_idempotent
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 288
+- file: tests/test_skill.py
+  function: test_update_replaces_only_the_marked_region
+  class_name: TestAgentsMdBlock
+  test_type: infrastructure
+  line_number: 274
+- file: tests/test_skill.py
+  function: test_compose_default_pins_installed_version
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 73
+- file: tests/test_skill.py
+  function: test_compose_doc_pin_is_stable
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 78
+- file: tests/test_skill.py
+  function: test_compose_preserves_frontmatter
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 85
+- file: tests/test_skill.py
+  function: test_compose_recommends_rust_offers_python
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 66
+  doc_string: The skill names both packages and links each one.
+- file: tests/test_skill.py
+  function: test_compose_substitutes_both_package_pins
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 58
+  doc_string: Both the Python and the recommended Rust-port placeholders are filled in.
+- file: tests/test_skill.py
+  function: test_compose_substitutes_explicit_version
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 53
+- file: tests/test_skill.py
+  function: test_skill_routes_details_to_cli
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 89
+  doc_string: 'The skill stays minimal: it routes to the self-documenting CLI rather than'
+- file: tests/test_skill.py
   function: test_docs_content_has_vscode_cursor_setup
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 56
+  line_number: 170
   doc_string: README/docs content includes VS Code/Cursor run-on-save setup.
 - file: tests/test_skill.py
   function: test_docs_content_is_readme
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 48
+  line_number: 160
   doc_string: get_docs_content returns README.md content.
 - file: tests/test_skill.py
   function: test_docs_content_loads
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 42
+  line_number: 154
   doc_string: README.md content can be loaded.
 - file: tests/test_skill.py
   function: test_skill_content_has_metadata
   class_name: TestGetSkillContent
   test_type: infrastructure
-  line_number: 19
+  line_number: 36
   doc_string: SKILL.md contains required metadata fields.
 - file: tests/test_skill.py
   function: test_skill_content_has_usage
   class_name: TestGetSkillContent
   test_type: infrastructure
-  line_number: 26
+  line_number: 43
   doc_string: SKILL.md contains usage instructions.
 - file: tests/test_skill.py
   function: test_skill_content_has_vscode_cursor_setup
@@ -883,8 +1168,43 @@
   function: test_skill_content_loads
   class_name: TestGetSkillContent
   test_type: infrastructure
-  line_number: 13
+  line_number: 30
   doc_string: SKILL.md can be loaded from package data.
+- file: tests/test_skill.py
+  function: test_forward_compat_guard_blocks_newer_format
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 236
+  doc_string: A surface stamped with a newer format is not clobbered.
+- file: tests/test_skill.py
+  function: test_install_agent_base_skips_git_recommendation
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 228
+  doc_string: An explicit `--agent-base` install never warns about git (it's intentional).
+- file: tests/test_skill.py
+  function: test_install_default_writes_both_project_local_surfaces
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 180
+  doc_string: Default project-local install writes both portable and Claude surfaces.
+- file: tests/test_skill.py
+  function: test_install_inside_git_repo_has_no_recommendation
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 219
+  doc_string: Inside a git repo, no project-root recommendation is printed.
+- file: tests/test_skill.py
+  function: test_install_is_idempotent
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 205
+- file: tests/test_skill.py
+  function: test_install_outside_git_repo_recommends_project_root
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 211
+  doc_string: A project-local install outside a git repo recommends a project root.
 - file: tests/test_skill.py
   function: test_install_skill_creates_directories
   class_name: TestInstallSkill
@@ -909,6 +1229,112 @@
   test_type: infrastructure
   line_number: 100
   doc_string: Skill installation overwrites existing SKILL.md.
+- file: tests/test_skill.py
+  function: test_install_target_selection
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 190
+  doc_string: The `surfaces` set selects which surfaces are written.
+- file: tests/test_skill.py
+  function: test_installed_file_has_do_not_edit_and_format_stamp
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 197
+- file: tests/test_skill.py
+  function: test_default_writes_all_three_surfaces
+  class_name: TestInstallSkillCli
+  test_type: infrastructure
+  line_number: 361
+- file: tests/test_skill.py
+  function: test_empty_surfaces_value_errors_out
+  class_name: TestInstallSkillCli
+  test_type: infrastructure
+  line_number: 398
+- file: tests/test_skill.py
+  function: test_surfaces_all_alias
+  class_name: TestInstallSkillCli
+  test_type: infrastructure
+  line_number: 377
+- file: tests/test_skill.py
+  function: test_surfaces_subset
+  class_name: TestInstallSkillCli
+  test_type: infrastructure
+  line_number: 370
+- file: tests/test_skill.py
+  function: test_surfaces_with_agent_base_errors_out
+  class_name: TestInstallSkillCli
+  test_type: infrastructure
+  line_number: 410
+- file: tests/test_skill.py
+  function: test_unknown_surface_errors_out
+  class_name: TestInstallSkillCli
+  test_type: infrastructure
+  line_number: 384
+- file: tests/test_skill.py
+  function: test_dev_version_falls_back_to_discovery_pin
+  class_name: TestVersionPin
+  test_type: infrastructure
+  line_number: 127
+  doc_string: On a dev/editable checkout, flowmark_version() yields a real PyPI pin.
+- file: tests/test_skill.py
+  function: test_non_releases_are_rejected
+  class_name: TestVersionPin
+  test_type: infrastructure
+  line_number: 124
+- file: tests/test_skill.py
+  function: test_real_release_is_passed_through
+  class_name: TestVersionPin
+  test_type: infrastructure
+  line_number: 141
+- file: tests/test_skill.py
+  function: test_real_releases_are_accepted
+  class_name: TestVersionPin
+  test_type: infrastructure
+  line_number: 107
+- file: tests/test_skill_artifacts.py
+  function: test_discovery_copy_has_resolvable_version_pin
+  test_type: unit
+  line_number: 120
+  doc_string: The committed discovery copy must pin a real, PyPI-installable version.
+- file: tests/test_skill_artifacts.py
+  function: test_discovery_copy_is_flowmark_stable
+  test_type: unit
+  line_number: 58
+  doc_string: '`flowmark --auto` over the discovery copy must be a no-op (it lives under `skills/`).'
+- file: tests/test_skill_artifacts.py
+  function: test_discovery_copy_matches_generator
+  test_type: unit
+  line_number: 53
+  doc_string: The committed repo-root discovery copy must match the generator output.
+- file: tests/test_skill_artifacts.py
+  function: test_discovery_copy_references_both_packages
+  test_type: unit
+  line_number: 148
+  doc_string: The skill recommends the Rust port and offers the Python build, so the discovery
+- file: tests/test_skill_artifacts.py
+  function: test_rs_discovery_version_is_resolvable
+  test_type: unit
+  line_number: 100
+  doc_string: The recommended Rust-port pin must be a real, PyPI-installable release.
+- file: tests/test_skill_artifacts.py
+  function: test_shipped_artifacts_never_use_at_latest
+  test_type: unit
+  line_number: 106
+  doc_string: Shipped runner examples must pin a version, never an unpinned `@latest`.
+- file: tests/test_skill_artifacts.py
+  function: test_shipped_artifacts_pin_discovery_version
+  test_type: unit
+  line_number: 65
+  doc_string: Every concrete `flowmark==` pin in a shipped artifact equals DISCOVERY_VERSION.
+- file: tests/test_skill_artifacts.py
+  function: test_shipped_artifacts_pin_rs_discovery_version
+  test_type: unit
+  line_number: 83
+  doc_string: Every `flowmark-rs==` pin in a skill surface equals FLOWMARK_RS_DISCOVERY_VERSION.
+- file: tests/test_skill_artifacts.py
+  function: test_skill_frontmatter_is_valid
+  test_type: unit
+  line_number: 158
 - file: tests/test_smartquotes.py
   function: test_apostrophes_and_contractions
   test_type: unit
@@ -1195,6 +1621,21 @@
   line_number: 646
   doc_string: Test that HTML comment tags on continuation lines don't get extra newlines.
 - file: tests/test_tag_formatting.py
+  function: test_multiline_html_comment_keeps_blockquote_indent
+  test_type: integration
+  line_number: 712
+  doc_string: 'Comment continuation lines stay inside a blockquote (PR #56 review).'
+- file: tests/test_tag_formatting.py
+  function: test_multiline_html_comment_keeps_list_indent
+  test_type: integration
+  line_number: 720
+  doc_string: 'Comment continuation lines stay inside a list item (PR #56 review).'
+- file: tests/test_tag_formatting.py
+  function: test_multiline_html_comment_preserves_line_breaks
+  test_type: integration
+  line_number: 689
+  doc_string: 'Multi-line HTML comments keep their internal line breaks (issue #35).'
+- file: tests/test_tag_formatting.py
   function: test_multiline_opening_tag_closing_on_own_line
   test_type: unit
   line_number: 424
@@ -1239,6 +1680,11 @@
   test_type: integration
   line_number: 332
   doc_string: Test selection fields with task list items (TAG_8).
+- file: tests/test_tag_formatting.py
+  function: test_single_line_html_comment_unaffected
+  test_type: integration
+  line_number: 706
+  doc_string: Single-line comments are not treated as verbatim blocks.
 - file: tests/test_tag_formatting.py
   function: test_single_line_paired_tags_not_split
   test_type: unit
@@ -1329,6 +1775,15 @@
   test_type: unit
   line_number: 4
   doc_string: Test that normal width values work as expected.
+- file: tests/test_width_options.py
+  function: test_task_list_idempotent_semantic_default_width
+  test_type: unit
+  line_number: 103
+- file: tests/test_width_options.py
+  function: test_task_list_idempotent_semantic_width0
+  test_type: unit
+  line_number: 91
+  doc_string: 'Task list items must not accumulate spaces after the checkbox (issue #42).'
 - file: tests/test_width_options.py
   function: test_width_zero_with_markdown
   test_type: unit

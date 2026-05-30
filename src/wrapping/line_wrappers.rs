@@ -87,9 +87,12 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
         Box::new(move |text: &str, initial_indent: &str, subsequent_indent: &str| -> String {
             let text = text.replace('\n', " ");
 
-            // Handle width == 0 as "no wrapping"
+            // Handle width == 0 as "no wrapping". Collapse internal whitespace (not just
+            // strip ends) so the output is normalized and idempotent, matching the
+            // whitespace handling of the width > 0 path.
             if width == 0 {
-                return format!("{initial_indent}{}", text.trim());
+                let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+                return format!("{initial_indent}{collapsed}");
             }
 
             let mut lines: Vec<String> = Vec::new();

@@ -10,7 +10,7 @@ env:
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_TEST_DEBUG: 0
   # Python flowmark version for parity tests — sync with [package.metadata.parity] in Cargo.toml
-  FLOWMARK_PY_VERSION: "0.7.0"
+  FLOWMARK_PY_VERSION: "0.7.2"
 
 jobs:
   fmt:
@@ -131,7 +131,7 @@ jobs:
         run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info --ignore-filename-regex test_tryscript_golden -- --skip tryscript
         env:
           RUSTFLAGS: "-D warnings"
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           files: lcov.info
           fail_ci_if_error: false

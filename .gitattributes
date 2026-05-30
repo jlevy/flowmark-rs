@@ -1,0 +1,12 @@
+# Force LF line endings on checkout for every platform.
+#
+# Markdown that the binary embeds via `include_str!` (e.g. src/skills/SKILL.md) or that
+# tests read from disk must match the LF the formatter emits. Without this, a Windows
+# checkout converts these files to CRLF, so line-ending-sensitive assertions fail there
+# (e.g. `compose_skill().starts_with("---\n")` and the SKILL.md frontmatter checks).
+# All sources are authored LF, so this only enforces existing line endings on checkout.
+* text=auto eol=lf
+
+# Belt-and-suspenders for the content most sensitive to this (embedded + golden inputs).
+*.md text eol=lf
+*.rs text eol=lf

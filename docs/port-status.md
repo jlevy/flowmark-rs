@@ -4,16 +4,17 @@
 > Documents the Rust port lifecycle: parity verification, sync workflow, and port
 > history.
 
-**Last updated:** 2026-05-29
+**Last updated:** 2026-05-30
 
-**Release status:** v0.3.0 **not yet published** — stabilizing toward release.
+**Release status:** v0.3.1 **not yet published** (v0.3.0 is on crates.io) — stabilizing
+toward release.
 
-**Python parity target:** flowmark v0.7.0
+**Python parity target:** flowmark v0.7.2
 
 ## Overview
 
 flowmark-rs is a Rust port of the Python [flowmark](https://github.com/jlevy/flowmark)
-Markdown auto-formatter, targeting drop-in CLI parity with v0.7.0. Core formatting
+Markdown auto-formatter, targeting drop-in CLI parity with v0.7.2. Core formatting
 parity is strong: cross-validation against the Python binary is byte-identical on the
 curated `testdoc` and `corner-cases` fixtures across default, semantic, auto, and
 plaintext modes, and across every supported flag combination.
@@ -52,7 +53,18 @@ error behavior.**
 - `--help` layout: minor formatting differences between clap (Rust) and argparse
   (Python)
 - `--version` output: Rust includes explicit port/version provenance metadata
-  (`flowmark 0.2.0-dev.<N>+g<hash> (Rust port of flowmark-py 0.7.0; base v0.2.0)`)
+  (`flowmark <X.Y.Z>-dev.<N>+g<hash> (Rust port of flowmark-py <parity>; base v<X.Y.Z>)`)
+- `--docs` output: Rust renders its own port-specific README (`# flowmark-rs`, Rust
+  install/feature sections) rather than the Python README. The shared body and section
+  headings (e.g. `## What Is Flowmark?`) are common; the wrapper differs by design.
+- `--install-skill` / `--skill` runner pins: each implementation pins its **own**
+  package version dynamically per the cross-implementation porting contract, so the
+  `uvx --from flowmark-rs==<X> flowmark` line carries this build’s flowmark-rs version
+  while the Python build emits its sibling `FLOWMARK_RS_DISCOVERY_VERSION` constant (the
+  two packages are numbered independently).
+  The authored skill text is otherwise byte-identical across both.
+  The committed discovery copy pins the last published flowmark-rs release so its
+  bootstrap always resolves.
 
 Everything not on this list is required to be identical.
 The corpus-sweep gaps below were all **fixed** (not tolerated); the single remaining
@@ -104,12 +116,13 @@ tests stay synchronized.
 ### Tests Always Run in CI (Principle 3)
 
 The full test suite runs in CI on every commit; no test file is orphaned.
-(Caveat tracked as `fmr-gkas`: the opt-in cross-binary and golden-drift parity tests in
-`tests/test_parity_cross_binary.rs` silently skip unless `FLOWMARK_PARITY_PYTHON=1` is
-set, which CI does not currently do.)
+The opt-in cross-binary and golden-drift parity tests in
+`tests/test_parity_cross_binary.rs` are now gated on in CI (`FLOWMARK_PARITY_PYTHON=1`
+on the ubuntu test job; `fmr-gkas` resolved), so a parity regression or golden drift
+fails CI rather than slipping through.
 The CI test job installs all required external tools:
 
-- Python flowmark v0.7.0 (via `uv tool install`)
+- Python flowmark v0.7.2 (via `uv tool install`)
 - tryscript (via `npm install -g`)
 
 ### Tests Never Hide Failures (Principle 4)
@@ -130,7 +143,7 @@ The CI test job installs all required external tools:
 
 **Required test dependencies** (all installed in CI):
 
-- Python flowmark v0.7.0 (`uv tool install flowmark==0.7.0`)
+- Python flowmark v0.7.2 (`uv tool install flowmark==0.7.2`)
 - tryscript (`npm install -g tryscript@latest`)
 - Node.js 22+ (for tryscript)
 
