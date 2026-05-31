@@ -182,10 +182,18 @@ jobs:
           pattern: wheels-*
           merge-multiple: true
           path: wheels/
+      - uses: actions/checkout@v6
       - name: List distributions
         run: ls -la wheels/
+      - name: Resolve PyPI publish state
+        id: pypi
+        run: python3 ./scripts/resolve_pypi_publish_state.py --manifest-path Cargo.toml --github-output "$GITHUB_OUTPUT"
       - name: Validate upload command (dry-run)
+        if: steps.pypi.outputs.already_published != 'true'
         run: uv publish --dry-run --check-url "${{ inputs.check_url }}" wheels/*
       - name: Publish to PyPI
-        if: inputs.publish
+        if: inputs.publish && steps.pypi.outputs.already_published != 'true'
         run: uv publish --trusted-publishing always --check-url "${{ inputs.check_url }}" wheels/*
+      - name: Skip publish (already exists)
+        if: steps.pypi.outputs.already_published == 'true'
+        run: echo "${{ steps.pypi.outputs.project }} ${{ steps.pypi.outputs.version }} is already published on PyPI; skipping upload."
