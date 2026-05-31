@@ -176,13 +176,13 @@ jobs:
     permissions:
       id-token: write
     steps:
+      - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v7
       - uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
           merge-multiple: true
           path: wheels/
-      - uses: actions/checkout@v6
       - name: List distributions
         run: ls -la wheels/
       - name: Resolve PyPI publish state
