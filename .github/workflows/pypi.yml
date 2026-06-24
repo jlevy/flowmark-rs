@@ -48,7 +48,7 @@ jobs:
   build-linux-x86_64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: v1.12.5
@@ -67,7 +67,7 @@ jobs:
   build-linux-aarch64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: v1.12.5
@@ -84,7 +84,7 @@ jobs:
   build-macos-x86_64:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: v1.12.5
@@ -102,7 +102,7 @@ jobs:
   build-macos-aarch64:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: v1.12.5
@@ -120,7 +120,7 @@ jobs:
   build-windows-x86_64:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: v1.12.5
@@ -138,7 +138,7 @@ jobs:
   build-sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: PyO3/maturin-action@v1
         with:
           maturin-version: v1.12.5
@@ -159,7 +159,7 @@ jobs:
       - build-windows-x86_64
       - build-sdist
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           pattern: wheels-*
@@ -176,7 +176,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
       - uses: actions/download-artifact@v8
         with:

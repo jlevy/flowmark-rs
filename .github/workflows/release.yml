@@ -46,7 +46,7 @@ jobs:
       publish: ${{ steps.plan.outputs.publish }}
       publish_channels: ${{ steps.plan.outputs.publish_channels }}
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - name: Resolve release mode
         id: plan
         run: python3 ./scripts/resolve_release_plan.py --event-name "${GITHUB_EVENT_NAME}" --ref-name "${GITHUB_REF_NAME}" --tag "${{ inputs.tag || '' }}" --publish "${{ inputs.publish || 'false' }}" --publish-prerelease "${{ inputs.publish_prerelease || 'false' }}" --run-id "${GITHUB_RUN_ID}" --github-output "$GITHUB_OUTPUT"
@@ -86,7 +86,7 @@ jobs:
     needs: [plan]
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
 
