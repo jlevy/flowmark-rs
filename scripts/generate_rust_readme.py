@@ -10,10 +10,10 @@
 
 from __future__ import annotations
 
-from argparse import ArgumentParser
-from pathlib import Path
 import re
 import tomllib
+from argparse import ArgumentParser
+from pathlib import Path
 
 from jinja2 import Environment, StrictUndefined
 from strif import atomic_output_file
@@ -24,7 +24,9 @@ UPSTREAM_DOCS_BASE_URL = "https://github.com/jlevy/flowmark/blob/main/docs/"
 def parse_args() -> tuple[Path, Path, Path]:
     """Parse command-line arguments and resolve default repo-relative paths."""
     repo_root = Path(__file__).resolve().parents[1]
-    parser = ArgumentParser(description="Generate README.md from shared docs + Rust wrapper template.")
+    parser = ArgumentParser(
+        description="Generate README.md from shared docs + Rust wrapper template."
+    )
     parser.add_argument(
         "--shared-docs",
         "--python-readme",
@@ -59,9 +61,10 @@ def rewrite_upstream_local_docs_links(markdown: str) -> str:
     )
 
 
-# Runner-pin placeholder in the shared docs (the `uvx --from flowmark==...` examples).
-# Substituted with the Python parity version, matching upstream generate-python-readme.py.
+# Runner-pin placeholders in the shared docs. Substitute the Python package from the
+# parity baseline and the Rust package from this crate's version.
 VERSION_PLACEHOLDER = "__FLOWMARK_VERSION__"
+RS_VERSION_PLACEHOLDER = "__FLOWMARK_RS_VERSION__"
 
 PERSPECTIVE_FLIP_OLD = (
     "Flowmark comes in two flavors: this Python reference implementation and an "
@@ -132,6 +135,18 @@ def read_parity_version(repo_root: Path) -> str:
     return parity
 
 
+def read_package_version(repo_root: Path) -> str:
+    """Read this Rust package's version from Cargo.toml."""
+    cargo_toml = repo_root / "Cargo.toml"
+    if not cargo_toml.exists():
+        raise FileNotFoundError(f"missing Cargo.toml at {cargo_toml}")
+    metadata = tomllib.loads(cargo_toml.read_text(encoding="utf-8"))
+    version = metadata.get("package", {}).get("version")
+    if not isinstance(version, str) or not version:
+        raise ValueError(f"missing [package].version in {cargo_toml}")
+    return version
+
+
 def read_last_sync_date(repo_root: Path) -> str:
     """Read the port last-updated date from docs/port-status.md."""
     port_status = repo_root / "docs/port-status.md"
@@ -149,6 +164,7 @@ def render_readme(
     shared_docs_body: str,
     msrv: str,
     parity_version: str,
+    rust_version: str,
     last_sync_date: str,
 ) -> str:
     """Render the README wrapper template with transformed shared docs content."""
@@ -162,6 +178,7 @@ def render_readme(
         shared_docs_body=shared_docs_body,
         msrv=msrv,
         parity_version=parity_version,
+        rust_version=rust_version,
         last_sync_date=last_sync_date,
     )
     if not rendered.endswith("\n"):
@@ -188,18 +205,20 @@ def main() -> int:
     shared_docs_body = shared_docs_path.read_text(encoding="utf-8").rstrip() + "\n"
     shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
     shared_docs_body = rewrite_perspective_for_rust_repo(shared_docs_body)
-    # The shared docs pin the Python runner with a `__FLOWMARK_VERSION__` placeholder
-    # (the `uvx --from flowmark==... flowmark` examples reference the Python package).
-    # Substitute the parity version so the examples are runnable, mirroring the upstream
-    # generate-python-readme.py; fail loudly if any placeholder survives.
+    # Keep the shared runner examples aligned with the Python parity baseline and this
+    # crate's release. Fail loudly if the shared source adds an unhandled placeholder.
+    rust_version = read_package_version(repo_root)
     shared_docs_body = shared_docs_body.replace(VERSION_PLACEHOLDER, parity_version)
-    if VERSION_PLACEHOLDER in shared_docs_body:
-        raise ValueError(f"{VERSION_PLACEHOLDER} still present after substitution")
+    shared_docs_body = shared_docs_body.replace(RS_VERSION_PLACEHOLDER, rust_version)
+    for placeholder in (VERSION_PLACEHOLDER, RS_VERSION_PLACEHOLDER):
+        if placeholder in shared_docs_body:
+            raise ValueError(f"{placeholder} still present after substitution")
     rendered = render_readme(
         template_path,
         shared_docs_body,
         read_msrv(repo_root),
         parity_version,
+        rust_version,
         read_last_sync_date(repo_root),
     )
     write_atomic(output_path, rendered)

@@ -1,21 +1,30 @@
-//! Drift and validation tests for the generated skill artifact (the committed discovery
-//! copy `skills/flowmark/SKILL.md`) and the skill frontmatter.
+//! Drift and validation tests for the generated skill bundle under `skills/flowmark/`
+//! and the skill frontmatter.
 //!
 //! Ported from Python: `test_skill_artifacts.py`. The Python suite also checks dogfooded
 //! repo surfaces (README + installed `.agents`/`.claude`/`AGENTS.md`); the Rust port keeps
-//! a single committed discovery copy, so the drift checks target that copy and the
-//! generator functions. Regenerate the copy with `discovery_skill_text()` if it drifts.
+//! a single committed discovery bundle, so the drift checks target that bundle and the
+//! generator functions.
 
 use std::path::PathBuf;
 
 use flowmark::config::ListSpacing;
 use flowmark::reformat_text;
 use flowmark::skills::{
-    FLOWMARK_RS_DISCOVERY_VERSION, compose_skill, discovery_skill_text, is_pypi_release,
+    FLOWMARK_RS_DISCOVERY_VERSION, compose_skill, discovery_project_setup_text,
+    discovery_skill_text, is_pypi_release,
 };
 
 fn discovery_copy_path() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("skills/flowmark/SKILL.md")
+}
+
+fn discovery_reference_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("skills/flowmark/references/project-setup.md")
+}
+
+fn readme_path() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("README.md")
 }
 
 /// Read the committed discovery copy, normalizing CRLF → LF so the line-ending-sensitive
@@ -27,12 +36,23 @@ fn discovery_copy() -> String {
         .replace("\r\n", "\n")
 }
 
+fn discovery_reference() -> String {
+    std::fs::read_to_string(discovery_reference_path())
+        .expect("read committed project-setup reference")
+        .replace("\r\n", "\n")
+}
+
 #[test]
 fn test_discovery_copy_matches_generator() {
     assert_eq!(
         discovery_copy(),
         discovery_skill_text().replace("\r\n", "\n"),
         "committed skills/flowmark/SKILL.md drifted from discovery_skill_text(); regenerate it"
+    );
+    assert_eq!(
+        discovery_reference(),
+        discovery_project_setup_text().replace("\r\n", "\n"),
+        "committed project-setup reference drifted from its generator"
     );
 }
 
@@ -43,6 +63,27 @@ fn test_discovery_copy_is_flowmark_stable() {
     let formatted =
         reformat_text(&text, 88, false, true, true, false, false, ListSpacing::Preserve);
     assert_eq!(formatted, text, "`flowmark` over the discovery copy must be a no-op");
+    let reference = discovery_reference();
+    let formatted_reference =
+        reformat_text(&reference, 88, false, true, true, false, false, ListSpacing::Preserve);
+    assert_eq!(
+        formatted_reference, reference,
+        "`flowmark` over the discovery reference must be a no-op"
+    );
+}
+
+#[test]
+fn test_discovery_skill_bundles_its_project_setup_reference() {
+    assert!(discovery_copy().contains("references/project-setup.md"));
+    assert!(discovery_reference_path().is_file());
+}
+
+#[test]
+fn test_readme_uses_the_current_rust_runner_pin() {
+    let readme = std::fs::read_to_string(readme_path()).expect("read README");
+    assert!(readme.contains(&format!("flowmark-rs=={FLOWMARK_RS_DISCOVERY_VERSION}")));
+    assert!(!readme.contains("__FLOWMARK_RS_VERSION__"));
+    assert!(!readme.contains("flowmark-rs@latest"));
 }
 
 #[test]
@@ -52,7 +93,7 @@ fn test_rs_discovery_version_is_resolvable() {
 
 #[test]
 fn test_discovery_copy_has_resolvable_version_pin() {
-    let text = discovery_copy();
+    let text = format!("{}\n{}", discovery_copy(), discovery_reference());
     assert!(!text.contains("__FLOWMARK_VERSION__"));
     assert!(!text.contains("__FLOWMARK_RS_VERSION__"));
     assert!(!text.contains("flowmark==<version>"));

@@ -100,8 +100,8 @@ methodology.
 The easiest way to install or run flowmark:
 
 ```bash
-uvx flowmark-rs@latest --auto .           # run on demand (no install needed)
-uv tool install flowmark-rs@latest        # persistent install
+uvx --from flowmark-rs=={{ rust_version }} flowmark --auto .
+uv tool install flowmark-rs=={{ rust_version }}
 ```
 
 ### Cargo
@@ -125,7 +125,7 @@ If you only want the CLI tool, just install `flowmark-rs`: you don’t need the 
 
 * * *
 
-{{ shared_docs_body }}
+{{ shared_docs_body.rstrip() }}
 
 Rust-specific docs:
 

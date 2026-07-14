@@ -42,6 +42,8 @@ fn test_default_writes_all_three_surfaces() {
     assert_eq!(r.code, 0);
     assert!(dir.path().join(".agents/skills/flowmark/SKILL.md").exists());
     assert!(dir.path().join(".claude/skills/flowmark/SKILL.md").exists());
+    assert!(dir.path().join(".agents/skills/flowmark/references/project-setup.md").exists());
+    assert!(dir.path().join(".claude/skills/flowmark/references/project-setup.md").exists());
     assert!(dir.path().join("AGENTS.md").exists());
 }
 
