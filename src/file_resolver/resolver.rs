@@ -128,10 +128,7 @@ impl FileResolver {
                     .collect();
                 return if patterns.is_empty() { None } else { Some(patterns) };
             }
-            match current.parent() {
-                Some(p) => current = p.to_path_buf(),
-                None => return None,
-            }
+            current = current.parent()?.to_path_buf();
         }
     }
 
