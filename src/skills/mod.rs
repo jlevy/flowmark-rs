@@ -2,7 +2,7 @@
 //!
 //! Ported from Python: `flowmark/skill.py`.
 //!
-//! Installs the flowmark `SKILL.md` so AI coding agents can discover and use it. By
+//! Installs the flowmark skill bundle so AI coding agents can discover and use it. By
 //! default this installs project-locally into both the portable `.agents/skills/flowmark/`
 //! location (read by Codex, Gemini CLI, pi) and the `.claude/skills/flowmark/` mirror
 //! (Claude Code reads only that path), plus a marker-bounded block in `AGENTS.md`. A
@@ -11,8 +11,13 @@
 //!
 //! # Cross-implementation porting contract
 //!
-//! The authored `SKILL.md` pins BOTH packages via two placeholders and is byte-identical
-//! across the Python and Rust implementations — only the substitution sources differ:
+//! The main Flowmark repository owns the public skill and its documentation. This crate
+//! embeds a byte-identical runtime mirror so `--skill` and `--install-skill` remain
+//! drop-in compatible. `scripts/generate_rust_readme.py` verifies the mirror against the
+//! pinned `repos/flowmark` submodule.
+//!
+//! The authored `SKILL.md` pins BOTH packages via two placeholders; only the
+//! substitution sources differ:
 //!
 //! - Python `flowmark`: `__FLOWMARK_VERSION__` <- its own installed version (dynamic),
 //!   `__FLOWMARK_RS_VERSION__` <- a sibling flowmark-rs discovery constant.
@@ -22,13 +27,17 @@
 //! The roles swap, but a default install from either side produces identical artifacts.
 
 use std::collections::HashSet;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use regex::Regex;
+use tempfile::NamedTempFile;
 
 /// The embedded SKILL.md template (still contains the version placeholders).
 pub const SKILL_CONTENT: &str = include_str!("SKILL.md");
+/// The project-setup reference bundled with the skill.
+pub const PROJECT_SETUP_CONTENT: &str = include_str!("references/project-setup.md");
 /// Embedded documentation content generated at build time.
 pub const DOCS_CONTENT: &str = include_str!(concat!(env!("OUT_DIR"), "/flowmark_docs.md"));
 
@@ -37,16 +46,20 @@ pub const DOCS_CONTENT: &str = include_str!(concat!(env!("OUT_DIR"), "/flowmark_
 /// `surface=` field distinguishes which artifact. Bump when any artifact's shape changes;
 /// a future flowmark uses the stamp to upgrade older shapes and refuses to clobber a
 /// newer format it doesn't understand.
-pub const FLOWMARK_FORMAT: &str = "f02";
+pub const FLOWMARK_FORMAT: &str = "f03";
 
 // Placeholders in the authored SKILL.md, replaced by `compose_skill` with concrete pins.
 const VERSION_PLACEHOLDER: &str = "__FLOWMARK_VERSION__"; // sibling package (flowmark, Python)
+
+/// Default permissions for newly generated text artifacts on Unix.
+#[cfg(unix)]
+const GENERATED_TEXT_FILE_MODE: u32 = 0o644;
 const RS_VERSION_PLACEHOLDER: &str = "__FLOWMARK_RS_VERSION__"; // this package (flowmark-rs)
 
-/// This port's own discovery pin: the fallback flowmark-rs version baked into the
-/// committed discovery copy and used when the running build's version is not a real,
-/// PyPI-installable release. Must be a real release (guarded by tests).
-pub const FLOWMARK_RS_DISCOVERY_VERSION: &str = "0.3.0";
+/// This port's own discovery pin: the fallback flowmark-rs version used when the
+/// running build's version is not a real, PyPI-installable release. Must be a real
+/// release (guarded by tests).
+pub const FLOWMARK_RS_DISCOVERY_VERSION: &str = "0.3.1";
 
 /// Sibling Python `flowmark` discovery pin substituted for `__FLOWMARK_VERSION__`. The
 /// two packages are numbered independently; this tracks the Python parity baseline.
@@ -121,9 +134,17 @@ pub fn flowmark_rs_version() -> String {
     resolve_rs_pin(is_dev_build, env!("CARGO_PKG_VERSION"), FLOWMARK_RS_DISCOVERY_VERSION)
 }
 
-/// The authored SKILL.md template (still contains the version placeholders).
+/// The vendored runtime mirror of Flowmark's authored SKILL.md template.
+///
+/// The main Flowmark repository owns the public discovery bundle; this copy exists only
+/// so the Rust CLI can print and install the same skill without a network dependency.
 pub fn get_skill_content() -> &'static str {
     SKILL_CONTENT
+}
+
+/// The vendored runtime mirror of Flowmark's authored project-setup reference.
+pub fn get_project_setup_content() -> &'static str {
+    PROJECT_SETUP_CONTENT
 }
 
 /// Render the SKILL.md template into a final skill document.
@@ -137,14 +158,20 @@ pub fn compose_skill(version: Option<&str>) -> String {
         .replace(VERSION_PLACEHOLDER, FLOWMARK_PY_DISCOVERY_VERSION)
 }
 
+/// Render the project-setup reference with a concrete Rust-port runner pin.
+pub fn compose_project_setup(version: Option<&str>) -> String {
+    let pin = version.map_or_else(flowmark_rs_version, String::from);
+    PROJECT_SETUP_CONTENT.replace(RS_VERSION_PLACEHOLDER, &pin)
+}
+
 fn format_num() -> i64 {
     FLOWMARK_FORMAT.trim_start_matches('f').parse().unwrap_or(0)
 }
 
-fn generated_marker() -> String {
+fn generated_marker(surface: &str) -> String {
     // No internal `.` so flowmark's sentence-wrap leaves the line intact.
     format!(
-        "<!-- DO NOT EDIT: `flowmark --install-skill` (format={FLOWMARK_FORMAT} surface=skill-md) -->"
+        "<!-- DO NOT EDIT: `flowmark --install-skill` (format={FLOWMARK_FORMAT} surface={surface}) -->"
     )
 }
 
@@ -153,7 +180,7 @@ fn generated_marker() -> String {
 /// and the marker survives a `flowmark --auto` pass).
 pub fn render_skill_file(version: Option<&str>) -> String {
     let composed = compose_skill(version);
-    let marker = generated_marker();
+    let marker = generated_marker("skill-md");
     let delimiter = "\n---\n";
     let front = "---\n";
     if let Some(rest) = composed.strip_prefix(front) {
@@ -167,11 +194,23 @@ pub fn render_skill_file(version: Option<&str>) -> String {
     format!("{marker}\n\n{composed}")
 }
 
-/// The committed repo-root discovery copy (`skills/flowmark/SKILL.md`), pinned to the
-/// discovery versions so its `uvx --from` bootstrap lines run without flowmark
-/// pre-installed.
+/// Render the generated project-setup reference installed beside `SKILL.md`.
+pub fn render_project_setup_file(version: Option<&str>) -> String {
+    let marker = generated_marker("skill-reference");
+    format!("{marker}\n\n{}", compose_project_setup(version))
+}
+
+/// Render a release-pinned skill snapshot for compatibility and validation.
+///
+/// Public discovery is owned by `github.com/jlevy/flowmark`; flowmark-rs deliberately
+/// does not publish a separate repo-root `skills/flowmark/` bundle.
 pub fn discovery_skill_text() -> String {
     render_skill_file(Some(FLOWMARK_RS_DISCOVERY_VERSION))
+}
+
+/// Render the reference paired with [`discovery_skill_text`].
+pub fn discovery_project_setup_text() -> String {
+    render_project_setup_file(Some(FLOWMARK_RS_DISCOVERY_VERSION))
 }
 
 /// Read README.md relative to the executable; falls back to embedded docs content.
@@ -257,11 +296,36 @@ fn replace_all_flowmark_blocks(existing: &str, block: &str) -> String {
     out
 }
 
-fn write_file(path: &Path, content: &str) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+fn stage_file(path: &Path, content: &str) -> std::io::Result<NamedTempFile> {
+    let parent = path.parent().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "output path has no parent")
+    })?;
+    std::fs::create_dir_all(parent)?;
+    let mut staged = NamedTempFile::new_in(parent)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let permissions = match std::fs::metadata(path) {
+            Ok(metadata) => metadata.permissions(),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                std::fs::Permissions::from_mode(GENERATED_TEXT_FILE_MODE)
+            }
+            Err(error) => return Err(error),
+        };
+        staged.as_file().set_permissions(permissions)?;
     }
-    std::fs::write(path, content)
+    staged.write_all(content.as_bytes())?;
+    staged.flush()?;
+    Ok(staged)
+}
+
+fn persist_file(staged: NamedTempFile, path: &Path) -> std::io::Result<()> {
+    staged.persist(path).map(|_| ()).map_err(|error| error.error)
+}
+
+fn write_file(path: &Path, content: &str) -> std::io::Result<()> {
+    persist_file(stage_file(path, content)?, path)
 }
 
 /// Insert or refresh the flowmark block in `AGENTS.md`, preserving all content outside the
@@ -297,19 +361,46 @@ pub fn update_agents_md(path: &Path, version: Option<&str>) -> std::io::Result<I
     Ok(InstallResult::new(surface, path.to_path_buf(), action))
 }
 
-/// Write a SKILL.md surface, honoring the forward-compatibility guard.
-fn write_surface(skill_dir: &Path, surface: &str, content: &str) -> std::io::Result<InstallResult> {
+/// Write one skill-bundle surface, honoring the forward-compatibility guard.
+fn write_surface(
+    skill_dir: &Path,
+    surface: &str,
+    content: &str,
+    project_setup_content: &str,
+) -> std::io::Result<InstallResult> {
     let target = skill_dir.join("SKILL.md");
-    if let Some(fmt) = existing_format(&target) {
-        if fmt > format_num() {
-            return Ok(InstallResult::new(surface, target, "blocked-newer"));
-        }
+    let project_setup_target = skill_dir.join("references").join("project-setup.md");
+    if [existing_format(&target), existing_format(&project_setup_target)]
+        .into_iter()
+        .flatten()
+        .any(|fmt| fmt > format_num())
+    {
+        return Ok(InstallResult::new(surface, target, "blocked-newer"));
     }
-    if target.is_file() && std::fs::read_to_string(&target).ok().as_deref() == Some(content) {
+    let skill_matches =
+        target.is_file() && std::fs::read_to_string(&target).ok().as_deref() == Some(content);
+    let reference_matches = project_setup_target.is_file()
+        && std::fs::read_to_string(&project_setup_target).ok().as_deref()
+            == Some(project_setup_content);
+    if skill_matches && reference_matches {
         return Ok(InstallResult::new(surface, target, "unchanged"));
     }
-    let action = if target.exists() { "updated" } else { "installed" };
-    write_file(&target, content)?;
+    let action =
+        if target.exists() || project_setup_target.exists() { "updated" } else { "installed" };
+    let staged_skill = if skill_matches { None } else { Some(stage_file(&target, content)?) };
+    let staged_reference = if reference_matches {
+        None
+    } else {
+        Some(stage_file(&project_setup_target, project_setup_content)?)
+    };
+    // Publish the reference first and SKILL.md last, making SKILL.md the bundle's commit
+    // point. A failed publication cannot expose a new skill with a missing reference.
+    if let Some(staged) = staged_reference {
+        persist_file(staged, &project_setup_target)?;
+    }
+    if let Some(staged) = staged_skill {
+        persist_file(staged, &target)?;
+    }
     Ok(InstallResult::new(surface, target, action))
 }
 
@@ -364,6 +455,7 @@ pub fn install_skill(
     surfaces: Option<&HashSet<String>>,
 ) -> Result<Vec<InstallResult>, String> {
     let content = render_skill_file(None);
+    let project_setup_content = render_project_setup_file(None);
     let selected: HashSet<String> = surfaces
         .cloned()
         .unwrap_or_else(|| ALL_SURFACES.iter().map(|s| (*s).to_string()).collect());
@@ -383,8 +475,13 @@ pub fn install_skill(
             .unwrap_or_else(|_| std::env::current_dir().unwrap_or_default().join(&base_path));
         let label = base_abs.display().to_string();
         results.push(
-            write_surface(&base_abs.join("skills").join(SKILL_DIRNAME), &label, &content)
-                .map_err(io_err)?,
+            write_surface(
+                &base_abs.join("skills").join(SKILL_DIRNAME),
+                &label,
+                &content,
+                &project_setup_content,
+            )
+            .map_err(io_err)?,
         );
     } else {
         let root = match project_root {
@@ -394,8 +491,10 @@ pub fn install_skill(
         project_local_root = Some(root.clone());
         if selected.contains(SURFACE_PORTABLE) {
             let dir = root.join(".agents").join("skills").join(SKILL_DIRNAME);
-            results
-                .push(write_surface(&dir, ".agents/skills (portable)", &content).map_err(io_err)?);
+            results.push(
+                write_surface(&dir, ".agents/skills (portable)", &content, &project_setup_content)
+                    .map_err(io_err)?,
+            );
         }
         if selected.contains(SURFACE_AGENTS_MD) {
             results.push(update_agents_md(&root.join("AGENTS.md"), None).map_err(io_err)?);
@@ -403,7 +502,13 @@ pub fn install_skill(
         if selected.contains(SURFACE_CLAUDE) {
             let dir = root.join(".claude").join("skills").join(SKILL_DIRNAME);
             results.push(
-                write_surface(&dir, ".claude/skills (Claude Code)", &content).map_err(io_err)?,
+                write_surface(
+                    &dir,
+                    ".claude/skills (Claude Code)",
+                    &content,
+                    &project_setup_content,
+                )
+                .map_err(io_err)?,
             );
         }
     }
@@ -426,6 +531,19 @@ pub fn install_skill(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn write_surface_does_not_publish_skill_before_reference() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let skill_dir = dir.path().join("flowmark");
+        std::fs::create_dir_all(&skill_dir).expect("skill dir");
+        std::fs::write(skill_dir.join("references"), "not a directory")
+            .expect("reference path blocker");
+
+        write_surface(&skill_dir, "test", "skill", "reference").expect_err("install fails");
+
+        assert!(!skill_dir.join("SKILL.md").exists());
+    }
 
     #[test]
     fn pin_or_discovery_passes_real_release_through() {

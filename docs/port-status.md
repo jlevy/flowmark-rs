@@ -62,9 +62,9 @@ error behavior.**
   `uvx --from flowmark-rs==<X> flowmark` line carries this build’s flowmark-rs version
   while the Python build emits its sibling `FLOWMARK_RS_DISCOVERY_VERSION` constant (the
   two packages are numbered independently).
-  The authored skill text is otherwise byte-identical across both.
-  The committed discovery copy pins the last published flowmark-rs release so its
-  bootstrap always resolves.
+  The main Flowmark repository owns the public discovery bundle and documentation.
+  This port keeps only a packaged runtime mirror for CLI compatibility; README
+  generation verifies it byte-for-byte against the pinned Flowmark submodule.
 
 Everything not on this list is required to be identical.
 The corpus-sweep gaps below were all **fixed** (not tolerated); the single remaining
@@ -197,7 +197,7 @@ or reclassified:
 | **Homebrew tap** | Live | `brew install jlevy/flowmark/flowmark` |
 | **Trusted publishing** | Complete | OIDC configured for crates.io and PyPI |
 | **Documentation** | Complete | README, CONTRIBUTING, CHANGELOG, publishing guide, sync playbook |
-| **Claude Code skill** | Complete | `--install-skill` and `--skill` flags working |
+| **Agent skill runtime** | Complete | `--install-skill` and `--skill` use the upstream-owned bundle; public discovery stays in `jlevy/flowmark` |
 
 ### Future Work
 

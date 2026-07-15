@@ -14,8 +14,8 @@ use flowmark::reformat_text;
 use flowmark::skills::{
     AGENTS_BEGIN_PREFIX, AGENTS_END_MARKER, FLOWMARK_PY_DISCOVERY_VERSION,
     FLOWMARK_RS_DISCOVERY_VERSION, SURFACE_CLAUDE, SURFACE_PORTABLE, agents_md_block,
-    compose_skill, flowmark_rs_version, get_docs_content, get_skill_content, install_skill,
-    is_pypi_release, update_agents_md,
+    compose_project_setup, compose_skill, flowmark_rs_version, get_docs_content,
+    get_project_setup_content, get_skill_content, install_skill, is_pypi_release, update_agents_md,
 };
 
 fn surfaces(names: &[&str]) -> HashSet<String> {
@@ -47,6 +47,16 @@ fn test_skill_content_has_usage() {
     let content = get_skill_content();
     assert!(content.contains("# Flowmark"));
     assert!(content.contains("flowmark --auto"));
+}
+
+#[test]
+fn test_skill_routes_repository_adoption_to_bundled_reference() {
+    let skill = get_skill_content();
+    assert!(skill.contains("references/project-setup.md"));
+    assert!(skill.contains("same runner with `--install-skill`"));
+    let reference = get_project_setup_content();
+    assert!(reference.contains("## Auto-Fix on Commit"));
+    assert!(reference.contains("## Disable Competing Markdown Formatters"));
 }
 
 // --- TestComposeSkill (version roles swapped vs Python) ---
@@ -92,6 +102,13 @@ fn test_compose_doc_pin_is_stable() {
 #[test]
 fn test_compose_preserves_frontmatter() {
     assert!(compose_skill(Some("1.2.3")).starts_with("---\nname: flowmark\n"));
+}
+
+#[test]
+fn test_compose_project_setup_substitutes_rust_pin() {
+    let rendered = compose_project_setup(Some("1.2.3"));
+    assert!(rendered.contains("flowmark-rs==1.2.3"));
+    assert!(!rendered.contains("__FLOWMARK_RS_VERSION__"));
 }
 
 #[test]
@@ -169,6 +186,8 @@ fn test_install_default_writes_both_project_local_surfaces() {
     let claude = dir.path().join(".claude/skills/flowmark/SKILL.md");
     assert!(portable.exists());
     assert!(claude.exists());
+    assert!(portable.parent().unwrap().join("references/project-setup.md").exists());
+    assert!(claude.parent().unwrap().join("references/project-setup.md").exists());
     assert!(fs::read_to_string(&claude).unwrap().contains("name: flowmark"));
 }
 
@@ -177,6 +196,7 @@ fn test_install_target_selection() {
     let dir = tempfile::tempdir().expect("temp dir");
     install_skill(None, Some(dir.path()), Some(&surfaces(&[SURFACE_PORTABLE]))).expect("install");
     assert!(dir.path().join(".agents/skills/flowmark/SKILL.md").exists());
+    assert!(dir.path().join(".agents/skills/flowmark/references/project-setup.md").exists());
     assert!(!dir.path().join(".claude").exists());
     assert!(!dir.path().join("AGENTS.md").exists());
 }
@@ -187,8 +207,12 @@ fn test_installed_file_has_do_not_edit_and_format_stamp() {
     install_skill(None, Some(dir.path()), None).expect("install");
     let content = fs::read_to_string(dir.path().join(".claude/skills/flowmark/SKILL.md")).unwrap();
     assert!(content.contains("DO NOT EDIT"));
-    assert!(content.contains("format=f02 surface=skill-md"));
+    assert!(content.contains("format=f03 surface=skill-md"));
     assert!(content.starts_with("---\nname: flowmark\n"));
+    let reference =
+        fs::read_to_string(dir.path().join(".claude/skills/flowmark/references/project-setup.md"))
+            .unwrap();
+    assert!(reference.contains("format=f03 surface=skill-reference"));
 }
 
 #[test]
@@ -214,13 +238,32 @@ fn test_forward_compat_guard_blocks_newer_format() {
     assert_eq!(fs::read_to_string(&target).unwrap(), "<!-- format=f99 surface=skill-md -->\nnewer");
 }
 
+#[test]
+fn test_forward_compat_guard_checks_bundled_reference() {
+    let dir = tempfile::tempdir().expect("temp dir");
+    let skill_dir = dir.path().join(".claude/skills/flowmark");
+    let target = skill_dir.join("references/project-setup.md");
+    fs::create_dir_all(target.parent().unwrap()).unwrap();
+    fs::write(&target, "<!-- format=f99 surface=skill-reference -->\nnewer").unwrap();
+
+    let results =
+        install_skill(None, Some(dir.path()), Some(&surfaces(&[SURFACE_CLAUDE]))).expect("install");
+
+    assert_eq!(results.iter().map(|r| r.action.as_str()).collect::<Vec<_>>(), ["blocked-newer"]);
+    assert_eq!(
+        fs::read_to_string(&target).unwrap(),
+        "<!-- format=f99 surface=skill-reference -->\nnewer"
+    );
+    assert!(!skill_dir.join("SKILL.md").exists());
+}
+
 // --- TestAgentsMdBlock ---
 
 #[test]
 fn test_block_is_marker_bounded_with_format() {
     let block = agents_md_block(Some("1.2.3"));
     assert!(block.starts_with(AGENTS_BEGIN_PREFIX));
-    assert!(block.contains("format=f02"));
+    assert!(block.contains("format=f03"));
     assert!(block.trim_end().ends_with(AGENTS_END_MARKER));
     assert!(block.contains("flowmark-rs==1.2.3"));
 }
@@ -317,6 +360,7 @@ fn test_install_skill_custom_base() {
     install_skill(Some(base.to_str().unwrap()), None, None).expect("install");
     let skill_file = base.join("skills/flowmark/SKILL.md");
     assert!(skill_file.exists());
+    assert!(base.join("skills/flowmark/references/project-setup.md").exists());
     assert!(fs::read_to_string(&skill_file).unwrap().contains("name: flowmark"));
 }
 
@@ -326,6 +370,7 @@ fn test_install_skill_creates_directories() {
     let base = dir.path().join("deep/nested/path");
     install_skill(Some(base.to_str().unwrap()), None, None).expect("install");
     assert!(base.join("skills/flowmark/SKILL.md").exists());
+    assert!(base.join("skills/flowmark/references/project-setup.md").exists());
 }
 
 #[test]
@@ -359,4 +404,5 @@ fn test_install_skill_safe_relative_path() {
     let safe = dir.path().join("project/.claude");
     install_skill(Some(safe.to_str().unwrap()), None, None).expect("install");
     assert!(safe.join("skills/flowmark/SKILL.md").exists());
+    assert!(safe.join("skills/flowmark/references/project-setup.md").exists());
 }

@@ -182,6 +182,8 @@ jobs:
         with:
           python-version: "3.14"
           enable-cache: true
+      - name: Verify Flowmark skill runtime mirror
+        run: python3 scripts/sync_skill_mirror.py --check
       - name: Regenerate README
         run: ./scripts/generate_rust_readme.py
       - name: Verify README is in sync

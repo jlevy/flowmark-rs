@@ -10,7 +10,7 @@ The three categories:
 
 | Status | Meaning |
 | --- | --- |
-| **Mirrored** | Content comes from upstream and is regenerated locally. Currently: `README.md` only (via [`docs/shared/flowmark-readme-shared.md`](https://github.com/jlevy/flowmark/blob/main/docs/shared/flowmark-readme-shared.md) and the wrapper template, with a small perspective transform in `scripts/generate_rust_readme.py`). |
+| **Mirrored** | Content comes from upstream and is regenerated or verified locally. Currently: the shared `README.md` body and the packaged runtime skill used by `--skill` / `--install-skill`. |
 | **Parallel** | Same role as the upstream doc of the same name; content differs because the toolchain (Rust cargo + multi-channel release vs Python uv + PyPI) requires different commands. |
 | **Rust port-specific** | No upstream equivalent. Documents the port lifecycle (parity, sync, history) or a Rust-only feature. |
 
@@ -55,14 +55,21 @@ The three categories:
 
 ## What is mirrored from upstream
 
-Exactly two pieces of upstream content flow into the Rust port:
+Three pieces of upstream content flow into the Rust port:
 
 1. **README body** comes from
    [`docs/shared/flowmark-readme-shared.md`](https://github.com/jlevy/flowmark/blob/main/docs/shared/flowmark-readme-shared.md)
    via the README generator, with a small perspective transform in
    `scripts/generate_rust_readme.py` so phrasing like “this Python reference
    implementation” reads correctly from the Rust repo’s perspective.
-2. **Test fixtures** at `tests/testdocs/testdoc.orig.md` and
+2. **Runtime skill sources** at `src/skills/` mirror
+   [`src/flowmark/skills/`](https://github.com/jlevy/flowmark/tree/main/src/flowmark/skills)
+   byte-for-byte so both CLIs print and install the same bundle.
+   The README generator checks this invariant against the pinned `repos/flowmark`
+   submodule. Public discovery and `npx skills add` remain exclusively in
+   `jlevy/flowmark`; this repository intentionally has no root `skills/flowmark/`
+   bundle.
+3. **Test fixtures** at `tests/testdocs/testdoc.orig.md` and
    `tests/testdocs/testdoc.expected.*.md` come from upstream’s
    [`tests/testdocs/`](https://github.com/jlevy/flowmark/tree/main/tests/testdocs) and
    are refreshed on every Mode B sync.
