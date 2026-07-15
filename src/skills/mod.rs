@@ -22,10 +22,12 @@
 //! The roles swap, but a default install from either side produces identical artifacts.
 
 use std::collections::HashSet;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use regex::Regex;
+use tempfile::NamedTempFile;
 
 /// The embedded SKILL.md template (still contains the version placeholders).
 pub const SKILL_CONTENT: &str = include_str!("SKILL.md");
@@ -43,6 +45,10 @@ pub const FLOWMARK_FORMAT: &str = "f03";
 
 // Placeholders in the authored SKILL.md, replaced by `compose_skill` with concrete pins.
 const VERSION_PLACEHOLDER: &str = "__FLOWMARK_VERSION__"; // sibling package (flowmark, Python)
+
+/// Default permissions for newly generated text artifacts on Unix.
+#[cfg(unix)]
+const GENERATED_TEXT_FILE_MODE: u32 = 0o644;
 const RS_VERSION_PLACEHOLDER: &str = "__FLOWMARK_RS_VERSION__"; // this package (flowmark-rs)
 
 /// This port's own discovery pin: the fallback flowmark-rs version baked into the
@@ -281,11 +287,36 @@ fn replace_all_flowmark_blocks(existing: &str, block: &str) -> String {
     out
 }
 
-fn write_file(path: &Path, content: &str) -> std::io::Result<()> {
-    if let Some(parent) = path.parent() {
-        std::fs::create_dir_all(parent)?;
+fn stage_file(path: &Path, content: &str) -> std::io::Result<NamedTempFile> {
+    let parent = path.parent().ok_or_else(|| {
+        std::io::Error::new(std::io::ErrorKind::InvalidInput, "output path has no parent")
+    })?;
+    std::fs::create_dir_all(parent)?;
+    let mut staged = NamedTempFile::new_in(parent)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+
+        let permissions = match std::fs::metadata(path) {
+            Ok(metadata) => metadata.permissions(),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                std::fs::Permissions::from_mode(GENERATED_TEXT_FILE_MODE)
+            }
+            Err(error) => return Err(error),
+        };
+        staged.as_file().set_permissions(permissions)?;
     }
-    std::fs::write(path, content)
+    staged.write_all(content.as_bytes())?;
+    staged.flush()?;
+    Ok(staged)
+}
+
+fn persist_file(staged: NamedTempFile, path: &Path) -> std::io::Result<()> {
+    staged.persist(path).map(|_| ()).map_err(|error| error.error)
+}
+
+fn write_file(path: &Path, content: &str) -> std::io::Result<()> {
+    persist_file(stage_file(path, content)?, path)
 }
 
 /// Insert or refresh the flowmark block in `AGENTS.md`, preserving all content outside the
@@ -347,11 +378,19 @@ fn write_surface(
     }
     let action =
         if target.exists() || project_setup_target.exists() { "updated" } else { "installed" };
-    if !skill_matches {
-        write_file(&target, content)?;
+    let staged_skill = if skill_matches { None } else { Some(stage_file(&target, content)?) };
+    let staged_reference = if reference_matches {
+        None
+    } else {
+        Some(stage_file(&project_setup_target, project_setup_content)?)
+    };
+    // Publish the reference first and SKILL.md last, making SKILL.md the bundle's commit
+    // point. A failed publication cannot expose a new skill with a missing reference.
+    if let Some(staged) = staged_reference {
+        persist_file(staged, &project_setup_target)?;
     }
-    if !reference_matches {
-        write_file(&project_setup_target, project_setup_content)?;
+    if let Some(staged) = staged_skill {
+        persist_file(staged, &target)?;
     }
     Ok(InstallResult::new(surface, target, action))
 }
@@ -483,6 +522,19 @@ pub fn install_skill(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn write_surface_does_not_publish_skill_before_reference() {
+        let dir = tempfile::tempdir().expect("temp dir");
+        let skill_dir = dir.path().join("flowmark");
+        std::fs::create_dir_all(&skill_dir).expect("skill dir");
+        std::fs::write(skill_dir.join("references"), "not a directory")
+            .expect("reference path blocker");
+
+        write_surface(&skill_dir, "test", "skill", "reference").expect_err("install fails");
+
+        assert!(!skill_dir.join("SKILL.md").exists());
+    }
 
     #[test]
     fn pin_or_discovery_passes_real_release_through() {

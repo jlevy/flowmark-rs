@@ -51,7 +51,9 @@ fn test_skill_content_has_usage() {
 
 #[test]
 fn test_skill_routes_repository_adoption_to_bundled_reference() {
-    assert!(get_skill_content().contains("references/project-setup.md"));
+    let skill = get_skill_content();
+    assert!(skill.contains("references/project-setup.md"));
+    assert!(skill.contains("same runner with `--install-skill`"));
     let reference = get_project_setup_content();
     assert!(reference.contains("## Auto-Fix on Commit"));
     assert!(reference.contains("## Disable Competing Markdown Formatters"));
