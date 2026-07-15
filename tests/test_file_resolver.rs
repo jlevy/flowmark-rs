@@ -70,7 +70,7 @@ fn test_config_effective_exclude_extended() {
     // Should have all defaults plus "extra/"
     assert!(effective.contains(&".git/".to_string()));
     assert!(effective.contains(&"node_modules/".to_string()));
-    assert!(effective.last() == Some(&"extra/".to_string()));
+    assert_eq!(effective.last(), Some(&"extra/".to_string()));
 }
 
 // --- Resolver core (7) ---
