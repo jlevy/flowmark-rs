@@ -16,7 +16,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/scripts/tbd-session.sh"
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/scripts/port-sync-check.py",
+            "timeout": 15
           }
         ]
       },
@@ -25,8 +26,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/scripts/port-sync-check.py",
-            "timeout": 15
+            "command": "bash .claude/scripts/tbd-session.sh"
           }
         ]
       }
@@ -37,7 +37,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/tbd-closing-reminder.sh"
+            "command": "bash \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/tbd-closing-reminder.sh"
           }
         ]
       }

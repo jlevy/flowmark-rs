@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased][unreleased]
 
+## [0.3.2][] (parity: flowmark-py 0.7.2)
+
+Patch release completing the cross-agent Flowmark skill distribution while keeping
+formatter output byte-identical to v0.3.1.
+
+### Agent skill
+
+- **Complete project setup guidance:** `--skill` and `--install-skill` now include the
+  bundled `references/project-setup.md` guide for repository migration, Makefile
+  integration, auto-fixing commit hooks, and disabling competing Markdown formatters.
+- **Canonical skill ownership:** the main
+  [Flowmark repository](https://github.com/jlevy/flowmark) owns the public skill and
+  documentation installed by `npx skills add`; this Rust package keeps a verified
+  runtime mirror for CLI compatibility.
+- **Pinned Rust runner:** generated skill artifacts bootstrap the released
+  `flowmark-rs==0.3.2` package.
+
+### Publishing reliability
+
+- PyPI publication is rerun-safe: already-published versions are detected before upload,
+  and wheel validation checks out the source scripts before inspecting artifacts.
+
 ## [0.3.1][] (parity: flowmark-py 0.7.2)
 
 Patch release syncing the Python flowmark parity surface from v0.7.0 to v0.7.2 (upstream
@@ -324,4 +346,5 @@ Early development release.
 [0.2.7]: https://github.com/jlevy/flowmark-rs/compare/v0.2.6...v0.2.7
 [0.3.0]: https://github.com/jlevy/flowmark-rs/compare/v0.2.7...v0.3.0
 [0.3.1]: https://github.com/jlevy/flowmark-rs/compare/v0.3.0...v0.3.1
-[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.3.1...HEAD
+[0.3.2]: https://github.com/jlevy/flowmark-rs/compare/v0.3.1...v0.3.2
+[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.3.2...HEAD
