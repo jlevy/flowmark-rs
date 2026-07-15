@@ -11,8 +11,13 @@
 //!
 //! # Cross-implementation porting contract
 //!
-//! The authored `SKILL.md` pins BOTH packages via two placeholders and is byte-identical
-//! across the Python and Rust implementations — only the substitution sources differ:
+//! The main Flowmark repository owns the public skill and its documentation. This crate
+//! embeds a byte-identical runtime mirror so `--skill` and `--install-skill` remain
+//! drop-in compatible. `scripts/generate_rust_readme.py` verifies the mirror against the
+//! pinned `repos/flowmark` submodule.
+//!
+//! The authored `SKILL.md` pins BOTH packages via two placeholders; only the
+//! substitution sources differ:
 //!
 //! - Python `flowmark`: `__FLOWMARK_VERSION__` <- its own installed version (dynamic),
 //!   `__FLOWMARK_RS_VERSION__` <- a sibling flowmark-rs discovery constant.
@@ -51,9 +56,9 @@ const VERSION_PLACEHOLDER: &str = "__FLOWMARK_VERSION__"; // sibling package (fl
 const GENERATED_TEXT_FILE_MODE: u32 = 0o644;
 const RS_VERSION_PLACEHOLDER: &str = "__FLOWMARK_RS_VERSION__"; // this package (flowmark-rs)
 
-/// This port's own discovery pin: the fallback flowmark-rs version baked into the
-/// committed discovery copy and used when the running build's version is not a real,
-/// PyPI-installable release. Must be a real release (guarded by tests).
+/// This port's own discovery pin: the fallback flowmark-rs version used when the
+/// running build's version is not a real, PyPI-installable release. Must be a real
+/// release (guarded by tests).
 pub const FLOWMARK_RS_DISCOVERY_VERSION: &str = "0.3.1";
 
 /// Sibling Python `flowmark` discovery pin substituted for `__FLOWMARK_VERSION__`. The
@@ -129,12 +134,15 @@ pub fn flowmark_rs_version() -> String {
     resolve_rs_pin(is_dev_build, env!("CARGO_PKG_VERSION"), FLOWMARK_RS_DISCOVERY_VERSION)
 }
 
-/// The authored SKILL.md template (still contains the version placeholders).
+/// The vendored runtime mirror of Flowmark's authored SKILL.md template.
+///
+/// The main Flowmark repository owns the public discovery bundle; this copy exists only
+/// so the Rust CLI can print and install the same skill without a network dependency.
 pub fn get_skill_content() -> &'static str {
     SKILL_CONTENT
 }
 
-/// The authored project-setup reference (still contains the Rust version placeholder).
+/// The vendored runtime mirror of Flowmark's authored project-setup reference.
 pub fn get_project_setup_content() -> &'static str {
     PROJECT_SETUP_CONTENT
 }
@@ -192,14 +200,15 @@ pub fn render_project_setup_file(version: Option<&str>) -> String {
     format!("{marker}\n\n{}", compose_project_setup(version))
 }
 
-/// The committed repo-root discovery copy (`skills/flowmark/SKILL.md`), pinned to the
-/// discovery versions so its `uvx --from` bootstrap lines run without flowmark
-/// pre-installed.
+/// Render a release-pinned skill snapshot for compatibility and validation.
+///
+/// Public discovery is owned by `github.com/jlevy/flowmark`; flowmark-rs deliberately
+/// does not publish a separate repo-root `skills/flowmark/` bundle.
 pub fn discovery_skill_text() -> String {
     render_skill_file(Some(FLOWMARK_RS_DISCOVERY_VERSION))
 }
 
-/// The reference bundled with the committed `skills/flowmark/` discovery skill.
+/// Render the reference paired with [`discovery_skill_text`].
 pub fn discovery_project_setup_text() -> String {
     render_project_setup_file(Some(FLOWMARK_RS_DISCOVERY_VERSION))
 }

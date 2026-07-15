@@ -183,16 +183,20 @@ For this repo, use these concrete equivalents:
    cd ../..
    ```
 
-4. **Sync fixtures and generated README inputs**
+4. **Sync fixtures, the runtime skill mirror, and generated README inputs**
 
    ```bash
    cp repos/flowmark/tests/testdocs/testdoc.orig.md tests/testdocs/
    cp repos/flowmark/tests/testdocs/testdoc.expected.*.md tests/testdocs/
+   python3 scripts/sync_skill_mirror.py
    ./scripts/generate_rust_readme.py
    ```
 
    The generator pulls `last_sync_date` from `docs/port-status.md` and `parity_version`
    from `Cargo.toml`, so update those before running it.
+   It also verifies that `src/skills/` is byte-identical to the complete upstream skill
+   bundle, except for the Rust-only `mod.rs` implementation.
+   The Rust repository does not publish a separate root `skills/flowmark/` bundle.
 
 5. **Triage mapping gaps early (temp manifest)**
 
@@ -255,7 +259,7 @@ For this repo, use these concrete equivalents:
 9. **Commit and release**
 
    ```bash
-   git add repos/flowmark Cargo.toml .github/workflows/ci.yml README.md docs/port-status.md tests/testdocs/ tests/parity/ python/ admin/port-coverage-mapping/
+   git add repos/flowmark src/skills/ Cargo.toml .github/workflows/ci.yml README.md docs/port-status.md tests/testdocs/ tests/parity/ python/ admin/port-coverage-mapping/
    git commit -m "sync: update Python source to v${TARGET}"
    ```
 

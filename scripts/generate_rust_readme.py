@@ -17,8 +17,11 @@ from pathlib import Path
 
 from jinja2 import Environment, StrictUndefined
 from strif import atomic_output_file
+from sync_skill_mirror import verify_skill_runtime_mirror
 
-UPSTREAM_DOCS_BASE_URL = "https://github.com/jlevy/flowmark/blob/main/docs/"
+UPSTREAM_REPO_BLOB_URL = "https://github.com/jlevy/flowmark/blob/main/"
+UPSTREAM_DOCS_BASE_URL = f"{UPSTREAM_REPO_BLOB_URL}docs/"
+UPSTREAM_SKILL_BASE_URL = f"{UPSTREAM_REPO_BLOB_URL}skills/flowmark/"
 
 
 def parse_args() -> tuple[Path, Path, Path]:
@@ -51,13 +54,17 @@ def parse_args() -> tuple[Path, Path, Path]:
     return args.shared_docs, args.template, args.output
 
 
-def rewrite_upstream_local_docs_links(markdown: str) -> str:
-    """Rewrite local docs links from the shared source to canonical upstream URLs."""
+def rewrite_upstream_local_links(markdown: str) -> str:
+    """Rewrite upstream-owned links from the shared source to Flowmark URLs."""
     # Keep the Rust repo's development workflow link local.
-    return re.sub(
+    markdown = re.sub(
         r"\]\(docs/(?!development\.md)([^)]+)\)",
         rf"]({UPSTREAM_DOCS_BASE_URL}\1)",
         markdown,
+    )
+    return markdown.replace(
+        "](skills/flowmark/",
+        f"]({UPSTREAM_SKILL_BASE_URL}",
     )
 
 
@@ -201,9 +208,10 @@ def main() -> int:
     if not template_path.exists():
         raise FileNotFoundError(f"missing wrapper template at {template_path}")
 
+    verify_skill_runtime_mirror(repo_root)
     parity_version = read_parity_version(repo_root)
     shared_docs_body = shared_docs_path.read_text(encoding="utf-8").rstrip() + "\n"
-    shared_docs_body = rewrite_upstream_local_docs_links(shared_docs_body)
+    shared_docs_body = rewrite_upstream_local_links(shared_docs_body)
     shared_docs_body = rewrite_perspective_for_rust_repo(shared_docs_body)
     # Keep the shared runner examples aligned with the Python parity baseline and this
     # crate's release. Fail loudly if the shared source adds an unhandled placeholder.
