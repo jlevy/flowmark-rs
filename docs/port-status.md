@@ -4,10 +4,10 @@
 > Documents the Rust port lifecycle: parity verification, sync workflow, and port
 > history.
 
-**Last updated:** 2026-05-30
+**Last updated:** 2026-07-14
 
-**Release status:** v0.3.1 **not yet published** (v0.3.0 is on crates.io) — stabilizing
-toward release.
+**Release status:** v0.3.2 release preparation; v0.3.1 is published on crates.io and
+PyPI.
 
 **Python parity target:** flowmark v0.7.2
 
