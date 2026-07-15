@@ -79,6 +79,13 @@ fn test_discovery_skill_bundles_its_project_setup_reference() {
 }
 
 #[test]
+fn test_project_setup_hooks_cover_common_markdown_extensions() {
+    let reference = discovery_reference();
+    assert!(reference.contains(r#"glob: "*.{md,mdc,markdown}""#));
+    assert!(reference.contains(r"files: '\.(md|mdc|markdown)$'"));
+}
+
+#[test]
 fn test_readme_uses_the_current_rust_runner_pin() {
     let readme = std::fs::read_to_string(readme_path()).expect("read README");
     assert!(readme.contains(&format!("flowmark-rs=={FLOWMARK_RS_DISCOVERY_VERSION}")));
