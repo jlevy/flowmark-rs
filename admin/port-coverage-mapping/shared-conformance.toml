@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "b7eb61abbbac9fc1c036e3ed4addbb8116d69cc7"
+upstream_commit = "fb76196ee28ec943894db379bf02fb5eeb642f30"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -62,6 +62,12 @@ status = "implemented"
 id = "FM-EXT-MULTILINE-TABLE-001"
 python_bead = "fm-kr0a"
 rust_bead = "fm-kr0a"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-MYST-WIKILINK-001"
+python_bead = "fm-5vlb"
+rust_bead = "fm-5vlb"
 status = "implemented"
 
 [[change]]

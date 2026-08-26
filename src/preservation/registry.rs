@@ -6,6 +6,7 @@ pub(crate) const fn priority(kind: RegionKind) -> u8 {
     match kind {
         RegionKind::MathGitlabInline | RegionKind::MathMystInline => 10,
         RegionKind::RawHtmlInline => 15,
+        RegionKind::MystRoleInline | RegionKind::WikilinkInline => 18,
         RegionKind::CodeSpan => 20,
         RegionKind::MathParenInline | RegionKind::MathEnvironmentInline => 30,
         RegionKind::AttributeGroupInline => 35,
@@ -30,6 +31,8 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
         RegionKind::MathGitlabInline => "math_gitlab_inline",
         RegionKind::MathMystInline => "math_myst_inline",
         RegionKind::RawHtmlInline => "raw_html_inline",
+        RegionKind::MystRoleInline => "myst_role_inline",
+        RegionKind::WikilinkInline => "wikilink_inline",
         RegionKind::CodeSpan => "code_span",
         RegionKind::MathParenInline => "math_paren_inline",
         RegionKind::MathEnvironmentInline => "math_environment_inline",

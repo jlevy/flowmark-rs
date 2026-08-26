@@ -18,6 +18,8 @@ pub(crate) enum RegionKind {
     MathGitlabInline,
     MathMystInline,
     RawHtmlInline,
+    MystRoleInline,
+    WikilinkInline,
     CodeSpan,
     MathParenInline,
     MathEnvironmentInline,

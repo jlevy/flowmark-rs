@@ -461,6 +461,93 @@ fn scan_composite_math(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     candidates
 }
 
+fn valid_myst_role_name(name: &str) -> bool {
+    let mut bytes = name.bytes();
+    bytes.next().is_some_and(|byte| byte.is_ascii_alphabetic())
+        && bytes.all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b':' | b'_' | b'-'))
+}
+
+fn scan_myst_roles(text: &str, start: usize, end: usize) -> Vec<Candidate> {
+    let mut pending = HashMap::<usize, usize>::new();
+    let mut candidates = Vec::new();
+    for (run_start, run_end) in backtick_runs(text, start, end) {
+        let length = run_end - run_start;
+        if let Some(opener) = pending.remove(&length) {
+            candidates.push(Candidate::inline(RegionKind::MystRoleInline, opener, run_end));
+            continue;
+        }
+        if run_start <= start || text.as_bytes()[run_start - 1] != b'}' {
+            continue;
+        }
+        let Some(relative) = text[start..run_start - 1].rfind('{') else {
+            continue;
+        };
+        let role_start = start + relative;
+        if !escape_is_even(text, role_start) {
+            continue;
+        }
+        let role_name = &text[role_start + 1..run_start - 1];
+        if valid_myst_role_name(role_name) {
+            pending.insert(length, role_start);
+        }
+    }
+    candidates
+}
+
+fn scan_wikilinks(text: &str, start: usize, end: usize) -> Vec<Candidate> {
+    let bytes = text.as_bytes();
+    let mut candidates = Vec::new();
+    let mut index = start;
+    while index + 1 < end {
+        if &bytes[index..index + 2] != b"[[" || !escape_is_even(text, index) {
+            index += 1;
+            continue;
+        }
+        let candidate_start =
+            if index > start && bytes[index - 1] == b'!' && escape_is_even(text, index - 1) {
+                index - 1
+            } else {
+                index
+            };
+        let body_start = index + 2;
+        let mut cursor = body_start;
+        let mut depth = 1_usize;
+        let mut closed = false;
+        while cursor + 1 < end {
+            if bytes[cursor] == b'\n' {
+                break;
+            }
+            if &bytes[cursor..cursor + 2] == b"[[" && escape_is_even(text, cursor) {
+                depth += 1;
+                cursor += 2;
+                continue;
+            }
+            if &bytes[cursor..cursor + 2] == b"]]" && escape_is_even(text, cursor) {
+                depth -= 1;
+                cursor += 2;
+                if depth == 0 {
+                    if !text[body_start..cursor - 2].trim().is_empty() {
+                        candidates.push(Candidate::inline(
+                            RegionKind::WikilinkInline,
+                            candidate_start,
+                            cursor,
+                        ));
+                    }
+                    index = cursor;
+                    closed = true;
+                    break;
+                }
+                continue;
+            }
+            cursor += 1;
+        }
+        if !closed {
+            index += 1;
+        }
+    }
+    candidates
+}
+
 fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     let bytes = text.as_bytes();
     let mut candidates = Vec::new();
@@ -868,6 +955,8 @@ fn arbitrate(mut candidates: Vec<Candidate>, start: usize, end: usize) -> Vec<Ca
 
 fn scan_inline_scope(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     let mut candidates = scan_composite_math(text, start, end);
+    candidates.extend(scan_myst_roles(text, start, end));
+    candidates.extend(scan_wikilinks(text, start, end));
     candidates.extend(scan_backticks(text, start, end));
     candidates.extend(scan_paren_math(text, start, end));
     candidates.extend(scan_inline_environments(text, start, end));
@@ -1899,7 +1988,10 @@ fn overlaps(range: ByteRange, ranges: &[ByteRange]) -> bool {
 }
 
 fn structural_pipe_ranges(text: &str, start: usize, end: usize) -> Vec<ByteRange> {
-    let code: Vec<ByteRange> = arbitrate(scan_backticks(text, start, end), start, end)
+    let mut atomic_candidates = scan_backticks(text, start, end);
+    atomic_candidates.extend(scan_myst_roles(text, start, end));
+    atomic_candidates.extend(scan_wikilinks(text, start, end));
+    let atomic: Vec<ByteRange> = arbitrate(atomic_candidates, start, end)
         .into_iter()
         .map(|candidate| (candidate.start, candidate.end))
         .collect();
@@ -1908,7 +2000,7 @@ fn structural_pipe_ranges(text: &str, start: usize, end: usize) -> Vec<ByteRange
     while index < end {
         if text.as_bytes()[index] == b'|'
             && escape_is_even(text, index)
-            && !overlaps((index, index + 1), &code)
+            && !overlaps((index, index + 1), &atomic)
         {
             boundaries.push(index);
             boundaries.push(index + 1);
@@ -2176,5 +2268,22 @@ mod tests {
         assert_eq!(regions[0].source, "| first\n|\n| third $x$\n");
         assert_eq!(regions[1].kind, RegionKind::PandocLineBlock);
         assert_eq!(regions[1].source, "> | quoted\n> | continued\n");
+    }
+
+    #[test]
+    fn general_myst_roles_and_wikilinks_preserve_priority_and_nesting() {
+        let source = normalize_source(
+            "{ref}`target` {custom:name}``body `tick` `` {math}`x_y`\n\n[[Note]] ![[Page#A|Alias]] [[outer [[inner]] tail]]\n\n``{ref}`inside` `` \\[[escaped]] [[]] {bad role}`x`\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 8);
+        assert_eq!(regions[0].kind, RegionKind::MystRoleInline);
+        assert_eq!(regions[1].kind, RegionKind::MystRoleInline);
+        assert_eq!(regions[2].kind, RegionKind::MathMystInline);
+        assert_eq!(regions[3].source, "[[Note]]");
+        assert_eq!(regions[4].source, "![[Page#A|Alias]]");
+        assert_eq!(regions[5].source, "[[outer [[inner]] tail]]");
+        assert_eq!(regions[6].kind, RegionKind::CodeSpan);
+        assert_eq!(regions[7].kind, RegionKind::CodeSpan);
     }
 }
