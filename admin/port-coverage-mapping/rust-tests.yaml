@@ -7,6 +7,9 @@
 - file: src/cli.rs
   function: show_cache_requires_project_root
   line_number: 0
+- file: src/conformance.rs
+  function: coverage_profile_paths_are_kept_out_of_case_workspaces
+  line_number: 0
 - file: src/file_resolver/resolver.rs
   function: directory_pattern_matches_nested_path
   line_number: 356
@@ -555,79 +558,82 @@
   line_number: 23
 - file: tests/test_edge_cases.rs
   function: test_angle_bracket_autolink_in_footnote
-  line_number: 154
+  line_number: 168
 - file: tests/test_edge_cases.rs
   function: test_angle_bracket_autolink_preserved
-  line_number: 140
+  line_number: 154
 - file: tests/test_edge_cases.rs
   function: test_angle_bracket_email_preserved
-  line_number: 193
+  line_number: 207
 - file: tests/test_edge_cases.rs
   function: test_bare_dollar_in_text
-  line_number: 78
+  line_number: 92
 - file: tests/test_edge_cases.rs
   function: test_bare_url_not_linkified
-  line_number: 166
+  line_number: 180
 - file: tests/test_edge_cases.rs
   function: test_code_block_trailing_content
-  line_number: 91
-- file: tests/test_edge_cases.rs
-  function: test_code_fence_with_indented_list_content
-  line_number: 20
-- file: tests/test_edge_cases.rs
-  function: test_display_math_latex
-  line_number: 63
-- file: tests/test_edge_cases.rs
-  function: test_ellipsis_in_footnote_body
-  line_number: 360
-- file: tests/test_edge_cases.rs
-  function: test_email_not_linkified
-  line_number: 182
-- file: tests/test_edge_cases.rs
-  function: test_escaped_char_in_code_span_width
-  line_number: 326
-- file: tests/test_edge_cases.rs
-  function: test_footnote_autolink_blank_lines
-  line_number: 128
-- file: tests/test_edge_cases.rs
-  function: test_footnote_with_reference
   line_number: 105
 - file: tests/test_edge_cases.rs
+  function: test_code_fence_with_indented_list_content
+  line_number: 34
+- file: tests/test_edge_cases.rs
+  function: test_display_math_latex
+  line_number: 77
+- file: tests/test_edge_cases.rs
+  function: test_ellipsis_in_footnote_body
+  line_number: 374
+- file: tests/test_edge_cases.rs
+  function: test_email_not_linkified
+  line_number: 196
+- file: tests/test_edge_cases.rs
+  function: test_escaped_char_in_code_span_width
+  line_number: 340
+- file: tests/test_edge_cases.rs
+  function: test_footnote_autolink_blank_lines
+  line_number: 142
+- file: tests/test_edge_cases.rs
+  function: test_footnote_with_reference
+  line_number: 119
+- file: tests/test_edge_cases.rs
   function: test_html_comment_after_blank_line_tight_text
-  line_number: 259
-- file: tests/test_edge_cases.rs
-  function: test_html_comment_no_extra_blank_line_tight
-  line_number: 209
-- file: tests/test_edge_cases.rs
-  function: test_html_comment_pair_tight_with_text
-  line_number: 233
-- file: tests/test_edge_cases.rs
-  function: test_html_comment_preserves_blank_line_when_present
-  line_number: 221
-- file: tests/test_edge_cases.rs
-  function: test_inline_math_latex_backslashes
-  line_number: 53
-- file: tests/test_edge_cases.rs
-  function: test_list_then_html_comment_stays_tight
   line_number: 273
 - file: tests/test_edge_cases.rs
+  function: test_html_comment_no_extra_blank_line_tight
+  line_number: 223
+- file: tests/test_edge_cases.rs
+  function: test_html_comment_pair_tight_with_text
+  line_number: 247
+- file: tests/test_edge_cases.rs
+  function: test_html_comment_preserves_blank_line_when_present
+  line_number: 235
+- file: tests/test_edge_cases.rs
+  function: test_inline_math_latex_backslashes
+  line_number: 67
+- file: tests/test_edge_cases.rs
+  function: test_invalid_utf8_uses_the_existing_io_error_surface
+  line_number: 15
+- file: tests/test_edge_cases.rs
+  function: test_list_then_html_comment_stays_tight
+  line_number: 287
+- file: tests/test_edge_cases.rs
   function: test_multiple_footnotes
-  line_number: 113
+  line_number: 127
 - file: tests/test_edge_cases.rs
   function: test_no_sentence_break_inside_link_paren
-  line_number: 309
+  line_number: 323
 - file: tests/test_edge_cases.rs
   function: test_paragraph_then_tight_list
-  line_number: 246
+  line_number: 260
 - file: tests/test_edge_cases.rs
   function: test_sentence_break_after_period_paren
-  line_number: 301
+  line_number: 315
 - file: tests/test_edge_cases.rs
   function: test_smart_quotes_in_footnote_body
-  line_number: 348
+  line_number: 362
 - file: tests/test_edge_cases.rs
   function: test_table_then_html_comment_stays_tight
-  line_number: 284
+  line_number: 298
 - file: tests/test_ellipses.rs
   function: test_ellipses_at_boundaries
   line_number: 19

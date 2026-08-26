@@ -1056,9 +1056,14 @@ fn main() -> std::process::ExitCode {
     {
         if let Err(e) = cli::run() {
             if e.chain().any(|cause| {
-                cause
-                    .downcast_ref::<flowmark::Error>()
-                    .is_some_and(|error| matches!(error, flowmark::Error::InvalidUtf8))
+                cause.downcast_ref::<flowmark::Error>().is_some_and(|error| {
+                    matches!(
+                        error,
+                        flowmark::Error::Io(source)
+                            if source.kind() == std::io::ErrorKind::InvalidData
+                                && source.to_string() == "input is not valid UTF-8"
+                    )
+                })
             }) {
                 eprintln!("Error: input is not valid UTF-8");
                 return std::process::ExitCode::from(2);

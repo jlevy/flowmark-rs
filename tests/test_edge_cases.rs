@@ -5,10 +5,24 @@
 //! all of these correctly without post-processing.
 
 use flowmark::config::ListSpacing;
-use flowmark::fill_markdown;
+use flowmark::{Error, FormatOptions, fill_markdown};
 
 fn fmt(input: &str) -> String {
     fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_invalid_utf8_uses_the_existing_io_error_surface() {
+    let error = FormatOptions::default()
+        .reformat_bytes(b"before\xffafter")
+        .expect_err("invalid UTF-8 must fail");
+
+    match error {
+        Error::Io(source) => {
+            assert_eq!(source.kind(), std::io::ErrorKind::InvalidData);
+            assert_eq!(source.to_string(), "input is not valid UTF-8");
+        }
+    }
 }
 
 // === Edge case 1: Code fence with indented YAML-like content ===

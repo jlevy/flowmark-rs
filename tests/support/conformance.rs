@@ -899,12 +899,22 @@ fn materialize_case(
     }
 }
 
+fn absolute_profile_path(profile: &str, cwd: &Path) -> PathBuf {
+    let path = PathBuf::from(profile);
+    if path.is_absolute() { path } else { cwd.join(path) }
+}
+
 fn controlled_environment(manifest: &ConformanceManifest) -> BTreeMap<String, String> {
     let mut environment = BTreeMap::new();
     for name in ENV_ALLOWLIST {
         if let Ok(value) = std::env::var(name) {
             environment.insert((*name).to_owned(), value);
         }
+    }
+    if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let absolute = absolute_profile_path(&profile, &cwd);
+        environment.insert("LLVM_PROFILE_FILE".to_owned(), absolute.to_string_lossy().into_owned());
     }
     environment.extend(manifest.default_env.clone());
     environment
@@ -1325,4 +1335,22 @@ pub fn load_known_divergences(path: &Path) -> Result<Vec<KnownDivergence>> {
 pub fn upstream_root(project_root: &Path) -> PathBuf {
     std::env::var_os("FLOWMARK_UPSTREAM_ROOT")
         .map_or_else(|| project_root.join("repos/flowmark"), PathBuf::from)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::absolute_profile_path;
+    use std::path::Path;
+
+    #[test]
+    fn coverage_profile_paths_are_kept_out_of_case_workspaces() {
+        let harness_cwd = std::env::temp_dir().join("flowmark-conformance-harness");
+        let profile = "default_%m_%p.profraw";
+
+        assert_eq!(absolute_profile_path(profile, &harness_cwd), harness_cwd.join(profile));
+        assert_eq!(
+            absolute_profile_path(harness_cwd.to_string_lossy().as_ref(), Path::new("ignored")),
+            harness_cwd
+        );
+    }
 }

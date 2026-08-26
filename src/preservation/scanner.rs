@@ -1904,10 +1904,10 @@ fn scan_raw_html_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Ca
                 break;
             }
             final_index = scan_index;
-            if let HtmlBlockEnd::Terminator(terminator) = &end_condition
-                && payload.to_ascii_lowercase().contains(&terminator.to_ascii_lowercase())
-            {
-                break;
+            if let HtmlBlockEnd::Terminator(terminator) = &end_condition {
+                if payload.to_ascii_lowercase().contains(&terminator.to_ascii_lowercase()) {
+                    break;
+                }
             }
             scan_index += 1;
         }
