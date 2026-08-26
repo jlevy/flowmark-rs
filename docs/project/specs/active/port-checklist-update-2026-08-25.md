@@ -61,7 +61,7 @@ and keep golden evidence versioned with provenance.
   architecture.
 - [x] Create `fm-t81l` for the remaining released v0.7.2-to-v0.7.3 baseline gap.
 - [x] Create `fm-zah1` for publication of the exact Python gitlink.
-- [ ] Prove a clean remote clone can initialize `repos/flowmark` at `b027fde`
+- [x] Prove a clean remote clone can initialize `repos/flowmark` at `b027fde`
   (`fm-zah1`).
 
 ## Phase 0: Empirical Pre-Port Verification
@@ -92,7 +92,7 @@ and keep golden evidence versioned with provenance.
 - [x] Advance `repos/rust-porting-playbook` from `df36b99` to `d24760a`.
 - [x] Record the shared source commit and change IDs in
   `admin/port-coverage-mapping/shared-conformance.toml`.
-- [ ] Publish the exact Python target commit so the parent gitlink is remotely fetchable
+- [x] Publish the exact Python target commit so the parent gitlink is remotely fetchable
   (`fm-zah1`).
 
 ### Delta Classification
@@ -112,7 +112,7 @@ and keep golden evidence versioned with provenance.
   records, and repair mappings to the current tests and direct tryscript wrappers.
 - [x] Refresh the supplemental function map for v0.7.3 after the inventory is stable.
 
-Completion gate: Phase 1 remains open until the remote-gitlink gate `fm-zah1` closes.
+Completion gate: the remote-gitlink gate `fm-zah1` is complete.
 
 ## Phase 2: Shared Contract Foundation
 
@@ -242,7 +242,7 @@ and traceability update.
 - [x] Merge current Rust main and rerun every gate (`fm-mfvi`).
 - [x] Run the pinned full differential and syntactic-class sweeps before advancing the
   released whole-program baseline.
-- [ ] Run a clean-clone test after `b027fde` becomes remotely fetchable.
+- [x] Run a clean-clone test after `b027fde` becomes remotely fetchable.
 - [x] Record post-merge commands, exit statuses, selected case IDs, and divergence delta
   in the sync artifact.
 - [x] Record the Python shared-conformance, Rust focused conformance, formatter, clippy,
@@ -257,7 +257,7 @@ and traceability update.
 
 ## Phase 8: Release Acceptance
 
-- [ ] The exact Python and playbook submodule commits are fetchable from clean clones.
+- [x] The exact Python and playbook submodule commits are fetchable from clean clones.
 - [x] The released baseline gap is closed.
 - [x] Every preservation-cycle change ID is implemented.
 - [x] Every active shared case passes or has an exact inherited ledger disposition.
@@ -267,7 +267,8 @@ and traceability update.
   baseline remains v0.3.2 until release planning.
 - [x] Full local test, lint, documentation, administration, build, and packaging gates
   pass.
-- [ ] Remote clean-clone, publication, security, and release-planning gates pass.
+- [x] Remote clean-clone and publication gates pass.
+- [ ] Remote CI, security, and release-planning gates pass.
 - [ ] Version correspondence and release notes state the exact achieved surface.
 - [ ] Beads, mapping, divergence ledger, checklist, and sync artifact agree.
 

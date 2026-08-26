@@ -33,8 +33,8 @@ timeout, and error invariants.
 This is not yet a released whole-program parity declaration.
 The shared branch contract is exact except for 34 inherited, explicitly ledgered
 CommonMark differences.
-The target Python commit is also local-only, so a clean remote clone cannot initialize
-the gitlink until `fm-zah1` is resolved.
+The target Python commit is published, and a fresh recursive clone initialized every
+gitlink from the configured remotes.
 
 ## Pinned Sources
 
@@ -138,11 +138,13 @@ No new divergence was added for math, code, extensions, or whole-document idempo
 
 ## Current Risks
 
-### Publication and Clean Clone
+### Remote CI and Release Scope
 
-The exact Python target commit is not fetchable from the configured GitHub remote.
-`fm-zah1` owns publication and the subsequent fresh recursive-clone proof.
-Do not replace the gitlink with an older published commit merely to make CI initialize.
+The publication gate is complete.
+A fresh shallow recursive clone of the published Rust branch resolved Python `b027fde`,
+the porting playbook `d24760a`, and the Homebrew repository without a local alternate.
+The remaining remote gates are the PR CI result and later release planning; this branch
+does not declare a new crates.io release.
 
 ### External Corpus Reconstruction
 
@@ -176,8 +178,9 @@ This porting cycle is locally complete when:
 - lint, test, documentation, administration, build, and package gates pass;
 - the checklist, sync artifacts, mapping, ledger, and beads agree.
 
-Remote completion additionally requires the exact Python gitlink to be published and a
-fresh recursive clone to pass without local alternates.
+The publication and fresh-clone gates are complete.
+Remote completion additionally requires the PR CI, security, and release-planning gates
+applicable to the eventual release.
 
 See the [Port Sync Playbook](port-sync-playbook.md), the
 [current update checklist](project/specs/active/port-checklist-update-2026-08-25.md),
