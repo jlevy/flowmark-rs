@@ -19,6 +19,7 @@ pub(crate) struct ProtectedSource {
     pub(crate) text: String,
     pub(crate) regions: Vec<ProtectedRegion>,
     pub(crate) tokens: Vec<String>,
+    synthetic_block_prefixes: Vec<bool>,
     synthetic_block_suffixes: Vec<bool>,
 }
 
@@ -226,6 +227,15 @@ pub(crate) fn protect_source(
 ) -> Result<ProtectedSource, PreservationError> {
     validate_regions(source, &regions)?;
     let tokens: Vec<String> = regions.iter().map(|region| encode_token(region.index)).collect();
+    let synthetic_block_prefixes: Vec<bool> = regions
+        .iter()
+        .map(|region| {
+            region.form == RegionForm::Block
+                && region.start > 0
+                && source.text.as_bytes()[region.start - 1] == b'\n'
+                && (region.start < 2 || source.text.as_bytes()[region.start - 2] != b'\n')
+        })
+        .collect();
     let synthetic_block_suffixes: Vec<bool> = regions
         .iter()
         .map(|region| {
@@ -241,10 +251,11 @@ pub(crate) fn protect_source(
     {
         output.push_str(&escape_authored_markers(&source.text[previous_end..region.start]));
         if region.form == RegionForm::Block {
-            if region.scaffold_prefix.is_empty() && !output.is_empty() && !output.ends_with("\n\n")
-            {
+            if !output.is_empty() && !output.ends_with("\n\n") {
                 // The Python protected-block adapter yields before an otherwise
-                // adjacent token. Give comrak the equivalent block boundary.
+                // adjacent token. Give comrak the equivalent block boundary even
+                // inside a quote or list scaffold; otherwise it can merge the token
+                // into the preceding paragraph and restoration would discard prose.
                 output.push('\n');
             }
             output.push_str(&region.scaffold_prefix);
@@ -261,7 +272,13 @@ pub(crate) fn protect_source(
         previous_end = region.end;
     }
     output.push_str(&escape_authored_markers(&source.text[previous_end..]));
-    Ok(ProtectedSource { text: output, regions, tokens, synthetic_block_suffixes })
+    Ok(ProtectedSource {
+        text: output,
+        regions,
+        tokens,
+        synthetic_block_prefixes,
+        synthetic_block_suffixes,
+    })
 }
 
 fn parse_rendered_stream(rendered: &str) -> Result<(Vec<String>, Vec<usize>), PreservationError> {
@@ -310,6 +327,7 @@ pub(crate) fn restore_source(
     protected: &ProtectedSource,
 ) -> Result<String, PreservationError> {
     if protected.regions.len() != protected.tokens.len()
+        || protected.regions.len() != protected.synthetic_block_prefixes.len()
         || protected.regions.len() != protected.synthetic_block_suffixes.len()
     {
         return Err(PreservationError("protected side-table lengths do not match"));
@@ -334,6 +352,9 @@ pub(crate) fn restore_source(
                 gaps[index].truncate(line_break + 1);
             } else {
                 gaps[index].clear();
+            }
+            if protected.synthetic_block_prefixes[index] && gaps[index].ends_with("\n\n") {
+                gaps[index].pop();
             }
             if !gaps[index + 1].starts_with('\n') {
                 return Err(PreservationError("protected block token lost its structural LF"));
@@ -378,11 +399,26 @@ mod tests {
             text: escaped.clone(),
             regions: vec![],
             tokens: vec![],
+            synthetic_block_prefixes: vec![],
             synthetic_block_suffixes: vec![],
         };
         let metrics = protected.measure_inline_text(&escaped).expect("valid authored escapes");
         assert_eq!(metrics.first_width, 5);
         assert_eq!(metrics.final_width, 5);
         assert!(!metrics.has_authored_break);
+    }
+
+    #[test]
+    fn restoration_removes_only_a_parser_synthesized_block_prefix_blank() {
+        use crate::preservation::{normalize_source, scan_protected_regions};
+
+        let source = normalize_source("Before\n$$\nbody\n$$\nAfter");
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        let protected = protect_source(&source, regions).expect("valid protection");
+
+        assert_eq!(
+            restore_source(&protected.text, &protected).expect("valid restoration"),
+            "Before\n$$\nbody\n$$\nAfter\n"
+        );
     }
 }

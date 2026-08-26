@@ -243,10 +243,27 @@ fn starts_block_structure(bytes: &[u8], start: usize, end: usize, column: usize)
     let structural_math = matches!(content, b"$$" | b"\\[" | b"\\]")
         || content.starts_with(b"\\begin{")
         || content.starts_with(b"\\end{");
+    let thematic_break = {
+        let mut marker = None;
+        let mut count = 0;
+        content.iter().all(|byte| match byte {
+            b' ' | b'\t' => true,
+            b'*' | b'-' | b'_' if marker.is_none_or(|candidate| candidate == *byte) => {
+                marker = Some(*byte);
+                count += 1;
+                true
+            }
+            _ => false,
+        }) && count >= 3
+    };
+    let raw_html = std::str::from_utf8(content)
+        .is_ok_and(|payload| html_block_start(payload, false).is_some());
     atx_heading
         || consume_quote_marker(bytes, start, end, column).is_some()
         || consume_list_marker(bytes, start, end, column).is_some()
         || fence
+        || thematic_break
+        || raw_html
         || structural_math
 }
 
@@ -2232,15 +2249,18 @@ mod tests {
     #[test]
     fn raw_html_uses_commonmark_boundaries_and_inline_angle_scopes() {
         let source = normalize_source(
-            "  <script>\n*not emphasis*\n\n</script>\n\nParagraph <x-card\n data-a=\"raw\"> tail\n",
+            "  <script>\n*not emphasis*\n\n</script>\n\nParagraph <x-card\n data-a=\"raw\"> tail\n\n- item\n<!-- closing -->",
         );
         let regions = scan_protected_regions(&source).expect("valid scan");
-        assert_eq!(regions.len(), 2);
+        assert_eq!(regions.len(), 3);
         assert_eq!(regions[0].kind, RegionKind::RawHtmlBlock);
         assert_eq!(regions[0].source, "  <script>\n*not emphasis*\n\n</script>\n");
         assert_eq!(regions[0].scaffold_prefix, "");
         assert_eq!(regions[1].kind, RegionKind::RawHtmlInline);
         assert_eq!(regions[1].source, "<x-card\n data-a=\"raw\">");
+        assert_eq!(regions[2].kind, RegionKind::RawHtmlBlock);
+        assert_eq!(regions[2].source, "<!-- closing -->\n");
+        assert_eq!(regions[2].container.list_depth, 0);
     }
 
     #[test]
