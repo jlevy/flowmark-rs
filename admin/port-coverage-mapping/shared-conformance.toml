@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "1045bdd543c0276f1527d72c15b2c03ab0516a54"
+upstream_commit = "b6e9782192d7439825f3038c40d423fdf42221a3"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -116,4 +116,4 @@ status = "implemented"
 id = "FM-REFERENCE-IDEMPOTENCE-001"
 python_bead = "fm-w467"
 rust_bead = "fm-w467"
-status = "deferred"
+status = "implemented"

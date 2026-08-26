@@ -1880,19 +1880,64 @@ fn is_pandoc_line(payload: &str) -> bool {
     !(payload.ends_with('|') && payload.bytes().filter(|byte| *byte == b'|').count() >= 3)
 }
 
+fn is_table_delimiter(payload: &str) -> bool {
+    let stripped = payload.trim_matches([' ', '\t']).trim_matches('|');
+    !stripped.is_empty()
+        && stripped.split('|').all(|cell| {
+            let cell = cell.trim_matches([' ', '\t']);
+            let core = cell.strip_prefix(':').unwrap_or(cell);
+            let core = core.strip_suffix(':').unwrap_or(core);
+            core.len() >= 3 && core.bytes().all(|byte| byte == b'-')
+        })
+}
+
+fn has_structural_pipe(source: &str, line: &Line) -> bool {
+    let (start, _) = line_payload_bounds(source, line);
+    if start >= line.content_end {
+        return false;
+    }
+    structural_pipe_ranges(source, start, line.content_end).len() > 1
+        || source[start..line.content_end].trim_start_matches([' ', '\t']).starts_with('|')
+}
+
 fn scan_pandoc_line_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut gfm_table_lines = vec![false; lines.len()];
+    let mut table_index = 0;
+    while table_index + 1 < lines.len() {
+        if !opaque[table_index]
+            && !opaque[table_index + 1]
+            && has_structural_pipe(source, &lines[table_index])
+            && is_table_delimiter(lines[table_index + 1].payload(source))
+        {
+            let mut table_end = table_index + 2;
+            while table_end < lines.len()
+                && !opaque[table_end]
+                && has_structural_pipe(source, &lines[table_end])
+            {
+                table_end += 1;
+            }
+            gfm_table_lines[table_index..table_end].fill(true);
+            table_index = table_end;
+        } else {
+            table_index += 1;
+        }
+    }
     let mut candidates = Vec::new();
     let mut opener_index = 0;
     while opener_index < lines.len() {
         let opener = &lines[opener_index];
-        if opaque[opener_index] || opener.lazy || !is_pandoc_line(opener.exact_payload(source)) {
+        if opaque[opener_index]
+            || gfm_table_lines[opener_index]
+            || opener.lazy
+            || !is_pandoc_line(opener.exact_payload(source))
+        {
             opener_index += 1;
             continue;
         }
         let mut final_index = opener_index;
         let mut scan_index = opener_index + 1;
         while scan_index < lines.len() {
-            if opaque[scan_index] {
+            if opaque[scan_index] || gfm_table_lines[scan_index] {
                 break;
             }
             let line = &lines[scan_index];
@@ -2288,6 +2333,13 @@ mod tests {
         assert_eq!(regions[0].source, "| first\n|\n| third $x$\n");
         assert_eq!(regions[1].kind, RegionKind::PandocLineBlock);
         assert_eq!(regions[1].source, "> | quoted\n> | continued\n");
+    }
+
+    #[test]
+    fn line_blocks_do_not_claim_single_column_gfm_tables() {
+        let source = normalize_source("| Header |\n| --- |\n| There’s a value |\n");
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert!(regions.is_empty());
     }
 
     #[test]

@@ -36,27 +36,35 @@ fn is_multi_paragraph(text: &str) -> bool {
 
 /// Apply smart quote conversion to a text segment.
 fn apply_smart_quotes_to_text(text: &str) -> String {
-    // Handle quoted text - both single and double quotes
-    let result = QUOTE_PATTERN
-        .replace_all(text, |caps: &regex::Captures<'_>| {
-            let prefix = caps.get(1).map_or("", |m| m.as_str());
-            let double_content = caps.get(2);
-            let single_content = caps.get(3);
-            let suffix = caps.get(4).map_or("", |m| m.as_str());
+    // An outer-pair conversion can expose a differently quoted nested pair.
+    // Iterate until stable so one formatter run owns the complete result.
+    let mut result = text.to_owned();
+    loop {
+        let converted = QUOTE_PATTERN
+            .replace_all(&result, |caps: &regex::Captures<'_>| {
+                let prefix = caps.get(1).map_or("", |m| m.as_str());
+                let double_content = caps.get(2);
+                let single_content = caps.get(3);
+                let suffix = caps.get(4).map_or("", |m| m.as_str());
 
-            let content = double_content.or(single_content).map_or("", |m| m.as_str());
+                let content = double_content.or(single_content).map_or("", |m| m.as_str());
 
-            if is_multi_paragraph(content) {
-                return caps.get(0).expect("group 0 always exists").as_str().to_string();
-            }
+                if is_multi_paragraph(content) {
+                    return caps.get(0).expect("group 0 always exists").as_str().to_string();
+                }
 
-            if double_content.is_some() {
-                format!("{prefix}\u{201c}{content}\u{201d}{suffix}")
-            } else {
-                format!("{prefix}\u{2018}{content}\u{2019}{suffix}")
-            }
-        })
-        .into_owned();
+                if double_content.is_some() {
+                    format!("{prefix}\u{201c}{content}\u{201d}{suffix}")
+                } else {
+                    format!("{prefix}\u{2018}{content}\u{2019}{suffix}")
+                }
+            })
+            .into_owned();
+        if converted == result {
+            break;
+        }
+        result = converted;
+    }
 
     // Handle apostrophes/contractions - process word by word
     let mut output = String::new();
@@ -180,5 +188,14 @@ mod tests {
     fn test_code_like_unchanged() {
         let input = r#"x="foo""#;
         assert_eq!(smart_quotes(input), input);
+    }
+
+    #[test]
+    fn differently_quoted_nested_pairs_reach_a_fixed_point_in_one_call() {
+        let input = r#""It was known as the 'Corporate Accountability Act' and--""#;
+        assert_eq!(
+            smart_quotes(input),
+            "\u{201c}It was known as the \u{2018}Corporate Accountability Act\u{2019} and--\u{201d}"
+        );
     }
 }

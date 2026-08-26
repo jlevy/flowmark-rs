@@ -12,12 +12,18 @@ use crate::wrapping::LineWrapper;
 use crate::preservation::ProtectedSource;
 use crate::wrapping::sentence::split_sentences_atomic;
 use crate::wrapping::tag_handling::{add_tag_newline_handling, denormalize_adjacent_tags};
-use crate::wrapping::text_wrapping::{wrap_paragraph, wrap_paragraph_lines};
+use crate::wrapping::text_wrapping::{markdown_escape_word, wrap_paragraph, wrap_paragraph_lines};
 use crate::wrapping::text_wrapping::{wrap_paragraph_lines_protected, wrap_paragraph_protected};
 
 /// Pattern to match Markdown hard line breaks.
 static LINE_BREAK_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\\\n|  \n").expect("valid LINE_BREAK_RE regex"));
+
+fn escape_first_markdown_word(line: &mut String) {
+    let word_end = line.find(' ').unwrap_or(line.len());
+    let escaped = markdown_escape_word(&line[..word_end]);
+    line.replace_range(..word_end, &escaped);
+}
 
 /// Split text by explicit Markdown line breaks.
 fn split_markdown_hard_breaks(text: &str) -> Vec<String> {
@@ -128,6 +134,7 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
             let sentences = split_sentences_atomic(&text, 0);
 
             for sentence in &sentences {
+                let mut starts_new_output_line = !lines.is_empty();
                 let base_column =
                     if first_line { initial_indent_len } else { subsequent_indent_len };
 
@@ -158,6 +165,13 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
                     let last = lines.last_mut().expect("non-empty lines");
                     *last = format!("{last} {}", wrapped[0]);
                     wrapped.remove(0);
+                    starts_new_output_line = false;
+                }
+
+                if is_markdown && starts_new_output_line {
+                    if let Some(first) = wrapped.first_mut() {
+                        escape_first_markdown_word(first);
+                    }
                 }
 
                 lines.extend(wrapped);
@@ -204,6 +218,7 @@ pub(crate) fn line_wrap_by_sentence_protected(
         let initial_indent_len = initial_indent.chars().count();
         let subsequent_indent_len = subsequent_indent.chars().count();
         for sentence in split_sentences_atomic(&text, 0) {
+            let mut starts_new_output_line = !lines.is_empty();
             let base_column = if first_line { initial_indent_len } else { subsequent_indent_len };
             let last_width = lines.last().map_or(0, |line| {
                 protected
@@ -231,6 +246,12 @@ pub(crate) fn line_wrap_by_sentence_protected(
             if last_is_short && !wrapped.is_empty() && last_width + 1 + next_first_width <= width {
                 let last = lines.last_mut().expect("non-empty lines");
                 *last = format!("{last} {}", wrapped.remove(0));
+                starts_new_output_line = false;
+            }
+            if is_markdown && starts_new_output_line {
+                if let Some(first) = wrapped.first_mut() {
+                    escape_first_markdown_word(first);
+                }
             }
             lines.extend(wrapped);
             first_line = false;
