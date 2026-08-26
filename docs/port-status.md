@@ -8,14 +8,15 @@
 
 **Last declared whole-program Python baseline:** v0.7.3
 
-**In-progress upstream contract:** `e9d58059f850bb216702e0d15b211b48fe5674ad`
+**In-progress upstream contract:** `b027fde6f8174b9f20ca69fa459ac2a11e0ff483`
 
 ## Summary
 
-The current branch implements the complete shared Markdown-preservation contract through
-`e9d5805`. Math remains the highest-priority syntax family, but the same automatic,
-parser-independent mechanism now covers inline code and the supported opaque Markdown
-extensions without requiring dialect flags.
+The current branch implements the complete shared Markdown-preservation behavior through
+`e9d5805` and pins the integration-golden successor `b027fde`. Math remains the
+highest-priority syntax family, but the same automatic, parser-independent mechanism now
+covers inline code and the supported opaque Markdown extensions without requiring
+dialect flags.
 
 The contract includes source-exact math, code spans, Pandoc multiline and grid tables,
 definition lists, line blocks, Obsidian callouts, colon containers, TOML frontmatter,
@@ -39,7 +40,7 @@ the gitlink until `fm-zah1` is resolved.
 
 | Source | Recorded commit | Purpose |
 | --- | --- | --- |
-| Python Flowmark | `e9d58059f850bb216702e0d15b211b48fe5674ad` | Source, shared manifest, expected bytes, reference documents, CommonMark, and tryscript |
+| Python Flowmark | `b027fde6f8174b9f20ca69fa459ac2a11e0ff483` | Source, shared manifest, expected bytes, reference documents, CommonMark, and tryscript |
 | Rust porting playbook | `d24760a3fbd2951c730a199269aeb082abb46a42` | Latest reviewed `origin/main`; canonical update workflow and Rust guidance |
 | Released parity baseline | Python v0.7.3 at `7912c322417ae49c5c45ab099997c142cf392db8` | Supplemental whole-program mapping and release correspondence |
 

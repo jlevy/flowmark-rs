@@ -204,7 +204,7 @@ Verify:
 ## 8. Confirm Documentation and Traceability
 
 ```bash
-rg -n "e9d5805|schema_version|FM-" \
+rg -n "b027fde|schema_version|FM-" \
   admin/port-coverage-mapping/shared-conformance.toml \
   docs/port-status.md \
   docs/sync-artifacts/2026-08-26-sync-0d2bebb-to-e9d5805.md

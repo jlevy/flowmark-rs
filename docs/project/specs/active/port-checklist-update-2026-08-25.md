@@ -19,7 +19,7 @@ It remains active until the release gates at the end are satisfied.
 | Branch starting Python baseline | v0.6.5, `f1228297c8e2380685c6a10383f59164b96f6c22` |
 | Merged Rust release baseline | Rust v0.3.2 / Python v0.7.2, Rust `015f23989af3e5cfb3f8b58dfc72822c534df25a` |
 | Current branch parity baseline | v0.7.3, `7912c322417ae49c5c45ab099997c142cf392db8` |
-| Preservation-contract target | `e9d58059f850bb216702e0d15b211b48fe5674ad` |
+| Preservation-contract target | `b027fde6f8174b9f20ca69fa459ac2a11e0ff483` |
 | Pre-cycle Rust reference | `cb744eb` |
 | Shared-test foundation | `ccc8897ac0cb6c21c017f13ac68311198da71a48` |
 | Current-main merge | `c6449a5cba5b069c5bd29be0e08e83d036279b59` (second parent `015f23989af3e5cfb3f8b58dfc72822c534df25a`) |
@@ -59,7 +59,7 @@ and keep golden evidence versioned with provenance.
   architecture.
 - [x] Create `fm-t81l` for the remaining released v0.7.2-to-v0.7.3 baseline gap.
 - [x] Create `fm-zah1` for publication of the exact Python gitlink.
-- [ ] Prove a clean remote clone can initialize `repos/flowmark` at `e9d5805`
+- [ ] Prove a clean remote clone can initialize `repos/flowmark` at `b027fde`
   (`fm-zah1`).
 
 ## Phase 0: Empirical Pre-Port Verification
@@ -85,8 +85,8 @@ and keep golden evidence versioned with provenance.
 
 ### Source and Process Pins
 
-- [x] Advance `repos/flowmark` from `f122829` through `093c924` and `0d2bebb` to
-  `e9d5805` locally.
+- [x] Advance `repos/flowmark` from `f122829` through `093c924` and `0d2bebb` to the
+  `e9d5805` behavior tip and its integration-golden successor `b027fde` locally.
 - [x] Advance `repos/rust-porting-playbook` from `df36b99` to `d24760a`.
 - [x] Record the shared source commit and change IDs in
   `admin/port-coverage-mapping/shared-conformance.toml`.
@@ -97,7 +97,8 @@ and keep golden evidence versioned with provenance.
 
 - [x] Split the recovery into current Rust main (through Python v0.7.2), the released
   v0.7.2-to-v0.7.3 track, the math/foundation track through `0d2bebb`, and the
-  code/extensions/fixed-point track through `e9d5805`.
+  code/extensions/fixed-point track through `e9d5805`, followed by formatting and
+  integration-golden alignment through `b027fde`.
 - [x] Merge Rust `origin/main` at `015f239` and preserve its release, security,
   dependency, skill, and v0.7.2 parity work (`fm-mfvi`).
 - [x] Record the preservation branch as specification and shared-test infrastructure,
@@ -192,7 +193,7 @@ and traceability update.
 - [x] Treat the YAML Python/Rust function mapping as supplementary evidence.
 - [x] Complete the v0.7.3 supplemental mapping refresh (`fm-t81l`).
 - [x] Mark every core, math, code, extension, CLI, and fixed-point change ID implemented
-  at target `e9d5805`.
+  at target `b027fde`.
 - [x] Remove four ledger entries that became exact; retain 34 exact inherited CommonMark
   divergences.
 - [x] Regenerate the Rust inventory after adding native preservation diagnostics and
@@ -239,7 +240,7 @@ and traceability update.
 - [x] Merge current Rust main and rerun every gate (`fm-mfvi`).
 - [x] Run the pinned full differential and syntactic-class sweeps before advancing the
   released whole-program baseline.
-- [ ] Run a clean-clone test after `e9d5805` becomes remotely fetchable.
+- [ ] Run a clean-clone test after `b027fde` becomes remotely fetchable.
 - [x] Record post-merge commands, exit statuses, selected case IDs, and divergence delta
   in the sync artifact.
 - [x] Record the Python shared-conformance, Rust focused conformance, formatter, clippy,

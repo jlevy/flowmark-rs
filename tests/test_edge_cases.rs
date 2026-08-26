@@ -267,28 +267,27 @@ fn test_html_comment_after_blank_line_tight_text() {
     );
 }
 
-// === GAP13: Blank line before closing HTML comment after list/table ===
+// === GAP13: Source-exact adjacency before HTML comments after list/table ===
 
 #[test]
-fn test_list_then_html_comment_gets_blank_line() {
-    // Python adds a blank line between a list and a following HTML comment
-    // even when original is tight (list output already ends with \n).
+fn test_list_then_html_comment_stays_tight() {
+    // Protected HTML comment adjacency is source-exact in the shared contract.
     let input = "<!-- f:field -->\n- Option 1\n- Option 2\n- Option 3\n<!-- /f:field -->\n";
     let result = fmt(input);
     assert!(
-        result.contains("- Option 3\n\n<!-- /f:field -->"),
-        "Should have blank line between list and closing HTML comment: got {result:?}"
+        result.contains("- Option 3\n<!-- /f:field -->"),
+        "List and closing HTML comment should retain tight source adjacency: got {result:?}"
     );
 }
 
 #[test]
-fn test_table_then_html_comment_gets_blank_line() {
-    // Python adds a blank line between a table and a following HTML comment
+fn test_table_then_html_comment_stays_tight() {
+    // Protected HTML comment adjacency is source-exact in the shared contract.
     let input = "| A | B |\n|---|---|\n| 1 | 2 |\n<!-- end -->\n";
     let result = fmt(input);
     assert!(
-        result.contains("| 1 | 2 |\n\n<!-- end -->"),
-        "Should have blank line between table and closing HTML comment: got {result:?}"
+        result.contains("| 1 | 2 |\n<!-- end -->"),
+        "Table and HTML comment should retain tight source adjacency: got {result:?}"
     );
 }
 
