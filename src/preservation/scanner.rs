@@ -1215,6 +1215,97 @@ fn scan_definition_lists(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<C
     candidates
 }
 
+fn grid_border(payload: &str) -> Option<(u8, Vec<usize>)> {
+    let bytes = payload.as_bytes();
+    if bytes.len() < 3 || bytes.first() != Some(&b'+') || bytes.last() != Some(&b'+') {
+        return None;
+    }
+    let mut segments = Vec::new();
+    let mut index = 1;
+    let character = *bytes.get(index)?;
+    if !matches!(character, b'-' | b'=') {
+        return None;
+    }
+    while index < bytes.len() - 1 {
+        let start = index;
+        while index < bytes.len() - 1 && bytes[index] == character {
+            index += 1;
+        }
+        if start == index || bytes[index] != b'+' {
+            return None;
+        }
+        segments.push(index - start);
+        index += 1;
+    }
+    (index == bytes.len()).then_some((character, segments))
+}
+
+fn scan_pandoc_grid_tables(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    let mut opener_index = 0;
+    while opener_index < lines.len() {
+        let opener = &lines[opener_index];
+        let opener_payload = opener.payload(source);
+        let opener_border =
+            (!opaque[opener_index] && !opener.lazy).then(|| grid_border(opener_payload)).flatten();
+        let Some((b'-', opener_signature)) = opener_border else {
+            opener_index += 1;
+            continue;
+        };
+
+        let opener_width = opener_payload.len();
+        let mut content_since_border = false;
+        let mut closer_index = None;
+        let mut scan_index = opener_index + 1;
+        while scan_index < lines.len() {
+            let line = &lines[scan_index];
+            if opaque[scan_index] || content_under_frames(source, line, &opener.frames).is_none() {
+                break;
+            }
+            let payload = payload_under_frames(source, line, &opener.frames)
+                .expect("compatible grid-table line has a payload");
+            if let Some((_, signature)) = grid_border(payload) {
+                if !content_since_border || payload.len() != opener_width {
+                    break;
+                }
+                let next_is_content = lines.get(scan_index + 1).is_some_and(|next| {
+                    payload_under_frames(source, next, &opener.frames).is_some_and(|next_payload| {
+                        next_payload.starts_with('|') && next_payload.ends_with('|')
+                    })
+                });
+                if signature == opener_signature && !next_is_content {
+                    closer_index = Some(scan_index);
+                    break;
+                }
+                content_since_border = false;
+                scan_index += 1;
+                continue;
+            }
+            if payload.starts_with('|') && payload.ends_with('|') {
+                content_since_border = true;
+                scan_index += 1;
+                continue;
+            }
+            break;
+        }
+
+        let Some(closer_index) = closer_index else {
+            opener_index += 1;
+            continue;
+        };
+        let final_index = caption_extent_after(source, lines, closer_index, opener);
+        candidates.push(Candidate::block(
+            RegionKind::PandocGridTable,
+            opener.start,
+            lines[final_index].end,
+            opener.context,
+            opener.scaffold(source).to_owned(),
+        ));
+        opener_index = final_index + 1;
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_toml_frontmatter(text, lines, opaque);
@@ -1222,6 +1313,7 @@ fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Ve
     candidates.extend(scan_obsidian_callouts(text, lines, opaque));
     candidates.extend(scan_colon_containers(text, lines, opaque));
     candidates.extend(scan_definition_lists(text, lines, opaque));
+    candidates.extend(scan_pandoc_grid_tables(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -1491,5 +1583,16 @@ mod tests {
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].kind, RegionKind::DefinitionList);
         assert_eq!(regions[0].source, "Term\n: Definition\n\n  Continued block\n");
+    }
+
+    #[test]
+    fn grid_tables_require_compatible_outer_borders() {
+        let source = normalize_source(
+            "+-----+-----+\n| A   | B   |\n+=====+=====+\n| 1   | 2   |\n+-----+-----+\n\n+---+---+\nnot a table\n+---+---+\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].kind, RegionKind::PandocGridTable);
+        assert!(regions[0].source.ends_with("| 1   | 2   |\n+-----+-----+\n"));
     }
 }

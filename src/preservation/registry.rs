@@ -12,7 +12,8 @@ pub(crate) const fn priority(kind: RegionKind) -> u8 {
         | RegionKind::ObsidianCallout
         | RegionKind::ColonContainer
         | RegionKind::TomlFrontmatter
-        | RegionKind::DefinitionList => 45,
+        | RegionKind::DefinitionList
+        | RegionKind::PandocGridTable => 45,
         RegionKind::MathDollarBlock
         | RegionKind::MathBracketBlock
         | RegionKind::MathEnvironmentBlock => 50,
@@ -33,6 +34,7 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
         RegionKind::ColonContainer => "colon_container",
         RegionKind::TomlFrontmatter => "toml_frontmatter",
         RegionKind::DefinitionList => "definition_list",
+        RegionKind::PandocGridTable => "pandoc_grid_table",
         RegionKind::MathDollarBlock => "math_dollar_block",
         RegionKind::MathBracketBlock => "math_bracket_block",
         RegionKind::MathEnvironmentBlock => "math_environment_block",

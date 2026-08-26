@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "1130e7a9394dac7fb4650daaa5053bce71534b5d"
+upstream_commit = "1462680846fb4a57fd58217cb41399ac9a7e5c95"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -38,6 +38,12 @@ status = "implemented"
 id = "FM-EXT-DEFINITION-LIST-001"
 python_bead = "fm-663e"
 rust_bead = "fm-663e"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-GRID-TABLE-001"
+python_bead = "fm-z8xh"
+rust_bead = "fm-z8xh"
 status = "implemented"
 
 [[change]]

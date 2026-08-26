@@ -27,6 +27,7 @@ pub(crate) enum RegionKind {
     ColonContainer,
     TomlFrontmatter,
     DefinitionList,
+    PandocGridTable,
     MathDollarBlock,
     MathBracketBlock,
     MathEnvironmentBlock,
