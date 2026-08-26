@@ -63,7 +63,7 @@ pub const FLOWMARK_RS_DISCOVERY_VERSION: &str = "0.3.2";
 
 /// Sibling Python `flowmark` discovery pin substituted for `__FLOWMARK_VERSION__`. The
 /// two packages are numbered independently; this tracks the Python parity baseline.
-pub const FLOWMARK_PY_DISCOVERY_VERSION: &str = "0.7.2";
+pub const FLOWMARK_PY_DISCOVERY_VERSION: &str = "0.7.3";
 
 /// Project-local skill directory name.
 pub const SKILL_DIRNAME: &str = "flowmark";

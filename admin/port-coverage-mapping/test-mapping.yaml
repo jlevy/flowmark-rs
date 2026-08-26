@@ -1,5 +1,5 @@
 # Python-to-Rust test mapping
-# Auto-generated. Manual edits are preserved on re-generation.
+# Auto-generated skeleton. Mapping decisions are preserved on re-generation.
 
 - python_file: tests/test_alerts.py
   python_function: test_alert_after_heading
@@ -1343,6 +1343,12 @@
   rust_file: tests/test_skill.rs
   rust_function: test_compose_preserves_frontmatter
 - python_file: tests/test_skill.py
+  python_function: test_compose_project_setup_substitutes_rust_pin
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_compose_project_setup_substitutes_rust_pin
+- python_file: tests/test_skill.py
   python_function: test_compose_recommends_rust_offers_python
   python_class: TestComposeSkill
   status: mapped
@@ -1397,23 +1403,29 @@
   rust_file: tests/test_skill.rs
   rust_function: test_skill_content_has_usage
 - python_file: tests/test_skill.py
-  python_function: test_skill_content_has_vscode_cursor_setup
-  python_class: TestGetSkillContent
-  status: mapped
-  rust_file: tests/test_skill.rs
-  rust_function: test_skill_routes_repository_adoption_to_bundled_reference
-- python_file: tests/test_skill.py
   python_function: test_skill_content_loads
   python_class: TestGetSkillContent
   status: mapped
   rust_file: tests/test_skill.rs
   rust_function: test_skill_content_loads
 - python_file: tests/test_skill.py
+  python_function: test_skill_routes_repository_adoption_to_bundled_reference
+  python_class: TestGetSkillContent
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_skill_routes_repository_adoption_to_bundled_reference
+- python_file: tests/test_skill.py
   python_function: test_forward_compat_guard_blocks_newer_format
   python_class: TestInstallSkill
   status: mapped
   rust_file: tests/test_skill.rs
   rust_function: test_forward_compat_guard_blocks_newer_format
+- python_file: tests/test_skill.py
+  python_function: test_forward_compat_guard_checks_bundled_reference
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_forward_compat_guard_checks_bundled_reference
 - python_file: tests/test_skill.py
   python_function: test_install_agent_base_skips_git_recommendation
   python_class: TestInstallSkill
@@ -1426,6 +1438,12 @@
   status: mapped
   rust_file: tests/test_skill.rs
   rust_function: test_install_default_writes_both_project_local_surfaces
+- python_file: tests/test_skill.py
+  python_function: test_install_does_not_publish_skill_before_reference
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: src/skills.rs
+  rust_function: write_surface_does_not_publish_skill_before_reference
 - python_file: tests/test_skill.py
   python_function: test_install_inside_git_repo_has_no_recommendation
   python_class: TestInstallSkill
@@ -1444,30 +1462,6 @@
   status: mapped
   rust_file: tests/test_skill_cli.rs
   rust_function: test_install_outside_git_repo_recommends_project_root
-- python_file: tests/test_skill.py
-  python_function: test_install_skill_creates_directories
-  python_class: TestInstallSkill
-  status: mapped
-  rust_file: tests/test_skill.rs
-  rust_function: test_install_skill_creates_directories
-- python_file: tests/test_skill.py
-  python_function: test_install_skill_custom_base
-  python_class: TestInstallSkill
-  status: mapped
-  rust_file: tests/test_skill.rs
-  rust_function: test_install_skill_custom_base
-- python_file: tests/test_skill.py
-  python_function: test_install_skill_default
-  python_class: TestInstallSkill
-  status: mapped
-  rust_file: tests/test_skill.rs
-  rust_function: test_install_default_writes_both_project_local_surfaces
-- python_file: tests/test_skill.py
-  python_function: test_install_skill_overwrites_existing
-  python_class: TestInstallSkill
-  status: mapped
-  rust_file: tests/test_skill.rs
-  rust_function: test_install_skill_overwrites_existing
 - python_file: tests/test_skill.py
   python_function: test_install_target_selection
   python_class: TestInstallSkill
@@ -1560,6 +1554,21 @@
   status: mapped
   rust_file: tests/test_skill_artifacts.rs
   rust_function: test_release_pinned_bundle_references_both_packages
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_discovery_skill_bundles_its_project_setup_reference
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_runtime_skill_bundles_its_project_setup_reference
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_project_setup_hooks_cover_common_markdown_extensions
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_project_setup_hooks_cover_common_markdown_extensions
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_readme_uses_main_repository_for_skill_distribution
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_readme_uses_main_repository_for_skill_distribution
 - python_file: tests/test_skill_artifacts.py
   python_function: test_rs_discovery_version_is_resolvable
   status: mapped
@@ -2136,12 +2145,6 @@
   rust_function: test_block_heuristics_mixed_content
   notes: No Rust equivalent; tests block heuristics with mixed content (text + block elements)
 - python_file: tests/test_wrapping.py
-  python_function: test_block_heuristics_only_with_tags
-  status: mapped
-  rust_file: tests/test_wrapping.rs
-  rust_function: test_block_heuristics_only_with_tags
-  notes: No Rust equivalent; tests that block heuristics only apply when tags are present
-- python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_only_with_tags_for_lists
   status: mapped
   rust_file: tests/test_ref_docs.rs
@@ -2417,6 +2420,12 @@
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_formatting
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
+- python_file: tests/tryscript/help.tryscript.md
+  python_function: help
+  status: mapped
+  rust_file: tests/test_tryscript_golden.rs
+  rust_function: tryscript_help
   notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/list-spacing.tryscript.md
   python_function: list-spacing

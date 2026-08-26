@@ -1,8 +1,8 @@
 """
-Discover all test functions in the Python flowmark repo using AST parsing.
+Discover Python unit/integration tests and language-neutral tryscript suites.
 
 Walks `test_*.py` files, extracts `test_*` functions (including those inside classes),
-and classifies each test by type.
+and records each `*.tryscript.md` suite as one golden test.
 """
 
 from __future__ import annotations
@@ -75,7 +75,7 @@ def _extract_docstring(node: ast.FunctionDef) -> str | None:
 
 def discover_python_tests(repo_path: Path) -> list[PythonTestRecord]:
     """
-    Walk all `test_*.py` files under `repo_path/tests/` and extract test records.
+    Walk Python test modules and language-neutral tryscript suites under `repo_path/tests/`.
     Returns a sorted list of `PythonTestRecord`.
     """
     tests_dir = repo_path / "tests"
@@ -118,6 +118,18 @@ def discover_python_tests(repo_path: Path) -> list[PythonTestRecord]:
                                 doc_string=_extract_docstring(method),
                             )
                         )
+
+    for test_file in sorted((tests_dir / "tryscript").glob("*.tryscript.md")):
+        records.append(
+            PythonTestRecord(
+                file=test_file.relative_to(repo_path).as_posix(),
+                function=test_file.name.removesuffix(".tryscript.md"),
+                class_name=None,
+                test_type=TestType.golden,
+                line_number=0,
+                doc_string=None,
+            )
+        )
 
     # Sort by file, class, function for deterministic output.
     records.sort(key=lambda r: (r.file, r.class_name or "", r.function))

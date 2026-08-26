@@ -17,8 +17,8 @@ It remains active until the release gates at the end are satisfied.
 | --- | --- |
 | Release mode | Mode B: upstream baseline/commit changes |
 | Branch starting Python baseline | v0.6.5, `f1228297c8e2380685c6a10383f59164b96f6c22` |
-| Current released Rust/Python baseline | Rust v0.3.2 / Python v0.7.2, Rust `015f23989af3e5cfb3f8b58dfc72822c534df25a` |
-| Intermediate released target | v0.7.3, `7912c322417ae49c5c45ab099997c142cf392db8` |
+| Merged Rust release baseline | Rust v0.3.2 / Python v0.7.2, Rust `015f23989af3e5cfb3f8b58dfc72822c534df25a` |
+| Current branch parity baseline | v0.7.3, `7912c322417ae49c5c45ab099997c142cf392db8` |
 | Preservation-contract target | `093c9249610965b37a458b32e37b5cc4738afe48` |
 | Pre-cycle Rust reference | `cb744eb` |
 | Shared-test foundation | `ccc8897ac0cb6c21c017f13ac68311198da71a48` |
@@ -94,14 +94,14 @@ and keep golden evidence versioned with provenance.
   dependency, skill, and v0.7.2 parity work (`fm-mfvi`).
 - [x] Record the preservation branch as specification and shared-test infrastructure,
   not yet as implemented math behavior.
-- [ ] Inventory every behavior, CLI, API, test, dependency, and generated-content change
+- [x] Inventory every behavior, CLI, API, test, dependency, and generated-content change
   in v0.7.2-to-v0.7.3 (`fm-t81l`).
-- [ ] Give every relevant released change a Rust disposition and evidence link.
+- [x] Give every relevant released change a Rust disposition and evidence link.
 - [x] Regenerate the v0.7.2 Rust test inventory from Cargo, eliminate phantom deleted
   records, and repair mappings to the current tests and direct tryscript wrappers.
-- [ ] Refresh the supplemental function map for v0.7.3 after the inventory is stable.
+- [x] Refresh the supplemental function map for v0.7.3 after the inventory is stable.
 
-Completion gate: Phase 1 remains open until `fm-t81l` and `fm-zah1` close.
+Completion gate: Phase 1 remains open until the remote-gitlink gate `fm-zah1` closes.
 
 ## Phase 2: Shared Contract Foundation
 
@@ -159,7 +159,7 @@ and traceability update.
 - [x] Replace wildcard/summary tolerance with exact case-ID entries.
 - [x] Reject stale divergence entries.
 - [x] Treat the YAML Python/Rust function mapping as supplementary evidence.
-- [ ] Complete the v0.7.3 supplemental mapping refresh (`fm-t81l`).
+- [x] Complete the v0.7.3 supplemental mapping refresh (`fm-t81l`).
 - [ ] Resolve or receive explicit approval for every remaining CommonMark and historical
   parity divergence (`fmr-rz9f`).
 - [ ] Confirm no active shared change ID has `deferred` status at release acceptance.
@@ -176,8 +176,7 @@ and traceability update.
   dependency.
 - [x] Re-run documentation formatting and local-link checks after the merge.
 - [x] Re-run README generation for the merged v0.7.2 baseline and shared user docs.
-- [ ] Re-run README generation if the released parity version or shared user docs later
-  change.
+- [x] Re-run README generation for the declared v0.7.3 parity baseline.
 
 ## Phase 7: Validation
 
@@ -193,7 +192,7 @@ and traceability update.
   shared-test foundation commit.
 - [x] Re-run all affected gates after the workflow/playbook commit.
 - [x] Merge current Rust main and rerun every gate (`fm-mfvi`).
-- [ ] Run the pinned full differential and syntactic-class sweeps before advancing the
+- [x] Run the pinned full differential and syntactic-class sweeps before advancing the
   released whole-program baseline.
 - [ ] Run a clean-clone test after `093c924` becomes remotely fetchable.
 - [x] Record post-merge commands, exit statuses, selected case IDs, and divergence delta
@@ -203,7 +202,7 @@ and traceability update.
 ## Phase 8: Release Acceptance
 
 - [ ] The exact Python and playbook submodule commits are fetchable from clean clones.
-- [ ] The released baseline gap is closed.
+- [x] The released baseline gap is closed.
 - [ ] Every in-scope shared change ID is implemented.
 - [ ] Every shared case passes or has an explicitly approved, tested disposition.
 - [ ] No unexplained CLI, output-byte, file-tree, or idempotence differences remain.

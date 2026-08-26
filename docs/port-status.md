@@ -4,7 +4,7 @@
 
 **Current Rust release:** v0.3.2
 
-**Last declared whole-program Python baseline:** v0.7.2
+**Last declared whole-program Python baseline:** v0.7.3
 
 **In-progress upstream contract:** commit `093c9249610965b37a458b32e37b5cc4738afe48`
 (`v0.7.3-23-g093c924`)
@@ -16,17 +16,18 @@ The current development branch has adopted the upstream language-neutral conform
 manifest and tryscript suite directly.
 Current Rust `main` through v0.3.2 / Python v0.7.2 was merged at `c6449a5` without
 restoring copied portable fixtures or Python-coupled Rust tests.
+The remaining released Python v0.7.3 delta was then classified and closed: its
+observable change is the skill bundle already ported by current Rust main, while its
+other changes are release tooling, generated maintenance content, and type annotations.
 This is the foundation for porting Markdown preservation and math by stable behavior IDs
 rather than by copying Python tests or fixtures.
 
 Do not describe the current branch as whole-program parity with the in-progress commit.
-The portable test foundation is green, but two implementation tracks and one delivery
-gate remain open:
+The portable test foundation and released baseline are green, but one implementation
+track and one delivery gate remain open:
 
-1. Audit and close the remaining released upstream delta from Python v0.7.2 through
-   v0.7.3 (`fm-t81l`).
-2. Implement the deferred preservation, math, code-span, and extension change IDs.
-3. Publish the exact upstream commit so a clean remote Rust clone can initialize its
+1. Implement the deferred preservation, math, code-span, and extension change IDs.
+2. Publish the exact upstream commit so a clean remote Rust clone can initialize its
    Python submodule (`fm-zah1`).
 
 The distinction is intentional.
@@ -60,7 +61,7 @@ commit, then prove that a clean clone can initialize the submodule.
 | CommonMark 0.31.2 | Large syntax-surface sweep | Active cases pass or have exact ledger entries |
 | Historical parity corpus | Previously discovered cross-language corner cases | All active cases pass exactly |
 | Rust-focused tests | Adapter parsing, timeout, path safety, Rust-only behavior | Kept small and language-specific |
-| Legacy YAML mapping | Function-level provenance at the v0.7.2 baseline | Supplementary; refreshed from Cargo’s executable inventory with no missing or broken mappings |
+| Legacy YAML mapping | Function-level provenance at the v0.7.3 baseline | Supplementary; 442 source tests, 395 mapped, 47 excluded, with no missing or broken mappings |
 
 Ordinary Rust tests do not invoke Python.
 Python runs the same portable contract in its own repository.
@@ -103,14 +104,14 @@ Do not rewrite a reason to cover a different failure class.
 
 ## Validation Snapshot
 
-The post-merge commit `c6449a5` passed these local gates with the Python submodule at
-`093c924` and the playbook at `d24760a`:
+The merged foundation and subsequent v0.7.3 baseline update passed these local gates
+with the Python submodule at `093c924` and the playbook at `d24760a`:
 
 - `cargo fmt --all -- --check`
 - `cargo clippy --locked --all-targets --all-features -- -D warnings`
 - `cargo test --locked --all-features`
 - `cargo test --locked --no-default-features`
-- Rust-repository administration checks: Ruff, BasedPyright, 15 pytest tests, and
+- Rust-repository administration checks: Ruff, BasedPyright, 16 pytest tests, and
   mapping validation
 - `cargo build --locked --all-features`
 - `cargo package --locked --allow-dirty`, including packaged `--docs` and `--skill`
@@ -136,13 +137,6 @@ Inline and block math must be protected before Markdown parsing, preserved byte-
 through formatting, restored after rendering, and exercised in containers and feature
 interactions. The shared desired-output cases must land before the Rust algorithm.
 
-### P1: Released baseline gap
-
-The preservation branch now includes Rust v0.3.2 with its declared Python v0.7.2
-baseline. `fm-t81l` owns the remaining v0.7.2-to-v0.7.3 behavior, test, CLI, API, and
-dependency inventory.
-Until that closes, the branch is an in-progress port, not a new parity release.
-
 ### P1: Upstream commit availability
 
 The Rust gitlink cannot be initialized by a clean remote clone until upstream commit
@@ -156,11 +150,11 @@ proof of parity. `fmr-rz9f` owns their class-level investigation and reduction.
 
 ### P2: Supplemental mapping maintenance
 
-The YAML mapping now covers the v0.7.2 Python baseline and is checked against Cargo’s
+The YAML mapping now covers the v0.7.3 Python baseline and is checked against Cargo’s
 deduplicated executable test inventory.
 It remains a useful language-specific map, but its count is not a completion claim.
-Refresh it during `fm-t81l` after deciding which v0.7.3 tests are best represented by a
-shared integration case and which need focused Rust tests.
+Python discovery now includes the language-neutral tryscript suites directly and drops
+deleted or renamed test records authoritatively.
 
 ## Completion Criteria for the Current Porting Cycle
 
@@ -181,6 +175,9 @@ The preservation sync is complete only when:
 See [Port Sync Playbook](port-sync-playbook.md) for the procedure and
 [current update checklist](project/specs/active/port-checklist-update-2026-08-25.md) for
 the live execution record.
+
+The released-baseline decision record is
+[Baseline Audit: Python Flowmark v0.7.2 to v0.7.3](sync-artifacts/2026-08-25-baseline-audit-v0.7.2-to-v0.7.3.md).
 
 <!-- This document follows common-doc-guidelines.md.
 See github.com/jlevy/practical-prose and review guidelines before editing.

@@ -233,12 +233,15 @@ criterion:
 
 ```bash
 cd python
-uv run flowmark-dev discover-python --local-path ../repos/flowmark
+uv run flowmark-dev discover-python --ref v0.7.3
 uv run flowmark-dev discover-rust
 uv run flowmark-dev init-mapping
 uv run flowmark-dev check-mapping
 cd ..
 ```
+
+Use the exact proposed released tag, not the in-progress contract gitlink.
+A local path is valid only when that checkout is detached at the same released baseline.
 
 Map a Python test to the shared integration/golden contract when that is the real Rust
 counterpart. Use small Rust tests for code that cannot be shared.

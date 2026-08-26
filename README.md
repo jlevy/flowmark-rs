@@ -29,7 +29,7 @@ source) and regenerate via `scripts/generate_rust_readme.py`. -->
 > CLI usage and formatting behavior.
 > It is now the recommended version for CLI and IDE usage.
 > 
-> Last sync: **2026-08-25** against **Python v0.7.2**
+> Last sync: **2026-08-25** against **Python v0.7.3**
 > 
 > For more on the **automated porting methodology** used to build flowmark-rs, see the
 > [**port status report**](docs/port-status.md) and the
@@ -156,7 +156,7 @@ No install needed for one-off usage:
 ```shell
 uvx --from flowmark-rs==0.3.2 flowmark --help
 uvx --from flowmark-rs==0.3.2 flowmark --auto somefile.md
-uvx --from flowmark==0.7.2 flowmark --help  # Python reference
+uvx --from flowmark==0.7.3 flowmark --help  # Python reference
 ```
 
 ### Install as a Global CLI

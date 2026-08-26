@@ -1,5 +1,5 @@
 # Rust flowmark-rs test manifest
-# Auto-generated. Manual edits are preserved on re-generation.
+# Auto-generated. Regenerate with flowmark-dev; do not edit by hand.
 
 - file: src/cli.rs
   function: clear_cache_does_not_require_project_root

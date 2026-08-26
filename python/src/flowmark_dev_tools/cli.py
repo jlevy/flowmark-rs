@@ -19,7 +19,7 @@ from pathlib import Path
 from flowmark_dev_tools.check_mapping import run_check
 from flowmark_dev_tools.discover_python import discover_python_tests
 from flowmark_dev_tools.discover_rust import discover_rust_tests_cargo, discover_rust_tests_regex
-from flowmark_dev_tools.models import MappingRecord, MappingStatus, PythonTestRecord
+from flowmark_dev_tools.models import MappingRecord, MappingStatus
 from flowmark_dev_tools.yaml_io import (
     load_mapping_yaml,
     load_python_tests_yaml,
@@ -34,7 +34,7 @@ DEFAULT_PYTHON_YAML = f"{DEFAULT_MAPPING_DIR}/python-tests.yaml"
 DEFAULT_RUST_YAML = f"{DEFAULT_MAPPING_DIR}/rust-tests.yaml"
 DEFAULT_MAPPING_YAML = f"{DEFAULT_MAPPING_DIR}/test-mapping.yaml"
 DEFAULT_REPO_URL = "https://github.com/jlevy/flowmark"
-DEFAULT_REF = "v0.7.2"
+DEFAULT_REF = "v0.7.3"
 
 
 def _resolve_root() -> Path:
@@ -44,27 +44,6 @@ def _resolve_root() -> Path:
         if (parent / "Cargo.toml").exists():
             return parent
     return cwd
-
-
-def _merge_python_tests(
-    discovered: list[PythonTestRecord],
-    existing_path: Path,
-) -> tuple[list[PythonTestRecord], int]:
-    """
-    Merge auto-discovered Python tests with existing YAML, preserving hand-added entries.
-    Returns (merged records, count of hand-preserved entries).
-    """
-    if not existing_path.exists():
-        return discovered, 0
-
-    existing = load_python_tests_yaml(existing_path)
-    discovered_keys: set[tuple[str, str | None, str]] = {
-        (r.file, r.class_name, r.function) for r in discovered
-    }
-
-    # Preserve hand-added entries not found by auto-discovery.
-    preserved = [r for r in existing if (r.file, r.class_name, r.function) not in discovered_keys]
-    return discovered + preserved, len(preserved)
 
 
 def cmd_discover_python(args: argparse.Namespace) -> int:
@@ -89,12 +68,9 @@ def cmd_discover_python(args: argparse.Namespace) -> int:
             )
             discovered = discover_python_tests(Path(tmpdir))
 
-    records, preserved = _merge_python_tests(discovered, output)
-    records.sort(key=lambda r: (r.file, r.class_name or "", r.function))
-    write_python_tests_yaml(records, output)
+    discovered.sort(key=lambda r: (r.file, r.class_name or "", r.function))
+    write_python_tests_yaml(discovered, output)
     print(f"Discovered {len(discovered)} Python tests -> {output}")
-    if preserved:
-        print(f"  Preserved {preserved} hand-added entries from existing file")
     return 0
 
 

@@ -65,12 +65,12 @@ unsafe_code = "deny"
 warnings = "deny"
 
 [package.metadata.parity]
-version = "0.7.2"
+version = "0.7.3"
 
-# This sync (Python v0.7.2, a patch release) ports the cross-agent skill install, which
-# changes `skills::install_skill` from 1 to 3 parameters. That is a knowing, accepted
-# breaking change kept in a patch release (the project is pre-1.0 with effectively no
-# downstream library users). Allow just this one lint so cargo-semver-checks still gates
+# The Python v0.7.2 sync ported the cross-agent skill install, which changed
+# `skills::install_skill` from 1 to 3 parameters. That was a knowing, accepted breaking
+# change in a patch release (the project is pre-1.0 with effectively no downstream
+# library users). Keep this one historical exception so cargo-semver-checks still gates
 # every other part of the public API.
 [package.metadata.cargo-semver-checks.lints]
 function_parameter_count_changed = "allow"
