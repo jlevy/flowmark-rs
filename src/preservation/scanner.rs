@@ -565,6 +565,67 @@ fn scan_wikilinks(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     candidates
 }
 
+fn is_html_tag_span(span: &str) -> bool {
+    let bytes = span.as_bytes();
+    if bytes.len() < 3 || bytes[0] != b'<' || *bytes.last().expect("nonempty span") != b'>' {
+        return false;
+    }
+    let mut index = if bytes[1] == b'/' { 2 } else { 1 };
+    if index >= bytes.len() - 1 || !bytes[index].is_ascii_alphabetic() {
+        return false;
+    }
+    index += 1;
+    while index < bytes.len() - 1 && (bytes[index].is_ascii_alphanumeric() || bytes[index] == b'-')
+    {
+        index += 1;
+    }
+    index == bytes.len() - 1 || matches!(bytes[index], b' ' | b'\t' | b'\n' | b'/')
+}
+
+fn is_html_declaration(span: &str) -> bool {
+    let bytes = span.as_bytes();
+    bytes.len() >= 4
+        && bytes.starts_with(b"<!")
+        && bytes[2].is_ascii_uppercase()
+        && bytes.ends_with(b">")
+        && !bytes[2..bytes.len() - 1].contains(&b'<')
+}
+
+fn is_uri_autolink(body: &str) -> bool {
+    let Some((scheme, remainder)) = body.split_once(':') else { return false };
+    let scheme_bytes = scheme.as_bytes();
+    (2..=32).contains(&scheme_bytes.len())
+        && scheme_bytes[0].is_ascii_alphabetic()
+        && scheme_bytes[1..]
+            .iter()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'+' | b'-'))
+        && remainder.bytes().all(|byte| byte > b' ' && !matches!(byte, b'<' | b'>'))
+}
+
+fn is_email_autolink(body: &str) -> bool {
+    const LOCAL_PUNCTUATION: &[u8] = b".!#$%&'*+/=?^_`{|}~-";
+    let Some((local, domain)) = body.split_once('@') else { return false };
+    if local.is_empty()
+        || domain.is_empty()
+        || domain.contains('@')
+        || !local
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || LOCAL_PUNCTUATION.contains(&byte))
+    {
+        return false;
+    }
+    let labels: Vec<&str> = domain.split('.').collect();
+    labels.len() >= 2
+        && labels.iter().all(|label| {
+            let bytes = label.as_bytes();
+            !bytes.is_empty()
+                && bytes.len() <= 63
+                && bytes[0].is_ascii_alphanumeric()
+                && bytes[bytes.len() - 1].is_ascii_alphanumeric()
+                && bytes.iter().all(|byte| byte.is_ascii_alphanumeric() || *byte == b'-')
+        })
+}
+
 fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     let bytes = text.as_bytes();
     let mut candidates = Vec::new();
@@ -622,6 +683,17 @@ fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
             continue;
         };
         let span_end = close + 1;
+        let span = &text[index..span_end];
+        let body = &span[1..span.len() - 1];
+        if !(is_html_tag_span(span)
+            || is_html_declaration(span)
+            || is_uri_autolink(body)
+            || is_email_autolink(body)
+            || text[start..index].ends_with("]("))
+        {
+            index += 1;
+            continue;
+        }
         candidates.push(Candidate::inline(RegionKind::RawHtmlInline, index, span_end));
         index = span_end;
     }
@@ -2306,6 +2378,25 @@ mod tests {
         assert_eq!(regions[2].kind, RegionKind::RawHtmlBlock);
         assert_eq!(regions[2].source, "<!-- closing -->\n");
         assert_eq!(regions[2].container.list_depth, 0);
+    }
+
+    #[test]
+    fn angle_scanner_rejects_comparisons_and_accepts_html_and_autolinks() {
+        let source = normalize_source(
+            "| Fast | Slow |\n| --- | --- |\n| <15min | >25min |\n| <1.5x | >2.5x |\n\n[link](<foo\nbar>) <x-card data-label=\"raw\"> <https://example.com/a> <7@example.com> <!DOCTYPE html>\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        let sources: Vec<&str> = regions.iter().map(|region| region.source.as_str()).collect();
+        assert_eq!(
+            sources,
+            vec![
+                "<foo\nbar>",
+                "<x-card data-label=\"raw\">",
+                "<https://example.com/a>",
+                "<7@example.com>",
+                "<!DOCTYPE html>",
+            ]
+        );
     }
 
     #[test]
