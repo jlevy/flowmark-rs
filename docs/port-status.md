@@ -140,11 +140,13 @@ No new divergence was added for math, code, extensions, or whole-document idempo
 
 ### Remote CI and Release Scope
 
-The publication gate is complete.
+The publication and PR-validation gates are complete.
 A fresh shallow recursive clone of the published Rust branch resolved Python `783b445`,
 the porting playbook `d24760a`, and the Homebrew repository without a local alternate.
-The remaining remote gates are the PR CI result and later release planning; this branch
-does not declare a new crates.io release.
+The Python 3.10–3.14 matrix and the complete Rust Linux, macOS, Windows, MSRV, security,
+mapping, and packaging-related PR gates pass.
+Later release planning remains separate; this branch does not declare a new crates.io
+release.
 
 ### Windows Shared-Source Checkout
 
@@ -193,9 +195,9 @@ This porting cycle is locally complete when:
 - lint, test, documentation, administration, build, and package gates pass;
 - the checklist, sync artifacts, mapping, ledger, and beads agree.
 
-The publication and fresh-clone gates are complete.
-Remote completion additionally requires the PR CI, security, and release-planning gates
-applicable to the eventual release.
+The publication, fresh-clone, PR CI, and security gates are complete.
+Versioning, release notes, and publication gates for an eventual release remain a
+separate release-planning cycle.
 
 See the [Port Sync Playbook](port-sync-playbook.md), the
 [current update checklist](project/specs/active/port-checklist-update-2026-08-25.md),

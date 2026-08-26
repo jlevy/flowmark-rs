@@ -275,9 +275,11 @@ and traceability update.
 - [x] Full local test, lint, documentation, administration, build, and packaging gates
   pass.
 - [x] Remote clean-clone and publication gates pass.
-- [ ] Remote CI, security, and release-planning gates pass.
+- [x] Remote PR CI and security gates pass on Python 3.10–3.14 and Rust Linux, macOS,
+  Windows, and MSRV 1.85.
+- [ ] Release-planning gates pass.
 - [ ] Version correspondence and release notes state the exact achieved surface.
-- [ ] Beads, mapping, divergence ledger, checklist, and sync artifact agree.
+- [x] Beads, mapping, divergence ledger, checklist, and sync artifact agree.
 
 This checklist cannot be closed on the strength of test totals or a green subset.
 Completion requires the exact evidence above and zero unexplained differences.
