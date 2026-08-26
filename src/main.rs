@@ -2,7 +2,7 @@
 
 #[cfg(feature = "cli")]
 mod cli {
-    use anyhow::{Context, Result, bail};
+    use anyhow::{Context, Result};
     use clap::{ArgMatches, CommandFactory, FromArgMatches, Parser, parser::ValueSource};
     use rayon::prelude::*;
     use std::fs;
@@ -102,6 +102,10 @@ Use `flowmark --docs` for full documentation.
         #[arg(long)]
         pub nobackup: bool,
 
+        /// Don't write any files; exit with a non-zero status if any file would be reformatted. Useful for CI and pre-commit validation
+        #[arg(long)]
+        pub check: bool,
+
         /// Convenience preset for full auto-formatting; requires at least one file or directory argument
         #[arg(long)]
         pub auto: bool,
@@ -157,21 +161,16 @@ Use `flowmark --docs` for full documentation.
         #[arg(long, help_heading = "Agent Options")]
         pub skill: bool,
 
-        /// Install Claude Code skill for flowmark
+        /// Install the flowmark agent skill (project-local .agents/skills + .claude/skills + AGENTS.md by default)
         #[arg(long, help_heading = "Agent Options")]
         pub install_skill: bool,
 
-        /// Agent config directory for skill installation (default: ~/.claude)
+        /// Install the skill to a single explicit base dir (e.g. ~/.claude); for global/custom installs
         #[arg(long, value_name = "DIR", help_heading = "Agent Options")]
         pub agent_base: Option<String>,
 
-        /// Comma-separated project-local skill surfaces: portable, claude, agents-md, or all
-        #[arg(
-            long,
-            value_name = "SURFACES",
-            value_parser = skills::validate_surfaces,
-            help_heading = "Agent Options"
-        )]
+        /// With --install-skill: comma-separated subset of surfaces to install. Values: 'portable', 'claude', 'agents-md', or 'all' (default if omitted)
+        #[arg(long, value_name = "LIST", help_heading = "Agent Options")]
         pub surfaces: Option<String>,
 
         /// Print full documentation
@@ -272,7 +271,9 @@ Use `flowmark --docs` for full documentation.
         force_exclude: bool,
         files_max_size: u64,
     ) -> Vec<String> {
-        if !needs_file_resolution(files) && !list_files {
+        // `force_exclude` makes exclusions apply to explicitly-named files too, so the
+        // resolver must run even for a plain file list (matching Python's `_resolve_files`).
+        if !needs_file_resolution(files) && !list_files && !force_exclude {
             // Validate all non-stdin paths exist (matches Python's file_resolver behavior).
             for f in files {
                 if f != "-" && !Path::new(f).exists() {
@@ -612,26 +613,71 @@ Use `flowmark --docs` for full documentation.
 
         // Early exit: --install-skill
         if args.install_skill {
-            if args.agent_base.is_some() && args.surfaces.is_some() {
-                eprintln!(
-                    "Error: --surfaces is incompatible with --agent-base (the latter is an \
-                     explicit single-base install and writes one skill location)."
-                );
-                std::process::exit(2);
-            }
-            let surfaces = args
-                .surfaces
-                .as_deref()
-                .map_or_else(|| skills::ALL_SURFACES.to_vec(), skills::parse_surfaces);
-            if let Err(e) = skills::install_skill_surfaces(args.agent_base.as_deref(), &surfaces) {
-                bail!("{e}");
+            let results = if let Some(base) = args.agent_base.as_deref() {
+                if args.surfaces.is_some() {
+                    eprintln!(
+                        "Error: --surfaces is incompatible with --agent-base (the latter is \
+                         an explicit single-base install and writes one skill location)."
+                    );
+                    std::process::exit(2);
+                }
+                match skills::install_skill(Some(base), None, None) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    }
+                }
+            } else {
+                let selected = match args.surfaces.as_deref() {
+                    None => None,
+                    Some(raw) => {
+                        let tokens: Vec<&str> =
+                            raw.split(',').map(str::trim).filter(|t| !t.is_empty()).collect();
+                        if tokens.is_empty() {
+                            eprintln!(
+                                "Error: --surfaces given an empty value; pass a comma-separated \
+                                 list of: portable, claude, agents-md, all."
+                            );
+                            std::process::exit(2);
+                        }
+                        let mut expanded: std::collections::HashSet<String> =
+                            std::collections::HashSet::new();
+                        for tok in tokens {
+                            if tok == "all" {
+                                expanded
+                                    .extend(skills::ALL_SURFACES.iter().map(|s| (*s).to_string()));
+                            } else if skills::ALL_SURFACES.contains(&tok) {
+                                expanded.insert(tok.to_string());
+                            } else {
+                                eprintln!(
+                                    "Error: unknown surface '{tok}'; valid values: portable, \
+                                     claude, agents-md, all."
+                                );
+                                std::process::exit(2);
+                            }
+                        }
+                        Some(expanded)
+                    }
+                };
+                match skills::install_skill(None, None, selected.as_ref()) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        std::process::exit(1);
+                    }
+                }
+            };
+            // Forward-compat guard: fail if any surface was newer than this build understands.
+            if results.iter().any(|r| r.action == "blocked-newer") {
+                std::process::exit(1);
             }
             return Ok(());
         }
 
         // Early exit: --skill
         if args.skill {
-            print!("{}", skills::get_skill_content());
+            println!("{}", skills::compose_skill(None));
             return Ok(());
         }
 
@@ -744,6 +790,35 @@ Use `flowmark --docs` for full documentation.
             ellipses: args.ellipses,
             list_spacing: args.list_spacing,
         };
+
+        // Check-only mode: never write. Report any file that would change and exit with
+        // status 1 (matching Black/Ruff/Prettier). Bypasses the write-time validations
+        // (multi-file output guard, inplace-with-stdin) since nothing is written.
+        if args.check {
+            let mut changed: Vec<&str> = Vec::new();
+            for file in &resolved_files {
+                let content = if file == "-" {
+                    let mut input = String::new();
+                    std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
+                    input
+                } else {
+                    std::fs::read_to_string(file)
+                        .with_context(|| format!("failed to read {file}"))?
+                };
+                if opts.reformat_text(&content) != content {
+                    changed.push(file);
+                }
+            }
+            for f in &changed {
+                let label = if *f == "-" { "<stdin>" } else { f };
+                eprintln!("Would reformat: {label}");
+            }
+            if changed.is_empty() {
+                return Ok(());
+            }
+            std::process::exit(1);
+        }
+
         let incremental_enabled = args.inplace && args.incremental;
         let incremental_cache = open_incremental_cache(
             incremental_enabled,

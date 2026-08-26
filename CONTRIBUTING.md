@@ -1,5 +1,10 @@
 # Contributing to flowmark
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> Upstream Python contributing guidance is folded into
+> [`docs/development.md`](https://github.com/jlevy/flowmark/blob/main/docs/development.md);
+> the Rust port keeps this file separate for the Rust contributor onboarding flow.
+
 Thank you for your interest in contributing to flowmark!
 
 ## Prerequisites
@@ -11,7 +16,7 @@ Thank you for your interest in contributing to flowmark!
   (`npm install -g tryscript@0.1.7`)
 
 All test dependencies are required.
-Tests fail loudly when a dependency is missing — there is no skip logic.
+Tests fail loudly when a dependency is missing, there is no skip logic.
 See
 [Principle 6](repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
 of the porting playbook.
@@ -30,8 +35,8 @@ cargo test --all-features
 
 The full suite includes Rust unit and integration tests, a native runner for the pinned
 upstream conformance manifest, and the upstream tryscript suite.
-The portable layers do not invoke Python or keep synchronized fixture copies in this
-repository.
+Portable tests read their reviewed assets directly from `repos/flowmark`; they do not
+invoke Python or keep synchronized fixture copies in this repository.
 
 For full project structure, CI pipeline details, and architecture, see
 [`docs/development.md`](docs/development.md).

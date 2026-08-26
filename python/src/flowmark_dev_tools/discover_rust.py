@@ -20,6 +20,9 @@ from flowmark_dev_tools.models import RustTestRecord
 # Match `#[test]` or `#[tokio::test]` followed eventually by `fn name(`.
 _TEST_ATTR_PATTERN = re.compile(r"#\[(?:tokio::)?test\]")
 _FN_PATTERN = re.compile(r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)\s*\(", re.MULTILINE)
+_RUSTDOC_TEST_PATTERN = re.compile(
+    r"^(?P<file>.+\.rs) - (?P<function>.+) \(line (?P<line_number>\d+)\)$"
+)
 
 
 def discover_rust_tests_cargo(project_dir: Path) -> list[RustTestRecord]:
@@ -37,38 +40,46 @@ def discover_rust_tests_cargo(project_dir: Path) -> list[RustTestRecord]:
     if result.returncode != 0:
         raise RuntimeError(f"cargo test --list failed (exit {result.returncode}):\n{result.stderr}")
 
-    records: list[RustTestRecord] = []
+    records: dict[tuple[str, str], RustTestRecord] = {}
     for line in result.stdout.splitlines():
         line = line.strip()
         if not line.endswith(": test"):
             continue
         test_path = line[: -len(": test")].strip()
 
-        # cargo outputs two forms:
+        # cargo outputs three forms:
         #   Integration tests: "test_function_name: test"
         #   Unit tests: "module::submodule::tests::test_name: test"
-        if "::" in test_path:
+        #   Rustdoc tests: "src/lib.rs - Type::method (line N): test"
+        rustdoc_match = _RUSTDOC_TEST_PATTERN.fullmatch(test_path)
+        if rustdoc_match:
+            file = rustdoc_match.group("file")
+            function = rustdoc_match.group("function")
+            line_number = int(rustdoc_match.group("line_number"))
+        elif "::" in test_path:
             # Unit test in src/ — convert module path to a file reference.
             parts = test_path.split("::")
             function = parts[-1]
             # Strip the "tests" module suffix if present (convention for #[cfg(test)] mod tests).
             module_parts = [p for p in parts[:-1] if p != "tests"]
             file = "src/" + "/".join(module_parts) + ".rs"
+            line_number = _find_line_number(project_dir, file, function)
         else:
             # Integration test — need to find which file it's in.
             function = test_path
             file = _find_integration_test_file(project_dir, function)
+            line_number = _find_line_number(project_dir, file, function)
 
-        records.append(
-            RustTestRecord(
-                file=file,
-                function=function,
-                line_number=_find_line_number(project_dir, file, function),
-            )
+        record = RustTestRecord(
+            file=file,
+            function=function,
+            line_number=line_number,
         )
+        # The same source unit test can be listed once for each binary target. The
+        # executable inventory is keyed by its source identity, not build-target count.
+        records[(record.file, record.function)] = record
 
-    records.sort(key=lambda r: (r.file, r.function))
-    return records
+    return sorted(records.values(), key=lambda r: (r.file, r.function))
 
 
 def _find_integration_test_file(project_dir: Path, function_name: str) -> str:

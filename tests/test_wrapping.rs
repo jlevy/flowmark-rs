@@ -458,7 +458,8 @@ fn test_block_heuristics_mixed_content() {
 
     assert!(result.contains("{% field %}\n"));
     assert!(result.contains("\n| Col1 | Col2 |\n"));
-    assert!(result.contains("\n|------|------|\n"));
+    // Separator rows are normalized to three dashes, matching Python flowmark.
+    assert!(result.contains("\n| --- | --- |\n"));
     assert!(result.contains("\n{% /field %}"));
 }
 
@@ -521,7 +522,8 @@ fn test_block_heuristics_table_rows() {
 
     assert!(result.contains("{% field %}\n"));
     assert!(result.contains("\n| A | B |\n"));
-    assert!(result.contains("\n|---|---|\n"));
+    // Separator rows are normalized to three dashes, matching Python flowmark.
+    assert!(result.contains("\n| --- | --- |\n"));
     assert!(result.contains("\n| 1 | 2 |\n"));
     assert!(result.contains("\n{% /field %}"));
 }

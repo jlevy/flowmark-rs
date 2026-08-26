@@ -26,14 +26,14 @@ Use `flowmark` when it is already on `PATH`. Otherwise use the fast
 (never `@latest`):
 
 ```bash
-uvx --from flowmark-rs==0.3.2 flowmark --auto FILE
+uvx --from flowmark-rs==__FLOWMARK_RS_VERSION__ flowmark --auto FILE
 ```
 
 The [Python reference](https://github.com/jlevy/flowmark) remains available when its
 library API or a newer unported patch is required:
 
 ```bash
-uvx --from flowmark==0.7.3 flowmark --auto FILE
+uvx --from flowmark==__FLOWMARK_VERSION__ flowmark --auto FILE
 ```
 
 ## Adopt Flowmark in a Repository

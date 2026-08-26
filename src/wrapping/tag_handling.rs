@@ -9,7 +9,9 @@ use crate::wrapping::LineWrapper;
 use crate::wrapping::atomic_patterns::{
     SINGLE_HTML_COMMENT, SINGLE_JINJA_COMMENT, SINGLE_JINJA_TAG, SINGLE_JINJA_VAR,
 };
-use crate::wrapping::block_heuristics::line_is_block_content;
+use crate::wrapping::block_heuristics::{
+    line_is_block_content, line_is_list_item, line_is_table_row, normalize_table_separator,
+};
 
 /// Pattern to match complete template tags (for protecting content inside tags).
 pub(crate) static TEMPLATE_TAG_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
@@ -118,17 +120,22 @@ fn is_tag_only_line(line: &str) -> bool {
         return false;
     }
 
-    // Only consider Jinja/Markdoc tags for block spacing, NOT HTML comments.
-    // HTML comments are natively parsed by comrak as HTML blocks (type 2),
-    // so they don't need blank lines injected around them. Adding blank lines
-    // around HTML comments causes extra blank lines in the output.
+    // v0.7.0: HTML comments wrapping block content (table/list) also need blank
+    // lines injected, matching Jinja/Markdoc tags. Older versions excluded
+    // HTML comments because comrak handles them as HtmlBlock type 2, but the
+    // tight-against-list/table case loses the structural boundary without the
+    // injected blank line. Preprocess only inserts when the *current* line is
+    // block content (see caller), so paragraphs following an HTML comment are
+    // unaffected.
     let starts_tag = stripped.starts_with(SINGLE_JINJA_TAG.open_delim)
         || stripped.starts_with(SINGLE_JINJA_COMMENT.open_delim)
-        || stripped.starts_with(SINGLE_JINJA_VAR.open_delim);
+        || stripped.starts_with(SINGLE_JINJA_VAR.open_delim)
+        || stripped.starts_with(SINGLE_HTML_COMMENT.open_delim);
 
     let ends_tag = stripped.ends_with(SINGLE_JINJA_TAG.close_delim)
         || stripped.ends_with(SINGLE_JINJA_COMMENT.close_delim)
-        || stripped.ends_with(SINGLE_JINJA_VAR.close_delim);
+        || stripped.ends_with(SINGLE_JINJA_VAR.close_delim)
+        || stripped.ends_with(SINGLE_HTML_COMMENT.close_delim);
 
     starts_tag && ends_tag
 }
@@ -324,8 +331,13 @@ pub(crate) fn add_tag_newline_handling(
             let is_first_line = i == 0;
             let prev_ends_with_tag = !is_first_line && line_ends_with_tag(lines[i - 1]);
             let curr_starts_with_tag = is_unindented_tag_line(line);
-            let curr_is_block = has_tags && line_is_block_content(line);
-            let prev_is_block = has_tags && !is_first_line && line_is_block_content(lines[i - 1]);
+            // Table rows are ALWAYS structural boundaries (never line-wrapped),
+            // matching Python. List items are boundaries only when tags are present.
+            let curr_is_table = line_is_table_row(line);
+            let prev_is_table = !is_first_line && line_is_table_row(lines[i - 1]);
+            let curr_is_block = curr_is_table || (has_tags && line_is_list_item(line));
+            let prev_is_block =
+                prev_is_table || (has_tags && !is_first_line && line_is_list_item(lines[i - 1]));
 
             if (prev_ends_with_tag || curr_starts_with_tag || curr_is_block || prev_is_block)
                 && !current_segment_lines.is_empty()
@@ -346,12 +358,33 @@ pub(crate) fn add_tag_newline_handling(
             return fix_multiline_opening_tag_with_closing(&result);
         }
 
-        // Wrap each segment separately
+        // Wrap each segment separately. Segments made entirely of table rows are
+        // structural markdown and are preserved verbatim (never wrapped), with
+        // separator rows normalized to three dashes — matching Python.
         let mut wrapped_segments: Vec<String> = Vec::new();
         for (i, segment) in segments.iter().enumerate() {
             let is_first = i == 0;
             let cur_initial_indent = if is_first { initial_indent } else { subsequent_indent };
-            let wrapped = base_wrapper(segment, cur_initial_indent, subsequent_indent);
+            let segment_lines: Vec<&str> = segment.split('\n').collect();
+            let all_table_rows =
+                segment_lines.iter().filter(|l| !l.trim().is_empty()).all(|l| line_is_table_row(l));
+            let wrapped = if all_table_rows {
+                segment_lines
+                    .iter()
+                    .enumerate()
+                    .map(|(j, line)| {
+                        let indent = if j == 0 { cur_initial_indent } else { subsequent_indent };
+                        if line.trim().is_empty() {
+                            (*line).to_string()
+                        } else {
+                            format!("{indent}{}", normalize_table_separator(line))
+                        }
+                    })
+                    .collect::<Vec<_>>()
+                    .join("\n")
+            } else {
+                base_wrapper(segment, cur_initial_indent, subsequent_indent)
+            };
             wrapped_segments.push(wrapped);
         }
 

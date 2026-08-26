@@ -1,5 +1,11 @@
 # Development
 
+> **Doc status:** Parallel to upstream
+> [`docs/development.md`](https://github.com/jlevy/flowmark/blob/main/docs/development.md).
+> Both cover the same role; content differs because the Rust toolchain (cargo,
+> multi-channel release) and the Python toolchain (uv, PyPI-only) require different
+> commands and steps.
+
 How to build, test, and work on flowmark-rs.
 
 ## Prerequisites
@@ -10,7 +16,7 @@ How to build, test, and work on flowmark-rs.
   (`npm install -g tryscript@0.1.7`)
 
 All test dependencies are required.
-Tests fail loudly when a dependency is missing — there is no skip logic.
+Tests fail loudly when a dependency is missing, there is no skip logic.
 
 ## Building
 
@@ -37,7 +43,7 @@ The full suite includes:
 | Doc tests | Library API usage example |
 | Shared conformance tests | Exact process and filesystem behavior from the pinned upstream manifest |
 | Shared tryscript tests | End-to-end CLI behavior from the pinned upstream suite |
-| Rust-only golden tests | Incremental-cache behavior that has no Python equivalent |
+| Rust-only golden tests | Rust-only features and regressions that have no portable source equivalent |
 
 The native Rust adapter runs every portable case against the Cargo-built binary.
 It reads inputs and reviewed outputs directly from `repos/flowmark`; it does not invoke
@@ -84,14 +90,14 @@ Input → [YAML Frontmatter] → [comrak Parse] → [Typography] → [Cleanups] 
 
 Key design decisions:
 
-- **Feature-gated CLI** — library usable without clap/anyhow via `--no-default-features`
-- **Zero `unsafe` code** — `unsafe_code = "deny"` (1 exception: SIGPIPE handler in
+- **Feature-gated CLI:** library usable without clap/anyhow via `--no-default-features`
+- **Zero `unsafe` code:** `unsafe_code = "deny"` (1 exception: SIGPIPE handler in
   `main.rs`)
-- **No `unwrap()` in library** — `unwrap_used = "deny"`; all errors use `?` or
-  `expect()` with messages
-- **Pedantic clippy at deny level** — catches issues locally, not just in CI
-- **Atomic file writes** — tempfile + persist pattern prevents corruption
-- **13 comrak workarounds** — each tagged `COMRAK-WORKAROUNDn` in
+- **No `unwrap()` in library:** `unwrap_used = "deny"`; all errors use `?` or `expect()`
+  with messages
+- **Pedantic clippy at deny level:** catches issues locally, not just in CI
+- **Atomic file writes:** tempfile + persist pattern prevents corruption
+- **13 comrak workarounds:** each tagged `COMRAK-WORKAROUNDn` in
   `src/formatter/filling.rs`
 
 ## CI Pipeline

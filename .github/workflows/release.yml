@@ -115,7 +115,7 @@ jobs:
         run: python3 ./scripts/package_release_archive.py --artifact-tag "${{ needs.plan.outputs.artifact_tag }}" --target "${{ matrix.target }}" --runner-os "${{ matrix.os }}" --github-output "$GITHUB_OUTPUT"
 
       - name: Upload release archive artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-archives-${{ matrix.target }}
           path: ${{ steps.package.outputs.archive }}
@@ -126,7 +126,7 @@ jobs:
 
     steps:
       - name: Download release archives
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-archives-*
           merge-multiple: true
@@ -136,7 +136,7 @@ jobs:
         run: (cd release && shasum -a 256 * > ../SHA256SUMS)
 
       - name: Upload checksums artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: release-checksums
           path: SHA256SUMS
@@ -172,14 +172,14 @@ jobs:
       contents: write
     steps:
       - name: Download release artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: release-*
           merge-multiple: true
           path: release
 
       - name: Create or update GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ needs.plan.outputs.release_tag }}
           prerelease: ${{ needs.plan.outputs.prerelease == 'true' }}

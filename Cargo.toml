@@ -1,6 +1,6 @@
 [package]
 name = "flowmark"
-version = "0.2.6"
+version = "0.3.2"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
@@ -31,7 +31,7 @@ default = ["cli"]
 cli = ["clap", "anyhow", "rayon"]
 
 [dependencies]
-comrak = "0.50"
+comrak = { version = "0.51", default-features = false }
 regex = "1.12"
 thiserror = "2.0"
 toml = "1.0"
@@ -65,7 +65,15 @@ unsafe_code = "deny"
 warnings = "deny"
 
 [package.metadata.parity]
-version = "0.6.5"
+version = "0.7.2"
+
+# This sync (Python v0.7.2, a patch release) ports the cross-agent skill install, which
+# changes `skills::install_skill` from 1 to 3 parameters. That is a knowing, accepted
+# breaking change kept in a patch release (the project is pre-1.0 with effectively no
+# downstream library users). Allow just this one lint so cargo-semver-checks still gates
+# every other part of the public API.
+[package.metadata.cargo-semver-checks.lints]
+function_parameter_count_changed = "allow"
 
 [profile.release]
 opt-level = 3

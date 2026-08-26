@@ -1,12 +1,14 @@
 //! Parity discrepancy tests: Python flowmark vs Rust flowmark.
 //!
-//! Each test documents a specific discrepancy found during senior review (2026-02-18).
-//! Expected values are derived from Python v0.6.4 output and re-verified against the
-//! current parity baseline (v0.6.5 as of 2026-05-07). All 15 discrepancies (D1-D15)
-//! are resolved — every test passes.
+//! Each test documents a specific discrepancy found during senior review (2026-02-18)
+//! or subsequent stabilization (D17/D18, 2026-05-19). Expected values are derived from
+//! Python output and re-verified against the current parity baseline (v0.7.0 as of
+//! 2026-05-28; D18 tracks upstream issue #45 which is now released in v0.7.0, so it
+//! is exact parity, not an intentional divergence). All 18 discrepancies (D1-D18) are
+//! resolved — every test passes.
 //!
 //! D11 tests invoke both the Python and Rust binaries and compare error output.
-//! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.6.5`).
+//! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.7.0`).
 //!
 //! See: docs/project/specs/done/plan-2026-02-18-parity-discrepancies.md
 #![allow(clippy::unwrap_used)]
@@ -351,7 +353,14 @@ fn run_cli_stdin(bin: &str, args: &[&str], stdin: &str) -> (String, i32) {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .unwrap_or_else(|e| panic!("Failed to run {bin}: {e}"));
-    child.stdin.take().unwrap().write_all(stdin.as_bytes()).unwrap();
+    // The child may reject its arguments and exit before reading stdin (e.g.
+    // `--inplace -`), closing the read end of the pipe. The resulting broken-pipe write
+    // is expected and benign here — we assert on the child's stderr and exit code, not on
+    // the write succeeding — so ignore the error instead of `.unwrap()`ing it (which
+    // races against process teardown and flakes intermittently, especially on Windows).
+    if let Some(mut stdin_pipe) = child.stdin.take() {
+        let _ = stdin_pipe.write_all(stdin.as_bytes());
+    }
     let output = child.wait_with_output().unwrap();
     let stderr = String::from_utf8_lossy(&output.stderr).to_string();
     let code = output.status.code().unwrap_or(-1);
@@ -589,6 +598,297 @@ Only use `--no-verify` when absolutely necessary.
         result, python_output,
         "D16: Adjacent empty code blocks should not have extra blank line between them.\nGot:\n{result}"
     );
+}
+
+// =============================================================================
+// D17: Thematic break spacing — extra blank line around `* * *` (fmr-thbreak)
+// Python/marko preserves the source's tight spacing around a thematic break:
+// when a thematic break is adjacent to another block with no blank line in the
+// source, the output stays tight. Comrak's renderer instead forces blank lines
+// on both sides of every thematic break. Mirrors the existing tight-transition
+// handling for HTML comments (Rule 1/2), paragraph→list (Rule 3), and
+// paragraph→code (Rule 4) in render_block_children.
+// Found via corpus parity check (2026-05-19).
+// =============================================================================
+
+#[test]
+fn test_d17_thematic_break_before_heading_tight() {
+    let input = "text\n\n* * *\n## Heading\n\nmore\n";
+    let python_output = "text\n\n* * *\n## Heading\n\nmore\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: tight thematic break → heading should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_after_paragraph_tight() {
+    let input = "para\n* * *\n\nb\n";
+    let python_output = "para\n* * *\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: tight paragraph → thematic break should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_then_paragraph_tight() {
+    let input = "a\n\n* * *\npara\n\nb\n";
+    let python_output = "a\n\n* * *\npara\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: tight thematic break → paragraph should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_consecutive_tight() {
+    let input = "a\n\n* * *\n* * *\n\nb\n";
+    let python_output = "a\n\n* * *\n* * *\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: consecutive tight thematic breaks should stay tight.\nGot:\n{result}"
+    );
+}
+
+#[test]
+fn test_d17_thematic_break_loose_preserved() {
+    // When the source already has blank lines, they are preserved (no change).
+    let input = "a\n\n* * *\n\n## Heading\n\nb\n";
+    let python_output = "a\n\n* * *\n\n## Heading\n\nb\n";
+    let result = fmt(input);
+    assert_eq!(
+        result, python_output,
+        "D17: loose thematic break spacing should be preserved.\nGot:\n{result}"
+    );
+}
+
+// =============================================================================
+// D18: Reference-link normalization (upstream flowmark issue #45)
+// A reference link whose text equals its normalized label must render as the
+// unambiguous collapsed form `[text][]`, NOT the fragile shortcut `[text]`
+// (which merges with a following `(...)` or `[...]`, changing/dropping links).
+// When text != normalized label, the full form `[text][label]` is used.
+//
+// This adopts the upstream fix (already released in Python flowmark > v0.6.5,
+// commit 0af9e24). It is an INTENTIONAL divergence from released v0.6.5, which
+// still emits the buggy shortcut form. Verified against Python main (v0.6.6.dev)
+// and the upstream tests/test_reference_links.py spec.
+// =============================================================================
+
+fn fmt_ref(body: &str) -> String {
+    fmt(&format!("{body}\n\n[foo]: https://example.com/x\n"))
+}
+
+#[test]
+fn test_d18_shortcut_ref_normalized_to_collapsed() {
+    // [foo] (text == label) -> [foo][], not the fragile shortcut [foo].
+    assert_eq!(fmt_ref("Use [foo]"), "Use [foo][]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_collapsed_ref_preserved() {
+    assert_eq!(fmt_ref("Use [foo][]"), "Use [foo][]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_full_ref_label_equals_text_collapsed() {
+    // [foo][foo] (text == label) -> [foo][].
+    assert_eq!(fmt_ref("Use [foo][foo]"), "Use [foo][]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_full_ref_distinct_label_preserved() {
+    // [bar][foo] (text != label) stays a full reference.
+    assert_eq!(fmt_ref("Use [bar][foo]"), "Use [bar][foo]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_uppercase_shortcut_expands_to_full() {
+    // [Unreleased] with def [unreleased]: text "Unreleased" != normalized label
+    // "unreleased", so the full form is emitted (matches v0.6.5 AND main).
+    let input = "## [Unreleased]\n\n[unreleased]: https://example.com/c\n";
+    let expected = "## [Unreleased][unreleased]\n\n[unreleased]: https://example.com/c\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d18_label_normalized_to_lowercase() {
+    // [Foo] with def [Foo]: -> [Foo][foo] (link label normalized to lowercase).
+    // The def line is also lowercased on render, matching Python: see D20.
+    let input = "[Foo]\n\n[Foo]: https://example.com/x\n";
+    assert_eq!(fmt(input), "[Foo][foo]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_collapsed_ref_label_with_spaces_and_apostrophe() {
+    // Reviewer's reproducer: collapsed reference link whose label contains
+    // spaces and an apostrophe must round-trip cleanly — no leaked PUA
+    // marker, no inline-link fallback. The label is normalized to lowercase
+    // and the full form is emitted because text "St. John's School"
+    // differs from normalized "st. john's school".
+    let input = "See [St. John's School][] here.\n\n[St. John's School]: https://example.com/x\n";
+    let expected = "See [St. John's School][st. john's school] here.\n\n[st. john's school]: https://example.com/x\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d18_shortcut_ref_label_with_spaces_and_apostrophe() {
+    // Same case for the shortcut form.
+    let input = "See [St. John's School] here.\n\n[St. John's School]: https://example.com/x\n";
+    let expected = "See [St. John's School][st. john's school] here.\n\n[st. john's school]: https://example.com/x\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d18_collapsed_ref_label_lowercase_with_spaces_emits_collapsed() {
+    // When the link text already matches the normalized label exactly (the
+    // text is all lowercase with the same whitespace), emit the collapsed
+    // form `[text][]` per issue #45 — even though the label contains spaces.
+    let input = "See [an example][] here.\n\n[an example]: https://example.com/x\n";
+    let expected = "See [an example][] here.\n\n[an example]: https://example.com/x\n";
+    assert_eq!(fmt(input), expected);
+}
+
+// =============================================================================
+// D19: Reference-image inlining (parity bug surfaced by PR #54)
+// Python flowmark always renders reference images as INLINE form:
+// `![alt][label]`, `![alt][]`, and shortcut `![alt]` all become
+// `![alt](url)` (or `![alt](url "title")`) on render, with the matched
+// link reference definition's destination/title substituted in.
+// The Rust port was leaking the COMRAK-WORKAROUND1 PUA marker into the
+// rendered URL because the Image render branch didn't decode it, and after
+// the hex-encoded label fix in v0.7.0 the leak became hex strings like
+// `![alt](696d67)`. Fix: inline image references during pre-parse so comrak
+// parses them as proper inline images with the actual URL.
+// =============================================================================
+
+#[test]
+fn test_d19_image_full_ref_inlined() {
+    let input = "![alt][img]\n\n[img]: https://example.com/img.png\n";
+    let expected = "![alt](https://example.com/img.png)\n\n[img]: https://example.com/img.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_collapsed_ref_inlined() {
+    let input = "![alt][]\n\n[alt]: https://example.com/img.png\n";
+    let expected = "![alt](https://example.com/img.png)\n\n[alt]: https://example.com/img.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_shortcut_ref_inlined() {
+    let input = "![alt]\n\n[alt]: https://example.com/img.png\n";
+    let expected = "![alt](https://example.com/img.png)\n\n[alt]: https://example.com/img.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_with_title_inlined() {
+    let input = "![alt][img]\n\n[img]: https://example.com/img.png \"My title\"\n";
+    let expected = "![alt](https://example.com/img.png \"My title\")\n\n[img]: https://example.com/img.png \"My title\"\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_label_with_spaces_inlined() {
+    // Label with spaces must round-trip cleanly (no PUA/hex leak).
+    let input = "![Logo][company logo]\n\n[company logo]: https://example.com/logo.png\n";
+    let expected =
+        "![Logo](https://example.com/logo.png)\n\n[company logo]: https://example.com/logo.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_badge_pattern_image_inside_link() {
+    // The classic GitHub-badge shape: reference image nested inside a reference
+    // link. The image inlines; the OUTER link stays as a reference link.
+    let input = "[![alt][img]][url]\n\n[img]: https://example.com/img.png\n[url]: https://example.com/page\n";
+    let expected = "[![alt](https://example.com/img.png)][url]\n\n[img]: https://example.com/img.png\n[url]: https://example.com/page\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d19_image_no_def_unchanged() {
+    // No matching definition: leave the markdown as-is (comrak will render it
+    // as literal text since defs are extracted from comrak's view).
+    let input = "Some ![alt][missing] text here.\n";
+    let result = fmt(input);
+    assert!(
+        !result.contains('\u{F000}') && !result.contains("696d67"),
+        "no-def image must not leak PUA or hex: {result}"
+    );
+}
+
+// =============================================================================
+// D20: Link reference definition label lowercased on render (PR #57 follow-up)
+// Python flowmark stores reference labels in normalized (lowercase) form and
+// emits them lowercased on render: `[Logo]: url` -> `[logo]: url`. The Rust
+// port was preserving the original case. Both match the same link (CommonMark
+// def matching is case-insensitive), but exact-parity requires matching
+// Python's output form.
+// =============================================================================
+
+#[test]
+fn test_d20_def_label_lowercased_on_render() {
+    let input = "[Logo][]\n\n[Logo]: https://example.com/logo.png\n";
+    // Both the link's label (full form) and the def line emit the lowercased
+    // label. The link text "Logo" preserves its original case.
+    let expected = "[Logo][logo]\n\n[logo]: https://example.com/logo.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d20_def_label_with_spaces_lowercased() {
+    let input = "[Company Logo][]\n\n[Company Logo]: https://example.com/logo.png\n";
+    let expected = "[Company Logo][company logo]\n\n[company logo]: https://example.com/logo.png\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d20_def_label_already_lowercase_unchanged() {
+    let input = "[link][example]\n\n[example]: https://example.com/page\n";
+    let expected = "[link][example]\n\n[example]: https://example.com/page\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d20_def_label_with_title_preserved_lowercased() {
+    let input = "[Page][Home]\n\n[Home]: https://example.com \"Welcome home\"\n";
+    let expected = "[Page][home]\n\n[home]: https://example.com \"Welcome home\"\n";
+    assert_eq!(fmt(input), expected);
+}
+
+#[test]
+fn test_d18_shortcut_without_definition_unchanged() {
+    // [bar] with no matching definition is left as literal text.
+    assert_eq!(fmt_ref("Use [bar]"), "Use [bar]\n\n[foo]: https://example.com/x\n");
+}
+
+#[test]
+fn test_d18_multiple_shortcut_refs_on_one_line() {
+    assert_eq!(
+        fmt_ref("Both [foo] and [foo] here"),
+        "Both [foo][] and [foo][] here\n\n[foo]: https://example.com/x\n"
+    );
+}
+
+#[test]
+fn test_d18_collapsed_form_is_idempotent() {
+    // The collapsed output must be a fixed point.
+    let once = fmt_ref("Use [foo]");
+    assert_eq!(fmt(&once), once, "D18: collapsed reference output must be idempotent");
+}
+
+#[test]
+fn test_d18_inline_link_unaffected() {
+    let input = "See [foo](https://example.com/z) here.\n";
+    assert_eq!(fmt(input), "See [foo](https://example.com/z) here.\n");
 }
 
 // =============================================================================

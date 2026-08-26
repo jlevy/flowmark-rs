@@ -6,7 +6,10 @@ use regex::Regex;
 use std::sync::{Arc, LazyLock};
 
 use crate::wrapping::LineWrapper;
-use crate::wrapping::sentence::split_sentences_regex;
+// Atomic-aware sentence splitter (v0.7.0): never breaks inside a link, code
+// span, autolink, or bare URL. Replaced the older `split_sentences_regex` here
+// so the semantic line wrapper inherits the same Markdown-inline awareness.
+use crate::wrapping::sentence::split_sentences_atomic;
 use crate::wrapping::tag_handling::{add_tag_newline_handling, denormalize_adjacent_tags};
 use crate::wrapping::text_wrapping::{wrap_paragraph, wrap_paragraph_lines};
 
@@ -84,9 +87,12 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
         Box::new(move |text: &str, initial_indent: &str, subsequent_indent: &str| -> String {
             let text = text.replace('\n', " ");
 
-            // Handle width == 0 as "no wrapping"
+            // Handle width == 0 as "no wrapping". Collapse internal whitespace (not just
+            // strip ends) so the output is normalized and idempotent, matching the
+            // whitespace handling of the width > 0 path.
             if width == 0 {
-                return format!("{initial_indent}{}", text.trim());
+                let collapsed = text.split_whitespace().collect::<Vec<_>>().join(" ");
+                return format!("{initial_indent}{collapsed}");
             }
 
             let mut lines: Vec<String> = Vec::new();
@@ -94,7 +100,7 @@ pub fn line_wrap_by_sentence(width: usize, min_line_len: usize, is_markdown: boo
             let initial_indent_len = initial_indent.chars().count();
             let subsequent_indent_len = subsequent_indent.chars().count();
 
-            let sentences = split_sentences_regex(&text, 0);
+            let sentences = split_sentences_atomic(&text, 0);
 
             for sentence in &sentences {
                 let base_column =

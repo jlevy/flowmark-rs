@@ -78,11 +78,136 @@
   status: mapped
   rust_file: tests/test_alerts.rs
   rust_function: test_unknown_alert_types_preserve_quote
+- python_file: tests/test_block_spans.py
+  python_function: test_blank_only_document_has_full_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_block_span_helper_reads_the_span_attribute
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_blockquote_children_have_spans
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_crlf_input_normalized_to_lf_for_spans
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_document_has_full_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_empty_document_has_zero_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_every_block_element_in_realistic_doc_has_a_valid_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_every_block_in_golden_testdoc_has_a_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_fenced_code_span_includes_internal_blank_lines
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_footnote_definition_has_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_gfm_table_has_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_html_block_input_falls_back_to_paragraph_with_a_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_inline_elements_do_not_have_spans
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_nested_block_spans_include_container_markers
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_nested_list_item_and_sublist_have_spans
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_paragraph_immediately_after_heading_has_correct_span
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_setext_heading_span_covers_text_and_underline
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_spans_are_idempotent_under_repeated_parsing
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_spans_cover_golden_testdoc_without_gaps_or_overlaps_at_top_level
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
+- python_file: tests/test_block_spans.py
+  python_function: test_top_level_block_spans_are_exact_and_authoritative
+  status: excluded
+  notes: Block-span source mapping is a Python library API (flowmark.markdown_ast.block_span / element.span) for inline-Markdown
+    introspection. The Rust port exposes formatting via FormatOptions::reformat_text and does not publish an equivalent block-span
+    AST library API (comrak node spans are not surfaced). Follows the test_public_inline_api.py exclusion precedent.
 - python_file: tests/test_cleanups.py
   python_function: test_unbold_headings
   status: mapped
   rust_file: tests/test_cleanups.rs
   rust_function: test_unbold_headings
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_auto_check_validates_auto_formatting
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_auto_check_validates_auto_formatting
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_auto_list_files_no_args_errors
   status: mapped
@@ -104,10 +229,35 @@
   rust_file: tests/test_cli_file_discovery.rs
   rust_function: test_auto_with_explicit_file
 - python_file: tests/test_cli_file_discovery.py
+  python_function: test_check_clean_file_exits_zero
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_check_clean_file_exits_zero
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_check_multiple_files_reports_only_dirty
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_check_multiple_files_reports_only_dirty
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_check_reports_and_does_not_write
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_check_reports_and_does_not_write
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_explicit_file_overrides_flowmarkignore_by_default
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_explicit_file_overrides_flowmarkignore_by_default
+- python_file: tests/test_cli_file_discovery.py
   python_function: test_explicit_file_still_works
   status: mapped
   rust_file: tests/test_cli_file_discovery.rs
   rust_function: test_explicit_file_still_works
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_explicit_file_without_exclusions_is_formatted
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_explicit_file_without_exclusions_is_formatted
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_explicit_flag_detection_with_default_value
   status: mapped
@@ -118,6 +268,21 @@
   status: mapped
   rust_file: tests/test_cli_file_discovery.rs
   rust_function: test_flowmarkignore
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_flowmarkignore_applies_to_explicit_file_with_force_exclude
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_flowmarkignore_applies_to_explicit_file_with_force_exclude
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_force_exclude_explicit_file_skips_formatting
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_force_exclude_explicit_file_skips_formatting
+- python_file: tests/test_cli_file_discovery.py
+  python_function: test_force_exclude_explicit_multicomponent_pattern
+  status: mapped
+  rust_file: tests/test_cli_file_discovery.rs
+  rust_function: test_force_exclude_explicit_multicomponent_pattern
 - python_file: tests/test_cli_file_discovery.py
   python_function: test_list_files_directory
   status: mapped
@@ -608,6 +773,16 @@
   status: mapped
   rust_file: tests/test_filling.rs
   rust_function: test_normalize_markdown
+- python_file: tests/test_filling.py
+  python_function: test_standalone_wide_table
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
+- python_file: tests/test_filling.py
+  python_function: test_wide_table_adjacent_to_paragraph
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
 - python_file: tests/test_frontmatter.py
   python_function: test_has_frontmatter
   status: mapped
@@ -775,12 +950,308 @@
   status: mapped
   rust_file: tests/test_packaging_entrypoints.rs
   rust_function: test_flowmark_rs_alias_entrypoint
+- python_file: tests/test_packaging_entrypoints.py
+  python_function: test_pre_commit_hooks_manifest_is_valid
+  status: excluded
+  notes: Validates the Python package's .pre-commit-hooks.yaml manifest (Python packaging metadata). The Rust port ships its
+    own binary and pre-commit config; not part of CLI formatting parity.
+- python_file: tests/test_public_inline_api.py
+  python_function: test_angle_autolink_and_bare_url_extraction
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_atomic_pattern_constructs_with_name_and_pattern_only
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_atomic_span_name_distinguishes_link_from_code
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_autolink_pattern_matches_angle_url_and_email
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_bare_url_pattern_excludes_trailing_sentence_punctuation
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_duplicate_link_text_yields_separate_links
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_email_autolink_text_is_display_not_destination
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_empty_link_title_is_preserved_distinct_from_none
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_escaped_brackets_are_not_a_link
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_extract_collapsed_and_shortcut_references
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_extract_inline_link_with_title
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_extract_reference_link_resolves_destination
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_images_excluded_by_default_included_on_request
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_iter_atomic_spans_empty_patterns_yields_single_nonatomic_span
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_iter_atomic_spans_round_trip_and_offsets
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_iter_atomic_words_glues_atomic_and_keeps_offsets
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_link_syntax_inside_code_span_is_not_a_link
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_markdown_inline_patterns_includes_links_and_urls
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_nested_inline_markup_in_link_text
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_sentence_span_never_bisects_a_link_with_spaces
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_split_sentences_atomic_does_not_break_inside_link_with_period
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_split_sentences_with_spans_are_verbatim
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_walk_elements_is_read_only
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
+- python_file: tests/test_public_inline_api.py
+  python_function: test_walk_elements_yields_code_block_text_but_extract_links_excludes_it
+  status: excluded
+  notes: 'Python flowmark.{atomic,ast,split_sentences_atomic} are a Python library API for inline-Markdown introspection (consumers
+    like editors/extractors). The Rust port exposes formatting via FormatOptions::reformat_text and does not (yet) publish
+    an equivalent inline-AST library API. The CLI/formatter behavior driven by these patterns (atomic-aware semantic wrapping)
+    IS covered: see MARKDOWN_INLINE_PATTERN + split_sentences_atomic in src/wrapping/, test_ref_docs::test_reference_doc_formats,
+    and the D17/D18 parity tests.'
 - python_file: tests/test_ref_docs.py
   python_function: test_reference_doc_formats
   status: mapped
   rust_file: tests/test_ref_docs.rs
   rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
-  notes: Both implementations read the same pinned upstream test document and reviewed outputs.
+- python_file: tests/test_reference_images.py
+  python_function: test_badge_collapsed_ref_image_in_full_ref_link
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_badge_collapsed_ref_image_in_full_ref_link
+- python_file: tests/test_reference_images.py
+  python_function: test_badge_full_ref_image_in_full_ref_link
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_badge_full_ref_image_in_full_ref_link
+- python_file: tests/test_reference_images.py
+  python_function: test_badge_full_ref_image_in_full_ref_link_idempotent
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_badge_full_ref_image_in_full_ref_link_idempotent
+- python_file: tests/test_reference_images.py
+  python_function: test_badge_inline_image_in_full_ref_link
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_badge_inline_image_in_full_ref_link
+- python_file: tests/test_reference_images.py
+  python_function: test_badge_shortcut_ref_image_in_full_ref_link
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_badge_shortcut_ref_image_in_full_ref_link
+- python_file: tests/test_reference_images.py
+  python_function: test_collapsed_ref_image_inlined
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_collapsed_ref_image_inlined
+- python_file: tests/test_reference_images.py
+  python_function: test_full_ref_image_empty_alt
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_full_ref_image_empty_alt
+- python_file: tests/test_reference_images.py
+  python_function: test_full_ref_image_idempotent
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_full_ref_image_idempotent
+- python_file: tests/test_reference_images.py
+  python_function: test_full_ref_image_inlined
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_full_ref_image_inlined
+- python_file: tests/test_reference_images.py
+  python_function: test_full_ref_image_label_case_insensitive
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_full_ref_image_label_case_insensitive
+- python_file: tests/test_reference_images.py
+  python_function: test_full_ref_image_label_with_spaces
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_full_ref_image_label_with_spaces
+- python_file: tests/test_reference_images.py
+  python_function: test_full_ref_image_with_title
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_full_ref_image_with_title
+- python_file: tests/test_reference_images.py
+  python_function: test_shortcut_ref_image_inlined
+  status: mapped
+  rust_file: tests/test_reference_images.rs
+  rust_function: test_shortcut_ref_image_inlined
+- python_file: tests/test_reference_links.py
+  python_function: test_full_reference_with_distinct_label_preserved
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_distinct_label_preserved
+- python_file: tests/test_reference_links.py
+  python_function: test_idempotent_on_collapsed_reference
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_collapsed_form_is_idempotent
+- python_file: tests/test_reference_links.py
+  python_function: test_issue_45_link_survives_round_trip
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_collapsed_form_is_idempotent
+- python_file: tests/test_reference_links.py
+  python_function: test_label_equals_text_followed_by_parens_keeps_link
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_label_equals_text_collapsed
+- python_file: tests/test_reference_links.py
+  python_function: test_label_equals_text_followed_by_reference_keeps_both_links
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_label_equals_text_collapsed
+- python_file: tests/test_reference_links.py
+  python_function: test_label_equals_text_not_collapsed_to_shortcut
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_full_ref_label_equals_text_collapsed
+- python_file: tests/test_reference_links.py
+  python_function: test_shortcut_input_normalized_to_collapsed_reference
+  status: mapped
+  rust_file: tests/test_parity_discrepancies.rs
+  rust_function: test_d18_shortcut_ref_normalized_to_collapsed
 - python_file: tests/test_sentences.py
   python_function: test_first_sentence
   status: mapped
@@ -794,6 +1265,108 @@
   rust_function: test_split_sentences
   notes: Also tested in src/wrapping/sentence.rs::test_split_sentences
 - python_file: tests/test_skill.py
+  python_function: test_block_is_flowmark_auto_stable
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_block_is_flowmark_auto_stable
+- python_file: tests/test_skill.py
+  python_function: test_block_is_marker_bounded_with_format
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_block_is_marker_bounded_with_format
+- python_file: tests/test_skill.py
+  python_function: test_install_skill_creates_directories
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_skill_creates_directories
+- python_file: tests/test_skill.py
+  python_function: test_install_skill_custom_base
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_skill_custom_base
+- python_file: tests/test_skill.py
+  python_function: test_install_skill_overwrites_existing
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_skill_overwrites_existing
+- python_file: tests/test_skill.py
+  python_function: test_update_collapses_duplicate_stale_blocks
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_update_collapses_duplicate_stale_blocks
+- python_file: tests/test_skill.py
+  python_function: test_update_creates_and_preserves_user_content
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_update_creates_and_preserves_user_content
+- python_file: tests/test_skill.py
+  python_function: test_update_guard_blocks_newer_format
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_update_guard_blocks_newer_format
+- python_file: tests/test_skill.py
+  python_function: test_update_is_idempotent
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_update_is_idempotent
+- python_file: tests/test_skill.py
+  python_function: test_update_replaces_only_the_marked_region
+  python_class: TestAgentsMdBlock
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_update_replaces_only_the_marked_region
+- python_file: tests/test_skill.py
+  python_function: test_compose_default_pins_installed_version
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_compose_default_pins_installed_version
+- python_file: tests/test_skill.py
+  python_function: test_compose_doc_pin_is_stable
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_compose_doc_pin_is_stable
+- python_file: tests/test_skill.py
+  python_function: test_compose_preserves_frontmatter
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_compose_preserves_frontmatter
+- python_file: tests/test_skill.py
+  python_function: test_compose_recommends_rust_offers_python
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_compose_recommends_rust_offers_python
+- python_file: tests/test_skill.py
+  python_function: test_compose_substitutes_both_package_pins
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_compose_substitutes_both_package_pins
+- python_file: tests/test_skill.py
+  python_function: test_compose_substitutes_explicit_version
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_compose_substitutes_explicit_version
+- python_file: tests/test_skill.py
+  python_function: test_skill_routes_details_to_cli
+  python_class: TestComposeSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_skill_routes_details_to_cli
+- python_file: tests/test_skill.py
   python_function: test_docs_content_has_vscode_cursor_setup
   python_class: TestGetDocsContent
   status: mapped
@@ -804,7 +1377,7 @@
   python_class: TestGetDocsContent
   status: mapped
   rust_file: tests/test_skill.rs
-  rust_function: test_docs_content_has_flowmark_reference
+  rust_function: test_docs_content_is_readme
 - python_file: tests/test_skill.py
   python_function: test_docs_content_loads
   python_class: TestGetDocsContent
@@ -828,13 +1401,49 @@
   python_class: TestGetSkillContent
   status: mapped
   rust_file: tests/test_skill.rs
-  rust_function: test_docs_content_has_vscode_cursor_setup
+  rust_function: test_skill_routes_repository_adoption_to_bundled_reference
 - python_file: tests/test_skill.py
   python_function: test_skill_content_loads
   python_class: TestGetSkillContent
   status: mapped
   rust_file: tests/test_skill.rs
   rust_function: test_skill_content_loads
+- python_file: tests/test_skill.py
+  python_function: test_forward_compat_guard_blocks_newer_format
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_forward_compat_guard_blocks_newer_format
+- python_file: tests/test_skill.py
+  python_function: test_install_agent_base_skips_git_recommendation
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_install_agent_base_skips_git_recommendation
+- python_file: tests/test_skill.py
+  python_function: test_install_default_writes_both_project_local_surfaces
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_default_writes_both_project_local_surfaces
+- python_file: tests/test_skill.py
+  python_function: test_install_inside_git_repo_has_no_recommendation
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_install_inside_git_repo_has_no_recommendation
+- python_file: tests/test_skill.py
+  python_function: test_install_is_idempotent
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_is_idempotent
+- python_file: tests/test_skill.py
+  python_function: test_install_outside_git_repo_recommends_project_root
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_install_outside_git_repo_recommends_project_root
 - python_file: tests/test_skill.py
   python_function: test_install_skill_creates_directories
   python_class: TestInstallSkill
@@ -852,13 +1461,132 @@
   python_class: TestInstallSkill
   status: mapped
   rust_file: tests/test_skill.rs
-  rust_function: test_install_skill_default
+  rust_function: test_install_default_writes_both_project_local_surfaces
 - python_file: tests/test_skill.py
   python_function: test_install_skill_overwrites_existing
   python_class: TestInstallSkill
   status: mapped
   rust_file: tests/test_skill.rs
   rust_function: test_install_skill_overwrites_existing
+- python_file: tests/test_skill.py
+  python_function: test_install_target_selection
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_install_target_selection
+- python_file: tests/test_skill.py
+  python_function: test_installed_file_has_do_not_edit_and_format_stamp
+  python_class: TestInstallSkill
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_installed_file_has_do_not_edit_and_format_stamp
+- python_file: tests/test_skill.py
+  python_function: test_default_writes_all_three_surfaces
+  python_class: TestInstallSkillCli
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_default_writes_all_three_surfaces
+- python_file: tests/test_skill.py
+  python_function: test_empty_surfaces_value_errors_out
+  python_class: TestInstallSkillCli
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_empty_surfaces_value_errors_out
+- python_file: tests/test_skill.py
+  python_function: test_surfaces_all_alias
+  python_class: TestInstallSkillCli
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_surfaces_all_alias
+- python_file: tests/test_skill.py
+  python_function: test_surfaces_subset
+  python_class: TestInstallSkillCli
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_surfaces_subset
+- python_file: tests/test_skill.py
+  python_function: test_surfaces_with_agent_base_errors_out
+  python_class: TestInstallSkillCli
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_surfaces_with_agent_base_errors_out
+- python_file: tests/test_skill.py
+  python_function: test_unknown_surface_errors_out
+  python_class: TestInstallSkillCli
+  status: mapped
+  rust_file: tests/test_skill_cli.rs
+  rust_function: test_unknown_surface_errors_out
+- python_file: tests/test_skill.py
+  python_function: test_dev_version_falls_back_to_discovery_pin
+  python_class: TestVersionPin
+  status: mapped
+  rust_file: src/skills.rs
+  rust_function: pin_or_discovery_falls_back_on_dev_version
+- python_file: tests/test_skill.py
+  python_function: test_non_releases_are_rejected
+  python_class: TestVersionPin
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_non_releases_are_rejected
+- python_file: tests/test_skill.py
+  python_function: test_real_release_is_passed_through
+  python_class: TestVersionPin
+  status: mapped
+  rust_file: src/skills.rs
+  rust_function: pin_or_discovery_passes_real_release_through
+- python_file: tests/test_skill.py
+  python_function: test_real_releases_are_accepted
+  python_class: TestVersionPin
+  status: mapped
+  rust_file: tests/test_skill.rs
+  rust_function: test_real_releases_are_accepted
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_discovery_copy_has_resolvable_version_pin
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_release_pinned_bundle_has_resolvable_version_pins
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_discovery_copy_is_flowmark_stable
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_release_pinned_bundle_is_flowmark_stable
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_discovery_copy_matches_generator
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_packaged_runtime_sources_match_embedded_content
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_discovery_copy_references_both_packages
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_release_pinned_bundle_references_both_packages
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_rs_discovery_version_is_resolvable
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_rs_discovery_version_is_resolvable
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_shipped_artifacts_never_use_at_latest
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_release_pinned_bundle_never_uses_at_latest
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_shipped_artifacts_pin_discovery_version
+  status: excluded
+  notes: Drift guard across the Python repo's dogfooded surfaces (README + installed .agents/.claude/AGENTS.md). The Rust
+    port keeps a single committed discovery copy whose pins are verified by test_discovery_copy_matches_generator and test_discovery_copy_has_resolvable_version_pin
+    in tests/test_skill_artifacts.rs.
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_shipped_artifacts_pin_rs_discovery_version
+  status: excluded
+  notes: Drift guard across the Python repo's dogfooded surfaces (README + installed .agents/.claude/AGENTS.md). The Rust
+    port keeps a single committed discovery copy whose pins are verified by test_discovery_copy_matches_generator and test_discovery_copy_has_resolvable_version_pin
+    in tests/test_skill_artifacts.rs.
+- python_file: tests/test_skill_artifacts.py
+  python_function: test_skill_frontmatter_is_valid
+  status: mapped
+  rust_file: tests/test_skill_artifacts.rs
+  rust_function: test_skill_frontmatter_is_valid
 - python_file: tests/test_smartquotes.py
   python_function: test_apostrophes_and_contractions
   status: mapped
@@ -1157,6 +1885,21 @@
   rust_function: test_list_item_with_tag_on_continuation_line
   notes: Bug fmr-5ojk fixed.
 - python_file: tests/test_tag_formatting.py
+  python_function: test_multiline_html_comment_keeps_blockquote_indent
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_multiline_html_comment_keeps_blockquote_indent
+- python_file: tests/test_tag_formatting.py
+  python_function: test_multiline_html_comment_keeps_list_indent
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_multiline_html_comment_keeps_list_indent
+- python_file: tests/test_tag_formatting.py
+  python_function: test_multiline_html_comment_preserves_line_breaks
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_multiline_html_comment_preserves_line_breaks
+- python_file: tests/test_tag_formatting.py
   python_function: test_multiline_opening_tag_closing_on_own_line
   status: mapped
   rust_file: tests/test_tag_formatting.rs
@@ -1206,6 +1949,11 @@
   rust_file: tests/test_tag_formatting.rs
   rust_function: test_selection_field_with_task_list
   notes: No Rust equivalent; tests selection fields with task list items (TAG_8 pattern)
+- python_file: tests/test_tag_formatting.py
+  python_function: test_single_line_html_comment_unaffected
+  status: mapped
+  rust_file: tests/test_tag_formatting.rs
+  rust_function: test_single_line_html_comment_unaffected
 - python_file: tests/test_tag_formatting.py
   python_function: test_single_line_paired_tags_not_split
   status: mapped
@@ -1307,6 +2055,16 @@
   rust_file: tests/test_width_options.rs
   rust_function: test_normal_width_wrapping
 - python_file: tests/test_width_options.py
+  python_function: test_task_list_idempotent_semantic_default_width
+  status: mapped
+  rust_file: tests/test_width_options.rs
+  rust_function: test_task_list_idempotent_semantic_default_width
+- python_file: tests/test_width_options.py
+  python_function: test_task_list_idempotent_semantic_width0
+  status: mapped
+  rust_file: tests/test_width_options.rs
+  rust_function: test_task_list_idempotent_semantic_width0
+- python_file: tests/test_width_options.py
   python_function: test_width_zero_with_markdown
   status: mapped
   rust_file: tests/test_width_options.rs
@@ -1383,6 +2141,11 @@
   rust_file: tests/test_wrapping.rs
   rust_function: test_block_heuristics_only_with_tags
   notes: No Rust equivalent; tests that block heuristics only apply when tags are present
+- python_file: tests/test_wrapping.py
+  python_function: test_block_heuristics_only_with_tags_for_lists
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
 - python_file: tests/test_wrapping.py
   python_function: test_block_heuristics_preserves_existing_blank_lines
   status: mapped
@@ -1557,6 +2320,21 @@
   rust_function: test_table_content_gets_blank_lines
   notes: No Rust equivalent; tests that table content between tags DOES get blank lines
 - python_file: tests/test_wrapping.py
+  python_function: test_table_rows_only_no_surrounding_text
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
+- python_file: tests/test_wrapping.py
+  python_function: test_table_rows_preserved_without_tags
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
+- python_file: tests/test_wrapping.py
+  python_function: test_table_rows_with_semantic_wrapping
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
+- python_file: tests/test_wrapping.py
   python_function: test_tag_with_list_items
   status: mapped
   rust_file: tests/test_wrapping.rs
@@ -1579,6 +2357,11 @@
   rust_function: test_various_tag_types_with_tables
   notes: No Rust equivalent; tests tables with various tag types (Jinja, HTML comments, variables)
 - python_file: tests/test_wrapping.py
+  python_function: test_wide_table_rows_not_wrapped
+  status: mapped
+  rust_file: tests/test_ref_docs.rs
+  rust_function: reference_documents_are_read_directly_from_the_pinned_upstream
+- python_file: tests/test_wrapping.py
   python_function: test_wrap_paragraph_lines_markdown_escaping
   status: mapped
   rust_file: tests/test_wrapping.rs
@@ -1598,64 +2381,64 @@
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_auto_mode
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/cli-golden.tryscript.md
   python_function: cli-golden
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_cli_golden
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/config-interaction.tryscript.md
   python_function: config-interaction
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_config_interaction
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/errors-version.tryscript.md
   python_function: errors-version
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_errors_version
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/file-discovery.tryscript.md
   python_function: file-discovery
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_file_discovery
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/file-ops.tryscript.md
   python_function: file-ops
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_file_ops
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/formatting.tryscript.md
   python_function: formatting
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_formatting
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/list-spacing.tryscript.md
   python_function: list-spacing
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_list_spacing
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/stdin.tryscript.md
   python_function: stdin
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_stdin
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/typography-tests.tryscript.md
   python_function: typography-tests
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_typography_tests
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.
 - python_file: tests/tryscript/verbose-docs.tryscript.md
   python_function: verbose-docs
   status: mapped
   rust_file: tests/test_tryscript_golden.rs
   rust_function: tryscript_verbose_docs
-  notes: Rust adapter executes the pinned upstream script directly in an isolated workspace.
+  notes: Binary-agnostic tryscript golden test read directly from the pinned upstream submodule.

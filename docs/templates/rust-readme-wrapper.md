@@ -1,7 +1,14 @@
 <!-- Generated from shared docs source
 (repos/flowmark/docs/shared/flowmark-readme-shared.md) via
 scripts/generate_rust_readme.py.
--->
+
+Doc status: Rust port-specific.
+This file is a generator INPUT, not a standalone doc.
+It supplies the Rust wrapper around the upstream shared body, which is spliced in from
+`repos/flowmark/docs/shared/flowmark-readme-shared.md`. See `docs/docs-overview.md` for
+the full mirror map.
+Do not edit the generated `README.md` directly; edit this file (or the upstream shared
+source) and regenerate via `scripts/generate_rust_readme.py`. -->
 
 # flowmark-rs
 
@@ -93,8 +100,8 @@ methodology.
 The easiest way to install or run flowmark:
 
 ```bash
-uvx flowmark-rs@latest --auto .           # run on demand (no install needed)
-uv tool install flowmark-rs@latest        # persistent install
+uvx --from flowmark-rs=={{ rust_version }} flowmark --auto .
+uv tool install flowmark-rs=={{ rust_version }}
 ```
 
 ### Cargo
@@ -113,20 +120,20 @@ brew install jlevy/flowmark/flowmark
 
 **Note on the `flowmark` command name:** The PyPI package `flowmark-rs` provides both
 `flowmark` and `flowmark-rs` commands.
-If you only want the CLI tool, just install `flowmark-rs` — you don’t need the Python
+If you only want the CLI tool, just install `flowmark-rs`: you don’t need the Python
 `flowmark` package.
 
 * * *
 
-{{ shared_docs_body }}
+{{ shared_docs_body.rstrip() }}
 
 Rust-specific docs:
 
-- [`docs/port-status.md`](docs/port-status.md) — port overview, parity verification,
+- [`docs/port-status.md`](docs/port-status.md): port overview, parity verification,
   architecture
-- [`docs/port-sync-playbook.md`](docs/port-sync-playbook.md) — syncing with Python
+- [`docs/port-sync-playbook.md`](docs/port-sync-playbook.md): syncing with Python
   upstream
-- [`docs/publishing.md`](docs/publishing.md) — release process (crates.io, PyPI,
+- [`docs/publishing.md`](docs/publishing.md): release process (crates.io, PyPI,
   Homebrew)
-- [`docs/rust-only-features.md`](docs/rust-only-features.md) — Rust-only CLI features
-- [`docs/cache.md`](docs/cache.md) — incremental cache behavior
+- [`docs/rust-only-features.md`](docs/rust-only-features.md): Rust-only CLI features
+- [`docs/cache.md`](docs/cache.md): incremental cache behavior

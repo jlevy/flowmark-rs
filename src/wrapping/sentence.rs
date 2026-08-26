@@ -61,6 +61,127 @@ pub fn split_sentences_regex(text: &str, min_length: usize) -> Vec<String> {
     sentences
 }
 
+/// Atomic-aware sentence splitter: never breaks a sentence inside a Markdown
+/// link, code span, autolink, or bare URL.
+///
+/// Ported from Python `split_sentences_atomic` in v0.7.0 (commit `c9bc36f`).
+/// Like `split_sentences_regex` but iterates over "atomic words" — whitespace-
+/// delimited tokens with `MARKDOWN_INLINE_PATTERN` matches treated as opaque
+/// indivisible units that glue to adjacent non-space characters. Sentences are
+/// returned as verbatim slices of the input (no whitespace normalization),
+/// matching Python `SentenceSpan.text == source[start:end]`.
+pub fn split_sentences_atomic(text: &str, min_length: usize) -> Vec<String> {
+    let atomic_matches: Vec<(usize, usize)> =
+        crate::wrapping::atomic_patterns::MARKDOWN_INLINE_PATTERN
+            .find_iter(text)
+            .map(|m| (m.start(), m.end()))
+            .collect();
+    let mut atomic_iter = atomic_matches.into_iter().peekable();
+
+    let mut current_word = String::new();
+    let mut cw_start: usize = 0;
+    let mut cw_end: usize = 0;
+    let mut have_sent = false;
+    let mut sent_start: usize = 0;
+    let mut sent_end: usize = 0;
+    let mut char_total: usize = 0;
+    let mut word_total: usize = 0;
+    let mut sentences: Vec<String> = Vec::new();
+
+    let flush_word = |current_word: &mut String,
+                      cw_start: usize,
+                      cw_end: usize,
+                      have_sent: &mut bool,
+                      sent_start: &mut usize,
+                      sent_end: &mut usize,
+                      char_total: &mut usize,
+                      word_total: &mut usize,
+                      sentences: &mut Vec<String>| {
+        if current_word.is_empty() {
+            return;
+        }
+        if !*have_sent {
+            *sent_start = cw_start;
+            *have_sent = true;
+        }
+        *sent_end = cw_end;
+        *char_total += current_word.chars().count();
+        *word_total += 1;
+        let sentence_len = *char_total + *word_total - 1;
+        if heuristic_end_of_sentence(current_word) && sentence_len >= min_length {
+            sentences.push(text[*sent_start..*sent_end].to_string());
+            *have_sent = false;
+            *sent_end = 0;
+            *char_total = 0;
+            *word_total = 0;
+        }
+        current_word.clear();
+    };
+
+    let mut pos: usize = 0;
+    while pos < text.len() {
+        // If an atomic match starts at this position, consume it as a unit.
+        if let Some(&(s, e)) = atomic_iter.peek() {
+            if s == pos {
+                if current_word.is_empty() {
+                    cw_start = s;
+                }
+                current_word.push_str(&text[s..e]);
+                cw_end = e;
+                pos = e;
+                atomic_iter.next();
+                continue;
+            }
+            // Skip any atomic matches that overlap a position we've already passed
+            // (regex returns non-overlapping matches in order, so this only happens
+            // if our cursor advanced past `s` mid-character — shouldn't occur).
+            if s < pos {
+                atomic_iter.next();
+                continue;
+            }
+        }
+        // Plain-text character.
+        let c = text[pos..].chars().next().expect("non-empty remaining text");
+        let clen = c.len_utf8();
+        if c.is_whitespace() {
+            flush_word(
+                &mut current_word,
+                cw_start,
+                cw_end,
+                &mut have_sent,
+                &mut sent_start,
+                &mut sent_end,
+                &mut char_total,
+                &mut word_total,
+                &mut sentences,
+            );
+        } else {
+            if current_word.is_empty() {
+                cw_start = pos;
+            }
+            current_word.push(c);
+            cw_end = pos + clen;
+        }
+        pos += clen;
+    }
+    // Final word + trailing sentence.
+    flush_word(
+        &mut current_word,
+        cw_start,
+        cw_end,
+        &mut have_sent,
+        &mut sent_start,
+        &mut sent_end,
+        &mut char_total,
+        &mut word_total,
+        &mut sentences,
+    );
+    if have_sent {
+        sentences.push(text[sent_start..sent_end].to_string());
+    }
+    sentences
+}
+
 /// Return the first n sentences from the text.
 /// Not used in the production formatting pipeline.
 pub fn first_sentences(text: &str, n: usize, min_length: usize) -> Vec<String> {
@@ -79,6 +200,73 @@ pub fn first_sentence(text: &str, min_length: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // -- split_sentences_atomic: atomic-span coverage (v0.7.0) --
+    //
+    // These guard against breaking a sentence inside an atomic span. The
+    // sentence-boundary heuristic fires on "word ending in lowercase letter +
+    // sentence punctuation", so any abbreviation like "St." inside a link/code
+    // span is a strong trigger if the splitter misses the atom.
+
+    #[test]
+    fn atomic_inline_link_keeps_period_inside() {
+        let text = "He went to [St. John's School](https://example.com) in England.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "inline link with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_full_reference_link_keeps_period_inside() {
+        let text = "He went to [St. John's School][school] in England.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "full reference link `[text][ref]` with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_collapsed_reference_link_keeps_period_inside() {
+        let text = "He visited [St. John's][] last week.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "collapsed reference link `[text][]` with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_shortcut_reference_link_keeps_period_inside() {
+        let text = "He visited [St. John's] last week.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(
+            sentences.len(),
+            1,
+            "shortcut reference link `[text]` with `.` in text must not split: {sentences:?}"
+        );
+    }
+
+    #[test]
+    fn atomic_code_span_keeps_period_inside() {
+        let text = "Configure `client.send()` before calling `client.close()` afterwards.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(sentences.len(), 1, "code spans with `.` must not split: {sentences:?}");
+    }
+
+    #[test]
+    fn atomic_splitter_still_breaks_at_real_sentence_end() {
+        let text = "He went to [St. John's School](https://example.com). Then he left.";
+        let sentences = split_sentences_atomic(text, 0);
+        assert_eq!(sentences.len(), 2, "real sentence break after link must fire: {sentences:?}");
+        assert!(sentences[0].ends_with("(https://example.com)."));
+        assert_eq!(sentences[1], "Then he left.");
+    }
 
     #[test]
     fn test_heuristic_end_of_sentence() {

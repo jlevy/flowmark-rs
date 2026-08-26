@@ -1,5 +1,9 @@
 # Porting Log: Bugs, Fixes, and Lessons Learned
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+> Documents the Rust port lifecycle: parity verification, sync workflow, and port
+> history.
+
 All bugs, parity issues, and process failures encountered during the Python-to-Rust
 flowmark port. Each entry records what went wrong, how it was fixed, and the reusable
 lesson.
@@ -14,8 +18,8 @@ Anyone working on this codebase should read the [Key Lessons](#key-lessons) sect
 > The current port contract and workflow are recorded in
 > [`docs/port-status.md`](port-status.md) and
 > [`docs/port-sync-playbook.md`](port-sync-playbook.md).
-> In particular, the Rust suite now consumes versioned upstream golden evidence directly
-> instead of maintaining copied fixtures or requiring Python at normal test time.
+> The Rust suite now consumes versioned upstream golden evidence directly instead of
+> maintaining copied portable fixtures or requiring Python at normal test time.
 
 **Foundational principles:** The
 [Porting Principles and Anti-Patterns](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
@@ -105,10 +109,9 @@ execute the same case definition.
 
 Flowmark’s primary portable contract now consists of one upstream manifest and tryscript
 suite consumed directly by both implementations.
-This is preferable to a Python-invoking Rust test because it preserves exact provenance,
-works in clean Rust CI, and cannot drift into two fixture copies.
-Live cross-binary and corpus comparison is still required as a baseline-transition and
-discrepancy-discovery audit.
+This preserves exact provenance, works in clean Rust CI, and cannot drift into two
+fixture copies. Live cross-binary and corpus comparison is still required as a
+baseline-transition and discrepancy-discovery audit.
 Promote every real difference it finds into a minimal shared case before fixing it.
 
 **L8. Error parity is a first-class surface.** CLI error messages, exit codes, and
@@ -237,10 +240,10 @@ differences across 4 bug categories.
 
 | ID | Title | What PR #17 Did Wrong | Lesson |
 | --- | --- | --- | --- |
-| D12b | Mixed loose/tight list code fences (P6) | Test only covered standalone para-to-fence, not mixed lists | **L3**: Test the edge case |
-| D13r | Blockquote blank line indentation (P7) | Test checked `!contains("\n\n>")` --- too weak, missed indent | **L2**: Use `assert_eq!` with exact output |
-| D15r | Smart quote after inline code (P9) | Test asserted Python does NOT convert --- Python DOES for word chars | **L1**: Verify Python’s actual bytes |
-| D16 | Empty code blocks get spurious blank line | Never tested at all | **L3**: Test the edge case |
+| D12b | Mixed loose/tight list code fences (P6) | Test only covered standalone para-to-fence, not mixed lists | **L3:** Test the edge case |
+| D13r | Blockquote blank line indentation (P7) | Test checked `!contains("\n\n>")` --- too weak, missed indent | **L2:** Use `assert_eq!` with exact output |
+| D15r | Smart quote after inline code (P9) | Test asserted Python does NOT convert --- Python DOES for word chars | **L1:** Verify Python’s actual bytes |
+| D16 | Empty code blocks get spurious blank line | Never tested at all | **L3:** Test the edge case |
 
 ### Current Work: Fix PR #17’s 4 False-Parity Bugs
 

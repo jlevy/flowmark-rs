@@ -1,0 +1,40 @@
+diff --git a/tests/test_thematic_break_spacing.py b/tests/test_thematic_break_spacing.py
+new file mode 100644
+index 0000000..fefd290
+--- /dev/null
++++ b/tests/test_thematic_break_spacing.py
+@@ -0,0 +1,34 @@
++"""Thematic-break spacing: source tightness around `* * *` must be preserved.
++
++Regression test protecting the reference implementation. flowmark preserves the
++blank-line spacing the author used around a thematic break, rather than forcing
++blank lines on both sides. (The Rust port, flowmark-rs, had a comrak-driven bug
++here; this test pins the Python behavior both ports must match. See flowmark-rs
++discrepancy D17.)
++"""
++
++from flowmark.formats.flowmark_markdown import flowmark_markdown
++
++
++def test_thematic_break_tight_before_heading_preserved():
++    md = flowmark_markdown()
++    src = "text\n\n* * *\n## Heading\n\nmore\n"
++    assert md(src) == "text\n\n* * *\n## Heading\n\nmore\n"
++
++
++def test_thematic_break_tight_after_paragraph_preserved():
++    md = flowmark_markdown()
++    src = "para\n* * *\n\nmore\n"
++    assert md(src) == "para\n* * *\n\nmore\n"
++
++
++def test_thematic_break_consecutive_tight_preserved():
++    md = flowmark_markdown()
++    src = "a\n\n* * *\n* * *\n\nb\n"
++    assert md(src) == "a\n\n* * *\n* * *\n\nb\n"
++
++
++def test_thematic_break_loose_spacing_preserved():
++    md = flowmark_markdown()
++    src = "a\n\n* * *\n\n## Heading\n\nb\n"
++    assert md(src) == "a\n\n* * *\n\n## Heading\n\nb\n"

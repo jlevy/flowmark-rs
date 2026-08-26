@@ -323,3 +323,45 @@ fn test_word_splitter_handles_multiline_tags() {
     let tokens = html_md_word_split(multi);
     assert!(tokens.contains(&multi.to_string()), "Multi-word tag should be coalesced: {tokens:?}");
 }
+
+// ===== Issue #35: multi-line HTML comments preserve interior line breaks =====
+// comrak parses block-level `<!-- ... -->` as an HtmlBlock; the verbatim preservation
+// lives in the HtmlBlock renderer (src/formatter/filling.rs). Ported from
+// test_tag_formatting.py.
+
+#[test]
+fn test_multiline_html_comment_preserves_line_breaks() {
+    let src = "<!-- field\ncolumnIds: a, b\ncolumnLabels: X, Y\n-->";
+    let result = fmt(src);
+    assert!(result.contains("columnIds: a, b\n"), "result:\n{result}");
+    assert!(result.contains("columnLabels: X, Y\n"), "result:\n{result}");
+    // Must not collapse onto a single line.
+    assert!(!result.contains("columnIds: a, b columnLabels"));
+    // Idempotent.
+    assert_eq!(fmt(&result), result);
+}
+
+#[test]
+fn test_single_line_html_comment_unaffected() {
+    let result = fmt("<!-- single line comment -->\n");
+    assert_eq!(result.trim(), "<!-- single line comment -->");
+}
+
+#[test]
+fn test_multiline_html_comment_keeps_blockquote_indent() {
+    let result = fmt("> <!-- field\n> a: b\n> -->\n");
+    for line in result.trim().lines() {
+        assert!(line.starts_with("> "), "line not blockquoted: {line:?}\nresult:\n{result}");
+    }
+    assert_eq!(fmt(&result), result);
+}
+
+#[test]
+fn test_multiline_html_comment_keeps_list_indent() {
+    let result = fmt("- <!-- field\n  a: b\n  -->\n");
+    let lines: Vec<&str> = result.trim().lines().collect();
+    assert!(lines[0].starts_with("- <!-- field"), "result:\n{result}");
+    assert!(lines[1].starts_with("  a: b"), "result:\n{result}");
+    assert!(lines[2].starts_with("  -->"), "result:\n{result}");
+    assert_eq!(fmt(&result), result);
+}

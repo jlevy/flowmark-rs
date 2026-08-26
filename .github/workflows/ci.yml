@@ -79,6 +79,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - uses: dtolnay/rust-toolchain@1.85
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --locked --all-features
@@ -121,7 +123,7 @@ jobs:
         run: cargo llvm-cov --locked --all-features --lcov --output-path lcov.info --ignore-filename-regex test_tryscript_golden -- --skip tryscript
         env:
           RUSTFLAGS: "-D warnings"
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           files: lcov.info
           fail_ci_if_error: false
@@ -172,6 +174,8 @@ jobs:
         with:
           python-version: "3.14"
           enable-cache: true
+      - name: Verify Flowmark skill runtime mirror
+        run: python3 scripts/sync_skill_mirror.py --check
       - name: Regenerate README
         run: ./scripts/generate_rust_readme.py
       - name: Verify README is in sync
