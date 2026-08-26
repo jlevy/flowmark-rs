@@ -46,7 +46,8 @@
   python_function: test_lowercase_alert_normalized_to_uppercase
   status: mapped
   rust_file: tests/test_alerts.rs
-  rust_function: test_lowercase_alert_normalized_to_uppercase
+  rust_function: test_lowercase_alert_marker_is_preserved_source_exactly
+  notes: The released Python test name is historical; the in-progress shared contract preserves the authored marker.
 - python_file: tests/test_alerts.py
   python_function: test_malformed_alert_preserves_quote
   status: mapped
