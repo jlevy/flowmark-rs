@@ -2156,6 +2156,32 @@ fn is_heading(payload: &str) -> bool {
 }
 
 fn inline_scopes(source: &str, lines: &[Line], excluded: &[bool]) -> Vec<ByteRange> {
+    let mut table_lines = vec![false; lines.len()];
+    let mut table_index = 0;
+    while table_index + 1 < lines.len() {
+        let key = lines[table_index].key.as_slice();
+        if !excluded[table_index]
+            && !excluded[table_index + 1]
+            && !lines[table_index].payload(source).is_empty()
+            && lines[table_index + 1].key.as_slice() == key
+            && has_structural_pipe(source, &lines[table_index])
+            && is_table_delimiter(lines[table_index + 1].payload(source))
+        {
+            let mut table_end = table_index + 2;
+            while table_end < lines.len()
+                && !excluded[table_end]
+                && lines[table_end].key.as_slice() == key
+                && has_structural_pipe(source, &lines[table_end])
+            {
+                table_end += 1;
+            }
+            table_lines[table_index..table_end].fill(true);
+            table_index = table_end;
+        } else {
+            table_index += 1;
+        }
+    }
+
     let mut scopes = Vec::new();
     let mut paragraph_start = None;
     let mut paragraph_end = 0;
@@ -2181,7 +2207,7 @@ fn inline_scopes(source: &str, lines: &[Line], excluded: &[bool]) -> Vec<ByteRan
         if excluded[line.index] || payload.is_empty() {
             continue;
         }
-        if payload.contains('|') {
+        if table_lines[line.index] {
             flush(&mut scopes, &mut paragraph_start, paragraph_end);
             paragraph_key = None;
             let (payload_start, _) = line_payload_bounds(source, line);
@@ -2396,6 +2422,22 @@ mod tests {
                 "<7@example.com>",
                 "<!DOCTYPE html>",
             ]
+        );
+    }
+
+    #[test]
+    fn code_spans_cross_deep_list_continuations() {
+        let source = normalize_source(
+            "- Deep continuation `debugMockLlms: null | { enabled: boolean; perAgent?\n    : Record<string, string>; phaseOverrides?: { analysis?: string\n    } }` stays exact.\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        let code = regions
+            .iter()
+            .find(|region| region.kind == RegionKind::CodeSpan)
+            .expect("multiline code span");
+        assert_eq!(
+            code.source,
+            "`debugMockLlms: null | { enabled: boolean; perAgent?\n    : Record<string, string>; phaseOverrides?: { analysis?: string\n    } }`"
         );
     }
 
