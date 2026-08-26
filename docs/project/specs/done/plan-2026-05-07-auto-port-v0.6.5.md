@@ -9,7 +9,12 @@ author: Claude Code (with Joshua Levy)
 
 **Author:** Claude Code (auto-port agent)
 
-**Status:** Draft
+**Status:** Completed (historical workflow; superseded for future syncs)
+
+> [!NOTE]
+> This plan records the v0.6.5 sync as executed. Its copied-fixture and live-Python test
+> steps are historical. New syncs follow the
+> [current direct shared-corpus checklist](../active/port-checklist-update-2026-08-25.md).
 
 ## Overview
 
@@ -181,3 +186,7 @@ Single phase (sync release).
 - Upstream commits range: `repos/flowmark` `v0.6.4..v0.6.5`
 - Sync artifact (to be created):
   `docs/sync-artifacts/2026-05-07-sync-v0.6.4-to-v0.6.5.md`
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->

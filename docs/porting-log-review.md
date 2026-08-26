@@ -9,6 +9,14 @@ Anyone working on this codebase should read the [Key Lessons](#key-lessons) sect
 
 **Reference version:** Python flowmark v0.6.4
 
+> [!NOTE]
+> This is a historical defect log.
+> The current port contract and workflow are recorded in
+> [`docs/port-status.md`](port-status.md) and
+> [`docs/port-sync-playbook.md`](port-sync-playbook.md).
+> In particular, the Rust suite now consumes versioned upstream golden evidence directly
+> instead of maintaining copied fixtures or requiring Python at normal test time.
+
 **Foundational principles:** The
 [Porting Principles and Anti-Patterns](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
 document defines 8 non-negotiable rules for agent-driven porting.
@@ -28,7 +36,7 @@ full mapping.
 | Corpus parity bugs (P6-P9) | 4 | #17 |
 | Tryscript golden test gaps (D1-D15 wrapping) | 15 | #13 |
 | PR #17 false-parity bugs (D12b, D13r, D15r, D16) | 4 | (this PR) |
-| **Total distinct bugs** | **~68** | |
+| **Total distinct bugs** | **~68** |  |
 
 ## Key Lessons
 
@@ -89,30 +97,19 @@ This prevents the PR #17 failure mode where tests were written to pass from the 
 --- they never actually validated anything because they asserted the wrong expected
 output. Red-first ensures the test can distinguish broken from fixed.
 
-**L11. Parity tests should be dynamic assertions that two programs behave identically,
-not static assertions about a single expected behavior.** What makes a parity test
-“dynamic” is that it ensures exact matching of two pieces of code, not matching of code
-against a test assertion.
-A static assertion compares output against a hand-copied string literal --- the copying
-process itself introduces errors (see PR #17 D15). A dynamic assertion ensures the two
-implementations produce identical results, with three equally strong variations:
+**L11. Share reviewed, versioned golden evidence; do not hand-copy expectations.** A
+static assertion is weak when its expected string was guessed or copied by the port
+author. It is strong when the source implementation produced the bytes, a reviewer
+accepted the exact diff, the source commit and command are recorded, and both languages
+execute the same case definition.
 
-1. **Run both and assert equivalent:** Execute both implementations on the same input in
-   the test harness and assert `rs_output == py_output` directly.
-   The D11 CLI tests do this.
-1. **Run both and auto-compare saved results:** Execute both implementations separately,
-   save their outputs, and have an automatic process (e.g., `diff -rq`) assert they are
-   identical. This is how corpus validation works (L5).
-1. **Shared golden test script:** Maintain a shared input corpus and a test script that
-   runs on both codebases, so the same test definition validates both implementations.
-
-All three forms are fundamentally stronger than static assertions because the parity
-gate is code-to-code, not code-to-copied-value.
-Static assertions are still useful as supplementary documentation, but the primary
-parity gate should be one of these dynamic forms wherever practical.
-When none is practical (e.g., library-level tests without CLI invocation), capture the
-expected output by running the original program and saving to a fixture file, not by
-guessing.
+Flowmark’s primary portable contract now consists of one upstream manifest and tryscript
+suite consumed directly by both implementations.
+This is preferable to a Python-invoking Rust test because it preserves exact provenance,
+works in clean Rust CI, and cannot drift into two fixture copies.
+Live cross-binary and corpus comparison is still required as a baseline-transition and
+discrepancy-discovery audit.
+Promote every real difference it finds into a minimal shared case before fixing it.
 
 **L8. Error parity is a first-class surface.** CLI error messages, exit codes, and
 stderr output must be tested with the same rigor as formatting output.
@@ -280,16 +277,16 @@ The claim was false --- 4 bugs remained.
    Python actually DOES convert them when the code ends with a word character.
    The agent never ran Python to verify.
 
-1. **Tests used weak assertions.** The D13 test checked `!result.contains("\n\n>")` (no
+2. **Tests used weak assertions.** The D13 test checked `!result.contains("\n\n>")` (no
    bare blank lines) but didn’t check that the blank lines had the correct indentation.
    An `assert_eq!` with exact Python output would have caught this.
 
-1. **Tests didn’t cover edge cases.** The D12/P6 tests only covered the simple case
+3. **Tests didn’t cover edge cases.** The D12/P6 tests only covered the simple case
    (standalone paragraph before code fence).
    Mixed loose/tight lists --- where comrak’s classification differs from Python’s ---
    were not tested.
 
-1. **No corpus-level verification.** The claim of “exact parity” was based solely on
+4. **No corpus-level verification.** The claim of “exact parity” was based solely on
    unit tests. Running both formatters on a real-world corpus would have revealed the
    remaining differences immediately.
 
@@ -349,7 +346,7 @@ They have two gaps:
    This is a fundamentally different validation method that catches bugs targeted tests
    miss (PR #17 passed 430 tests but failed on 20 of 623 corpus files).
 
-1. **Static vs dynamic assertions.** P8 says “expected output comes from the Python
+2. **Static vs dynamic assertions.** P8 says “expected output comes from the Python
    reference” but does not distinguish between a static hand-copied string literal and a
    dynamic assertion that runs both programs.
    A static assertion tests one expected behavior; a dynamic assertion tests that two
@@ -388,10 +385,10 @@ When fixing a parity bug, follow the red/green process (**L10**):
 1. **Red:** Extract a minimal reproducer from the corpus diff.
    Add it to `tests/corpus-regressions/` (**L9**) and/or as a test case.
    Confirm the test **fails** against current code.
-1. **Fix:** Implement the fix.
-1. **Green:** Confirm the new test passes, all existing tests still pass, and the full
+2. **Fix:** Implement the fix.
+3. **Green:** Confirm the new test passes, all existing tests still pass, and the full
    corpus diff is clean (`uvx flowmark@0.6.4`, not `@latest` --- **L1**).
-1. **Log:** Add an entry to the relevant PR section (or create a new section) with:
+4. **Log:** Add an entry to the relevant PR section (or create a new section) with:
 
 ```markdown
 | ID | Bead | Title | Root Cause | Fix | Lesson |
@@ -400,3 +397,7 @@ When fixing a parity bug, follow the red/green process (**L10**):
 If the bug reveals a new reusable lesson, add it to the [Key Lessons](#key-lessons)
 section with the next available number (L11, L12, ...) and cross-reference it from the
 bug entry.
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->
