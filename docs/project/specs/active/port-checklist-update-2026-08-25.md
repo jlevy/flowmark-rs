@@ -19,7 +19,7 @@ It remains active until the release gates at the end are satisfied.
 | Branch starting Python baseline | v0.6.5, `f1228297c8e2380685c6a10383f59164b96f6c22` |
 | Merged Rust release baseline | Rust v0.3.2 / Python v0.7.2, Rust `015f23989af3e5cfb3f8b58dfc72822c534df25a` |
 | Current branch parity baseline | v0.7.3, `7912c322417ae49c5c45ab099997c142cf392db8` |
-| Preservation-contract target | `1cb2555368ff6d07dfe145271a842c817a64f4ba` |
+| Preservation-contract target | `783b445186df328d9354d4215079c6e56e9268fc` |
 | Pre-cycle Rust reference | `cb744eb` |
 | Shared-test foundation | `ccc8897ac0cb6c21c017f13ac68311198da71a48` |
 | Current-main merge | `c6449a5cba5b069c5bd29be0e08e83d036279b59` (second parent `015f23989af3e5cfb3f8b58dfc72822c534df25a`) |
@@ -42,7 +42,7 @@ It remains active until the release gates at the end are satisfied.
 | Update fixed test-count constants | Validate stable IDs, references, schema, and mapping completeness | Counts change under parameterization and do not prove coverage |
 | Treat coverage percentages as completion gates | Use coverage as gap discovery; use shared surface and exact-output gates for acceptance | Assertion quality and syntax breadth matter more than a scalar count |
 | Run live cross-binary comparison in ordinary CI | Run it as a pinned baseline-transition audit; run versioned shared evidence in ordinary Rust CI | Keeps Rust CI portable while retaining source-oracle checks at acceptance time |
-| Recursively materialize every upstream path on Windows | Resolve the exact Python gitlink and sparse-checkout its shared `tests/` tree on Windows; retain complete recursive checkout on Linux and macOS | NTFS rejects existing colon-named upstream shortcut docs, while all portable behavior assets live under `tests/` |
+| Recursively materialize every upstream path on Windows | Resolve the exact Python gitlink and extract `README.md` plus its shared `tests/` tree from that commit’s Git archive; retain complete recursive checkout on Linux and macOS | NTFS rejects existing colon-named upstream shortcut docs, while the Rust build and portable behavior assets need only those exported paths |
 
 These adaptations follow the latest playbook’s rules to share fixture inputs, map one
 source test to a shared golden test where appropriate, test the built Rust executable,
@@ -62,7 +62,7 @@ and keep golden evidence versioned with provenance.
   architecture.
 - [x] Create `fm-t81l` for the remaining released v0.7.2-to-v0.7.3 baseline gap.
 - [x] Create `fm-zah1` for publication of the exact Python gitlink.
-- [x] Prove a clean remote clone can initialize `repos/flowmark` at `1cb2555`
+- [x] Prove a clean remote clone can initialize `repos/flowmark` at `783b445`
   (`fm-zah1`).
 
 ## Phase 0: Empirical Pre-Port Verification
@@ -90,7 +90,7 @@ and keep golden evidence versioned with provenance.
 
 - [x] Advance `repos/flowmark` from `f122829` through `093c924` and `0d2bebb` to the
   `e9d5805` behavior tip, its integration-golden successor `b027fde`, and the Python
-  3.10 compatibility successor `1cb2555`.
+  Python 3.10 compatibility successors through `783b445`.
 - [x] Advance `repos/rust-porting-playbook` from `df36b99` to `d24760a`.
 - [x] Record the shared source commit and change IDs in
   `admin/port-coverage-mapping/shared-conformance.toml`.
@@ -103,7 +103,7 @@ and keep golden evidence versioned with provenance.
   v0.7.2-to-v0.7.3 track, the math/foundation track through `0d2bebb`, and the
   code/extensions/fixed-point track through `e9d5805`, followed by formatting and
   integration-golden alignment through `b027fde`, followed by the compatibility-only
-  `1cb2555` source pin.
+  `783b445` source pin.
 - [x] Merge Rust `origin/main` at `015f239` and preserve its release, security,
   dependency, skill, and v0.7.2 parity work (`fm-mfvi`).
 - [x] Record the preservation branch as specification and shared-test infrastructure,
@@ -198,7 +198,7 @@ and traceability update.
 - [x] Treat the YAML Python/Rust function mapping as supplementary evidence.
 - [x] Complete the v0.7.3 supplemental mapping refresh (`fm-t81l`).
 - [x] Mark every core, math, code, extension, CLI, and fixed-point change ID implemented
-  at target `1cb2555`.
+  at target `783b445`.
 - [x] Remove four ledger entries that became exact; retain 34 exact inherited CommonMark
   divergences.
 - [x] Regenerate the Rust inventory after adding native preservation diagnostics and
@@ -245,9 +245,10 @@ and traceability update.
 - [x] Merge current Rust main and rerun every gate (`fm-mfvi`).
 - [x] Run the pinned full differential and syntactic-class sweeps before advancing the
   released whole-program baseline.
-- [x] Run a clean-clone test after `1cb2555` becomes remotely fetchable.
-- [x] Keep full recursive submodule checkout on Linux and macOS; use the exact Python
-  gitlink with a shared-tests-only sparse checkout on Windows.
+- [x] Run a clean-clone test after `783b445` becomes remotely fetchable.
+- [x] Keep full recursive submodule checkout on Linux and macOS; on Windows, record the
+  exact Python gitlink as the nested repository `HEAD` and export only `README.md` and
+  the shared `tests/` tree from that commit.
 - [x] Record post-merge commands, exit statuses, selected case IDs, and divergence delta
   in the sync artifact.
 - [x] Record the Python shared-conformance, Rust focused conformance, formatter, clippy,

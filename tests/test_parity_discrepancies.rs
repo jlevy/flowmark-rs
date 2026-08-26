@@ -374,8 +374,7 @@ fn python_flowmark() -> &'static str {
 
 #[cfg(feature = "cli")]
 fn rust_flowmark() -> String {
-    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    root.join("target/debug/flowmark").to_string_lossy().to_string()
+    env!("CARGO_BIN_EXE_flowmark").to_owned()
 }
 
 #[test]

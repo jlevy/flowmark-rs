@@ -53,11 +53,14 @@ jobs:
         run: |
           $upstreamCommit = git rev-parse HEAD:repos/flowmark
           $upstreamUrl = git config -f .gitmodules --get submodule.repos/flowmark.url
-          git clone --filter=blob:none --no-checkout $upstreamUrl repos/flowmark
-          git -C repos/flowmark sparse-checkout init --cone
-          git -C repos/flowmark sparse-checkout set tests
+          $upstreamArchive = Join-Path $env:RUNNER_TEMP "flowmark-shared-tests.tar"
+          New-Item -ItemType Directory -Force repos/flowmark | Out-Null
+          git -C repos/flowmark init
+          git -C repos/flowmark remote add origin $upstreamUrl
           git -C repos/flowmark fetch --depth=1 origin $upstreamCommit
-          git -C repos/flowmark checkout --detach $upstreamCommit
+          git -C repos/flowmark update-ref HEAD $upstreamCommit
+          git -C repos/flowmark archive --format=tar --output=$upstreamArchive $upstreamCommit README.md tests
+          tar -xf $upstreamArchive -C repos/flowmark
           $actualCommit = git -C repos/flowmark rev-parse HEAD
           if ($actualCommit -ne $upstreamCommit) {
             throw "Expected Flowmark $upstreamCommit, got $actualCommit"
