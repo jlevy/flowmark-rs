@@ -931,10 +931,49 @@ fn scan_obsidian_callouts(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<
     candidates
 }
 
+fn colon_fence_is_opener(payload: &str) -> Option<bool> {
+    let colon_count = payload.bytes().take_while(|byte| *byte == b':').count();
+    if colon_count < 3 {
+        return None;
+    }
+    Some(!payload[colon_count..].trim_matches([' ', '\t']).is_empty())
+}
+
+fn scan_colon_containers(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut stacks = HashMap::<Vec<ContainerFrame>, Vec<usize>>::new();
+    let mut candidates = Vec::new();
+    for line in lines {
+        if opaque[line.index] || line.lazy {
+            continue;
+        }
+        let Some(is_opener) = colon_fence_is_opener(line.payload(source)) else {
+            continue;
+        };
+        let stack = stacks.entry(line.key.clone()).or_default();
+        if is_opener {
+            stack.push(line.index);
+            continue;
+        }
+        let Some(opener_index) = stack.pop() else {
+            continue;
+        };
+        let opener = &lines[opener_index];
+        candidates.push(Candidate::block(
+            RegionKind::ColonContainer,
+            opener.start,
+            line.end,
+            opener.context,
+            opener.scaffold(source).to_owned(),
+        ));
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_pandoc_multiline_tables(text, lines, opaque);
     candidates.extend(scan_obsidian_callouts(text, lines, opaque));
+    candidates.extend(scan_colon_containers(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -1173,5 +1212,15 @@ mod tests {
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].kind, RegionKind::ObsidianCallout);
         assert_eq!(regions[0].source, "> [!tip]- valid\ncontinued lazily\n");
+    }
+
+    #[test]
+    fn colon_container_closers_ignore_run_length_and_fenced_code() {
+        let source =
+            normalize_source(":::: outer\n```text\n:::\n```\n::: inner\nbody\n:::::\n:::\n");
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].kind, RegionKind::ColonContainer);
+        assert_eq!(regions[0].source, source.text);
     }
 }
