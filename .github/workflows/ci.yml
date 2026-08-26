@@ -67,7 +67,7 @@ jobs:
           # Git validates the complete source tree on Windows even though this archive
           # selects only portable paths. Disable that validation for this read-only
           # archive operation; the extraction remains limited to README.md and tests/.
-          git -c core.protectNTFS=false -C $upstreamRepository archive --format=tar --output=$upstreamArchive FETCH_HEAD README.md tests
+          git -c core.protectNTFS=false -c core.autocrlf=false -C $upstreamRepository archive --format=tar --output=$upstreamArchive FETCH_HEAD README.md tests
           tar -xf $upstreamArchive -C repos/flowmark
           if (-not (Test-Path repos/flowmark/README.md)) {
             throw "Shared README was not materialized"
