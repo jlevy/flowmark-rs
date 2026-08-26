@@ -22,6 +22,7 @@ It remains active until the release gates at the end are satisfied.
 | Preservation-contract target | `093c9249610965b37a458b32e37b5cc4738afe48` |
 | Pre-cycle Rust reference | `cb744eb` |
 | Shared-test foundation | `ccc8897ac0cb6c21c017f13ac68311198da71a48` |
+| Current-main merge | `c6449a5cba5b069c5bd29be0e08e83d036279b59` (second parent `015f23989af3e5cfb3f8b58dfc72822c534df25a`) |
 | Previous playbook commit | `df36b99744405622defa56ad2e7b6f38129e121c` |
 | Current playbook commit | `d24760a3fbd2951c730a199269aeb082abb46a42` |
 | Shared schema | 1 |
@@ -89,17 +90,18 @@ and keep golden evidence versioned with provenance.
 
 - [x] Split the recovery into current Rust main (through Python v0.7.2), the released
   v0.7.2-to-v0.7.3 track, and the v0.7.3-to-`093c924` preservation-contract track.
-- [ ] Merge Rust `origin/main` at `015f239` and preserve its release, security,
+- [x] Merge Rust `origin/main` at `015f239` and preserve its release, security,
   dependency, skill, and v0.7.2 parity work (`fm-mfvi`).
 - [x] Record the preservation branch as specification and shared-test infrastructure,
   not yet as implemented math behavior.
 - [ ] Inventory every behavior, CLI, API, test, dependency, and generated-content change
   in v0.7.2-to-v0.7.3 (`fm-t81l`).
 - [ ] Give every relevant released change a Rust disposition and evidence link.
-- [ ] Refresh the supplemental function map for the new released baseline after the
-  inventory is stable.
+- [x] Regenerate the v0.7.2 Rust test inventory from Cargo, eliminate phantom deleted
+  records, and repair mappings to the current tests and direct tryscript wrappers.
+- [ ] Refresh the supplemental function map for v0.7.3 after the inventory is stable.
 
-Completion gate: Phase 1 remains open until `fm-mfvi`, `fm-t81l`, and `fm-zah1` close.
+Completion gate: Phase 1 remains open until `fm-t81l` and `fm-zah1` close.
 
 ## Phase 2: Shared Contract Foundation
 
@@ -172,8 +174,9 @@ and traceability update.
 - [x] Create this filled current checklist and a dated sync artifact.
 - [x] Record why Python is a baseline-transition audit rather than a normal Rust CI
   dependency.
-- [ ] Re-run documentation formatting and link checks after all edits.
-- [ ] Re-run README generation if the released parity version or shared user docs
+- [x] Re-run documentation formatting and local-link checks after the merge.
+- [x] Re-run README generation for the merged v0.7.2 baseline and shared user docs.
+- [ ] Re-run README generation if the released parity version or shared user docs later
   change.
 
 ## Phase 7: Validation
@@ -188,13 +191,14 @@ and traceability update.
 - [x] `cargo build --locked --all-features` at shared-test foundation commit.
 - [x] `cargo package --locked --allow-dirty` plus packaged docs/skill smoke tests at
   shared-test foundation commit.
-- [ ] Re-run all affected gates after the workflow/playbook commit.
-- [ ] Merge current Rust main and rerun every gate (`fm-mfvi`).
+- [x] Re-run all affected gates after the workflow/playbook commit.
+- [x] Merge current Rust main and rerun every gate (`fm-mfvi`).
 - [ ] Run the pinned full differential and syntactic-class sweeps before advancing the
   released whole-program baseline.
 - [ ] Run a clean-clone test after `093c924` becomes remotely fetchable.
-- [ ] Record final commands, exit statuses, selected case IDs, and divergence delta in
-  the sync artifact.
+- [x] Record post-merge commands, exit statuses, selected case IDs, and divergence delta
+  in the sync artifact.
+- [ ] Append final-cycle evidence after the remaining behavior beads close.
 
 ## Phase 8: Release Acceptance
 

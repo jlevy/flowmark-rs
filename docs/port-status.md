@@ -14,17 +14,20 @@
 flowmark-rs is a production Rust port of Python Flowmark.
 The current development branch has adopted the upstream language-neutral conformance
 manifest and tryscript suite directly.
+Current Rust `main` through v0.3.2 / Python v0.7.2 was merged at `c6449a5` without
+restoring copied portable fixtures or Python-coupled Rust tests.
 This is the foundation for porting Markdown preservation and math by stable behavior IDs
 rather than by copying Python tests or fixtures.
 
 Do not describe the current branch as whole-program parity with the in-progress commit.
-The portable test foundation is green, but three work tracks remain open:
+The portable test foundation is green, but two implementation tracks and one delivery
+gate remain open:
 
-1. Merge current Rust `origin/main` at v0.3.2 into the preservation branch (`fm-mfvi`).
-   The branch forked 88 mainline commits ago, before the completed v0.7.2 port.
-2. Audit and close the remaining released upstream delta from Python v0.7.2 through
+1. Audit and close the remaining released upstream delta from Python v0.7.2 through
    v0.7.3 (`fm-t81l`).
-3. Implement the deferred preservation, math, code-span, and extension change IDs.
+2. Implement the deferred preservation, math, code-span, and extension change IDs.
+3. Publish the exact upstream commit so a clean remote Rust clone can initialize its
+   Python submodule (`fm-zah1`).
 
 The distinction is intentional.
 A passing shared subset proves that subset; it does not retroactively classify every
@@ -55,9 +58,9 @@ commit, then prove that a clean clone can initialize the submodule.
 | Shared tryscript | End-to-end CLI workflows and fixture interactions | Rust executes upstream documents directly |
 | Reference documents | Broad whole-document interactions in multiple modes | Consumed from pinned upstream |
 | CommonMark 0.31.2 | Large syntax-surface sweep | Active cases pass or have exact ledger entries |
-| Historical parity corpus | Previously discovered cross-language corner cases | Default and plaintext pass; three long-link wrapping cases are tracked |
+| Historical parity corpus | Previously discovered cross-language corner cases | All active cases pass exactly |
 | Rust-focused tests | Adapter parsing, timeout, path safety, Rust-only behavior | Kept small and language-specific |
-| Legacy YAML mapping | Function-level provenance from the old branch base | Supplementary; current main carries the newer v0.7.2 mapping and must be merged |
+| Legacy YAML mapping | Function-level provenance at the v0.7.2 baseline | Supplementary; refreshed from Cargo’s executable inventory with no missing or broken mappings |
 
 Ordinary Rust tests do not invoke Python.
 Python runs the same portable contract in its own repository.
@@ -86,8 +89,7 @@ evidence.
 ## Divergence Policy
 
 `tests/parity_corpus_known_divergences.toml` is a closed, exact ledger.
-At this status snapshot it contains 88 active case IDs, primarily CommonMark examples
-plus three historical long-link wrapping cases.
+At this status snapshot it contains 38 active CommonMark case IDs.
 The ledger is not a wildcard allowlist:
 
 - an unlisted mismatch fails;
@@ -101,20 +103,27 @@ Do not rewrite a reason to cover a different failure class.
 
 ## Validation Snapshot
 
-The shared-test foundation commit `ccc8897` passed these local gates before the playbook
-refresh:
+The post-merge commit `c6449a5` passed these local gates with the Python submodule at
+`093c924` and the playbook at `d24760a`:
 
 - `cargo fmt --all -- --check`
 - `cargo clippy --locked --all-targets --all-features -- -D warnings`
 - `cargo test --locked --all-features`
 - `cargo test --locked --no-default-features`
-- Rust-repository administration checks: Ruff, BasedPyright, pytest, and mapping
-  validation
+- Rust-repository administration checks: Ruff, BasedPyright, 15 pytest tests, and
+  mapping validation
 - `cargo build --locked --all-features`
 - `cargo package --locked --allow-dirty`, including packaged `--docs` and `--skill`
   content checks
+- README generation, skill-mirror validation, workflow-script tests, Markdown
+  formatting, and local-link validation
 
-This snapshot proves the committed foundation at its pinned upstream commit.
+The shared corpus reported 304 exact passes and 38 exact known divergences; all
+historical parity cases pass after the merge.
+The divergence gate also caught and removed more than 50 stale entries that current Rust
+main had already fixed.
+
+This snapshot proves the merged foundation at its pinned upstream commit.
 Re-run the relevant gates after each gitlink, manifest, implementation, or workflow
 change.
 
@@ -127,15 +136,12 @@ Inline and block math must be protected before Markdown parsing, preserved byte-
 through formatting, restored after rendering, and exercised in containers and feature
 interactions. The shared desired-output cases must land before the Rust algorithm.
 
-### P1: Current Rust main and released baseline gap
+### P1: Released baseline gap
 
-The working preservation branch forked before Rust v0.2.7 and still records v0.6.5,
-while current Rust main is v0.3.2 with Python v0.7.2 parity.
-`fm-mfvi` owns merging that mainline work without reintroducing copied fixtures or
-Python-coupled tests.
-After the merge, `fm-t81l` owns the smaller v0.7.2-to-v0.7.3 behavior, test, CLI, API,
-and dependency inventory.
-Until both close, the branch is an in-progress port, not a new parity release.
+The preservation branch now includes Rust v0.3.2 with its declared Python v0.7.2
+baseline. `fm-t81l` owns the remaining v0.7.2-to-v0.7.3 behavior, test, CLI, API, and
+dependency inventory.
+Until that closes, the branch is an in-progress port, not a new parity release.
 
 ### P1: Upstream commit availability
 
@@ -148,13 +154,13 @@ The Rust gitlink cannot be initialized by a clean remote clone until upstream co
 The current CommonMark and historical parity entries are visible debt, not accepted as
 proof of parity. `fmr-rz9f` owns their class-level investigation and reduction.
 
-### P2: Supplemental mapping drift
+### P2: Supplemental mapping maintenance
 
-The legacy YAML mapping in the pre-merge working branch describes its v0.6.5 test
-inventory. Current Rust main carries the completed v0.7.2 mapping.
+The YAML mapping now covers the v0.7.2 Python baseline and is checked against Cargo’s
+deduplicated executable test inventory.
 It remains a useful language-specific map, but its count is not a completion claim.
-Refresh it after the baseline inventory establishes which newer Python tests are best
-represented by a shared integration case and which need focused Rust tests.
+Refresh it during `fm-t81l` after deciding which v0.7.3 tests are best represented by a
+shared integration case and which need focused Rust tests.
 
 ## Completion Criteria for the Current Porting Cycle
 

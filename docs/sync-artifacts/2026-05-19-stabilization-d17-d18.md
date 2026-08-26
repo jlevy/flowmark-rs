@@ -86,7 +86,7 @@ Upstream `main` (post-v0.6.5) also adds atomic-aware semantic line wrapping
 (links/inline code kept atomic) and table-row-adjacent-to-paragraph handling.
 These are feature changes beyond stabilizing v0.6.5 and are deferred to the next sync,
 now tagged upstream as **v0.7.0** — see
-[`plan-2026-05-19-next-sync-v0.7.0.md`](../project/specs/active/plan-2026-05-19-next-sync-v0.7.0.md).
+[`plan-2026-05-19-next-sync-v0.7.0.md`](../project/specs/done/plan-2026-05-19-next-sync-v0.7.0.md).
 
 ## Validation
 
