@@ -23,6 +23,7 @@ pub(crate) enum RegionKind {
     MathDollarInline,
     MathDoubleDollarInline,
     PandocMultilineTable,
+    ObsidianCallout,
     MathDollarBlock,
     MathBracketBlock,
     MathEnvironmentBlock,

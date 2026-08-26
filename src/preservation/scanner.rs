@@ -877,9 +877,64 @@ fn scan_pandoc_multiline_tables(source: &str, lines: &[Line], opaque: &[bool]) -
     candidates
 }
 
+fn is_obsidian_callout(payload: &str) -> bool {
+    let Some(rest) = payload.strip_prefix("[!") else {
+        return false;
+    };
+    let Some(marker_end) = rest.find(']') else {
+        return false;
+    };
+    let kind = &rest[..marker_end];
+    if kind.is_empty()
+        || !kind.bytes().enumerate().all(|(index, byte)| {
+            byte.is_ascii_alphanumeric() || (index > 0 && matches!(byte, b'_' | b'-'))
+        })
+    {
+        return false;
+    }
+    let mut suffix = &rest[marker_end + 1..];
+    if suffix.starts_with(['+', '-']) {
+        suffix = &suffix[1..];
+    }
+    suffix.is_empty() || suffix.starts_with(' ') || suffix.starts_with('\t')
+}
+
+fn scan_obsidian_callouts(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    for (opener_index, opener) in lines.iter().enumerate() {
+        if opaque[opener_index]
+            || opener.lazy
+            || opener.frames.last().map(|frame| frame.kind) != Some(ContainerKind::Quote)
+            || !is_obsidian_callout(opener.payload(source))
+            || opener_index > 0 && lines[opener_index - 1].frames == opener.frames
+        {
+            continue;
+        }
+
+        let mut final_index = opener_index;
+        for (candidate_index, candidate) in lines.iter().enumerate().skip(opener_index + 1) {
+            if candidate.frames.len() < opener.frames.len()
+                || candidate.frames[..opener.frames.len()] != opener.frames
+            {
+                break;
+            }
+            final_index = candidate_index;
+        }
+        candidates.push(Candidate::block(
+            RegionKind::ObsidianCallout,
+            opener.start,
+            lines[final_index].end,
+            opener.context,
+            opener.scaffold(source).to_owned(),
+        ));
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_pandoc_multiline_tables(text, lines, opaque);
+    candidates.extend(scan_obsidian_callouts(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -1107,5 +1162,16 @@ mod tests {
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].kind, RegionKind::PandocMultilineTable);
         assert!(regions[0].source.ends_with("next       row\n-----\n"));
+    }
+
+    #[test]
+    fn callout_marker_must_be_the_first_line_of_its_quote() {
+        let source = normalize_source(
+            "> ordinary first line\n> [!note] too late\n\n> [!tip]- valid\ncontinued lazily\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].kind, RegionKind::ObsidianCallout);
+        assert_eq!(regions[0].source, "> [!tip]- valid\ncontinued lazily\n");
     }
 }

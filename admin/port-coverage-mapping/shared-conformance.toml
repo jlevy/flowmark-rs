@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "56274b8223c415fde3273f67d6cdff77e7259e22"
+upstream_commit = "4a222ea6d9df43010e190db3036bd7049025c14a"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -32,6 +32,12 @@ status = "implemented"
 id = "FM-EXT-MULTILINE-TABLE-001"
 python_bead = "fm-kr0a"
 rust_bead = "fm-kr0a"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-OBSIDIAN-CALLOUT-001"
+python_bead = "fm-aq78"
+rust_bead = "fm-aq78"
 status = "implemented"
 
 [[change]]
