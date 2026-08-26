@@ -1,96 +1,101 @@
 # Project Status: flowmark-rs
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+
 **Last updated:** 2026-08-26
 
 **Current Rust release:** v0.3.2
 
 **Last declared whole-program Python baseline:** v0.7.3
 
-**In-progress upstream contract:** commit `0d2bebb0fabb9ad8705ac797687f96335ca7cfe7`
-(`v0.7.3-38-g0d2bebb`)
+**In-progress upstream contract:** `e9d58059f850bb216702e0d15b211b48fe5674ad`
 
 ## Summary
 
-The current branch ports the complete shared preservation contract through `0d2bebb`.
-Rust now recognizes and preserves the same inline and block math forms as Python,
-normalizes source bytes at the same boundary, accounts for protected source width while
-wrapping, and implements the shared single-file output and invalid-UTF-8 behavior.
+The current branch implements the complete shared Markdown-preservation contract through
+`e9d5805`. Math remains the highest-priority syntax family, but the same automatic,
+parser-independent mechanism now covers inline code and the supported opaque Markdown
+extensions without requiring dialect flags.
 
-The design remains parser-independent at the contract boundary.
-A byte-offset scanner finds opaque source regions before comrak sees the document; a
-collision-safe, fixed-width bridge carries those regions through parsing and wrapping;
-restoration validates the token stream and re-inserts the original source slices.
-No math dialect flag is required.
+The contract includes source-exact math, code spans, Pandoc multiline and grid tables,
+definition lists, line blocks, Obsidian callouts, colon containers, TOML frontmatter,
+raw HTML, attribute groups, MyST roles, and wikilinks.
+Malformed or ambiguous openers degrade to ordinary Markdown behavior.
+Whole-document semantic, cleanup, and typography outputs reach fixed points.
 
-The ordinary Rust suite consumes upstream expectations directly and does not invoke
-Python. Small Rust tests cover only scanner, bridge, and adapter invariants.
-The shared corpus supplies the portable end-to-end evidence used by both
-implementations.
+The ordinary Rust suite reads versioned inputs and expected bytes directly from the
+pinned Python submodule.
+It does not invoke Python.
+Focused Rust tests cover only language-specific scanner, bridge, parser-adapter, path,
+timeout, and error invariants.
 
-Do not describe this branch as whole-program parity with the in-progress commit.
-The new preservation change IDs are exact, but code-span, raw/extension syntax, and the
-remaining reference-idempotence surfaces still have explicit deferred owners.
-One delivery gate also remains: publish the exact Python commit so a clean remote Rust
-clone can initialize its submodule (`fm-zah1`).
+This is not yet a released whole-program parity declaration.
+The shared branch contract is exact except for 34 inherited, explicitly ledgered
+CommonMark differences.
+The target Python commit is also local-only, so a clean remote clone cannot initialize
+the gitlink until `fm-zah1` is resolved.
 
 ## Pinned Sources
 
 | Source | Recorded commit | Purpose |
 | --- | --- | --- |
-| Python Flowmark | `0d2bebb0fabb9ad8705ac797687f96335ca7cfe7` | Source, shared manifests, expected bytes, and tryscript documents |
-| Rust porting playbook | `d24760a3fbd2951c730a199269aeb082abb46a42` | Latest `origin/main`; current update workflow and Rust guidance |
-| Homebrew tap | `6567a9ffbf7d90c0c08ec55dc43583e060c5349b` | Historical release integration |
+| Python Flowmark | `e9d58059f850bb216702e0d15b211b48fe5674ad` | Source, shared manifest, expected bytes, reference documents, CommonMark, and tryscript |
+| Rust porting playbook | `d24760a3fbd2951c730a199269aeb082abb46a42` | Latest reviewed `origin/main`; canonical update workflow and Rust guidance |
+| Released parity baseline | Python v0.7.3 at `7912c322417ae49c5c45ab099997c142cf392db8` | Supplemental whole-program mapping and release correspondence |
 
 `admin/port-coverage-mapping/shared-conformance.toml` is the machine-checked source for
-the Python commit, manifest path, schema, and shared change-ID mapping.
-The parent submodule gitlink must match it.
-
-The Python target exists on the local source branch but is not yet available from the
-configured GitHub remote.
-Remote Rust CI is therefore gated on `fm-zah1`: publish that exact commit, then prove
-clean-clone submodule initialization before merging or releasing the Rust branch.
+the in-progress commit, schema, manifest path, divergence ledger, and change-ID map.
+The parent `repos/flowmark` gitlink must match it exactly.
 
 The playbook submodule was fetched and compared with `origin/main` during this cycle.
-Both resolve to `d24760a`, so no playbook gitlink change is required.
+Both resolve to `d24760a`, so no new playbook gitlink change is required.
 
 ## Evidence Model
 
 | Layer | Role | Current state |
 | --- | --- | --- |
-| Shared conformance manifest | Exact stdout, stderr, exit, filesystem, timeout, and idempotence contract | 404 exact passes, 35 exact known divergences |
-| Shared tryscript | End-to-end CLI workflows and fixture interactions | Rust executes upstream documents directly |
-| Reference documents | Broad whole-document interactions in multiple modes | Exact for the current preservation target |
-| CommonMark 0.31.2 | Large syntax-surface sweep | Active cases pass or have exact ledger entries |
-| Historical parity corpus | Previously discovered cross-language corner cases | All active cases pass exactly |
+| Shared conformance manifest | Exact stdout, stderr, exit, filesystem, timeout, and idempotence contract | 476 exact passes, 34 exact known divergences |
+| Shared tryscript | End-to-end CLI workflows and fixture interactions | Rust executes upstream documents against Cargo-built artifacts |
+| Reference and topic documents | Broad whole-document and cross-family interactions | Exact for all implemented change IDs; fixed-point cases active |
+| CommonMark 0.31.2 | Large standard-Markdown syntax sweep | Active cases pass or have exact ledger entries |
+| Historical parity cases | Previously discovered cross-parser corner cases | All active cases exact |
 | Rust-focused tests | Scanner, bridge, adapter, timeout, and path-safety invariants | Intentionally small and language-specific |
-| Legacy YAML mapping | Function-level provenance at the released v0.7.3 baseline | 442 Python records: 395 mapped, 47 excluded; 665 native Rust tests inventoried |
+| External 670-file corpus | Baseline-transition differential audit | Both binaries selected all files; zero byte differences |
+| Legacy YAML mapping | Function-level provenance at released v0.7.3 | Supplemental evidence, not the portable truth source |
 
-Pinned cross-binary runs remain a transition audit when accepting a new baseline or
-investigating a discrepancy.
-They are not a normal CI dependency and never generate the golden outputs used to judge
-Rust.
+See [Test Corpora and Provenance](test-corpora.md) for the ownership, execution, and
+reconstruction rules for each layer.
 
 ## Shared Change IDs
 
-The status values below come from `admin/port-coverage-mapping/shared-conformance.toml`.
+All current statuses come from `admin/port-coverage-mapping/shared-conformance.toml`.
 
-| Change ID | Python bead | Rust bead | Status |
-| --- | --- | --- | --- |
-| `FM-CLI-OUTPUT-001` | `fm-9r1n` | `fm-1mq0` | Implemented |
-| `FM-CODE-SPAN-001` | `fm-ocpw` | `fm-82vu` | Deferred |
-| `FM-COMMONMARK-001` | `fm-shou` | `fm-gc8d` | Known divergences |
-| `FM-CONFORMANCE-001` | `fm-ltof` | `fm-gc8d` | Implemented |
-| `FM-EXT-RAW-HTML-001` | `fm-w1tn` | `fm-w1tn` | Deferred |
-| `FM-MATH-BLOCK-001` | `fm-6erm` | `fm-fpbj` | Implemented |
-| `FM-MATH-INLINE-001` | `fm-ucy8` | `fm-fpbj` | Implemented |
-| `FM-PARITY-BASELINE-001` | `fm-gc8d` | `fm-gc8d` | Known divergences |
-| `FM-PRESERVE-CORE-001` | `fm-2tto` | `fm-1mq0` | Implemented |
-| `FM-REFERENCE-IDEMPOTENCE-001` | `fm-w467` | `fm-w467` | Deferred |
+| Change ID | State |
+| --- | --- |
+| `FM-CLI-OUTPUT-001` | Implemented |
+| `FM-CODE-SPAN-001` | Implemented |
+| `FM-CONFORMANCE-001` | Implemented |
+| `FM-EXT-ATTRIBUTE-GROUP-001` | Implemented |
+| `FM-EXT-COLON-CONTAINER-001` | Implemented |
+| `FM-EXT-DEFINITION-LIST-001` | Implemented |
+| `FM-EXT-GRID-TABLE-001` | Implemented |
+| `FM-EXT-LINE-BLOCK-001` | Implemented |
+| `FM-EXT-MULTILINE-TABLE-001` | Implemented |
+| `FM-EXT-MYST-WIKILINK-001` | Implemented |
+| `FM-EXT-OBSIDIAN-CALLOUT-001` | Implemented |
+| `FM-EXT-RAW-HTML-001` | Implemented |
+| `FM-EXT-TOML-FRONTMATTER-001` | Implemented |
+| `FM-MATH-BLOCK-001` | Implemented |
+| `FM-MATH-INLINE-001` | Implemented |
+| `FM-PRESERVE-CORE-001` | Implemented |
+| `FM-REFERENCE-IDEMPOTENCE-001` | Implemented |
+| `FM-COMMONMARK-001` | 34 exact known divergences |
+| `FM-PARITY-BASELINE-001` | Exact except for the same inherited ledger |
 
-Future shared behavior must receive a stable `FM-*` ID before language-specific
+Future portable behavior must receive a stable `FM-*` ID before language-specific
 implementation starts.
-The same ID identifies the Python case, Rust bead, mapping record, and validation
-evidence.
+The same ID identifies the Python cases, beads, Rust mapping record, and dated
+validation evidence.
 
 ## Preservation Architecture
 
@@ -98,116 +103,86 @@ The port follows five explicit stages:
 
 1. Strictly decode UTF-8, normalize CRLF/CR, record a leading BOM, and canonicalize the
    terminal newline.
-2. Scan byte offsets before Markdown parsing, with fenced and indented code taking
-   precedence over math.
-3. Replace recognized regions with fixed-width supplementary-private-use tokens while
-   reversibly escaping authored token controls.
-4. Parse, transform, and wrap prose while measuring each token by the original region’s
-   logical source width.
-5. Validate token order and block line boundaries, restore exact source slices, then
-   restore the document-level BOM policy.
+2. Scan byte offsets before Markdown parsing.
+   Existing fenced and indented code take precedence, followed by registered opaque
+   extensions and math.
+3. Replace recognized regions with collision-safe fixed-width tokens while reversibly
+   escaping authored token-control scalars.
+4. Parse, transform, and wrap prose while measuring each token by the original source
+   region’s logical width and container context.
+5. Validate token count, order, and block boundaries; restore exact source slices; then
+   restore the document-level BOM and newline policy.
 
-Inline recognition covers single and double dollar forms, `\(...\)`, GitLab and MyST
-forms, and inline LaTeX environments.
-Block recognition covers dollar displays, `\[...\]`, nested/starred/custom environments,
-and container continuations in lists and blockquotes.
-The scanners deliberately degrade safely on unmatched or mismatched openers.
+Recognition is automatic.
+Users do not need to select a Markdown dialect or enable math.
+The scanner’s role is preservation, not semantic validation: a closed recognized region
+is opaque, while unmatched or structurally ambiguous syntax remains available to the
+ordinary parser.
+
+The parser bridge is intentionally separate from recognition.
+A future parser adapter may need different scaffolding, but it must consume the same
+portable regions and exact restoration side table.
 
 ## Divergence Policy
 
-`tests/parity_corpus_known_divergences.toml` is a closed, exact ledger.
-It currently contains 35 inherited CommonMark case IDs.
-The preservation implementation removed three stale entries that now pass.
+`tests/parity_corpus_known_divergences.toml` is a closed, bidirectional ledger with 34
+inherited CommonMark case IDs owned by `fmr-rz9f`.
 
-The ledger is not a wildcard allowlist:
+- An unlisted mismatch fails.
+- An entry for a missing or deferred case fails.
+- A listed case that begins passing fails as stale.
+- Every entry names a live tracker and reason.
 
-- an unlisted mismatch fails;
-- an entry for a missing or deferred case fails;
-- a listed case that starts passing fails as stale;
-- every entry names a live tracker and reason.
+No new divergence was added for math, code, extensions, or whole-document idempotence.
 
-The current inherited differences are owned by `fmr-rz9f`. Remove passing case IDs in
-the same commit as the fix; never broaden an old reason to cover a new failure class.
+## Current Risks
 
-## Current Validation Snapshot
+### Publication and Clean Clone
 
-With the Python submodule at `0d2bebb` and the playbook at `d24760a`, the focused shared
-conformance run passes all 404 active exact cases and retains 35 exact known
-divergences. The implemented preservation IDs account for:
+The exact Python target commit is not fetchable from the configured GitHub remote.
+`fm-zah1` owns publication and the subsequent fresh recursive-clone proof.
+Do not replace the gitlink with an older published commit merely to make CI initialize.
 
-- 9 `FM-PRESERVE-CORE-001` cases;
-- 25 `FM-MATH-INLINE-001` cases, including selected CommonMark examples;
-- 9 `FM-MATH-BLOCK-001` cases;
-- 1 `FM-CLI-OUTPUT-001` case.
+### External Corpus Reconstruction
 
-The selected surface includes BOM and line endings, invalid UTF-8 and no-mutation
-failures, sentinel collisions, inline and block dialects, code precedence, malformed
-fallbacks, Markdown containers, tables, links and images, frontmatter and HTML
-adjacency, semantic and width-boundary wrapping, file/config/check/output modes,
-idempotence, and an adversarial linear-time case.
+The historical 623-file `attic/test-docs` corpus remains unrecoverable.
+A later 670-file AI Trade Arena snapshot was recovered, identified by digest, and used
+successfully, but 199 files differ from the closest immutable source commit.
+It is strong local transition evidence, not a portable CI fixture.
+The checked-in shared corpus remains the release contract.
 
-The dated sync artifact records the full pre-port red matrix and final command evidence.
-The final local lint, all-features and no-default-features tests, documentation,
-administration, build, crate verification, and packaged-resource smoke gates pass.
-Only the remote clean-clone and publication gate remains for this cycle.
+### Parser Boundary Interactions
 
-## Remaining Risks and Work
+The recovered corpus found two interaction classes after the focused suite was green:
+angle comparisons mistaken for HTML, and prose union pipes mistaken for table cells.
+New syntax families should continue to probe ambiguous punctuation, container identity,
+adjacent protected blocks, table detection, lazy continuation, and malformed boundaries.
 
-### P0: Publish the Exact Upstream Commit
+### Inherited CommonMark Differences
 
-The Rust gitlink cannot be initialized by a clean remote clone until Python commit
-`0d2bebb` is published.
-`fm-zah1` owns the gate.
-No Rust push or release should precede it.
+The 34 exact ledger entries are visible debt rather than parity.
+Reducing them is useful, but they do not obscure the result of any new shared change ID.
 
-### P1: Extend Opaque Syntax Coverage
+## Completion Criteria
 
-Code spans, raw/extension blocks, and remaining reference-document fixed points still
-have deferred change IDs.
-They should use the same scanner/registry/bridge rather than introducing a second
-preservation mechanism.
+This porting cycle is locally complete when:
 
-### P1: Exercise Container Identity as the Corpus Grows
+- every in-scope shared change ID is implemented;
+- all shared cases pass or have an exact inherited ledger disposition;
+- shared tryscript and conformance run against Cargo-built artifacts;
+- no normal Rust behavior test invokes Python or copies portable goldens;
+- the external audit selects the same complete corpus and has no unexplained diff;
+- lint, test, documentation, administration, build, and package gates pass;
+- the checklist, sync artifacts, mapping, ledger, and beads agree.
 
-The shared suite covers nested quotes, list content columns, lazy continuation, tabs,
-tables, and malformed boundaries.
-New Markdown dialect cases should especially probe sibling lists with identical
-indentation, mixed quote/list transitions, interruption by HTML or fences, and adjacent
-protected blocks. These are the places where a coarse container signature is most likely
-to over-consume or terminate early.
-
-### P1: Keep Restoration Fail-Closed
-
-The bridge detects missing, duplicate, reordered, or structurally damaged tokens.
-The current public string API treats those states as internal invariants.
-If third-party parser adapters become configurable, introduce a fallible formatting path
-before allowing an invariant failure to cross the library boundary.
-
-### P2: Reduce Inherited CommonMark Divergences
-
-The 35 exact ledger entries are visible debt, not evidence of parity.
-`fmr-rz9f` owns their class-level investigation and reduction.
-
-## Completion Criteria for This Porting Cycle
-
-The preservation sync is complete only when:
-
-- the exact Python gitlink is fetchable by a clean clone;
-- every in-scope shared case passes or has an explicitly approved, tested disposition;
-- shared tryscript and conformance suites run against built Rust artifacts;
-- no normal Rust behavior test depends on Python;
-- the legacy function mapping has no unexplained drift;
-- full local Rust, documentation, administration, build, and packaging gates pass;
-- the exact upstream gitlink is published and passes the remote clean-clone gate;
-- the checklist, sync artifact, mapping, ledger, and beads agree.
+Remote completion additionally requires the exact Python gitlink to be published and a
+fresh recursive clone to pass without local alternates.
 
 See the [Port Sync Playbook](port-sync-playbook.md), the
 [current update checklist](project/specs/active/port-checklist-update-2026-08-25.md),
+the [math/foundation artifact](sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md),
 and the
-[current preservation sync artifact](sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md).
-
-The released-baseline decision record remains
-[Baseline Audit: Python Flowmark v0.7.2 to v0.7.3](sync-artifacts/2026-08-25-baseline-audit-v0.7.2-to-v0.7.3.md).
+[code/extensions artifact](sync-artifacts/2026-08-26-sync-0d2bebb-to-e9d5805.md).
 
 <!-- This document follows common-doc-guidelines.md.
 See github.com/jlevy/practical-prose and review guidelines before editing.

@@ -34,6 +34,7 @@ The three categories:
 | [`rust-only-features.md`](rust-only-features.md) | Rust port-specific | The (currently small) set of features the Rust port has that upstream does not. |
 | [`port-status.md`](port-status.md) | Rust port-specific | Current parity target, release status, tolerated variations, and porting principles compliance. |
 | [`port-sync-playbook.md`](port-sync-playbook.md) | Rust port-specific | How to sync flowmark-rs with upstream Python releases (Mode B workflow). |
+| [`test-corpora.md`](test-corpora.md) | Rust port-specific | Ownership, provenance, and execution rules for shared and external test corpora. |
 | [`parity-coverage-matrix.md`](parity-coverage-matrix.md) | Rust port-specific | Per-AST-node × syntactic-form matrix mapped to the tests that prove parity for each row. Structural backstop against inheriting upstream test gaps. |
 | [`porting-log-review.md`](porting-log-review.md) | Rust port-specific | Historical review log from the initial port. |
 | [`templates/rust-readme-wrapper.md`](templates/rust-readme-wrapper.md) | Rust port-specific | Wrapper template the README generator splices around `{{ shared_docs_body }}`. |
@@ -50,7 +51,7 @@ The three categories:
 
 | Submodule | Role |
 | --- | --- |
-| [`repos/flowmark/`](https://github.com/jlevy/flowmark) | Upstream Python flowmark source, pinned to the parity-target release tag (currently `v0.7.0`). |
+| [`repos/flowmark/`](https://github.com/jlevy/flowmark) | Upstream Python source and authoritative shared test assets, pinned to the exact in-progress contract commit. |
 | [`repos/rust-porting-playbook/`](https://github.com/jlevy/rust-porting-playbook) | Reusable Python-to-Rust porting methodology, guidelines, and workflows. |
 
 ## What is mirrored from upstream
@@ -69,10 +70,11 @@ Three pieces of upstream content flow into the Rust port:
    submodule. Public discovery and `npx skills add` remain exclusively in
    `jlevy/flowmark`; this repository intentionally has no root `skills/flowmark/`
    bundle.
-3. **Test fixtures** at `tests/testdocs/testdoc.orig.md` and
-   `tests/testdocs/testdoc.expected.*.md` come from upstream’s
-   [`tests/testdocs/`](https://github.com/jlevy/flowmark/tree/main/tests/testdocs) and
-   are refreshed on every Mode B sync.
+3. **Portable test assets** are consumed directly from the pinned `repos/flowmark`
+   submodule. They include the language-neutral manifest, reference and topic documents,
+   CommonMark registry, historical parity cases, and tryscript sessions.
+   Rust does not keep a copied fixture tree or invoke Python in its normal behavior
+   suite.
 
 Everything else in this repo is Rust-port-specific.
 

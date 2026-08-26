@@ -1,5 +1,7 @@
 # Port Sync Playbook
 
+> **Doc status:** Rust port-specific (no upstream equivalent).
+
 This is the Flowmark-specific operating procedure for keeping the Rust port aligned with
 Python Flowmark. It adapts the canonical
 [Python-to-Rust update checklist](../repos/rust-porting-playbook/playbooks/port-checklist-update-template.md)
@@ -73,8 +75,9 @@ Do not make normal Rust tests invoke Python.
 | Exact known differences | `tests/parity_corpus_known_divergences.toml` |
 | Commit and change-ID traceability | `admin/port-coverage-mapping/shared-conformance.toml` |
 | Supplemental function mapping | `admin/port-coverage-mapping/*.yaml` |
+| Corpus ownership and provenance | `docs/test-corpora.md` |
 | Current execution checklist | `docs/project/specs/active/port-checklist-update-2026-08-25.md` |
-| Current sync evidence | `docs/sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md` |
+| Current sync evidence | `docs/sync-artifacts/2026-08-26-sync-0d2bebb-to-e9d5805.md` |
 
 ## Start Every Sync Cleanly
 
@@ -295,6 +298,25 @@ sweep and a syntactic class sweep.
 Capture the complete diff.
 Convert every new difference into a shared discriminating case and disposition before
 fixing it.
+
+External corpora are transition evidence, not portable truth sources.
+Require an explicit corpus path, immutable Python label, aggregate corpus digest, equal
+selected file lists, and complete retained output diff.
+The audit must fail if either binary skips a Markdown file.
+Record source provenance or reconstruction limits in
+[`test-corpora.md`](test-corpora.md) and the dated sync artifact.
+
+Use the repository helper for that gate:
+
+```bash
+cargo build --locked --release
+
+FLOWMARK_PARITY_PYTHON_BIN=/absolute/path/to/flowmark \
+FLOWMARK_PARITY_PYTHON_LABEL='flowmark <full-commit>' \
+FLOWMARK_PARITY_EXPECTED_CORPUS_SHA256='<corpus-digest>' \
+FLOWMARK_PARITY_REPORT_DIR='target/corpus-parity/<run-id>' \
+scripts/corpus-parity-check.sh /absolute/path/to/corpus target/release/flowmark
+```
 
 ### 9. Finish the Record
 

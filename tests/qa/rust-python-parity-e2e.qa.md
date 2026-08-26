@@ -102,7 +102,7 @@ cargo fmt --all -- --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --all-features
 cargo test --locked --no-default-features
-cargo doc --locked --no-deps
+RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
 
 cd python
 uv run ruff check .
@@ -154,16 +154,25 @@ It is not required for an ordinary Rust-only change against an unchanged pinned
 contract.
 
 Run both pinned implementations over the same isolated real-world and syntactic-surface
-corpora. `scripts/corpus-parity-check.sh` is the existing transition-audit helper:
+corpora. `scripts/corpus-parity-check.sh` is the transition-audit helper:
 
 ```bash
 cargo build --locked --release
-scripts/corpus-parity-check.sh <corpus-directory> target/release/flowmark
+
+FLOWMARK_PARITY_PYTHON_BIN=/absolute/path/to/flowmark \
+FLOWMARK_PARITY_PYTHON_LABEL='flowmark <full-commit>' \
+FLOWMARK_PARITY_EXPECTED_CORPUS_SHA256='<corpus-digest>' \
+FLOWMARK_PARITY_REPORT_DIR='target/corpus-parity/<run-id>' \
+scripts/corpus-parity-check.sh /absolute/path/to/corpus target/release/flowmark
 ```
 
 Verify:
 
 - [ ] The Python command resolves the exact proposed baseline, never `latest`.
+- [ ] The corpus source, immutable source commit or reconstruction limit, file count,
+  and digest are recorded in `docs/test-corpora.md` and the dated sync artifact.
+- [ ] Both binaries select the same list, and that list contains every Markdown file in
+  the corpus.
 - [ ] The full diff is retained and reviewed without truncation.
 - [ ] Every difference is classified as port defect, source defect, dependency/platform
   behavior, nondeterminism outside the contract, or approved intentional divergence.
@@ -195,10 +204,10 @@ Verify:
 ## 8. Confirm Documentation and Traceability
 
 ```bash
-rg -n "0d2bebb|schema_version|FM-" \
+rg -n "e9d5805|schema_version|FM-" \
   admin/port-coverage-mapping/shared-conformance.toml \
   docs/port-status.md \
-  docs/sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md
+  docs/sync-artifacts/2026-08-26-sync-0d2bebb-to-e9d5805.md
 git diff --check
 ```
 
