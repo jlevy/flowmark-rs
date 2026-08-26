@@ -12,6 +12,8 @@
 #   FLOWMARK_PARITY_REPORT_DIR   Persistent report directory. Defaults below target/.
 #   FLOWMARK_PARITY_EXPECTED_CORPUS_SHA256
 #                                Optional pinned corpus digest; mismatch aborts the audit.
+#   FLOWMARK_PARITY_KEEP_TMP      Set to 1 to retain the formatted Python and Rust trees
+#                                and record their temporary workspace in the report.
 #
 # Exit code: 0 = full parity, 1 = differences found, 2 = invalid audit setup.
 
@@ -34,6 +36,12 @@ PYTHON_BIN="${FLOWMARK_PARITY_PYTHON_BIN:-}"
 PYTHON_LABEL="${FLOWMARK_PARITY_PYTHON_LABEL:-}"
 REPORT_DIR="${FLOWMARK_PARITY_REPORT_DIR:-$REPO_ROOT/target/corpus-parity/$(date -u +%Y%m%dT%H%M%SZ)}"
 EXPECTED_CORPUS_DIGEST="${FLOWMARK_PARITY_EXPECTED_CORPUS_SHA256:-}"
+KEEP_TMP="${FLOWMARK_PARITY_KEEP_TMP:-0}"
+
+if [ "$KEEP_TMP" != "0" ] && [ "$KEEP_TMP" != "1" ]; then
+    echo "ERROR: FLOWMARK_PARITY_KEEP_TMP must be 0 or 1"
+    exit 2
+fi
 
 if [ ! -d "$CORPUS_DIR" ]; then
     echo "ERROR: Corpus directory not found: $CORPUS_DIR"
@@ -72,8 +80,12 @@ if [ -z "$PYTHON_BIN" ] && [ "$ACTUAL_VERSION" != "v${PYTHON_VERSION}" ]; then
     exit 2
 fi
 
-TMPDIR=$(mktemp -d)
-trap 'rm -rf "$TMPDIR"' EXIT
+AUDIT_TMP_DIR=$(mktemp -d)
+if [ "$KEEP_TMP" = "1" ]; then
+    echo "Retaining temporary audit workspace: $AUDIT_TMP_DIR"
+else
+    trap 'rm -rf "$AUDIT_TMP_DIR"' EXIT
+fi
 mkdir -p "$REPORT_DIR"
 
 CORPUS_DIGEST=$(
@@ -110,8 +122,8 @@ python=$PYTHON_LABEL
 python_reported_version=$ACTUAL_VERSION
 EOF
 
-cp -a "$CORPUS_DIR" "$TMPDIR/td-py"
-cp -a "$CORPUS_DIR" "$TMPDIR/td-rs"
+cp -a "$CORPUS_DIR" "$AUDIT_TMP_DIR/td-py"
+cp -a "$CORPUS_DIR" "$AUDIT_TMP_DIR/td-rs"
 
 (
     cd "$CORPUS_DIR"
@@ -119,11 +131,11 @@ cp -a "$CORPUS_DIR" "$TMPDIR/td-rs"
 ) > "$REPORT_DIR/corpus-files.txt"
 
     "${PYTHON_COMMAND[@]}" --list-files --no-respect-gitignore --files-max-size 0 \
-    "$TMPDIR/td-py/" \
+    "$AUDIT_TMP_DIR/td-py/" \
     | sed 's#^.*/td-py/##' \
     | LC_ALL=C sort > "$REPORT_DIR/python-selected-files.txt"
 "$RUST_BIN" --list-files --no-respect-gitignore --files-max-size 0 \
-    "$TMPDIR/td-rs/" \
+    "$AUDIT_TMP_DIR/td-rs/" \
     | sed 's#^.*/td-rs/##' \
     | LC_ALL=C sort > "$REPORT_DIR/rust-selected-files.txt"
 
@@ -142,9 +154,12 @@ if ! diff -u "$REPORT_DIR/corpus-files.txt" "$REPORT_DIR/python-selected-files.t
 fi
 
 echo "selected_markdown_files=$FILE_COUNT" >> "$REPORT_DIR/metadata.txt"
+if [ "$KEEP_TMP" = "1" ]; then
+    echo "temporary_workspace=$AUDIT_TMP_DIR" >> "$REPORT_DIR/metadata.txt"
+fi
 
 echo "Running Python flowmark..."
-if ! "${PYTHON_COMMAND[@]}" --auto --no-respect-gitignore --files-max-size 0 "$TMPDIR/td-py/" \
+if ! "${PYTHON_COMMAND[@]}" --auto --no-respect-gitignore --files-max-size 0 "$AUDIT_TMP_DIR/td-py/" \
     > "$REPORT_DIR/python.stdout" 2> "$REPORT_DIR/python.stderr"; then
     echo "ERROR: Python formatter failed; see $REPORT_DIR/python.stderr"
     cat "$REPORT_DIR/python.stderr"
@@ -152,7 +167,7 @@ if ! "${PYTHON_COMMAND[@]}" --auto --no-respect-gitignore --files-max-size 0 "$T
 fi
 
 echo "Running Rust flowmark..."
-if ! "$RUST_BIN" --auto --no-respect-gitignore --files-max-size 0 "$TMPDIR/td-rs/" \
+if ! "$RUST_BIN" --auto --no-respect-gitignore --files-max-size 0 "$AUDIT_TMP_DIR/td-rs/" \
     > "$REPORT_DIR/rust.stdout" 2> "$REPORT_DIR/rust.stderr"; then
     echo "ERROR: Rust formatter failed; see $REPORT_DIR/rust.stderr"
     cat "$REPORT_DIR/rust.stderr"
@@ -162,8 +177,8 @@ fi
 echo ""
 echo "Comparing outputs..."
 
-diff -rq "$TMPDIR/td-py/" "$TMPDIR/td-rs/" > "$REPORT_DIR/differences.txt" || true
-diff -ruN "$TMPDIR/td-py/" "$TMPDIR/td-rs/" > "$REPORT_DIR/diff.patch" || true
+diff -rq "$AUDIT_TMP_DIR/td-py/" "$AUDIT_TMP_DIR/td-rs/" > "$REPORT_DIR/differences.txt" || true
+diff -ruN "$AUDIT_TMP_DIR/td-py/" "$AUDIT_TMP_DIR/td-rs/" > "$REPORT_DIR/diff.patch" || true
 
 if [ ! -s "$REPORT_DIR/differences.txt" ]; then
     echo "PASS: 0 differences across $FILE_COUNT files"
