@@ -75,6 +75,14 @@ jobs:
           if (-not (Test-Path repos/flowmark/tests/parity_corpus/manifest.toml)) {
             throw "Shared conformance manifest was not materialized"
           }
+          git -C repos/flowmark init
+          git -C repos/flowmark remote add origin $upstreamUrl
+          git -C repos/flowmark fetch --depth=1 $upstreamRepository $upstreamCommit
+          git -C repos/flowmark update-ref --no-deref HEAD $upstreamCommit
+          $materializedCommit = git -C repos/flowmark rev-parse HEAD
+          if ($materializedCommit -ne $upstreamCommit) {
+            throw "Expected materialized Flowmark $upstreamCommit, got $materializedCommit"
+          }
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v6

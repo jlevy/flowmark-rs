@@ -152,8 +152,9 @@ The Python repository contains long-standing managed shortcut-document filenames
 colons, which NTFS cannot materialize.
 Linux and macOS CI initialize the complete recursive submodule tree.
 Windows CI resolves the same exact Python gitlink, verifies the fetched commit in an
-isolated bare repository, and extracts `README.md` plus the shared `tests/` tree
-directly from that commit’s Git archive.
+isolated bare repository, extracts `README.md` plus the shared `tests/` tree directly
+from that commit’s Git archive, and records the verified commit as the exported tree’s
+detached `HEAD` without checking out the incompatible paths.
 The extracted tree contains every portable conformance, tryscript, topic, reference, and
 CommonMark asset used by the Rust suite.
 The Windows result therefore proves formatter behavior against the shared contract, but
