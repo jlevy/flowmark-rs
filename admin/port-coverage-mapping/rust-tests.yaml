@@ -543,19 +543,19 @@
   line_number: 346
 - file: tests/test_conformance.rs
   function: exact_selection_can_run_a_deferred_case
-  line_number: 178
+  line_number: 180
 - file: tests/test_conformance.rs
   function: runner_timeout_is_bounded_and_has_a_stable_code
-  line_number: 190
+  line_number: 192
 - file: tests/test_conformance.rs
   function: shared_conformance_corpus_matches_or_has_a_current_divergence
-  line_number: 60
+  line_number: 62
 - file: tests/test_conformance.rs
   function: shared_runner_fixtures_have_the_same_stable_error_codes
-  line_number: 118
+  line_number: 120
 - file: tests/test_conformance.rs
   function: shared_traceability_matches_the_pinned_upstream
-  line_number: 23
+  line_number: 25
 - file: tests/test_edge_cases.rs
   function: test_angle_bracket_autolink_in_footnote
   line_number: 168

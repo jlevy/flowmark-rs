@@ -6,7 +6,9 @@ mod conformance;
 
 use conformance::{load_known_divergences, load_manifest, run_case, select_cases, upstream_root};
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::{Path, PathBuf};
+#[cfg(unix)]
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Command;
 use std::time::Duration;
 use toml::Value;
