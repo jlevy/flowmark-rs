@@ -29,7 +29,7 @@ source) and regenerate via `scripts/generate_rust_readme.py`. -->
 > CLI usage and formatting behavior.
 > It is now the recommended version for CLI and IDE usage.
 > 
-> Last sync: **2026-08-25** against **Python v0.7.3**
+> Last sync: **2026-08-26** against **Python v0.7.3**
 > 
 > For more on the **automated porting methodology** used to build flowmark-rs, see the
 > [**port status report**](docs/port-status.md) and the
@@ -461,8 +461,9 @@ deliberately ignored in pre-commit.
 The `--force-exclude` flag resolves this: with it, all exclusion sources
 (`.flowmarkignore`, `--exclude`/`--extend-exclude`, and the built-in defaults) are
 applied to explicitly-named files too.
-This is why Flowmark’s [published pre-commit hooks](#3-run-on-pre-commit) set
-`--force-exclude` — exactly as
+This is why Flowmark’s
+[published pre-commit hooks](https://github.com/jlevy/flowmark/blob/main/skills/flowmark/references/project-setup.md#auto-fix-on-commit)
+set `--force-exclude` — exactly as
 [`ruff-pre-commit`](https://github.com/astral-sh/ruff-pre-commit) does — so your
 `.flowmarkignore` is respected on the staged files pre-commit hands the hook.
 

@@ -74,7 +74,7 @@ Do not make normal Rust tests invoke Python.
 | Commit and change-ID traceability | `admin/port-coverage-mapping/shared-conformance.toml` |
 | Supplemental function mapping | `admin/port-coverage-mapping/*.yaml` |
 | Current execution checklist | `docs/project/specs/active/port-checklist-update-2026-08-25.md` |
-| Current sync evidence | `docs/sync-artifacts/2026-08-25-sync-v0.7.2-to-093c924.md` |
+| Current sync evidence | `docs/sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md` |
 
 ## Start Every Sync Cleanly
 
@@ -89,6 +89,9 @@ git status --short --branch
 All recorded gitlinks must be obtainable from their configured remotes before a Rust PR
 is ready for remote CI. A local-only upstream commit is acceptable while developing, but
 it is an explicit publication dependency.
+A successful exact-SHA fetch from a checkout that already contains the object is not
+evidence of remote availability because Git can satisfy it locally.
+Use a fresh recursive clone or an empty object store for the publication gate.
 For local recovery only, fetch the exact commit from the sibling source checkout; never
 silently substitute an older commit:
 
@@ -163,6 +166,9 @@ Record one disposition per change ID:
 The replacement Markdown parser can differ in either direction.
 Passing a new case does not prove the surrounding syntax class; run the whole relevant
 tag or change-ID selection.
+Record the exact pass/fail matrix before changing code.
+If a source unit invariant can affect CLI bytes, promote it to a shared discriminating
+case during review rather than leaving it visible to only one language.
 
 ### 4. Port Shared Behavior Tests First
 
@@ -190,12 +196,24 @@ That overlap is useful.
 It catches local defects and whole-document interactions while keeping each portable
 expectation language-neutral.
 
+Container-sensitive cases must distinguish logical container identity from indentation.
+At minimum, cover continuations and siblings separately: two list items can have the
+same depth and content column but must not share an unmatched delimiter.
+Prefer an observable transform inside the candidate span so accidental over-protection
+cannot pass merely because the input was already a fixed point.
+
 ### 5. Implement Idiomatic Rust
 
 Port behavior, not Python implementation structure.
 Use focused Rust unit tests for language-specific adapters, parsing helpers, timeout
 handling, path safety, and error classification.
 Do not duplicate a shared golden assertion as a Rust string literal.
+
+For opaque Markdown, keep recognition before the destination parser and keep the parser
+bridge separate from source semantics.
+A parser-specific AST shape may require scaffolding, but the shared scanner owns region
+selection and the side table owns exact restoration.
+Do not use parser recognition as an implicit dialect configuration layer.
 
 For every shared change ID, update `admin/port-coverage-mapping/shared-conformance.toml`
 with:
@@ -285,6 +303,15 @@ divergence ledger, and affected beads.
 Record every command and result.
 Re-run any generator that embeds upstream content, then verify the generated result is
 stable.
+
+When senior review discovers a portable corner case after the first green run, use this
+closure loop:
+
+1. Add a discriminating shared case at the source contract.
+2. Prove the source implementation passes it.
+3. Re-run it against the current port; do not hand-copy the expected bytes.
+4. Fix the port and rerun the complete affected change ID.
+5. Advance the immutable source gitlink and every traceability record together.
 
 Do not mark a sync complete while:
 

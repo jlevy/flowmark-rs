@@ -18,103 +18,103 @@
   line_number: 362
 - file: src/formatter/filling.rs
   function: decode_hex_label_rejects_invalid
-  line_number: 3154
+  line_number: 3186
 - file: src/formatter/filling.rs
   function: encode_collapsed_ref_link
-  line_number: 3108
+  line_number: 3140
 - file: src/formatter/filling.rs
   function: encode_empty_labels_passthrough
-  line_number: 3170
+  line_number: 3202
 - file: src/formatter/filling.rs
   function: encode_full_ref_link
-  line_number: 3098
+  line_number: 3130
 - file: src/formatter/filling.rs
   function: encode_inside_code_fence_unchanged
-  line_number: 3178
+  line_number: 3210
 - file: src/formatter/filling.rs
   function: encode_shortcut_ref_link
-  line_number: 3116
+  line_number: 3148
 - file: src/formatter/filling.rs
   function: encode_shortcut_ref_lowercases_label
-  line_number: 3126
+  line_number: 3158
 - file: src/formatter/filling.rs
   function: encode_unknown_label_unchanged
-  line_number: 3162
+  line_number: 3194
 - file: src/formatter/filling.rs
   function: extract_footnote_basic
-  line_number: 3021
+  line_number: 3053
 - file: src/formatter/filling.rs
   function: extract_footnote_consecutive_blank_line_preserved
-  line_number: 3042
+  line_number: 3074
 - file: src/formatter/filling.rs
   function: extract_footnote_inside_code_fence_ignored
-  line_number: 3084
+  line_number: 3116
 - file: src/formatter/filling.rs
   function: extract_footnote_multiline
-  line_number: 3033
+  line_number: 3065
 - file: src/formatter/filling.rs
   function: extract_footnote_with_autolink_blank_line_preserved
-  line_number: 3056
+  line_number: 3088
 - file: src/formatter/filling.rs
   function: extract_ref_defs_basic
-  line_number: 2951
+  line_number: 2983
 - file: src/formatter/filling.rs
   function: extract_ref_defs_case_insensitive
-  line_number: 2962
+  line_number: 2994
 - file: src/formatter/filling.rs
   function: extract_ref_defs_inside_code_fence_ignored
-  line_number: 2970
+  line_number: 3002
 - file: src/formatter/filling.rs
   function: extract_ref_defs_multiple
-  line_number: 2989
+  line_number: 3021
 - file: src/formatter/filling.rs
   function: extract_ref_defs_skips_footnote_definitions
-  line_number: 2998
+  line_number: 3030
 - file: src/formatter/filling.rs
   function: extract_ref_defs_with_title
-  line_number: 2979
+  line_number: 3011
 - file: src/formatter/filling.rs
   function: hex_label_round_trip_handles_spaces_and_punctuation
-  line_number: 3141
+  line_number: 3173
 - file: src/formatter/filling.rs
   function: inline_image_collapsed_ref
-  line_number: 3196
+  line_number: 3228
 - file: src/formatter/filling.rs
   function: inline_image_full_ref
-  line_number: 3188
-- file: src/formatter/filling.rs
-  function: inline_image_inside_code_fence_unchanged
-  line_number: 3237
-- file: src/formatter/filling.rs
-  function: inline_image_label_lowercased_lookup
   line_number: 3220
 - file: src/formatter/filling.rs
+  function: inline_image_inside_code_fence_unchanged
+  line_number: 3269
+- file: src/formatter/filling.rs
+  function: inline_image_label_lowercased_lookup
+  line_number: 3252
+- file: src/formatter/filling.rs
   function: inline_image_no_def_unchanged
-  line_number: 3229
+  line_number: 3261
 - file: src/formatter/filling.rs
   function: inline_image_shortcut_ref
-  line_number: 3204
+  line_number: 3236
 - file: src/formatter/filling.rs
   function: inline_image_with_title
-  line_number: 3212
+  line_number: 3244
 - file: src/formatter/filling.rs
   function: lowercase_refdef_label_basic
-  line_number: 3247
+  line_number: 3279
 - file: src/formatter/filling.rs
   function: lowercase_refdef_label_passthrough_when_no_match
-  line_number: 3263
+  line_number: 3295
 - file: src/formatter/filling.rs
   function: lowercase_refdef_label_preserves_title
-  line_number: 3255
+  line_number: 3287
 - file: src/formatter/filling.rs
   function: markers_contain_pua_char
-  line_number: 3281
+  line_number: 3313
 - file: src/formatter/filling.rs
   function: replace_until_stable_multiple_matches
-  line_number: 3271
+  line_number: 3303
 - file: src/formatter/filling.rs
   function: user_html_comment_not_treated_as_marker
-  line_number: 3287
+  line_number: 3319
 - file: src/incremental_cache.rs
   function: cache_ignores_corrupt_manifest_and_recovers
   line_number: 261
@@ -132,7 +132,7 @@
   line_number: 304
 - file: src/lib.rs
   function: FormatOptions::reformat_text
-  line_number: 34
+  line_number: 35
 - file: src/parser/frontmatter.rs
   function: test_has_frontmatter
   line_number: 76
@@ -145,6 +145,18 @@
 - file: src/parser/frontmatter.rs
   function: test_split_frontmatter_present
   line_number: 60
+- file: src/preservation/bridge.rs
+  function: authored_marker_escapes_retain_one_column_each
+  line_number: 281
+- file: src/preservation/bridge.rs
+  function: fixed_width_token_round_trips_u64_indexes
+  line_number: 272
+- file: src/preservation/scanner.rs
+  function: block_math_owns_nested_markdown
+  line_number: 965
+- file: src/preservation/scanner.rs
+  function: code_wins_and_complete_math_survives
+  line_number: 957
 - file: src/settings.rs
   function: default_cache_root_prefers_os_cache_dir
   line_number: 88
@@ -249,19 +261,19 @@
   line_number: 139
 - file: src/wrapping/text_wrapping.rs
   function: test_html_md_word_split
-  line_number: 314
+  line_number: 410
 - file: src/wrapping/text_wrapping.rs
   function: test_html_md_word_split_links
-  line_number: 320
+  line_number: 416
 - file: src/wrapping/text_wrapping.rs
   function: test_markdown_escape_word
-  line_number: 274
+  line_number: 370
 - file: src/wrapping/text_wrapping.rs
   function: test_no_wrap
-  line_number: 306
+  line_number: 402
 - file: src/wrapping/text_wrapping.rs
   function: test_simple_wrapping
-  line_number: 288
+  line_number: 384
 - file: tests/test_alerts.rs
   function: test_alert_after_heading
   line_number: 140

@@ -52,6 +52,10 @@ Verify:
   If not, record `fm-zah1` as a release/remote-CI blocker.
 - [ ] The playbook commit is the reviewed commit named in the current sync artifact.
 
+Do not use an exact-SHA fetch from an existing source checkout as the publication proof:
+if that object already exists locally, Git can report success without receiving it from
+the remote. Use a fresh recursive clone or an empty object store.
+
 Do not continue with a substituted tag or nearby commit.
 The expected bytes and change IDs are valid only for the recorded source commit.
 
@@ -138,7 +142,10 @@ For every changed case, verify:
 
 For math changes, inspect at least inline and block delimiters, escaped dollars,
 currency, code precedence, links/images, tables, blockquotes, list indentation,
-frontmatter, HTML containers, line endings, adjacent delimiters, and unmatched markers.
+frontmatter, HTML containers, line endings, adjacent delimiters, unmatched markers, and
+sibling containers with the same apparent indentation.
+Use an observable transform in container-boundary cases so accidental over-protection
+cannot look like a pass.
 
 ## 6. Audit a New Whole-Program Baseline
 
@@ -188,10 +195,10 @@ Verify:
 ## 8. Confirm Documentation and Traceability
 
 ```bash
-rg -n "093c924|schema_version|FM-" \
+rg -n "0d2bebb|schema_version|FM-" \
   admin/port-coverage-mapping/shared-conformance.toml \
   docs/port-status.md \
-  docs/sync-artifacts/2026-08-25-sync-v0.7.2-to-093c924.md
+  docs/sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md
 git diff --check
 ```
 

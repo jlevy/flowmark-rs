@@ -1,6 +1,6 @@
 ---
 title: Python-to-Rust Update Checklist for Markdown Preservation
-description: Filled Flowmark-rs Mode B checklist for the v0.7.2 baseline through the pinned preservation-contract commit
+description: Filled Flowmark-rs Mode B checklist for the v0.7.2 baseline through the implemented preservation contract
 author: Codex
 ---
 # Python-to-Rust Update Checklist: Markdown Preservation
@@ -19,14 +19,15 @@ It remains active until the release gates at the end are satisfied.
 | Branch starting Python baseline | v0.6.5, `f1228297c8e2380685c6a10383f59164b96f6c22` |
 | Merged Rust release baseline | Rust v0.3.2 / Python v0.7.2, Rust `015f23989af3e5cfb3f8b58dfc72822c534df25a` |
 | Current branch parity baseline | v0.7.3, `7912c322417ae49c5c45ab099997c142cf392db8` |
-| Preservation-contract target | `093c9249610965b37a458b32e37b5cc4738afe48` |
+| Preservation-contract target | `0d2bebb0fabb9ad8705ac797687f96335ca7cfe7` |
 | Pre-cycle Rust reference | `cb744eb` |
 | Shared-test foundation | `ccc8897ac0cb6c21c017f13ac68311198da71a48` |
 | Current-main merge | `c6449a5cba5b069c5bd29be0e08e83d036279b59` (second parent `015f23989af3e5cfb3f8b58dfc72822c534df25a`) |
 | Previous playbook commit | `df36b99744405622defa56ad2e7b6f38129e121c` |
 | Current playbook commit | `d24760a3fbd2951c730a199269aeb082abb46a42` |
 | Shared schema | 1 |
-| Sync artifact | `docs/sync-artifacts/2026-08-25-sync-v0.7.2-to-093c924.md` |
+| Preservation implementation | `b76f635` |
+| Sync artifact | `docs/sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md` |
 
 ## Flowmark Adaptations to the Canonical Checklist
 
@@ -57,7 +58,7 @@ and keep golden evidence versioned with provenance.
   architecture.
 - [x] Create `fm-t81l` for the remaining released v0.7.2-to-v0.7.3 baseline gap.
 - [x] Create `fm-zah1` for publication of the exact Python gitlink.
-- [ ] Prove a clean remote clone can initialize `repos/flowmark` at `093c924`
+- [ ] Prove a clean remote clone can initialize `repos/flowmark` at `0d2bebb`
   (`fm-zah1`).
 
 ## Phase 0: Empirical Pre-Port Verification
@@ -70,16 +71,20 @@ and keep golden evidence versioned with provenance.
 - [x] Verify the ledger is bidirectional: unlisted failures and stale passing entries
   both fail the suite.
 - [x] Verify current upstream tryscript documents against the Cargo-built binary.
-- [ ] Add the shared desired-output inline-math cases (`fm-9m7k`).
-- [ ] Add the shared desired-output block-math and container cases (`fm-8rmy`).
-- [ ] Run every new math case against the pre-port Rust binary and record its exact
+- [x] Add and review the shared desired-output inline-math cases.
+- [x] Add and review the shared desired-output block-math and container cases.
+- [x] Run every new math case against the pre-port Rust binary and record its exact
   disposition before implementation.
+- [x] Record the pre-port matrix by change ID: core 4 pass/5 fail, inline 15 pass/10
+  fail, block 1 pass/7 fail, and CLI output 0 pass/1 fail.
+- [x] Promote the sibling-list identity finding from a Python-only scanner invariant to
+  the shared case `preservation.math.block.sibling-boundaries`.
 
 ## Phase 1: Sync and Classify Upstream
 
 ### Source and Process Pins
 
-- [x] Advance `repos/flowmark` from `f122829` to `093c924` locally.
+- [x] Advance `repos/flowmark` from `f122829` through `093c924` to `0d2bebb` locally.
 - [x] Advance `repos/rust-porting-playbook` from `df36b99` to `d24760a`.
 - [x] Record the shared source commit and change IDs in
   `admin/port-coverage-mapping/shared-conformance.toml`.
@@ -89,7 +94,7 @@ and keep golden evidence versioned with provenance.
 ### Delta Classification
 
 - [x] Split the recovery into current Rust main (through Python v0.7.2), the released
-  v0.7.2-to-v0.7.3 track, and the v0.7.3-to-`093c924` preservation-contract track.
+  v0.7.2-to-v0.7.3 track, and the v0.7.3-to-`0d2bebb` preservation-contract track.
 - [x] Merge Rust `origin/main` at `015f239` and preserve its release, security,
   dependency, skill, and v0.7.2 parity work (`fm-mfvi`).
 - [x] Record the preservation branch as specification and shared-test infrastructure,
@@ -127,19 +132,24 @@ and traceability update.
 
 | Change ID | Behavior | Rust owner | State |
 | --- | --- | --- | --- |
-| `FM-MATH-INLINE-001` | Inline dollar-math recognition and byte preservation | `fm-fpbj` | Deferred pending shared desired outputs |
+| `FM-PRESERVE-CORE-001` | Normalization, token collision, strict UTF-8, and failure atomicity | `fm-1mq0` | Implemented |
+| `FM-MATH-INLINE-001` | Inline math dialect recognition, exact bytes, and source-width wrapping | `fm-fpbj` | Implemented |
+| `FM-MATH-BLOCK-001` | Display math, environments, containers, and malformed fallback | `fm-fpbj` | Implemented |
+| `FM-CLI-OUTPUT-001` | Direct single-file output path | `fm-1mq0` | Implemented |
 | `FM-CODE-SPAN-001` | Source-exact inline code preservation | `fm-82vu` | Deferred |
 | `FM-EXT-RAW-HTML-001` | Opaque raw/extension syntax preservation | `fm-w1tn` | Deferred |
 | `FM-REFERENCE-IDEMPOTENCE-001` | Reference-document fixed points | `fm-w467` | Deferred |
 
-- [ ] Port the normalized byte model and preservation registry.
-- [ ] Port pre-parse scanners with code-span precedence over math.
-- [ ] Port inline math and prove delimiter/currency/escape corner cases.
-- [ ] Port block math and container-boundary handling.
-- [ ] Port restoration failure boundaries with stable errors and no silent corruption.
-- [ ] Remove superseded PUA/NUL workarounds rather than stacking another mechanism.
-- [ ] Confirm every new or changed shared case is represented in the change-ID map.
-- [ ] Reduce the exact divergence ledger in the same commits that make cases pass.
+- [x] Port the normalized byte model and preservation registry.
+- [x] Port pre-parse scanners with code-span precedence over math.
+- [x] Port inline math and prove delimiter/currency/escape corner cases.
+- [x] Port block math, active container-frame identity, and malformed boundaries.
+- [x] Port collision-safe fixed-width tokens and source-width-aware wrapping.
+- [x] Port restoration failure boundaries with stable errors and no silent corruption.
+- [x] Keep math out of the legacy PUA/NUL regex workarounds; retain unrelated
+  workarounds only for their still-deferred syntax families.
+- [x] Confirm every new or changed shared case is represented in the change-ID map.
+- [x] Reduce the exact divergence ledger in the same commit that makes cases pass.
 
 ## Phase 4: CLI and Filesystem Contract
 
@@ -148,10 +158,14 @@ and traceability update.
 - [x] Support stdin with `--output` as required by the upstream transcript.
 - [x] Match current `--surfaces`, `--skill`, and `--docs` workflows.
 - [x] Run shared tests in isolated roots with explicit deterministic environment.
-- [ ] Add math/preservation CLI cases for stdin, output files, in-place formatting,
-  check mode, multiple files, and partial failure.
-- [ ] Validate CRLF, missing final newline, UTF-8, BOM policy, symlinks, permissions,
-  and atomic replacement wherever those observations belong to the contract.
+- [x] Add math/preservation CLI cases for stdin, output files, in-place formatting,
+  check mode, project config, and invalid-file failure.
+- [x] Validate CRLF, missing final newline, strict UTF-8, BOM policy, no mutation on
+  failure, and atomic in-place replacement wherever those observations belong to the
+  contract.
+- [ ] Add shared multiple-file partial-failure, symlink, and permission cases only when
+  their exact cross-platform observation is specified; do not infer them from native
+  implementation details.
 
 ## Phase 5: Mapping and Divergences
 
@@ -160,6 +174,13 @@ and traceability update.
 - [x] Reject stale divergence entries.
 - [x] Treat the YAML Python/Rust function mapping as supplementary evidence.
 - [x] Complete the v0.7.3 supplemental mapping refresh (`fm-t81l`).
+- [x] Mark core, inline math, block math, and CLI output implemented at target
+  `0d2bebb`.
+- [x] Remove three ledger entries that became exact; retain 35 exact inherited
+  CommonMark divergences.
+- [x] Regenerate the Rust inventory after adding native preservation diagnostics: 665
+  deduplicated executable tests; mapping remains 395 mapped, 47 excluded, zero missing
+  or broken references.
 - [ ] Resolve or receive explicit approval for every remaining CommonMark and historical
   parity divergence (`fmr-rz9f`).
 - [ ] Confirm no active shared change ID has `deferred` status at release acceptance.
@@ -177,6 +198,10 @@ and traceability update.
 - [x] Re-run documentation formatting and local-link checks after the merge.
 - [x] Re-run README generation for the merged v0.7.2 baseline and shared user docs.
 - [x] Re-run README generation for the declared v0.7.3 parity baseline.
+- [x] Revise the Flowmark workflow for shared regression promotion, observable
+  container-boundary tests, and parser-independent preservation adapters.
+- [x] Verify the pinned playbook is still the latest `origin/main` at `d24760a`.
+- [x] Create the dated `093c924`-to-`0d2bebb` implementation artifact.
 
 ## Phase 7: Validation
 
@@ -194,20 +219,29 @@ and traceability update.
 - [x] Merge current Rust main and rerun every gate (`fm-mfvi`).
 - [x] Run the pinned full differential and syntactic-class sweeps before advancing the
   released whole-program baseline.
-- [ ] Run a clean-clone test after `093c924` becomes remotely fetchable.
+- [ ] Run a clean-clone test after `0d2bebb` becomes remotely fetchable.
 - [x] Record post-merge commands, exit statuses, selected case IDs, and divergence delta
   in the sync artifact.
-- [ ] Append final-cycle evidence after the remaining behavior beads close.
+- [x] Record the Python shared-conformance, Rust focused conformance, formatter, clippy,
+  and preservation-unit evidence for implementation commit `b76f635`.
+- [x] Append the final full-gate evidence after documentation and mapping stabilize.
+- [x] Re-run the final local matrix: all-features and no-default-features tests, clippy,
+  rustdoc warnings, build warnings, crate verification, packaged docs/skill smoke,
+  administration lint/types/tests, and mapping validation.
 
 ## Phase 8: Release Acceptance
 
 - [ ] The exact Python and playbook submodule commits are fetchable from clean clones.
 - [x] The released baseline gap is closed.
-- [ ] Every in-scope shared change ID is implemented.
-- [ ] Every shared case passes or has an explicitly approved, tested disposition.
-- [ ] No unexplained CLI, output-byte, file-tree, or idempotence differences remain.
-- [ ] The public API and crates.io baseline have been checked if changed.
-- [ ] Full test, lint, documentation, security, packaging, and release gates pass.
+- [x] Every preservation-cycle change ID is implemented.
+- [x] Every active shared case passes or has an exact inherited ledger disposition.
+- [x] No unexplained preservation CLI, output-byte, file-tree, or idempotence difference
+  remains.
+- [x] The public API change is additive (`reformat_bytes`); the crates.io release
+  baseline remains v0.3.2 until release planning.
+- [x] Full local test, lint, documentation, administration, build, and packaging gates
+  pass.
+- [ ] Remote clean-clone, publication, security, and release-planning gates pass.
 - [ ] Version correspondence and release notes state the exact achieved surface.
 - [ ] Beads, mapping, divergence ledger, checklist, and sync artifact agree.
 
