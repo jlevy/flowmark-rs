@@ -15,61 +15,61 @@
   line_number: 0
 - file: src/formatter/filling.rs
   function: encode_collapsed_ref_link
-  line_number: 2675
+  line_number: 2692
 - file: src/formatter/filling.rs
   function: encode_empty_labels_passthrough
-  line_number: 2693
+  line_number: 2711
 - file: src/formatter/filling.rs
   function: encode_full_ref_link
-  line_number: 2664
+  line_number: 2681
 - file: src/formatter/filling.rs
   function: encode_inside_code_fence_unchanged
-  line_number: 2701
+  line_number: 2719
 - file: src/formatter/filling.rs
   function: encode_unknown_label_unchanged
-  line_number: 2684
+  line_number: 2702
 - file: src/formatter/filling.rs
   function: extract_footnote_basic
-  line_number: 2591
+  line_number: 2608
 - file: src/formatter/filling.rs
   function: extract_footnote_consecutive_blank_line_preserved
-  line_number: 2612
+  line_number: 2629
 - file: src/formatter/filling.rs
   function: extract_footnote_inside_code_fence_ignored
-  line_number: 2654
+  line_number: 2671
 - file: src/formatter/filling.rs
   function: extract_footnote_multiline
-  line_number: 2603
+  line_number: 2620
 - file: src/formatter/filling.rs
   function: extract_footnote_with_autolink_blank_line_preserved
-  line_number: 2626
+  line_number: 2643
 - file: src/formatter/filling.rs
   function: extract_ref_defs_basic
-  line_number: 2523
+  line_number: 2540
 - file: src/formatter/filling.rs
   function: extract_ref_defs_case_insensitive
-  line_number: 2534
-- file: src/formatter/filling.rs
-  function: extract_ref_defs_inside_code_fence_ignored
-  line_number: 2542
-- file: src/formatter/filling.rs
-  function: extract_ref_defs_multiple
-  line_number: 2559
-- file: src/formatter/filling.rs
-  function: extract_ref_defs_skips_footnote_definitions
-  line_number: 2568
-- file: src/formatter/filling.rs
-  function: extract_ref_defs_with_title
   line_number: 2551
 - file: src/formatter/filling.rs
+  function: extract_ref_defs_inside_code_fence_ignored
+  line_number: 2559
+- file: src/formatter/filling.rs
+  function: extract_ref_defs_multiple
+  line_number: 2576
+- file: src/formatter/filling.rs
+  function: extract_ref_defs_skips_footnote_definitions
+  line_number: 2585
+- file: src/formatter/filling.rs
+  function: extract_ref_defs_with_title
+  line_number: 2568
+- file: src/formatter/filling.rs
   function: markers_contain_pua_char
-  line_number: 2722
+  line_number: 2740
 - file: src/formatter/filling.rs
   function: replace_until_stable_multiple_matches
-  line_number: 2712
+  line_number: 2730
 - file: src/formatter/filling.rs
   function: user_html_comment_not_treated_as_marker
-  line_number: 2728
+  line_number: 2746
 - file: src/incremental_cache.rs
   function: cache_ignores_corrupt_manifest_and_recovers
   line_number: 261
@@ -106,12 +106,6 @@
 - file: src/settings.rs
   function: default_cache_root_uses_temp_fallback_when_os_and_home_missing
   line_number: 115
-- file: src/src/lib.rs - FormatOptions.rs
-  function: reformat_text (line 30)
-  line_number: 0
-- file: src/src/lib.rs - FormatOptions.rs
-  function: reformat_text (line 32)
-  line_number: 0
 - file: src/src/lib.rs - FormatOptions.rs
   function: reformat_text (line 34)
   line_number: 0
@@ -297,7 +291,7 @@
   line_number: 272
 - file: tests/test_cli_help.rs
   function: test_help_includes_agent_guidance
-  line_number: 50
+  line_number: 53
 - file: tests/test_cli_help.rs
   function: test_help_includes_brief_common_usage
   line_number: 39
@@ -306,7 +300,7 @@
   line_number: 30
 - file: tests/test_cli_help.rs
   function: test_help_omits_old_long_epilog
-  line_number: 63
+  line_number: 66
 - file: tests/test_config.rs
   function: test_find_config_dot_flowmark_toml_takes_precedence
   line_number: 25
@@ -370,6 +364,21 @@
 - file: tests/test_config.rs
   function: test_parse_config_warns_unknown_keys
   line_number: 346
+- file: tests/test_conformance.rs
+  function: exact_selection_can_run_a_deferred_case
+  line_number: 178
+- file: tests/test_conformance.rs
+  function: runner_timeout_is_bounded_and_has_a_stable_code
+  line_number: 190
+- file: tests/test_conformance.rs
+  function: shared_conformance_corpus_matches_or_has_a_current_divergence
+  line_number: 60
+- file: tests/test_conformance.rs
+  function: shared_runner_fixtures_have_the_same_stable_error_codes
+  line_number: 118
+- file: tests/test_conformance.rs
+  function: shared_traceability_matches_the_pinned_upstream
+  line_number: 23
 - file: tests/test_edge_cases.rs
   function: test_angle_bracket_autolink_in_footnote
   line_number: 154
@@ -526,9 +535,6 @@
 - file: tests/test_escape_handling.rs
   function: test_pua_chars_safe_range_preserved
   line_number: 184
-- file: tests/test_escape_handling.rs
-  function: test_pua_placeholder_collision_known_limitation
-  line_number: 197
 - file: tests/test_escape_handling.rs
   function: test_pua_placeholder_no_collision
   line_number: 198
@@ -814,12 +820,6 @@
 - file: tests/test_packaging_entrypoints.rs
   function: test_flowmark_rs_alias_entrypoint
   line_number: 12
-- file: tests/test_parity_cross_binary.rs
-  function: test_cross_binary_corner_cases
-  line_number: 113
-- file: tests/test_parity_cross_binary.rs
-  function: test_golden_files_match_python
-  line_number: 153
 - file: tests/test_parity_discrepancies.rs
   function: test_absolute_url_autolink_still_works
   line_number: 746
@@ -931,27 +931,9 @@
 - file: tests/test_parity_discrepancies.rs
   function: test_relative_path_link_preserved
   line_number: 736
-- file: tests/test_parity_golden.rs
-  function: test_parity_corner_cases_auto
-  line_number: 105
-- file: tests/test_parity_golden.rs
-  function: test_parity_corner_cases_default
-  line_number: 90
-- file: tests/test_parity_golden.rs
-  function: test_parity_corner_cases_loose
-  line_number: 135
-- file: tests/test_parity_golden.rs
-  function: test_parity_corner_cases_plaintext
-  line_number: 150
-- file: tests/test_parity_golden.rs
-  function: test_parity_corner_cases_tight
-  line_number: 120
-- file: tests/test_parity_red_green.rs
-  function: test_red_green_v020_regression
-  line_number: 99
 - file: tests/test_ref_docs.rs
-  function: test_reference_doc_formats
-  line_number: 22
+  function: reference_documents_are_read_directly_from_the_pinned_upstream
+  line_number: 47
 - file: tests/test_sentences.rs
   function: test_first_sentence
   line_number: 19
@@ -960,31 +942,31 @@
   line_number: 9
 - file: tests/test_skill.rs
   function: test_docs_content_has_flowmark_reference
-  line_number: 55
+  line_number: 52
 - file: tests/test_skill.rs
   function: test_docs_content_has_vscode_cursor_setup
-  line_number: 62
+  line_number: 59
 - file: tests/test_skill.rs
   function: test_docs_content_loads
-  line_number: 49
+  line_number: 46
 - file: tests/test_skill.rs
   function: test_install_skill_creates_directories
-  line_number: 108
+  line_number: 111
 - file: tests/test_skill.rs
   function: test_install_skill_custom_base
-  line_number: 94
+  line_number: 97
 - file: tests/test_skill.rs
   function: test_install_skill_default
-  line_number: 77
+  line_number: 74
 - file: tests/test_skill.rs
   function: test_install_skill_overwrites_existing
-  line_number: 119
+  line_number: 122
 - file: tests/test_skill.rs
   function: test_install_skill_rejects_path_traversal
-  line_number: 138
+  line_number: 141
 - file: tests/test_skill.rs
   function: test_install_skill_safe_relative_path
-  line_number: 147
+  line_number: 150
 - file: tests/test_skill.rs
   function: test_skill_content_has_metadata
   line_number: 18
@@ -992,11 +974,11 @@
   function: test_skill_content_has_usage
   line_number: 26
 - file: tests/test_skill.rs
-  function: test_skill_content_has_vscode_cursor_setup
-  line_number: 34
-- file: tests/test_skill.rs
   function: test_skill_content_loads
   line_number: 12
+- file: tests/test_skill.rs
+  function: test_skill_content_routes_repository_adoption_to_the_bundled_reference
+  line_number: 34
 - file: tests/test_smartquotes.rs
   function: test_apostrophes_and_contractions
   line_number: 25
@@ -1248,43 +1230,43 @@
   line_number: 313
 - file: tests/test_tryscript_golden.rs
   function: tryscript_auto_mode
-  line_number: 63
+  line_number: 122
 - file: tests/test_tryscript_golden.rs
   function: tryscript_cache_behavior
-  line_number: 118
+  line_number: 136
 - file: tests/test_tryscript_golden.rs
   function: tryscript_cli_golden
-  line_number: 61
+  line_number: 123
 - file: tests/test_tryscript_golden.rs
   function: tryscript_config_interaction
-  line_number: 68
+  line_number: 124
 - file: tests/test_tryscript_golden.rs
   function: tryscript_errors_version
-  line_number: 73
+  line_number: 125
 - file: tests/test_tryscript_golden.rs
   function: tryscript_file_discovery
-  line_number: 78
+  line_number: 126
 - file: tests/test_tryscript_golden.rs
   function: tryscript_file_ops
-  line_number: 83
+  line_number: 127
 - file: tests/test_tryscript_golden.rs
   function: tryscript_formatting
-  line_number: 103
+  line_number: 128
 - file: tests/test_tryscript_golden.rs
   function: tryscript_help
-  line_number: 113
+  line_number: 129
 - file: tests/test_tryscript_golden.rs
   function: tryscript_list_spacing
-  line_number: 88
+  line_number: 130
 - file: tests/test_tryscript_golden.rs
   function: tryscript_stdin
-  line_number: 93
+  line_number: 131
 - file: tests/test_tryscript_golden.rs
   function: tryscript_typography_tests
-  line_number: 108
+  line_number: 132
 - file: tests/test_tryscript_golden.rs
   function: tryscript_verbose_docs
-  line_number: 98
+  line_number: 133
 - file: tests/test_version.rs
   function: test_version_has_expected_shape
   line_number: 20
@@ -1465,36 +1447,3 @@
 - file: tests/test_wrapping.rs
   function: test_wrap_width
   line_number: 161
-- file: tests/tryscript/auto-mode.tryscript.md
-  function: auto-mode
-  line_number: 0
-- file: tests/tryscript/cli-golden.tryscript.md
-  function: cli-golden
-  line_number: 0
-- file: tests/tryscript/config-interaction.tryscript.md
-  function: config-interaction
-  line_number: 0
-- file: tests/tryscript/errors-version.tryscript.md
-  function: errors-version
-  line_number: 0
-- file: tests/tryscript/file-discovery.tryscript.md
-  function: file-discovery
-  line_number: 0
-- file: tests/tryscript/file-ops.tryscript.md
-  function: file-ops
-  line_number: 0
-- file: tests/tryscript/formatting.tryscript.md
-  function: formatting
-  line_number: 0
-- file: tests/tryscript/list-spacing.tryscript.md
-  function: list-spacing
-  line_number: 0
-- file: tests/tryscript/stdin.tryscript.md
-  function: stdin
-  line_number: 0
-- file: tests/tryscript/typography-tests.tryscript.md
-  function: typography-tests
-  line_number: 0
-- file: tests/tryscript/verbose-docs.tryscript.md
-  function: verbose-docs
-  line_number: 0

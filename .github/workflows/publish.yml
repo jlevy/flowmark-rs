@@ -31,8 +31,6 @@ permissions:
   contents: read
 
 env:
-  # Python flowmark version for parity tests — sync with [package.metadata.parity] in Cargo.toml
-  FLOWMARK_PY_VERSION: "0.6.5"
   FLOWMARK_RELEASE_TAG: ${{ inputs.release_tag || '' }}
 
 jobs:
@@ -41,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -50,13 +50,7 @@ jobs:
         with:
           node-version: "22"
       - name: Pre-install tryscript
-        run: npm install -g tryscript@latest
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.14"
-          enable-cache: true
-      - name: Install Python flowmark for parity tests
-        run: uv tool install flowmark==${{ env.FLOWMARK_PY_VERSION }}
+        run: npm install -g tryscript@0.1.7
       - name: Build flowmark binary for tests
         run: cargo build --locked --all-features
         env:

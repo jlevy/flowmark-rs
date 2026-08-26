@@ -4,7 +4,7 @@
 
 use std::fs;
 
-use flowmark::skills::{get_docs_content, get_skill_content, install_skill};
+use flowmark::skills::{PROJECT_SETUP_CONTENT, get_docs_content, get_skill_content, install_skill};
 
 // --- Skill content loading (3 tests) ---
 
@@ -31,15 +31,12 @@ fn test_skill_content_has_usage() {
 }
 
 #[test]
-fn test_skill_content_has_vscode_cursor_setup() {
+fn test_skill_content_routes_repository_adoption_to_the_bundled_reference() {
     let content = get_skill_content();
     assert!(
-        content.contains("VS Code/Cursor"),
-        "skill should include VS Code/Cursor setup section"
-    );
-    assert!(
-        content.contains("emeraldwalk.runonsave"),
-        "skill should include run-on-save configuration"
+        content.contains("## Adopt Flowmark in a Repository")
+            && content.contains("[project-setup.md](references/project-setup.md)"),
+        "skill should route repository adoption to the bundled reference"
     );
 }
 
@@ -85,6 +82,12 @@ fn test_install_skill_default() {
 
     let skill_file = base.join("skills").join("flowmark").join("SKILL.md");
     assert!(skill_file.exists(), "SKILL.md should be created");
+
+    let reference_file = base.join("skills").join("flowmark").join("references/project-setup.md");
+    assert_eq!(
+        fs::read_to_string(reference_file).expect("read project setup reference"),
+        PROJECT_SETUP_CONTENT
+    );
 
     let content = fs::read_to_string(&skill_file).expect("read SKILL.md");
     assert!(content.contains("name: flowmark"), "should contain name: flowmark");

@@ -1,6 +1,0 @@
-[formatting]
-width = 60
-semantic = true
-
-[file-discovery]
-extend-include = ["*.mdx"]

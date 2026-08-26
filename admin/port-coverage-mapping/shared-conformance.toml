@@ -1,0 +1,47 @@
+schema_version = 1
+upstream_commit = "093c9249610965b37a458b32e37b5cc4738afe48"
+manifest = "tests/parity_corpus/manifest.toml"
+rust_runner = "tests/test_conformance.rs"
+divergence_ledger = "tests/parity_corpus_known_divergences.toml"
+
+[[change]]
+id = "FM-CODE-SPAN-001"
+python_bead = "fm-ocpw"
+rust_bead = "fm-82vu"
+status = "deferred"
+
+[[change]]
+id = "FM-COMMONMARK-001"
+python_bead = "fm-shou"
+rust_bead = "fm-gc8d"
+status = "known-divergences"
+
+[[change]]
+id = "FM-CONFORMANCE-001"
+python_bead = "fm-ltof"
+rust_bead = "fm-gc8d"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-RAW-HTML-001"
+python_bead = "fm-w1tn"
+rust_bead = "fm-w1tn"
+status = "deferred"
+
+[[change]]
+id = "FM-MATH-INLINE-001"
+python_bead = "fm-ucy8"
+rust_bead = "fm-fpbj"
+status = "deferred"
+
+[[change]]
+id = "FM-PARITY-BASELINE-001"
+python_bead = "fm-gc8d"
+rust_bead = "fm-gc8d"
+status = "known-divergences"
+
+[[change]]
+id = "FM-REFERENCE-IDEMPOTENCE-001"
+python_bead = "fm-w467"
+rust_bead = "fm-w467"
+status = "deferred"

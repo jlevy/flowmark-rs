@@ -86,6 +86,13 @@ def _find_integration_test_file(project_dir: Path, function_name: str) -> str:
         if re.search(rf"\bfn\s+{re.escape(function_name)}\s*\(", content):
             return f"tests/{test_file.name}"
 
+    # Declarative macros commonly generate repetitive integration tests. Cargo lists
+    # the expanded function, while the source contains it as the macro's first argument.
+    macro_invocation = re.compile(rf"!\s*\(\s*{re.escape(function_name)}\s*,")
+    for test_file in tests_dir.glob("test_*.rs"):
+        if macro_invocation.search(test_file.read_text(encoding="utf-8")):
+            return f"tests/{test_file.name}"
+
     return "tests/unknown.rs"
 
 
@@ -97,6 +104,8 @@ def _find_line_number(project_dir: Path, file_path: str, function_name: str) -> 
 
     for i, line in enumerate(full_path.read_text(encoding="utf-8").splitlines()):
         if re.search(rf"\bfn\s+{re.escape(function_name)}\s*\(", line):
+            return i + 1
+        if re.search(rf"!\s*\(\s*{re.escape(function_name)}\s*,", line):
             return i + 1
 
     return 0

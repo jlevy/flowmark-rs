@@ -6,9 +6,9 @@ Thank you for your interest in contributing to flowmark!
 
 - Rust 1.85+ (see `rust-version` in Cargo.toml for MSRV)
 - cargo (comes with Rust)
-- Python flowmark v0.6.5 — for cross-binary parity tests
-  (`uv tool install flowmark==0.6.5`)
-- Node.js 22+ and tryscript — for golden CLI tests (`npm install -g tryscript@latest`)
+- Git submodules initialized with `git submodule update --init --recursive`
+- Node.js 22+ and tryscript 0.1.7 for golden CLI tests
+  (`npm install -g tryscript@0.1.7`)
 
 All test dependencies are required.
 Tests fail loudly when a dependency is missing — there is no skip logic.
@@ -28,9 +28,10 @@ cargo build --all-features
 cargo test --all-features
 ```
 
-The full test suite (469 tests) includes unit tests, integration tests, D11 cross-binary
-parity tests (requires Python flowmark), and tryscript golden tests (requires
-tryscript).
+The full suite includes Rust unit and integration tests, a native runner for the pinned
+upstream conformance manifest, and the upstream tryscript suite.
+The portable layers do not invoke Python or keep synchronized fixture copies in this
+repository.
 
 For full project structure, CI pipeline details, and architecture, see
 [`docs/development.md`](docs/development.md).
@@ -56,3 +57,7 @@ The project uses pedantic clippy lints and denies `unsafe_code` and `unwrap_used
 ## Releasing
 
 See [docs/publishing.md](docs/publishing.md) for the release process.
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->

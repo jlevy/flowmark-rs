@@ -749,9 +749,8 @@ fn encode_ref_links(text: &str, labels: &HashSet<String>) -> String {
         // Replace collapsed reference links: [text][]
         replace_until_stable(&mut result, &COLLAPSED_REF_LINK, |caps: &regex::Captures| {
             let text_part = &caps[1];
-            let label = text_part;
-            if labels.contains(&label.to_lowercase()) {
-                format!("[{text_part}]({REF_LABEL_START}{label}{REF_LABEL_SEP})")
+            if labels.contains(&text_part.to_lowercase()) {
+                format!("[{text_part}]({REF_LABEL_START}{REF_LABEL_SEP})")
             } else {
                 caps[0].to_string()
             }
@@ -2105,7 +2104,11 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
             if link.url.starts_with(REF_LABEL_START) {
                 if let Some(sep_pos) = link.url.find(REF_LABEL_SEP) {
                     let label = &link.url[REF_LABEL_START.len_utf8()..sep_pos];
-                    format!("[{inner}][{label}]")
+                    if label.is_empty() || label.eq_ignore_ascii_case(&inner) {
+                        format!("[{inner}][]")
+                    } else {
+                        format!("[{inner}][{label}]")
+                    }
                 } else {
                     // Malformed PUA marker — strip it and render as inline
                     let url = &link.url[REF_LABEL_START.len_utf8()..];
@@ -2133,12 +2136,26 @@ fn render_inline<'a>(node: &'a AstNode<'a>, options: &Options, in_heading: bool)
 
         NodeValue::Image(image) => {
             let inner = render_inline_children(node, options, in_heading);
-            let title = if image.title.is_empty() {
-                String::new()
+            if image.url.starts_with(REF_LABEL_START) {
+                if let Some(sep_pos) = image.url.find(REF_LABEL_SEP) {
+                    let label = &image.url[REF_LABEL_START.len_utf8()..sep_pos];
+                    if label.is_empty() {
+                        format!("![{inner}][]")
+                    } else {
+                        format!("![{inner}][{label}]")
+                    }
+                } else {
+                    let url = &image.url[REF_LABEL_START.len_utf8()..];
+                    format!("![{inner}]({url})")
+                }
             } else {
-                format!(" \"{}\"", image.title.replace('"', "\\\""))
-            };
-            format!("![{inner}]({}{})", image.url, title)
+                let title = if image.title.is_empty() {
+                    String::new()
+                } else {
+                    format!(" \"{}\"", image.title.replace('"', "\\\""))
+                };
+                format!("![{inner}]({}{title})", image.url)
+            }
         }
 
         NodeValue::HtmlInline(html) => html.clone(),
@@ -2678,6 +2695,7 @@ mod tests {
         let input = "See [Example][] for details.\n";
         let output = encode_ref_links(input, &labels);
         assert!(output.contains(REF_LABEL_START));
+        assert!(output.contains(&format!("{REF_LABEL_START}{REF_LABEL_SEP}")));
     }
 
     #[test]

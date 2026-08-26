@@ -1,16 +1,12 @@
 use flowmark::config::ListSpacing;
 use flowmark::fill_markdown;
-use std::path::Path;
-
-fn read_normalized(path: &Path) -> String {
-    std::fs::read_to_string(path)
-        .unwrap_or_else(|_| panic!("Failed to read: {}", path.display()))
-        .replace("\r\n", "\n")
-}
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
+use toml::Value;
 
 #[allow(clippy::struct_excessive_bools)]
 struct TestCase {
-    name: &'static str,
+    id: &'static str,
     filename: &'static str,
     semantic: bool,
     cleanups: bool,
@@ -18,18 +14,43 @@ struct TestCase {
     ellipses: bool,
 }
 
+fn upstream_testdoc_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("repos/flowmark/tests/testdocs")
+}
+
+fn read_text(path: &Path) -> String {
+    std::fs::read_to_string(path)
+        .unwrap_or_else(|error| panic!("cannot read {}: {error}", path.display()))
+}
+
+fn known_divergence_ids() -> BTreeSet<String> {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/parity_corpus_known_divergences.toml");
+    let document = toml::from_str::<Value>(&read_text(&path))
+        .unwrap_or_else(|error| panic!("cannot parse {}: {error}", path.display()));
+    document
+        .get("divergence")
+        .and_then(Value::as_array)
+        .unwrap_or_else(|| panic!("{} has no divergence array", path.display()))
+        .iter()
+        .map(|entry| {
+            entry
+                .get("case_id")
+                .and_then(Value::as_str)
+                .unwrap_or_else(|| panic!("{} has a divergence without a case_id", path.display()))
+                .to_owned()
+        })
+        .collect()
+}
+
 #[test]
-fn test_reference_doc_formats() {
-    let testdoc_dir = Path::new("tests/testdocs");
-    let orig_path = testdoc_dir.join("testdoc.orig.md");
-
-    assert!(orig_path.exists(), "Original test document not found at {orig_path:?}");
-
-    let orig_content = read_normalized(&orig_path);
-
+fn reference_documents_are_read_directly_from_the_pinned_upstream() {
+    let testdoc_dir = upstream_testdoc_dir();
+    let orig_content = read_text(&testdoc_dir.join("testdoc.orig.md"));
+    let known = known_divergence_ids();
     let test_cases = [
         TestCase {
-            name: "plain",
+            id: "reference.testdoc.plain",
             filename: "testdoc.expected.plain.md",
             semantic: false,
             cleanups: false,
@@ -37,7 +58,7 @@ fn test_reference_doc_formats() {
             ellipses: false,
         },
         TestCase {
-            name: "semantic",
+            id: "reference.testdoc.semantic",
             filename: "testdoc.expected.semantic.md",
             semantic: true,
             cleanups: false,
@@ -45,7 +66,7 @@ fn test_reference_doc_formats() {
             ellipses: false,
         },
         TestCase {
-            name: "cleaned",
+            id: "reference.testdoc.cleaned",
             filename: "testdoc.expected.cleaned.md",
             semantic: true,
             cleanups: true,
@@ -53,7 +74,7 @@ fn test_reference_doc_formats() {
             ellipses: false,
         },
         TestCase {
-            name: "auto",
+            id: "reference.testdoc.auto",
             filename: "testdoc.expected.auto.md",
             semantic: true,
             cleanups: true,
@@ -62,11 +83,8 @@ fn test_reference_doc_formats() {
         },
     ];
 
-    let mut all_pass = true;
-    for case in &test_cases {
-        let test_doc = testdoc_dir.join(case.filename);
-        let expected = read_normalized(&test_doc);
-
+    for case in test_cases {
+        let expected = read_text(&testdoc_dir.join(case.filename));
         let actual = fill_markdown(
             &orig_content,
             true,
@@ -78,37 +96,10 @@ fn test_reference_doc_formats() {
             None,
             ListSpacing::Preserve,
         );
-
-        if actual != expected {
-            let actual_path = testdoc_dir.join(format!("testdoc.actual.{}.md", case.name));
-            std::fs::write(&actual_path, &actual)
-                .unwrap_or_else(|_| panic!("Failed to write actual output for {}", case.name));
-            eprintln!("actual was different from expected for {}!", case.name);
-            eprintln!("Saving actual to: {actual_path:?}");
-
-            // Show first difference
-            let expected_lines: Vec<&str> = expected.lines().collect();
-            let actual_lines: Vec<&str> = actual.lines().collect();
-            for (i, (exp, act)) in expected_lines.iter().zip(actual_lines.iter()).enumerate() {
-                if exp != act {
-                    eprintln!("First difference at line {} for {}:", i + 1, case.name);
-                    eprintln!("  Expected: {exp:?}");
-                    eprintln!("  Actual:   {act:?}");
-                    break;
-                }
-            }
-            if expected_lines.len() != actual_lines.len() {
-                eprintln!(
-                    "Line count differs for {}: expected {}, got {}",
-                    case.name,
-                    expected_lines.len(),
-                    actual_lines.len()
-                );
-            }
-
-            all_pass = false;
-        }
+        assert!(
+            actual == expected || known.contains(case.id),
+            "{} differs from its pinned upstream output without a ledger entry",
+            case.id
+        );
     }
-
-    assert!(all_pass, "One or more reference document format tests failed");
 }

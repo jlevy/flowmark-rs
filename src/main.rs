@@ -165,6 +165,15 @@ Use `flowmark --docs` for full documentation.
         #[arg(long, value_name = "DIR", help_heading = "Agent Options")]
         pub agent_base: Option<String>,
 
+        /// Comma-separated project-local skill surfaces: portable, claude, agents-md, or all
+        #[arg(
+            long,
+            value_name = "SURFACES",
+            value_parser = skills::validate_surfaces,
+            help_heading = "Agent Options"
+        )]
+        pub surfaces: Option<String>,
+
         /// Print full documentation
         #[arg(long, help_heading = "Agent Options")]
         pub docs: bool,
@@ -267,8 +276,8 @@ Use `flowmark --docs` for full documentation.
             // Validate all non-stdin paths exist (matches Python's file_resolver behavior).
             for f in files {
                 if f != "-" && !Path::new(f).exists() {
-                    eprintln!("Error: Path not found: {f}");
-                    std::process::exit(1);
+                    eprintln!("Error: [Errno 2] No such file or directory: '{f}'");
+                    std::process::exit(2);
                 }
             }
             return files.to_vec();
@@ -553,7 +562,9 @@ Use `flowmark --docs` for full documentation.
         }
 
         if !nobackup {
-            let backup_path = path.with_extension("bak");
+            let mut backup_name = path.as_os_str().to_os_string();
+            backup_name.push(".orig");
+            let backup_path = PathBuf::from(backup_name);
             std::fs::copy(path, &backup_path)?;
         }
 
@@ -601,7 +612,18 @@ Use `flowmark --docs` for full documentation.
 
         // Early exit: --install-skill
         if args.install_skill {
-            if let Err(e) = skills::install_skill(args.agent_base.as_deref()) {
+            if args.agent_base.is_some() && args.surfaces.is_some() {
+                eprintln!(
+                    "Error: --surfaces is incompatible with --agent-base (the latter is an \
+                     explicit single-base install and writes one skill location)."
+                );
+                std::process::exit(2);
+            }
+            let surfaces = args
+                .surfaces
+                .as_deref()
+                .map_or_else(|| skills::ALL_SURFACES.to_vec(), skills::parse_surfaces);
+            if let Err(e) = skills::install_skill_surfaces(args.agent_base.as_deref(), &surfaces) {
                 bail!("{e}");
             }
             return Ok(());
@@ -746,9 +768,9 @@ Use `flowmark --docs` for full documentation.
             std::process::exit(1);
         }
 
-        // Validate: cannot use --output with multiple files
+        // Python currently permits an explicit output path only for stdin.
         let has_explicit_output = args.output != "-";
-        if has_explicit_output && resolved_files.len() > 1 {
+        if has_explicit_output && resolved_files.iter().any(|file| file != "-") {
             eprintln!(
                 "Error: Cannot specify output file when processing multiple files \
                  (use --inplace instead)"
@@ -766,9 +788,20 @@ Use `flowmark --docs` for full documentation.
             std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
 
             let output = opts.reformat_text(&input);
-            let stdout = std::io::stdout().lock();
-            let mut writer = BufWriter::new(stdout);
-            writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
+            if has_explicit_output {
+                let output_path = PathBuf::from(&args.output);
+                if let Some(parent) = output_path.parent() {
+                    std::fs::create_dir_all(parent).with_context(|| {
+                        format!("failed to create output directory {}", parent.display())
+                    })?;
+                }
+                atomic_write(&output_path, &output)
+                    .with_context(|| format!("failed to write {}", output_path.display()))?;
+            } else {
+                let stdout = std::io::stdout().lock();
+                let mut writer = BufWriter::new(stdout);
+                writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
+            }
         }
 
         // Format regular files: parallel when inplace, sequential for stdout output

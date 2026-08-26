@@ -14,7 +14,7 @@ pub mod transform;
 pub mod typography;
 pub mod wrapping;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub use config::{DEFAULT_WRAP_WIDTH, FormatOptions, ListSpacing};
 pub use error::{Error, Result};
@@ -90,7 +90,9 @@ impl FormatOptions {
 
         if inplace {
             if !nobackup {
-                let backup_path = path.with_extension("bak");
+                let mut backup_name = path.as_os_str().to_os_string();
+                backup_name.push(".orig");
+                let backup_path = PathBuf::from(backup_name);
                 std::fs::copy(path, &backup_path)?;
             }
             atomic_write(path, &formatted)?;
