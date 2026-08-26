@@ -994,12 +994,234 @@ fn scan_toml_frontmatter(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<C
     Vec::new()
 }
 
+fn definition_marker(source: &str, line: &Line, frames: &[ContainerFrame]) -> Option<usize> {
+    if line.lazy {
+        return None;
+    }
+    let (index, column) = content_under_frames(source, line, frames)?;
+    let (mut index, mut column) =
+        consume_indent(source.as_bytes(), index, line.content_end, column, 2);
+    if index >= line.content_end || !matches!(source.as_bytes()[index], b':' | b'~') {
+        return None;
+    }
+    index += 1;
+    column += 1;
+    if index < line.content_end && !matches!(source.as_bytes()[index], b' ' | b'\t') {
+        return None;
+    }
+    let (_, column) = consume_whitespace(source.as_bytes(), index, line.content_end, column);
+    Some(column)
+}
+
+fn definition_continuation_column(
+    source: &str,
+    line: &Line,
+    frames: &[ContainerFrame],
+) -> Option<usize> {
+    let (mut index, mut column) = content_under_frames(source, line, frames)?;
+    while index < line.content_end && matches!(source.as_bytes()[index], b' ' | b'\t') {
+        column = advance_column(column, source.as_bytes()[index]);
+        index += 1;
+    }
+    Some(column)
+}
+
+fn definition_payload<'a>(
+    source: &'a str,
+    line: &Line,
+    frames: &[ContainerFrame],
+) -> Option<&'a str> {
+    if line.frames == frames {
+        Some(line.payload(source))
+    } else {
+        payload_under_frames(source, line, frames)
+    }
+}
+
+fn definition_term_line(
+    source: &str,
+    line: &Line,
+    frames: &[ContainerFrame],
+    opaque: bool,
+) -> bool {
+    if opaque || line.lazy || line.frames != frames {
+        return false;
+    }
+    let Some(payload) = definition_payload(source, line, frames) else {
+        return false;
+    };
+    if payload.is_empty()
+        || definition_marker(source, line, frames).is_some()
+        || colon_fence_is_opener(payload).is_some()
+    {
+        return false;
+    }
+    !starts_block_structure(
+        source.as_bytes(),
+        line.content_start,
+        line.content_end,
+        line.logical_column,
+    )
+}
+
+fn definition_term_start(
+    source: &str,
+    lines: &[Line],
+    marker_index: usize,
+    frames: &[ContainerFrame],
+    opaque: &[bool],
+) -> Option<usize> {
+    let mut term_end = marker_index.checked_sub(1)?;
+    content_under_frames(source, &lines[term_end], frames)?;
+    if definition_payload(source, &lines[term_end], frames)?.is_empty() {
+        term_end = term_end.checked_sub(1)?;
+        content_under_frames(source, &lines[term_end], frames)?;
+        if definition_payload(source, &lines[term_end], frames)?.is_empty() {
+            return None;
+        }
+    }
+    if !definition_term_line(source, &lines[term_end], frames, opaque[term_end]) {
+        return None;
+    }
+    let mut term_start = term_end;
+    while term_start > 0
+        && definition_term_line(source, &lines[term_start - 1], frames, opaque[term_start - 1])
+    {
+        term_start -= 1;
+    }
+    Some(term_start)
+}
+
+fn definition_term_sequence(
+    source: &str,
+    lines: &[Line],
+    start_index: usize,
+    frames: &[ContainerFrame],
+    opaque: &[bool],
+) -> Option<(usize, usize)> {
+    let mut index = start_index;
+    let mut terms = 0;
+    while index < lines.len() {
+        let line = &lines[index];
+        if opaque[index] || line.lazy || content_under_frames(source, line, frames).is_none() {
+            return None;
+        }
+        let payload = definition_payload(source, line, frames)?;
+        if payload.is_empty() {
+            break;
+        }
+        if line.frames != frames {
+            return None;
+        }
+        if let Some(marker_column) = definition_marker(source, line, frames) {
+            return (terms > 0).then_some((index, marker_column));
+        }
+        if !definition_term_line(source, line, frames, false) {
+            return None;
+        }
+        terms += 1;
+        index += 1;
+    }
+    if terms == 0 || index >= lines.len() {
+        return None;
+    }
+    index += 1;
+    let line = lines.get(index)?;
+    if opaque[index] || line.lazy || line.frames != frames {
+        return None;
+    }
+    definition_marker(source, line, frames).map(|column| (index, column))
+}
+
+fn scan_definition_lists(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    let mut marker_index = 0;
+    while marker_index < lines.len() {
+        let marker = &lines[marker_index];
+        let frames = marker.frames.as_slice();
+        let marker_column =
+            (!opaque[marker_index]).then(|| definition_marker(source, marker, frames)).flatten();
+        let term_start = marker_column
+            .and_then(|_| definition_term_start(source, lines, marker_index, frames, opaque));
+        let (Some(mut marker_column), Some(term_start)) = (marker_column, term_start) else {
+            marker_index += 1;
+            continue;
+        };
+
+        let mut final_index = marker_index;
+        let mut scan_index = marker_index + 1;
+        let mut blank_start = None;
+        while scan_index < lines.len() {
+            let line = &lines[scan_index];
+            if content_under_frames(source, line, frames).is_none() {
+                break;
+            }
+            let payload = definition_payload(source, line, frames)
+                .expect("compatible definition-list line has a payload");
+            if payload.is_empty() {
+                blank_start.get_or_insert(scan_index);
+                scan_index += 1;
+                continue;
+            }
+
+            let next_marker_column =
+                (!opaque[scan_index]).then(|| definition_marker(source, line, frames)).flatten();
+            if blank_start.is_none() {
+                final_index = scan_index;
+                if let Some(column) = next_marker_column {
+                    marker_column = column;
+                }
+                scan_index += 1;
+                continue;
+            }
+
+            let continuation_column = definition_continuation_column(source, line, frames);
+            let deeper_container = line.frames.len() > frames.len();
+            if let Some(column) = next_marker_column {
+                final_index = scan_index;
+                marker_column = column;
+                blank_start = None;
+                scan_index += 1;
+                continue;
+            }
+            if deeper_container || continuation_column.is_some_and(|column| column >= marker_column)
+            {
+                final_index = scan_index;
+                blank_start = None;
+                scan_index += 1;
+                continue;
+            }
+            let Some((next_marker_index, column)) =
+                definition_term_sequence(source, lines, scan_index, frames, opaque)
+            else {
+                break;
+            };
+            final_index = next_marker_index;
+            marker_column = column;
+            blank_start = None;
+            scan_index = next_marker_index + 1;
+        }
+
+        let opener = &lines[term_start];
+        candidates.push(Candidate::block(
+            RegionKind::DefinitionList,
+            opener.start,
+            lines[final_index].end,
+            opener.context,
+            opener.scaffold(source).to_owned(),
+        ));
+        marker_index = final_index + 1;
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_toml_frontmatter(text, lines, opaque);
     candidates.extend(scan_pandoc_multiline_tables(text, lines, opaque));
     candidates.extend(scan_obsidian_callouts(text, lines, opaque));
     candidates.extend(scan_colon_containers(text, lines, opaque));
+    candidates.extend(scan_definition_lists(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -1258,5 +1480,16 @@ mod tests {
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].kind, RegionKind::TomlFrontmatter);
         assert_eq!(regions[0].source, "+++\ntitle = \"Exact\"\n+++\n");
+    }
+
+    #[test]
+    fn definition_lists_require_marker_columns_and_stop_before_plain_suffix() {
+        let source = normalize_source(
+            "Term\n: Definition\n\n  Continued block\n\nSuffix\n\nNot a term\n   : over-indented\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].kind, RegionKind::DefinitionList);
+        assert_eq!(regions[0].source, "Term\n: Definition\n\n  Continued block\n");
     }
 }

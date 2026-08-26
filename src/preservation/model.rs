@@ -26,6 +26,7 @@ pub(crate) enum RegionKind {
     ObsidianCallout,
     ColonContainer,
     TomlFrontmatter,
+    DefinitionList,
     MathDollarBlock,
     MathBracketBlock,
     MathEnvironmentBlock,

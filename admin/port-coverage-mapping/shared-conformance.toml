@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "6831aeaf240aaceb01253cffc44877aa6014e147"
+upstream_commit = "30de4c0fec9eec6f3afdc0e6dce6627db0c847d1"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -32,6 +32,12 @@ status = "implemented"
 id = "FM-EXT-COLON-CONTAINER-001"
 python_bead = "fm-dvl6"
 rust_bead = "fm-dvl6"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-DEFINITION-LIST-001"
+python_bead = "fm-663e"
+rust_bead = "fm-663e"
 status = "implemented"
 
 [[change]]
