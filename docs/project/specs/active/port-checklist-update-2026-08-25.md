@@ -247,8 +247,8 @@ and traceability update.
   released whole-program baseline.
 - [x] Run a clean-clone test after `783b445` becomes remotely fetchable.
 - [x] Keep full recursive submodule checkout on Linux and macOS; on Windows, record the
-  exact Python gitlink as the nested repository `HEAD` and export only `README.md` and
-  the shared `tests/` tree from that commit.
+  exact Python gitlink, verify the fetched object in an isolated bare repository, and
+  export only `README.md` and the shared `tests/` tree from that commit.
 - [x] Record post-merge commands, exit statuses, selected case IDs, and divergence delta
   in the sync artifact.
 - [x] Record the Python shared-conformance, Rust focused conformance, formatter, clippy,

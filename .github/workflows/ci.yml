@@ -51,19 +51,26 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
           $upstreamCommit = git rev-parse HEAD:repos/flowmark
           $upstreamUrl = git config -f .gitmodules --get submodule.repos/flowmark.url
+          $upstreamRepository = Join-Path $env:RUNNER_TEMP "flowmark-upstream.git"
           $upstreamArchive = Join-Path $env:RUNNER_TEMP "flowmark-shared-tests.tar"
           New-Item -ItemType Directory -Force repos/flowmark | Out-Null
-          git -C repos/flowmark init
-          git -C repos/flowmark remote add origin $upstreamUrl
-          git -C repos/flowmark fetch --depth=1 origin $upstreamCommit
-          git -C repos/flowmark update-ref HEAD $upstreamCommit
-          git -C repos/flowmark archive --format=tar --output=$upstreamArchive $upstreamCommit README.md tests
-          tar -xf $upstreamArchive -C repos/flowmark
-          $actualCommit = git -C repos/flowmark rev-parse HEAD
+          git init --bare $upstreamRepository
+          git -C $upstreamRepository fetch --depth=1 $upstreamUrl $upstreamCommit
+          $actualCommit = git -C $upstreamRepository rev-parse FETCH_HEAD
           if ($actualCommit -ne $upstreamCommit) {
             throw "Expected Flowmark $upstreamCommit, got $actualCommit"
+          }
+          git -C $upstreamRepository archive --format=tar --output=$upstreamArchive FETCH_HEAD README.md tests
+          tar -xf $upstreamArchive -C repos/flowmark
+          if (-not (Test-Path repos/flowmark/README.md)) {
+            throw "Shared README was not materialized"
+          }
+          if (-not (Test-Path repos/flowmark/tests/parity_corpus/manifest.toml)) {
+            throw "Shared conformance manifest was not materialized"
           }
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2

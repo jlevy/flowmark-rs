@@ -151,9 +151,9 @@ does not declare a new crates.io release.
 The Python repository contains long-standing managed shortcut-document filenames with
 colons, which NTFS cannot materialize.
 Linux and macOS CI initialize the complete recursive submodule tree.
-Windows CI resolves the same exact Python gitlink, records it as the nested repository’s
-`HEAD`, and extracts `README.md` plus the shared `tests/` tree directly from that
-commit’s Git archive.
+Windows CI resolves the same exact Python gitlink, verifies the fetched commit in an
+isolated bare repository, and extracts `README.md` plus the shared `tests/` tree
+directly from that commit’s Git archive.
 The extracted tree contains every portable conformance, tryscript, topic, reference, and
 CommonMark asset used by the Rust suite.
 The Windows result therefore proves formatter behavior against the shared contract, but
