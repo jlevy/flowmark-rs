@@ -1,21 +1,6 @@
 # Every entry is an active shared case that currently differs in Rust.
 # The native runner rejects unlisted mismatches and entries that have become stale.
 [[divergence]]
-case_id = "commonmark.auto.0004"
-tracker = "fmr-rz9f"
-reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
-
-[[divergence]]
-case_id = "commonmark.default.0004"
-tracker = "fmr-rz9f"
-reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
-
-[[divergence]]
-case_id = "commonmark.default.0009"
-tracker = "fmr-rz9f"
-reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
-
-[[divergence]]
 case_id = "commonmark.default.0022"
 tracker = "fmr-rz9f"
 reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."

@@ -8,6 +8,7 @@ pub mod file_resolver;
 pub mod formatter;
 pub mod incremental_cache;
 pub mod parser;
+mod preservation;
 pub mod settings;
 pub mod skills;
 pub mod transform;
@@ -60,7 +61,7 @@ impl FormatOptions {
         } else {
             fill_markdown(
                 text,
-                true,
+                false,
                 self.width,
                 self.semantic,
                 self.cleanups,
@@ -72,6 +73,12 @@ impl FormatOptions {
         }
     }
 
+    /// Decode UTF-8 bytes strictly and reformat them without replacement characters.
+    pub fn reformat_bytes(&self, bytes: &[u8]) -> Result<String> {
+        let text = std::str::from_utf8(bytes).map_err(|_| Error::InvalidUtf8)?;
+        Ok(self.reformat_text(text))
+    }
+
     /// Reformat a Markdown or plain text file.
     pub fn reformat_file(
         &self,
@@ -80,11 +87,11 @@ impl FormatOptions {
         inplace: bool,
         nobackup: bool,
     ) -> Result<()> {
-        let content = std::fs::read_to_string(path)?;
-        let formatted = self.reformat_text(&content);
+        let content = std::fs::read(path)?;
+        let formatted = self.reformat_bytes(&content)?;
 
         // Skip write if content is unchanged (preserves mtime, avoids I/O)
-        if inplace && formatted == content {
+        if inplace && formatted.as_bytes() == content {
             return Ok(());
         }
 

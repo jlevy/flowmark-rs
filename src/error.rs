@@ -3,6 +3,8 @@
 /// Errors that can occur during flowmark operations.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    #[error("input is not valid UTF-8")]
+    InvalidUtf8,
     #[error("I/O error")]
     Io(#[from] std::io::Error),
 }

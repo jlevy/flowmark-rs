@@ -5,6 +5,7 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
+use crate::preservation::ProtectedSource;
 use crate::wrapping::atomic_patterns::ATOMIC_CONSTRUCT_PATTERN;
 use crate::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacent_tags};
 
@@ -226,6 +227,72 @@ pub fn wrap_paragraph_lines(
     lines
 }
 
+/// Wrap parser-facing words while measuring protected tokens by their authored source.
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn wrap_paragraph_lines_protected(
+    text: &str,
+    width: usize,
+    initial_column: usize,
+    subsequent_offset: usize,
+    drop_whitespace: bool,
+    is_markdown: bool,
+    protected: &ProtectedSource,
+) -> Vec<String> {
+    if width == 0 {
+        let collapsed = WHITESPACE_RE.replace_all(text, " ");
+        let collapsed = if drop_whitespace { collapsed.trim() } else { &collapsed };
+        return (!collapsed.is_empty()).then(|| collapsed.to_string()).into_iter().collect();
+    }
+
+    let normalized = WHITESPACE_RE.replace_all(text, " ");
+    let words = html_md_word_split(&normalized);
+    let mut lines = Vec::new();
+    let mut current_line = Vec::<String>::new();
+    let mut current_width = initial_column;
+    let mut first_line = true;
+
+    for word in words {
+        let metrics = protected
+            .measure_inline_text(&word)
+            .expect("scanner-selected preservation tokens must remain canonical during wrapping");
+        let space_width = usize::from(!current_line.is_empty());
+        if current_width + space_width + metrics.first_width <= width {
+            current_line.push(word);
+            if metrics.has_authored_break {
+                current_width = metrics.final_width;
+                first_line = false;
+            } else {
+                current_width += space_width + metrics.final_width;
+            }
+            continue;
+        }
+
+        if !current_line.is_empty() {
+            let line = current_line.join(" ");
+            let line = if drop_whitespace { line.trim().to_owned() } else { line };
+            lines.push(line);
+            first_line = false;
+        }
+        let escaped = if is_markdown && !first_line { markdown_escape_word(&word) } else { word };
+        let escaped_metrics = protected
+            .measure_inline_text(&escaped)
+            .expect("escaped preservation word must remain canonical");
+        current_line = vec![escaped];
+        current_width = if escaped_metrics.has_authored_break {
+            first_line = false;
+            escaped_metrics.final_width
+        } else {
+            subsequent_offset + escaped_metrics.final_width
+        };
+    }
+    if !current_line.is_empty() {
+        let line = current_line.join(" ");
+        let line = if drop_whitespace { line.trim().to_owned() } else { line };
+        lines.push(line);
+    }
+    lines
+}
+
 /// Wrap lines of a single paragraph of plain text, returning a new string.
 #[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn wrap_paragraph(
@@ -264,6 +331,35 @@ pub fn wrap_paragraph(
 
     // Restore original adjacency for paired tags
     denormalize_adjacent_tags(&result)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn wrap_paragraph_protected(
+    text: &str,
+    width: usize,
+    initial_indent: &str,
+    subsequent_indent: &str,
+    protected: &ProtectedSource,
+    is_markdown: bool,
+) -> String {
+    let mut lines = wrap_paragraph_lines_protected(
+        text,
+        width,
+        initial_indent.chars().count(),
+        subsequent_indent.chars().count(),
+        true,
+        is_markdown,
+        protected,
+    );
+    if !initial_indent.is_empty() && !lines.is_empty() {
+        lines[0] = format!("{initial_indent}{}", lines[0]);
+    }
+    if !subsequent_indent.is_empty() && lines.len() > 1 {
+        for line in lines.iter_mut().skip(1) {
+            *line = format!("{subsequent_indent}{line}");
+        }
+    }
+    denormalize_adjacent_tags(&lines.join("\n"))
 }
 
 #[cfg(test)]

@@ -215,11 +215,16 @@ use comrak::{Arena, Options};
 use crate::config::{DEFAULT_MIN_LINE_LEN, ListSpacing};
 use crate::formatter::markdown::flowmark_comrak_options;
 use crate::parser::frontmatter::split_frontmatter;
+use crate::preservation::{
+    finalize_output, normalize_source, protect_source, restore_source, scan_protected_regions,
+};
 use crate::transform::cleanups::doc_cleanups;
 use crate::typography::ellipses::ellipses as apply_ellipses;
 use crate::typography::quotes::smart_quotes;
 use crate::wrapping::LineWrapper;
-use crate::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
+use crate::wrapping::line_wrappers::{
+    line_wrap_by_sentence_protected, line_wrap_to_width_protected,
+};
 use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
 
 /// Aggregated stage-level performance counters for `fill_markdown`.
@@ -301,6 +306,18 @@ fn record_fill_perf_sample(sample: FillPerfSample) {
     if let Ok(mut stats) = PERF_STATS.lock() {
         stats.add_sample(sample);
     }
+}
+
+fn split_leading_blank_lines(text: &str) -> (String, String) {
+    let mut consumed = 0;
+    for line in text.split_inclusive('\n') {
+        if !line.trim().is_empty() {
+            break;
+        }
+        consumed += line.len();
+    }
+    let prefix = if consumed > 0 { "\n" } else { "" };
+    (prefix.to_owned(), text[consumed..].to_owned())
 }
 
 // ===== PUA (Private Use Area) markers =====
@@ -2678,27 +2695,35 @@ pub fn fill_markdown(
         '`', '"', '%', '&', '\'', ',', '/', ':', ';', '<', '=', '?', '@', '^',
     ];
 
-    let line_wrapper = line_wrapper.unwrap_or_else(|| {
-        if semantic {
-            line_wrap_by_sentence(width, DEFAULT_MIN_LINE_LEN, true)
-        } else {
-            line_wrap_to_width(width, true)
-        }
-    });
     let perf_enabled = PERF_STATS_ENABLED.load(Ordering::Relaxed);
     let mut perf_sample = FillPerfSample::default();
 
-    // Extract frontmatter before any processing
-    let (frontmatter, content) = split_frontmatter(markdown_text);
-
-    let mut text = if frontmatter.is_empty() { markdown_text.to_string() } else { content };
-
+    let mut input = markdown_text.to_owned();
     if dedent_input {
-        text = dedent(&text);
+        input = dedent(&input);
     }
+    let source = normalize_source(&input);
+    let regions = scan_protected_regions(&source)
+        .expect("valid UTF-8 source must produce canonical preservation regions");
+    let protected = protect_source(&source, regions)
+        .expect("canonical preservation regions must produce parser-safe source");
+    let line_wrapper = line_wrapper.unwrap_or_else(|| {
+        if semantic {
+            line_wrap_by_sentence_protected(width, DEFAULT_MIN_LINE_LEN, true, protected.clone())
+        } else {
+            line_wrap_to_width_protected(width, true, protected.clone())
+        }
+    });
 
-    text = text.trim().to_string();
-    text.push('\n');
+    // Frontmatter stays outside comrak only after document normalization and
+    // protection have established the complete source contract.
+    let (frontmatter, mut text) = split_frontmatter(&protected.text);
+    let mut leading_blank_lines = String::new();
+    if frontmatter.is_empty() {
+        (leading_blank_lines, text) = split_leading_blank_lines(&text);
+    } else {
+        text = text.trim_start_matches('\n').to_owned();
+    }
     let preprocess_start = perf_enabled.then(Instant::now);
 
     // === Pre-parse workarounds (see module-level COMRAK-WORKAROUND docs) ===
@@ -2711,6 +2736,9 @@ pub fn fill_markdown(
     // reference *links* with PUA markers. Must happen before escape placeholder
     // substitution, which would mangle `\[` etc.
     let (ref_defs, text_without_defs) = extract_link_ref_defs(&text);
+    // Shield escaped opening brackets before reference-link regexes run. An
+    // authored `\[label]` is literal Markdown, not a shortcut reference link.
+    let text_without_defs = protect_escapes_outside_code(&text_without_defs, &['[']);
     text = inline_image_refs(&text_without_defs, &ref_defs);
     text = encode_ref_links(&text, &ref_defs);
 
@@ -2792,11 +2820,15 @@ pub fn fill_markdown(
     // COMRAK-WORKAROUND12: Normalize comrak output formatting differences.
     let result = normalize_comrak_output(&result);
 
-    // Python always outputs at least a trailing newline for empty/whitespace input.
-    let result = if result.is_empty() { "\n".to_string() } else { result };
-
     // Reattach frontmatter if present
-    let result = if frontmatter.is_empty() { result } else { format!("{frontmatter}{result}") };
+    let result = if frontmatter.is_empty() {
+        format!("{leading_blank_lines}{result}")
+    } else {
+        format!("{frontmatter}{result}")
+    };
+    let restored = restore_source(&result, &protected)
+        .expect("parser and renderer must preserve the canonical token stream");
+    let result = finalize_output(&source, &restored);
     if let Some(start) = postprocess_start {
         perf_sample.postprocess = start.elapsed();
     }

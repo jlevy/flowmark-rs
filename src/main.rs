@@ -551,14 +551,14 @@ Use `flowmark --docs` for full documentation.
         nobackup: bool,
         cache: &IncrementalCache,
     ) -> Result<bool> {
-        let content = std::fs::read_to_string(path)?;
-        if cache.is_known_formatted(path, content.as_bytes()) {
+        let content = std::fs::read(path)?;
+        if cache.is_known_formatted(path, &content) {
             return Ok(true);
         }
 
-        let formatted = opts.reformat_text(&content);
-        if formatted == content {
-            cache.record_formatted(path, content.as_bytes());
+        let formatted = opts.reformat_bytes(&content)?;
+        if formatted.as_bytes() == content {
+            cache.record_formatted(path, &content);
             return Ok(false);
         }
 
@@ -798,14 +798,13 @@ Use `flowmark --docs` for full documentation.
             let mut changed: Vec<&str> = Vec::new();
             for file in &resolved_files {
                 let content = if file == "-" {
-                    let mut input = String::new();
-                    std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
+                    let mut input = Vec::new();
+                    std::io::stdin().read_to_end(&mut input).context("failed to read stdin")?;
                     input
                 } else {
-                    std::fs::read_to_string(file)
-                        .with_context(|| format!("failed to read {file}"))?
+                    std::fs::read(file).with_context(|| format!("failed to read {file}"))?
                 };
-                if opts.reformat_text(&content) != content {
+                if opts.reformat_bytes(&content)?.as_bytes() != content {
                     changed.push(file);
                 }
             }
@@ -843,9 +842,9 @@ Use `flowmark --docs` for full documentation.
             std::process::exit(1);
         }
 
-        // Python currently permits an explicit output path only for stdin.
+        // A direct single input (stdin or file) may use an explicit output path.
         let has_explicit_output = args.output != "-";
-        if has_explicit_output && resolved_files.iter().any(|file| file != "-") {
+        if has_explicit_output && resolved_files.len() != 1 {
             eprintln!(
                 "Error: Cannot specify output file when processing multiple files \
                  (use --inplace instead)"
@@ -859,10 +858,9 @@ Use `flowmark --docs` for full documentation.
 
         // Handle stdin sequentially
         for _file in &stdin_files {
-            let mut input = String::new();
-            std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
-
-            let output = opts.reformat_text(&input);
+            let mut input = Vec::new();
+            std::io::stdin().read_to_end(&mut input).context("failed to read stdin")?;
+            let output = opts.reformat_bytes(&input)?;
             if has_explicit_output {
                 let output_path = PathBuf::from(&args.output);
                 if let Some(parent) = output_path.parent() {
@@ -1057,6 +1055,14 @@ fn main() -> std::process::ExitCode {
     #[cfg(feature = "cli")]
     {
         if let Err(e) = cli::run() {
+            if e.chain().any(|cause| {
+                cause
+                    .downcast_ref::<flowmark::Error>()
+                    .is_some_and(|error| matches!(error, flowmark::Error::InvalidUtf8))
+            }) {
+                eprintln!("Error: input is not valid UTF-8");
+                return std::process::ExitCode::from(2);
+            }
             eprintln!("error: {e:#}");
             return std::process::ExitCode::FAILURE;
         }
