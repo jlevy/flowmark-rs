@@ -1,7 +1,7 @@
 //! Collision-safe parser substitution and fail-closed restoration.
 
 use super::model::{
-    NormalizedSource, PreservationError, ProtectedRegion, RegionForm, validate_regions,
+    NormalizedSource, PreservationError, ProtectedRegion, RegionForm, RegionKind, validate_regions,
 };
 
 const ESCAPE_MARKER: char = '\u{f0000}';
@@ -28,7 +28,58 @@ pub(crate) struct ProtectedMetrics {
     pub(crate) has_authored_break: bool,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum InlineRewriteSegment<'a> {
+    Mutable(&'a str),
+    Immutable { source: &'a str, context: String },
+}
+
 impl ProtectedSource {
+    /// Split parser-facing text into mutable gaps and immutable preservation tokens.
+    ///
+    /// Code-span tokens contribute their CommonMark-normalized body only as rewrite
+    /// context. The authored token itself remains immutable and is restored from the
+    /// side table after rendering.
+    pub(crate) fn inline_rewrite_segments<'a>(
+        &self,
+        text: &'a str,
+    ) -> Result<Vec<InlineRewriteSegment<'a>>, PreservationError> {
+        let mut segments = Vec::new();
+        let mut previous_end = 0;
+        for (start, _) in text.match_indices(TOKEN_START) {
+            if start < previous_end {
+                continue;
+            }
+            if start > previous_end {
+                segments.push(InlineRewriteSegment::Mutable(&text[previous_end..start]));
+            }
+            let token_end = text[start..]
+                .char_indices()
+                .nth(TOKEN_LENGTH)
+                .map_or(text.len(), |(offset, _)| start + offset);
+            let token = &text[start..token_end];
+            let index = parse_token(token)?;
+            let region = self
+                .regions
+                .get(index)
+                .ok_or(PreservationError("unknown preservation token during rewrite"))?;
+            if self.tokens.get(index).map(String::as_str) != Some(token) {
+                return Err(PreservationError("unknown token reached inline rewrite"));
+            }
+            let context = if region.kind == RegionKind::CodeSpan {
+                code_span_rewrite_context(&region.source)?
+            } else {
+                token.to_owned()
+            };
+            segments.push(InlineRewriteSegment::Immutable { source: token, context });
+            previous_end = token_end;
+        }
+        if previous_end < text.len() {
+            segments.push(InlineRewriteSegment::Mutable(&text[previous_end..]));
+        }
+        Ok(segments)
+    }
+
     pub(crate) fn measure_inline_text(
         &self,
         text: &str,
@@ -102,6 +153,22 @@ impl ProtectedSource {
             has_authored_break,
         })
     }
+}
+
+fn code_span_rewrite_context(source: &str) -> Result<String, PreservationError> {
+    let delimiter_width = source.bytes().take_while(|byte| *byte == b'`').count();
+    if delimiter_width == 0
+        || source.len() < delimiter_width * 2
+        || !source.ends_with(&"`".repeat(delimiter_width))
+    {
+        return Err(PreservationError("protected code span has malformed delimiters"));
+    }
+    let mut body = source[delimiter_width..source.len() - delimiter_width].replace('\n', " ");
+    if !body.trim().is_empty() && body.starts_with(' ') && body.ends_with(' ') {
+        body.remove(0);
+        body.pop();
+    }
+    Ok(body)
 }
 
 fn escape_authored_markers(text: &str) -> String {

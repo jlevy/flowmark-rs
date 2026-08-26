@@ -926,11 +926,7 @@ pub(crate) fn scan_protected_regions(
 
     let mut inline_candidates = Vec::new();
     for (start, end) in inline_scopes(&source.text, &lines, &excluded) {
-        inline_candidates.extend(
-            scan_inline_scope(&source.text, start, end)
-                .into_iter()
-                .filter(|candidate| candidate.kind != RegionKind::CodeSpan),
-        );
+        inline_candidates.extend(scan_inline_scope(&source.text, start, end));
     }
 
     let mut candidates = block_candidates;
@@ -958,7 +954,7 @@ mod tests {
         let source = normalize_source("Code `$not$`, math $a * b$, then $c$.\n");
         let regions = scan_protected_regions(&source).expect("valid scan");
         let slices: Vec<&str> = regions.iter().map(|region| region.source.as_str()).collect();
-        assert_eq!(slices, ["$a * b$", "$c$"]);
+        assert_eq!(slices, ["`$not$`", "$a * b$", "$c$"]);
     }
 
     #[test]

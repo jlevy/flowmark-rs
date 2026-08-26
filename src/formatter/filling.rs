@@ -216,7 +216,8 @@ use crate::config::{DEFAULT_MIN_LINE_LEN, ListSpacing};
 use crate::formatter::markdown::flowmark_comrak_options;
 use crate::parser::frontmatter::split_frontmatter;
 use crate::preservation::{
-    finalize_output, normalize_source, protect_source, restore_source, scan_protected_regions,
+    InlineRewriteSegment, ProtectedSource, finalize_output, normalize_source, protect_source,
+    restore_source, scan_protected_regions,
 };
 use crate::transform::cleanups::doc_cleanups;
 use crate::typography::ellipses::ellipses as apply_ellipses;
@@ -2782,7 +2783,7 @@ pub fn fill_markdown(
         doc_cleanups(root);
     }
     if smartquotes {
-        apply_smart_quotes_to_ast(root);
+        apply_smart_quotes_to_ast(root, &protected);
     }
     if ellipses {
         apply_ellipses_to_ast(root);
@@ -2840,14 +2841,14 @@ pub fn fill_markdown(
 
 /// Apply smart quotes to all text nodes in the AST.
 /// Works at the paragraph level so quotes spanning inline elements are handled.
-fn apply_smart_quotes_to_ast<'a>(root: &'a AstNode<'a>) {
+fn apply_smart_quotes_to_ast<'a>(root: &'a AstNode<'a>, protected: &ProtectedSource) {
     for node in root.descendants() {
         let is_para = matches!(
             node.data.borrow().value,
             NodeValue::Paragraph | NodeValue::Heading(_) | NodeValue::TableCell
         );
         if is_para {
-            apply_smart_quotes_to_inline_tree(node);
+            apply_smart_quotes_to_inline_tree(node, protected);
         }
     }
 }
@@ -2855,27 +2856,46 @@ fn apply_smart_quotes_to_ast<'a>(root: &'a AstNode<'a>) {
 /// Collect text nodes from inline tree, apply smart quotes to concatenated text,
 /// then redistribute back.
 #[allow(clippy::items_after_statements)]
-fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
-    // Collect all text nodes with their content
-    let mut text_nodes: Vec<&'a AstNode<'a>> = Vec::new();
+fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>, protected: &ProtectedSource) {
+    #[derive(Debug)]
+    enum RewritePart {
+        Mutable { start: usize, len: usize },
+        Immutable(String),
+    }
+
+    // Collect all text nodes and the mutable/immutable pieces needed to rebuild them.
+    let mut text_nodes: Vec<(&'a AstNode<'a>, Vec<RewritePart>)> = Vec::new();
     let mut concatenated = String::new();
-    let mut char_boundaries: Vec<(usize, usize)> = Vec::new(); // (start, len) in chars
 
     fn collect_text_nodes<'a>(
         node: &'a AstNode<'a>,
-        text_nodes: &mut Vec<&'a AstNode<'a>>,
+        protected: &ProtectedSource,
+        text_nodes: &mut Vec<(&'a AstNode<'a>, Vec<RewritePart>)>,
         concatenated: &mut String,
-        char_boundaries: &mut Vec<(usize, usize)>,
     ) {
         for child in node.children() {
             let data = child.data.borrow();
             match &data.value {
                 NodeValue::Text(text) => {
-                    let start = concatenated.chars().count();
-                    let len = text.chars().count();
-                    concatenated.push_str(text);
-                    char_boundaries.push((start, len));
-                    text_nodes.push(child);
+                    let mut parts = Vec::new();
+                    for segment in protected
+                        .inline_rewrite_segments(text)
+                        .expect("protected tokens in the AST must remain canonical")
+                    {
+                        match segment {
+                            InlineRewriteSegment::Mutable(value) => {
+                                let start = concatenated.chars().count();
+                                let len = value.chars().count();
+                                concatenated.push_str(value);
+                                parts.push(RewritePart::Mutable { start, len });
+                            }
+                            InlineRewriteSegment::Immutable { source, context } => {
+                                concatenated.push_str(&context);
+                                parts.push(RewritePart::Immutable(source.to_owned()));
+                            }
+                        }
+                    }
+                    text_nodes.push((child, parts));
                 }
                 NodeValue::Code(code) => {
                     // Skip code spans - don't apply smart quotes inside them.
@@ -2907,13 +2927,13 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
                 _ => {
                     // Recurse into emphasis, strong, link, etc.
                     drop(data);
-                    collect_text_nodes(child, text_nodes, concatenated, char_boundaries);
+                    collect_text_nodes(child, protected, text_nodes, concatenated);
                 }
             }
         }
     }
 
-    collect_text_nodes(node, &mut text_nodes, &mut concatenated, &mut char_boundaries);
+    collect_text_nodes(node, protected, &mut text_nodes, &mut concatenated);
 
     if text_nodes.is_empty() {
         return;
@@ -2924,14 +2944,19 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
 
     // Redistribute characters back to text nodes
     let converted_chars: Vec<char> = converted.chars().collect();
-    for (i, text_node) in text_nodes.iter().enumerate() {
-        let (start, len) = char_boundaries[i];
-        if start + len <= converted_chars.len() {
-            let new_text: String = converted_chars[start..start + len].iter().collect();
-            let mut data = text_node.data.borrow_mut();
-            if let NodeValue::Text(ref mut text) = data.value {
-                *text = new_text.into();
+    for (text_node, parts) in text_nodes {
+        let mut rebuilt = String::new();
+        for part in parts {
+            match part {
+                RewritePart::Mutable { start, len } => {
+                    rebuilt.extend(&converted_chars[start..start + len]);
+                }
+                RewritePart::Immutable(source) => rebuilt.push_str(&source),
             }
+        }
+        let mut data = text_node.data.borrow_mut();
+        if let NodeValue::Text(ref mut text) = data.value {
+            *text = rebuilt.into();
         }
     }
 }
