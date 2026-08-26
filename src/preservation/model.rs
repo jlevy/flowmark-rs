@@ -25,6 +25,7 @@ pub(crate) enum RegionKind {
     PandocMultilineTable,
     ObsidianCallout,
     ColonContainer,
+    TomlFrontmatter,
     MathDollarBlock,
     MathBracketBlock,
     MathEnvironmentBlock,

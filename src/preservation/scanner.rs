@@ -969,9 +969,35 @@ fn scan_colon_containers(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<C
     candidates
 }
 
+fn is_root_exact_delimiter(source: &str, line: &Line, delimiter: &str) -> bool {
+    line.key.is_empty() && !line.lazy && source.get(line.start..line.content_end) == Some(delimiter)
+}
+
+fn scan_toml_frontmatter(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let Some(opener) = lines.first() else {
+        return Vec::new();
+    };
+    if opaque[opener.index] || !is_root_exact_delimiter(source, opener, "+++") {
+        return Vec::new();
+    }
+    for closer in lines.iter().skip(1) {
+        if is_root_exact_delimiter(source, closer, "+++") {
+            return vec![Candidate::block(
+                RegionKind::TomlFrontmatter,
+                opener.start,
+                closer.end,
+                opener.context,
+                opener.scaffold(source).to_owned(),
+            )];
+        }
+    }
+    Vec::new()
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
-    let mut candidates = scan_pandoc_multiline_tables(text, lines, opaque);
+    let mut candidates = scan_toml_frontmatter(text, lines, opaque);
+    candidates.extend(scan_pandoc_multiline_tables(text, lines, opaque));
     candidates.extend(scan_obsidian_callouts(text, lines, opaque));
     candidates.extend(scan_colon_containers(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
@@ -1222,5 +1248,15 @@ mod tests {
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].kind, RegionKind::ColonContainer);
         assert_eq!(regions[0].source, source.text);
+    }
+
+    #[test]
+    fn toml_frontmatter_requires_exact_root_delimiters() {
+        let source =
+            normalize_source("+++\ntitle = \"Exact\"\n+++\n\n  +++\nnot frontmatter\n  +++\n");
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].kind, RegionKind::TomlFrontmatter);
+        assert_eq!(regions[0].source, "+++\ntitle = \"Exact\"\n+++\n");
     }
 }

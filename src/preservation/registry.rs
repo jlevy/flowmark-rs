@@ -10,7 +10,8 @@ pub(crate) const fn priority(kind: RegionKind) -> u8 {
         RegionKind::MathDollarInline | RegionKind::MathDoubleDollarInline => 40,
         RegionKind::PandocMultilineTable
         | RegionKind::ObsidianCallout
-        | RegionKind::ColonContainer => 45,
+        | RegionKind::ColonContainer
+        | RegionKind::TomlFrontmatter => 45,
         RegionKind::MathDollarBlock
         | RegionKind::MathBracketBlock
         | RegionKind::MathEnvironmentBlock => 50,
@@ -29,6 +30,7 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
         RegionKind::PandocMultilineTable => "pandoc_multiline_table",
         RegionKind::ObsidianCallout => "obsidian_callout",
         RegionKind::ColonContainer => "colon_container",
+        RegionKind::TomlFrontmatter => "toml_frontmatter",
         RegionKind::MathDollarBlock => "math_dollar_block",
         RegionKind::MathBracketBlock => "math_bracket_block",
         RegionKind::MathEnvironmentBlock => "math_environment_block",
