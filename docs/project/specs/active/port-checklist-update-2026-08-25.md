@@ -28,6 +28,8 @@ It remains active until the release gates at the end are satisfied.
 | Shared schema | 1 |
 | Math implementation | `b76f635` |
 | Code/extensions implementation | `b040416` through `bb8eb08` |
+| Native/test alignment | `bd7248e` through `c07bc61` |
+| Hardened audit harness | `ab42ba3` |
 | Sync artifacts | `docs/sync-artifacts/2026-08-26-sync-093c924-to-0d2bebb.md`; `docs/sync-artifacts/2026-08-26-sync-0d2bebb-to-e9d5805.md` |
 
 ## Flowmark Adaptations to the Canonical Checklist
@@ -249,6 +251,9 @@ and traceability update.
 - [x] Re-run the final local matrix: all-features and no-default-features tests, clippy,
   rustdoc warnings, build warnings, crate verification, packaged docs/skill smoke,
   administration lint/types/tests, and mapping validation.
+- [x] Retain the final 670-file transition audit at
+  `target/corpus-parity/2026-08-26-b027fde-final/`; both binaries selected every file
+  and produced zero byte differences.
 
 ## Phase 8: Release Acceptance
 
