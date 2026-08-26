@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "468eb98ab2e1d42986a97268e58fe528e1b99316"
+upstream_commit = "d4b9cd71a135bc23ed5a2b37c02ceb4f712c0188"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -26,6 +26,12 @@ status = "known-divergences"
 id = "FM-CONFORMANCE-001"
 python_bead = "fm-ltof"
 rust_bead = "fm-gc8d"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-ATTRIBUTE-GROUP-001"
+python_bead = "fm-c57j"
+rust_bead = "fm-c57j"
 status = "implemented"
 
 [[change]]

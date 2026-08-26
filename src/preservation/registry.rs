@@ -8,6 +8,7 @@ pub(crate) const fn priority(kind: RegionKind) -> u8 {
         RegionKind::RawHtmlInline => 15,
         RegionKind::CodeSpan => 20,
         RegionKind::MathParenInline | RegionKind::MathEnvironmentInline => 30,
+        RegionKind::AttributeGroupInline => 35,
         RegionKind::MathDollarInline | RegionKind::MathDoubleDollarInline => 40,
         RegionKind::PandocMultilineTable
         | RegionKind::ObsidianCallout
@@ -15,7 +16,8 @@ pub(crate) const fn priority(kind: RegionKind) -> u8 {
         | RegionKind::TomlFrontmatter
         | RegionKind::DefinitionList
         | RegionKind::PandocGridTable
-        | RegionKind::RawHtmlBlock => 45,
+        | RegionKind::RawHtmlBlock
+        | RegionKind::AttributeGroupBlock => 45,
         RegionKind::MathDollarBlock
         | RegionKind::MathBracketBlock
         | RegionKind::MathEnvironmentBlock => 50,
@@ -30,6 +32,7 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
         RegionKind::CodeSpan => "code_span",
         RegionKind::MathParenInline => "math_paren_inline",
         RegionKind::MathEnvironmentInline => "math_environment_inline",
+        RegionKind::AttributeGroupInline => "attribute_group_inline",
         RegionKind::MathDollarInline => "math_dollar_inline",
         RegionKind::MathDoubleDollarInline => "math_double_dollar_inline",
         RegionKind::PandocMultilineTable => "pandoc_multiline_table",
@@ -39,6 +42,7 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
         RegionKind::DefinitionList => "definition_list",
         RegionKind::PandocGridTable => "pandoc_grid_table",
         RegionKind::RawHtmlBlock => "raw_html_block",
+        RegionKind::AttributeGroupBlock => "attribute_group_block",
         RegionKind::MathDollarBlock => "math_dollar_block",
         RegionKind::MathBracketBlock => "math_bracket_block",
         RegionKind::MathEnvironmentBlock => "math_environment_block",

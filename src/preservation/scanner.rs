@@ -509,6 +509,177 @@ fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     candidates
 }
 
+fn attribute_atom_end(text: &str, mut index: usize, end: usize, value: bool) -> Option<usize> {
+    let start = index;
+    while index < end {
+        let scalar = text[index..end].chars().next().expect("attribute atom boundary");
+        if scalar.is_whitespace() {
+            break;
+        }
+        if scalar == '\\' {
+            index += 1;
+            let escaped = text[index..end].chars().next()?;
+            index += escaped.len_utf8();
+            continue;
+        }
+        if matches!(scalar, '{' | '}' | '"' | '\'') || !value && scalar == '=' {
+            break;
+        }
+        index += scalar.len_utf8();
+    }
+    (index > start).then_some(index)
+}
+
+fn valid_attribute_body(text: &str, start: usize, end: usize) -> bool {
+    let mut index = start;
+    let mut attributes = 0;
+    loop {
+        while index < end {
+            let scalar = text[index..end].chars().next().expect("attribute whitespace boundary");
+            if !scalar.is_whitespace() {
+                break;
+            }
+            index += scalar.len_utf8();
+        }
+        if index == end {
+            return attributes > 0;
+        }
+        if matches!(text.as_bytes()[index], b'.' | b'#') {
+            let Some(token_end) = attribute_atom_end(text, index + 1, end, false) else {
+                return false;
+            };
+            index = token_end;
+            attributes += 1;
+            continue;
+        }
+
+        let Some(key_end) = attribute_atom_end(text, index, end, false) else {
+            return false;
+        };
+        if key_end >= end || text.as_bytes()[key_end] != b'=' {
+            return false;
+        }
+        index = key_end + 1;
+        if index < end && matches!(text.as_bytes()[index], b'"' | b'\'') {
+            let quote = text.as_bytes()[index];
+            index += 1;
+            while index < end && text.as_bytes()[index] != quote {
+                if text.as_bytes()[index] == b'\\' {
+                    index += 1;
+                    if index >= end {
+                        return false;
+                    }
+                }
+                index +=
+                    text[index..end].chars().next().expect("quoted attribute boundary").len_utf8();
+            }
+            if index >= end {
+                return false;
+            }
+            index += 1;
+        } else {
+            let Some(value_end) = attribute_atom_end(text, index, end, true) else {
+                return false;
+            };
+            index = value_end;
+        }
+        attributes += 1;
+    }
+}
+
+fn attribute_group_end(text: &str, start: usize, end: usize) -> Option<usize> {
+    if start >= end || text.as_bytes()[start] != b'{' || !escape_is_even(text, start) {
+        return None;
+    }
+    let mut index = start + 1;
+    let mut quote = None;
+    while index < end {
+        let scalar = text[index..end].chars().next()?;
+        if scalar == '\n' {
+            return None;
+        }
+        if scalar == '\\' {
+            index += 1;
+            let escaped = text[index..end].chars().next()?;
+            index += escaped.len_utf8();
+            continue;
+        }
+        match quote {
+            Some(active) if scalar == active => quote = None,
+            None if matches!(scalar, '"' | '\'') => quote = Some(scalar),
+            None if scalar == '{' => return None,
+            None if scalar == '}' => {
+                return valid_attribute_body(text, start + 1, index).then_some(index + 1);
+            }
+            Some(_) | None => {}
+        }
+        index += scalar.len_utf8();
+    }
+    None
+}
+
+fn is_setext_heading(payload: &str) -> bool {
+    let payload = payload.trim_end_matches([' ', '\t']);
+    let indent = payload.bytes().take_while(|byte| *byte == b' ').count();
+    if indent > 3 {
+        return false;
+    }
+    let rule = &payload[indent..];
+    !rule.is_empty()
+        && (rule.bytes().all(|byte| byte == b'=') || rule.bytes().all(|byte| byte == b'-'))
+}
+
+fn compatible_attribute_predecessor(
+    text: &str,
+    start: usize,
+    group_end: usize,
+    scope_end: usize,
+) -> bool {
+    let Some(previous) = text[..start].chars().next_back() else {
+        return false;
+    };
+    if !previous.is_whitespace() {
+        return matches!(previous, ')' | ']' | '}' | '`' | '$' | '>' | '*' | '_');
+    }
+    let line_start = text[..start].rfind('\n').map_or(0, |index| index + 1);
+    if is_heading(text[line_start..start].trim_start_matches([' ', '\t'])) {
+        return true;
+    }
+    let Some(relative_line_end) = text[group_end..scope_end].find('\n') else {
+        return false;
+    };
+    let line_end = group_end + relative_line_end;
+    if !text[group_end..line_end].trim_matches([' ', '\t']).is_empty() {
+        return false;
+    }
+    let next_end = text[line_end + 1..scope_end]
+        .find('\n')
+        .map_or(scope_end, |relative| line_end + 1 + relative);
+    is_setext_heading(&text[line_end + 1..next_end])
+}
+
+fn scan_attribute_groups(text: &str, start: usize, end: usize) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    let mut index = start;
+    while index < end {
+        if text.as_bytes()[index] != b'{' {
+            index += text[index..end].chars().next().map_or(1, char::len_utf8);
+            continue;
+        }
+        let Some(group_end) = attribute_group_end(text, index, end) else {
+            index += 1;
+            continue;
+        };
+        if !compatible_attribute_predecessor(text, index, group_end, end) {
+            index += 1;
+            continue;
+        }
+        candidates.push(Candidate::inline(RegionKind::AttributeGroupInline, index, group_end));
+        index = group_end;
+    }
+    candidates
+}
+
 fn scan_paren_math(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     let bytes = text.as_bytes();
     let mut opener = None;
@@ -685,6 +856,7 @@ fn scan_inline_scope(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     candidates.extend(scan_backticks(text, start, end));
     candidates.extend(scan_paren_math(text, start, end));
     candidates.extend(scan_inline_environments(text, start, end));
+    candidates.extend(scan_attribute_groups(text, start, end));
     candidates.extend(scan_dollars(text, start, end));
     arbitrate(candidates, start, end)
 }
@@ -1559,6 +1731,27 @@ fn scan_raw_html_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Ca
     candidates
 }
 
+fn scan_attribute_group_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    for line in lines {
+        let payload = line.payload(source);
+        if opaque[line.index] || line.lazy || !payload.starts_with('{') {
+            continue;
+        }
+        if attribute_group_end(payload, 0, payload.len()) != Some(payload.len()) {
+            continue;
+        }
+        candidates.push(Candidate::block(
+            RegionKind::AttributeGroupBlock,
+            line.start,
+            line.end,
+            line.context,
+            line.scaffold(source).to_owned(),
+        ));
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_toml_frontmatter(text, lines, opaque);
@@ -1568,6 +1761,7 @@ fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Ve
     candidates.extend(scan_definition_lists(text, lines, opaque));
     candidates.extend(scan_pandoc_grid_tables(text, lines, opaque));
     candidates.extend(scan_raw_html_blocks(text, lines, opaque));
+    candidates.extend(scan_attribute_group_blocks(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -1897,5 +2091,19 @@ mod tests {
         assert_eq!(regions[0].scaffold_prefix, "");
         assert_eq!(regions[1].kind, RegionKind::RawHtmlInline);
         assert_eq!(regions[1].source, "<x-card\n data-a=\"raw\">");
+    }
+
+    #[test]
+    fn attribute_groups_require_valid_attributes_and_compatible_placement() {
+        let source = normalize_source(
+            "# Heading {#id .wide key=\"raw ...\"}\n\n[link](url){.button}{#second} ordinary {.detached}\n\n{.standalone data-ü=\"välue\"}\n\n[bad](url){#}\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 4);
+        assert_eq!(regions[0].kind, RegionKind::AttributeGroupInline);
+        assert_eq!(regions[1].source, "{.button}");
+        assert_eq!(regions[2].source, "{#second}");
+        assert_eq!(regions[3].kind, RegionKind::AttributeGroupBlock);
+        assert_eq!(regions[3].source, "{.standalone data-ü=\"välue\"}\n");
     }
 }
