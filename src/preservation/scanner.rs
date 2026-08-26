@@ -44,8 +44,7 @@ impl Line {
     }
 
     fn scaffold<'a>(&self, source: &'a str) -> &'a str {
-        let (payload_start, _) = line_payload_bounds(source, self);
-        &source[self.start..payload_start]
+        &source[self.start..self.content_start]
     }
 
     fn is_blank(&self, source: &str) -> bool {
@@ -443,6 +442,69 @@ fn scan_composite_math(text: &str, start: usize, end: usize) -> Vec<Candidate> {
         {
             myst.insert(length, run_start - 6);
         }
+    }
+    candidates
+}
+
+fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
+    let bytes = text.as_bytes();
+    let mut candidates = Vec::new();
+    let mut index = start;
+    while index < end {
+        if bytes[index] != b'<' || index + 1 >= end {
+            index += 1;
+            continue;
+        }
+        let next = text[index + 1..end].chars().next().expect("nonempty angle-span tail");
+        if next.is_whitespace() || matches!(next, '<' | '>') {
+            index += 1;
+            continue;
+        }
+
+        let terminator = if text[index..end].starts_with("<!--") {
+            Some("-->")
+        } else if text[index..end].starts_with("<![CDATA[") {
+            Some("]]>")
+        } else if text[index..end].starts_with("<?") {
+            Some("?>")
+        } else {
+            None
+        };
+        if let Some(terminator) = terminator {
+            if let Some(relative) = text[index + 2..end].find(terminator) {
+                let span_end = index + 2 + relative + terminator.len();
+                candidates.push(Candidate::inline(RegionKind::RawHtmlInline, index, span_end));
+                index = span_end;
+                continue;
+            }
+            index += 1;
+            continue;
+        }
+
+        let fallback_close = bytes[index + 1..end].iter().position(|byte| *byte == b'>');
+        let mut quote = None;
+        let mut cursor = index + 1;
+        let mut close = None;
+        while cursor < end {
+            match (quote, bytes[cursor]) {
+                (Some(active), byte) if active == byte => quote = None,
+                (None, byte @ (b'\'' | b'"')) => quote = Some(byte),
+                (None, b'>') => {
+                    close = Some(cursor);
+                    break;
+                }
+                _ => {}
+            }
+            cursor += 1;
+        }
+        let close = close.or_else(|| fallback_close.map(|relative| index + 1 + relative));
+        let Some(close) = close else {
+            index += 1;
+            continue;
+        };
+        let span_end = close + 1;
+        candidates.push(Candidate::inline(RegionKind::RawHtmlInline, index, span_end));
+        index = span_end;
     }
     candidates
 }
@@ -1306,6 +1368,197 @@ fn scan_pandoc_grid_tables(source: &str, lines: &[Line], opaque: &[bool]) -> Vec
     candidates
 }
 
+enum HtmlBlockEnd {
+    Terminator(String),
+    BlankLine,
+}
+
+fn html_name_prefix<'a>(payload: &'a str, name: &str) -> Option<&'a str> {
+    let tail = payload.get(1..)?;
+    let tail = tail.get(name.len()..).filter(|_| tail[..name.len()].eq_ignore_ascii_case(name))?;
+    (tail.is_empty() || tail.starts_with([' ', '\t', '>']) || tail.starts_with("/>"))
+        .then_some(tail)
+}
+
+fn raw_html_tag(payload: &str) -> Option<String> {
+    ["script", "pre", "style", "textarea"]
+        .iter()
+        .find_map(|name| html_name_prefix(payload, name).map(|_| format!("</{name}>")))
+}
+
+fn starts_standard_html_tag(payload: &str) -> bool {
+    const TAGS: &[&str] = &[
+        "address",
+        "article",
+        "aside",
+        "base",
+        "basefont",
+        "blockquote",
+        "body",
+        "caption",
+        "center",
+        "col",
+        "colgroup",
+        "dd",
+        "details",
+        "dialog",
+        "dir",
+        "div",
+        "dl",
+        "dt",
+        "fieldset",
+        "figcaption",
+        "figure",
+        "footer",
+        "form",
+        "frame",
+        "frameset",
+        "h1",
+        "h2",
+        "h3",
+        "h4",
+        "h5",
+        "h6",
+        "head",
+        "header",
+        "hr",
+        "html",
+        "iframe",
+        "legend",
+        "li",
+        "link",
+        "main",
+        "menu",
+        "menuitem",
+        "nav",
+        "noframes",
+        "ol",
+        "optgroup",
+        "option",
+        "p",
+        "param",
+        "search",
+        "section",
+        "summary",
+        "table",
+        "tbody",
+        "td",
+        "tfoot",
+        "th",
+        "thead",
+        "title",
+        "tr",
+        "track",
+        "ul",
+    ];
+    let opening = payload.strip_prefix('<').unwrap_or("");
+    let opening = opening.strip_prefix('/').unwrap_or(opening);
+    TAGS.iter().any(|name| {
+        opening.get(..name.len()).is_some_and(|prefix| prefix.eq_ignore_ascii_case(name))
+            && opening.get(name.len()..).is_some_and(|tail| {
+                tail.is_empty() || tail.starts_with([' ', '\t', '>']) || tail.starts_with("/>")
+            })
+    })
+}
+
+fn is_complete_html_tag(payload: &str) -> bool {
+    let payload = payload.trim_end_matches([' ', '\t']);
+    let Some(mut inner) = payload.strip_prefix('<').and_then(|tail| tail.strip_suffix('>')) else {
+        return false;
+    };
+    inner = inner.strip_prefix('/').unwrap_or(inner);
+    let name_len =
+        inner.bytes().take_while(|byte| byte.is_ascii_alphanumeric() || *byte == b'-').count();
+    if name_len == 0 || !inner.as_bytes()[0].is_ascii_alphabetic() {
+        return false;
+    }
+    let rest = &inner[name_len..];
+    rest.is_empty()
+        || rest == "/"
+        || matches!(rest.as_bytes().first(), Some(b' ' | b'\t')) && !rest.contains(['<', '>'])
+}
+
+fn html_block_start(payload: &str, allow_type_seven: bool) -> Option<HtmlBlockEnd> {
+    if let Some(terminator) = raw_html_tag(payload) {
+        return Some(HtmlBlockEnd::Terminator(terminator));
+    }
+    if payload.starts_with("<!--") {
+        return Some(HtmlBlockEnd::Terminator("-->".to_owned()));
+    }
+    if payload.starts_with("<?") {
+        return Some(HtmlBlockEnd::Terminator("?>".to_owned()));
+    }
+    if payload.starts_with("<![CDATA[") {
+        return Some(HtmlBlockEnd::Terminator("]]>".to_owned()));
+    }
+    if payload
+        .strip_prefix("<!")
+        .and_then(|tail| tail.as_bytes().first())
+        .is_some_and(u8::is_ascii_alphabetic)
+    {
+        return Some(HtmlBlockEnd::Terminator(">".to_owned()));
+    }
+    if starts_standard_html_tag(payload) || allow_type_seven && is_complete_html_tag(payload) {
+        return Some(HtmlBlockEnd::BlankLine);
+    }
+    None
+}
+
+fn scan_raw_html_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    let mut opener_index = 0;
+    while opener_index < lines.len() {
+        let opener = &lines[opener_index];
+        let previous_allows_type_seven = opener_index == 0
+            || lines[opener_index - 1].frames != opener.frames
+            || payload_under_frames(source, &lines[opener_index - 1], &opener.frames)
+                .is_some_and(str::is_empty);
+        let start = (!opaque[opener_index] && !opener.lazy)
+            .then(|| html_block_start(opener.payload(source), previous_allows_type_seven))
+            .flatten();
+        let Some(end_condition) = start else {
+            opener_index += 1;
+            continue;
+        };
+
+        let mut final_index = opener_index;
+        let mut scan_index = opener_index + 1;
+        let opener_closed = match &end_condition {
+            HtmlBlockEnd::Terminator(terminator) => opener
+                .payload(source)
+                .to_ascii_lowercase()
+                .contains(&terminator.to_ascii_lowercase()),
+            HtmlBlockEnd::BlankLine => false,
+        };
+        while !opener_closed && scan_index < lines.len() {
+            let line = &lines[scan_index];
+            let Some(payload) = payload_under_frames(source, line, &opener.frames) else {
+                break;
+            };
+            if matches!(end_condition, HtmlBlockEnd::BlankLine) && payload.is_empty() {
+                break;
+            }
+            final_index = scan_index;
+            if let HtmlBlockEnd::Terminator(terminator) = &end_condition
+                && payload.to_ascii_lowercase().contains(&terminator.to_ascii_lowercase())
+            {
+                break;
+            }
+            scan_index += 1;
+        }
+
+        candidates.push(Candidate::block(
+            RegionKind::RawHtmlBlock,
+            opener.start,
+            lines[final_index].end,
+            opener.context,
+            opener.scaffold(source).to_owned(),
+        ));
+        opener_index = final_index + 1;
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_toml_frontmatter(text, lines, opaque);
@@ -1314,6 +1567,7 @@ fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Ve
     candidates.extend(scan_colon_containers(text, lines, opaque));
     candidates.extend(scan_definition_lists(text, lines, opaque));
     candidates.extend(scan_pandoc_grid_tables(text, lines, opaque));
+    candidates.extend(scan_raw_html_blocks(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -1474,6 +1728,37 @@ fn inline_scopes(source: &str, lines: &[Line], excluded: &[bool]) -> Vec<ByteRan
     scopes
 }
 
+fn angle_inline_scopes(source: &str, lines: &[Line], excluded: &[bool]) -> Vec<ByteRange> {
+    let mut scopes = Vec::new();
+    let mut start = None;
+    let mut end = 0;
+    let mut frames: Option<&[ContainerFrame]> = None;
+    for line in lines {
+        let blank = line.payload(source).is_empty();
+        if excluded[line.index]
+            || blank
+            || frames.is_some_and(|active| active != line.frames.as_slice())
+        {
+            if let Some(scope_start) = start.take() {
+                scopes.push((scope_start, end));
+            }
+            frames = None;
+        }
+        if excluded[line.index] || blank {
+            continue;
+        }
+        if start.is_none() {
+            start = Some(line.content_start);
+            frames = Some(line.frames.as_slice());
+        }
+        end = line.end;
+    }
+    if let Some(scope_start) = start {
+        scopes.push((scope_start, end));
+    }
+    scopes
+}
+
 pub(crate) fn scan_protected_regions(
     source: &NormalizedSource,
 ) -> Result<Vec<ProtectedRegion>, PreservationError> {
@@ -1491,9 +1776,13 @@ pub(crate) fn scan_protected_regions(
     }
 
     let mut inline_candidates = Vec::new();
+    for (start, end) in angle_inline_scopes(&source.text, &lines, &excluded) {
+        inline_candidates.extend(scan_angle_spans(&source.text, start, end));
+    }
     for (start, end) in inline_scopes(&source.text, &lines, &excluded) {
         inline_candidates.extend(scan_inline_scope(&source.text, start, end));
     }
+    let inline_candidates = arbitrate(inline_candidates, 0, source.byte_length());
 
     let mut candidates = block_candidates;
     candidates.extend(inline_candidates);
@@ -1594,5 +1883,19 @@ mod tests {
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].kind, RegionKind::PandocGridTable);
         assert!(regions[0].source.ends_with("| 1   | 2   |\n+-----+-----+\n"));
+    }
+
+    #[test]
+    fn raw_html_uses_commonmark_boundaries_and_inline_angle_scopes() {
+        let source = normalize_source(
+            "  <script>\n*not emphasis*\n\n</script>\n\nParagraph <x-card\n data-a=\"raw\"> tail\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 2);
+        assert_eq!(regions[0].kind, RegionKind::RawHtmlBlock);
+        assert_eq!(regions[0].source, "  <script>\n*not emphasis*\n\n</script>\n");
+        assert_eq!(regions[0].scaffold_prefix, "");
+        assert_eq!(regions[1].kind, RegionKind::RawHtmlInline);
+        assert_eq!(regions[1].source, "<x-card\n data-a=\"raw\">");
     }
 }

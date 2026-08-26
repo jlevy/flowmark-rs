@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "1462680846fb4a57fd58217cb41399ac9a7e5c95"
+upstream_commit = "468eb98ab2e1d42986a97268e58fe528e1b99316"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -68,7 +68,7 @@ status = "implemented"
 id = "FM-EXT-RAW-HTML-001"
 python_bead = "fm-w1tn"
 rust_bead = "fm-w1tn"
-status = "deferred"
+status = "implemented"
 
 [[change]]
 id = "FM-MATH-BLOCK-001"

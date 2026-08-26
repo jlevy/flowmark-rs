@@ -17,6 +17,7 @@ impl std::error::Error for PreservationError {}
 pub(crate) enum RegionKind {
     MathGitlabInline,
     MathMystInline,
+    RawHtmlInline,
     CodeSpan,
     MathParenInline,
     MathEnvironmentInline,
@@ -28,6 +29,7 @@ pub(crate) enum RegionKind {
     TomlFrontmatter,
     DefinitionList,
     PandocGridTable,
+    RawHtmlBlock,
     MathDollarBlock,
     MathBracketBlock,
     MathEnvironmentBlock,

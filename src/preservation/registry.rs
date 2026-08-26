@@ -5,6 +5,7 @@ use super::model::RegionKind;
 pub(crate) const fn priority(kind: RegionKind) -> u8 {
     match kind {
         RegionKind::MathGitlabInline | RegionKind::MathMystInline => 10,
+        RegionKind::RawHtmlInline => 15,
         RegionKind::CodeSpan => 20,
         RegionKind::MathParenInline | RegionKind::MathEnvironmentInline => 30,
         RegionKind::MathDollarInline | RegionKind::MathDoubleDollarInline => 40,
@@ -13,7 +14,8 @@ pub(crate) const fn priority(kind: RegionKind) -> u8 {
         | RegionKind::ColonContainer
         | RegionKind::TomlFrontmatter
         | RegionKind::DefinitionList
-        | RegionKind::PandocGridTable => 45,
+        | RegionKind::PandocGridTable
+        | RegionKind::RawHtmlBlock => 45,
         RegionKind::MathDollarBlock
         | RegionKind::MathBracketBlock
         | RegionKind::MathEnvironmentBlock => 50,
@@ -24,6 +26,7 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
     match kind {
         RegionKind::MathGitlabInline => "math_gitlab_inline",
         RegionKind::MathMystInline => "math_myst_inline",
+        RegionKind::RawHtmlInline => "raw_html_inline",
         RegionKind::CodeSpan => "code_span",
         RegionKind::MathParenInline => "math_paren_inline",
         RegionKind::MathEnvironmentInline => "math_environment_inline",
@@ -35,6 +38,7 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
         RegionKind::TomlFrontmatter => "toml_frontmatter",
         RegionKind::DefinitionList => "definition_list",
         RegionKind::PandocGridTable => "pandoc_grid_table",
+        RegionKind::RawHtmlBlock => "raw_html_block",
         RegionKind::MathDollarBlock => "math_dollar_block",
         RegionKind::MathBracketBlock => "math_bracket_block",
         RegionKind::MathEnvironmentBlock => "math_environment_block",

@@ -32,12 +32,12 @@ fn test_all_valid_alert_types() {
 }
 
 #[test]
-fn test_lowercase_alert_normalized_to_uppercase() {
-    let input = "> [!note]\n> This lowercase alert should be normalized.";
+fn test_lowercase_alert_marker_is_preserved_source_exactly() {
+    let input = "> [!note]\n> This lowercase alert should be preserved.";
     let result = fmt(input);
-    assert!(result.contains("> [!NOTE]"));
-    assert!(!result.contains("> [!note]"));
-    assert!(result.contains("normalized"));
+    assert!(result.contains("> [!note]"));
+    assert!(!result.contains("> [!NOTE]"));
+    assert!(result.contains("preserved"));
 }
 
 #[test]
@@ -103,7 +103,7 @@ fn test_alert_with_multiline_content() {
 #[test]
 fn test_alert_with_multiple_paragraphs() {
     let input = "> [!TIP]\n> First paragraph.\n>\n> Second paragraph.";
-    let expected = "> [!TIP]\n> First paragraph.\n> \n> Second paragraph.\n";
+    let expected = "> [!TIP]\n> First paragraph.\n>\n> Second paragraph.\n";
     assert_eq!(fmt(input), expected);
 }
 

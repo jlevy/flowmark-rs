@@ -2786,7 +2786,7 @@ pub fn fill_markdown(
         apply_smart_quotes_to_ast(root, &protected);
     }
     if ellipses {
-        apply_ellipses_to_ast(root);
+        apply_ellipses_to_ast(root, &protected);
     }
     if let Some(start) = transforms_start {
         perf_sample.transforms = start.elapsed();
@@ -2961,12 +2961,24 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>, protected: &Prot
     }
 }
 
-/// Apply ellipsis conversion to all text nodes in the AST.
-fn apply_ellipses_to_ast<'a>(root: &'a AstNode<'a>) {
+/// Apply ellipsis conversion to mutable text while retaining exact inline tokens.
+fn apply_ellipses_to_ast<'a>(root: &'a AstNode<'a>, protected: &ProtectedSource) {
     for node in root.descendants() {
         let mut data = node.data.borrow_mut();
         if let NodeValue::Text(ref mut text) = data.value {
-            *text = apply_ellipses(text).into();
+            let mut rewritten = String::new();
+            for segment in protected
+                .inline_rewrite_segments(text)
+                .expect("protected tokens in the AST must remain canonical")
+            {
+                match segment {
+                    InlineRewriteSegment::Mutable(value) => {
+                        rewritten.push_str(&apply_ellipses(value));
+                    }
+                    InlineRewriteSegment::Immutable { source, .. } => rewritten.push_str(source),
+                }
+            }
+            *text = rewritten.into();
         }
     }
 }

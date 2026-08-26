@@ -19,6 +19,7 @@ pub(crate) struct ProtectedSource {
     pub(crate) text: String,
     pub(crate) regions: Vec<ProtectedRegion>,
     pub(crate) tokens: Vec<String>,
+    synthetic_block_suffixes: Vec<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -225,9 +226,19 @@ pub(crate) fn protect_source(
 ) -> Result<ProtectedSource, PreservationError> {
     validate_regions(source, &regions)?;
     let tokens: Vec<String> = regions.iter().map(|region| encode_token(region.index)).collect();
+    let synthetic_block_suffixes: Vec<bool> = regions
+        .iter()
+        .map(|region| {
+            region.form == RegionForm::Block
+                && region.end < source.text.len()
+                && !source.text[region.end..].starts_with('\n')
+        })
+        .collect();
     let mut output = String::with_capacity(source.text.len());
     let mut previous_end = 0;
-    for (region, token) in regions.iter().zip(&tokens) {
+    for ((region, token), synthetic_suffix) in
+        regions.iter().zip(&tokens).zip(&synthetic_block_suffixes)
+    {
         output.push_str(&escape_authored_markers(&source.text[previous_end..region.start]));
         if region.form == RegionForm::Block {
             if region.scaffold_prefix.is_empty() && !output.is_empty() && !output.ends_with("\n\n")
@@ -239,13 +250,18 @@ pub(crate) fn protect_source(
             output.push_str(&region.scaffold_prefix);
             output.push_str(token);
             output.push('\n');
+            if *synthetic_suffix {
+                // Keep following Markdown out of comrak's token paragraph. Restoration
+                // removes this parser-only blank line using the aligned side-table bit.
+                output.push('\n');
+            }
         } else {
             output.push_str(token);
         }
         previous_end = region.end;
     }
     output.push_str(&escape_authored_markers(&source.text[previous_end..]));
-    Ok(ProtectedSource { text: output, regions, tokens })
+    Ok(ProtectedSource { text: output, regions, tokens, synthetic_block_suffixes })
 }
 
 fn parse_rendered_stream(rendered: &str) -> Result<(Vec<String>, Vec<usize>), PreservationError> {
@@ -293,7 +309,9 @@ pub(crate) fn restore_source(
     rendered: &str,
     protected: &ProtectedSource,
 ) -> Result<String, PreservationError> {
-    if protected.regions.len() != protected.tokens.len() {
+    if protected.regions.len() != protected.tokens.len()
+        || protected.regions.len() != protected.synthetic_block_suffixes.len()
+    {
         return Err(PreservationError("protected side-table lengths do not match"));
     }
     for (index, (region, token)) in protected.regions.iter().zip(&protected.tokens).enumerate() {
@@ -321,6 +339,14 @@ pub(crate) fn restore_source(
                 return Err(PreservationError("protected block token lost its structural LF"));
             }
             gaps[index + 1].remove(0);
+            if protected.synthetic_block_suffixes[index] {
+                if !gaps[index + 1].starts_with('\n') {
+                    return Err(PreservationError(
+                        "protected block token lost its synthetic paragraph boundary",
+                    ));
+                }
+                gaps[index + 1].remove(0);
+            }
         }
     }
     let mut output = gaps[0].clone();
@@ -348,7 +374,12 @@ mod tests {
     fn authored_marker_escapes_retain_one_column_each() {
         let escaped =
             escape_authored_markers(&format!("a{ESCAPE_MARKER}{TOKEN_START}{TOKEN_END}b"));
-        let protected = ProtectedSource { text: escaped.clone(), regions: vec![], tokens: vec![] };
+        let protected = ProtectedSource {
+            text: escaped.clone(),
+            regions: vec![],
+            tokens: vec![],
+            synthetic_block_suffixes: vec![],
+        };
         let metrics = protected.measure_inline_text(&escaped).expect("valid authored escapes");
         assert_eq!(metrics.first_width, 5);
         assert_eq!(metrics.final_width, 5);
