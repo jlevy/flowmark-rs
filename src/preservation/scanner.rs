@@ -43,6 +43,11 @@ impl Line {
         source[start..end].trim_end_matches([' ', '\t'])
     }
 
+    fn exact_payload<'a>(&self, source: &'a str) -> &'a str {
+        let (start, end) = line_payload_bounds(source, self);
+        &source[start..end]
+    }
+
     fn scaffold<'a>(&self, source: &'a str) -> &'a str {
         &source[self.start..self.content_start]
     }
@@ -362,6 +367,16 @@ fn payload_under_frames<'a>(
     let (index, column) = content_under_frames(source, line, frames)?;
     let (start, _) = consume_indent(source.as_bytes(), index, line.content_end, column, 3);
     Some(source[start..line.content_end].trim_end_matches([' ', '\t']))
+}
+
+fn exact_payload_under_frames<'a>(
+    source: &'a str,
+    line: &Line,
+    frames: &[ContainerFrame],
+) -> Option<&'a str> {
+    let (index, column) = content_under_frames(source, line, frames)?;
+    let (start, _) = consume_indent(source.as_bytes(), index, line.content_end, column, 3);
+    Some(&source[start..line.content_end])
 }
 
 fn line_indent_width(source: &str, line: &Line) -> usize {
@@ -1752,6 +1767,48 @@ fn scan_attribute_group_blocks(source: &str, lines: &[Line], opaque: &[bool]) ->
     candidates
 }
 
+fn is_pandoc_line(payload: &str) -> bool {
+    if payload != "|" && !payload.starts_with("| ") {
+        return false;
+    }
+    !(payload.ends_with('|') && payload.bytes().filter(|byte| *byte == b'|').count() >= 3)
+}
+
+fn scan_pandoc_line_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    let mut opener_index = 0;
+    while opener_index < lines.len() {
+        let opener = &lines[opener_index];
+        if opaque[opener_index] || opener.lazy || !is_pandoc_line(opener.exact_payload(source)) {
+            opener_index += 1;
+            continue;
+        }
+        let mut final_index = opener_index;
+        let mut scan_index = opener_index + 1;
+        while scan_index < lines.len() {
+            if opaque[scan_index] {
+                break;
+            }
+            let line = &lines[scan_index];
+            let compatible = exact_payload_under_frames(source, line, &opener.frames);
+            if !compatible.is_some_and(is_pandoc_line) {
+                break;
+            }
+            final_index = scan_index;
+            scan_index += 1;
+        }
+        candidates.push(Candidate::block(
+            RegionKind::PandocLineBlock,
+            opener.start,
+            lines[final_index].end,
+            opener.context,
+            opener.scaffold(source).to_owned(),
+        ));
+        opener_index = final_index + 1;
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_toml_frontmatter(text, lines, opaque);
@@ -1762,6 +1819,7 @@ fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Ve
     candidates.extend(scan_pandoc_grid_tables(text, lines, opaque));
     candidates.extend(scan_raw_html_blocks(text, lines, opaque));
     candidates.extend(scan_attribute_group_blocks(text, lines, opaque));
+    candidates.extend(scan_pandoc_line_blocks(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -2105,5 +2163,18 @@ mod tests {
         assert_eq!(regions[2].source, "{#second}");
         assert_eq!(regions[3].kind, RegionKind::AttributeGroupBlock);
         assert_eq!(regions[3].source, "{.standalone data-ü=\"välue\"}\n");
+    }
+
+    #[test]
+    fn line_blocks_require_spaced_bars_and_do_not_claim_tables() {
+        let source = normalize_source(
+            "| first\n|\n| third $x$\n\n> | quoted\n> | continued\n\n| Header | Value |\n| --- | --- |\n| one | two |\n\n\\| escaped\n|unspaced\n    | code\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 2);
+        assert_eq!(regions[0].kind, RegionKind::PandocLineBlock);
+        assert_eq!(regions[0].source, "| first\n|\n| third $x$\n");
+        assert_eq!(regions[1].kind, RegionKind::PandocLineBlock);
+        assert_eq!(regions[1].source, "> | quoted\n> | continued\n");
     }
 }

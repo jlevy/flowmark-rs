@@ -32,6 +32,7 @@ pub(crate) enum RegionKind {
     PandocGridTable,
     RawHtmlBlock,
     AttributeGroupBlock,
+    PandocLineBlock,
     MathDollarBlock,
     MathBracketBlock,
     MathEnvironmentBlock,

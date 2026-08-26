@@ -17,7 +17,8 @@ pub(crate) const fn priority(kind: RegionKind) -> u8 {
         | RegionKind::DefinitionList
         | RegionKind::PandocGridTable
         | RegionKind::RawHtmlBlock
-        | RegionKind::AttributeGroupBlock => 45,
+        | RegionKind::AttributeGroupBlock
+        | RegionKind::PandocLineBlock => 45,
         RegionKind::MathDollarBlock
         | RegionKind::MathBracketBlock
         | RegionKind::MathEnvironmentBlock => 50,
@@ -43,6 +44,7 @@ pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
         RegionKind::PandocGridTable => "pandoc_grid_table",
         RegionKind::RawHtmlBlock => "raw_html_block",
         RegionKind::AttributeGroupBlock => "attribute_group_block",
+        RegionKind::PandocLineBlock => "pandoc_line_block",
         RegionKind::MathDollarBlock => "math_dollar_block",
         RegionKind::MathBracketBlock => "math_bracket_block",
         RegionKind::MathEnvironmentBlock => "math_environment_block",
