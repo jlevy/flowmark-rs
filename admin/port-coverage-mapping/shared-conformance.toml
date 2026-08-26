@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "921a47e97a9c6da5c2def3b11fb3b8e8b48345cb"
+upstream_commit = "56274b8223c415fde3273f67d6cdff77e7259e22"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -26,6 +26,12 @@ status = "known-divergences"
 id = "FM-CONFORMANCE-001"
 python_bead = "fm-ltof"
 rust_bead = "fm-gc8d"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-MULTILINE-TABLE-001"
+python_bead = "fm-kr0a"
+rust_bead = "fm-kr0a"
 status = "implemented"
 
 [[change]]

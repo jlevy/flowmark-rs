@@ -745,9 +745,141 @@ fn exact_environment_line(payload: &str) -> Option<(&str, &str)> {
     (!name.is_empty() && !name.contains(['{', '}', '\n'])).then_some((command, name))
 }
 
+fn multiline_table_rule(payload: &str) -> Option<usize> {
+    let bytes = payload.as_bytes();
+    let mut index = 0;
+    let mut segments = 0;
+    while index < bytes.len() {
+        let run_start = index;
+        while index < bytes.len() && bytes[index] == b'-' {
+            index += 1;
+        }
+        if index - run_start < 3 {
+            return None;
+        }
+        segments += 1;
+        if index == bytes.len() {
+            return Some(segments);
+        }
+        let whitespace_start = index;
+        while index < bytes.len() && matches!(bytes[index], b' ' | b'\t') {
+            index += 1;
+        }
+        if index == whitespace_start || index == bytes.len() {
+            return None;
+        }
+    }
+    None
+}
+
+fn is_table_caption(payload: &str) -> bool {
+    ["Table:", "table:", ":"].iter().any(|prefix| {
+        payload
+            .strip_prefix(prefix)
+            .is_some_and(|rest| rest.is_empty() || rest.starts_with(' ') || rest.starts_with('\t'))
+    })
+}
+
+fn caption_extent_after(source: &str, lines: &[Line], closer_index: usize, opener: &Line) -> usize {
+    let mut index = closer_index + 1;
+    let Some(mut payload) =
+        lines.get(index).and_then(|line| payload_under_frames(source, line, &opener.frames))
+    else {
+        return closer_index;
+    };
+    if payload.is_empty() {
+        index += 1;
+        let Some(next_payload) =
+            lines.get(index).and_then(|line| payload_under_frames(source, line, &opener.frames))
+        else {
+            return closer_index;
+        };
+        payload = next_payload;
+    }
+    if !is_table_caption(payload) {
+        return closer_index;
+    }
+    let mut final_index = index;
+    index += 1;
+    while let Some(payload) =
+        lines.get(index).and_then(|line| payload_under_frames(source, line, &opener.frames))
+    {
+        if payload.is_empty() {
+            break;
+        }
+        final_index = index;
+        index += 1;
+    }
+    final_index
+}
+
+fn scan_pandoc_multiline_tables(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+    let mut candidates = Vec::new();
+    let mut opener_index = 0;
+    while opener_index < lines.len() {
+        let opener = &lines[opener_index];
+        let opener_payload = opener.payload(source);
+        let opener_rule = (!opaque[opener_index] && !opener.lazy)
+            .then(|| multiline_table_rule(opener_payload))
+            .flatten();
+        let Some(opener_segments) = opener_rule else {
+            opener_index += 1;
+            continue;
+        };
+
+        let headered = opener_segments == 1;
+        let mut header_separator_seen = false;
+        let mut body_content_seen = false;
+        let mut body_blank_seen = false;
+        let mut closer_index = None;
+        let mut scan_index = opener_index + 1;
+        while scan_index < lines.len() {
+            if opaque[scan_index] {
+                break;
+            }
+            let Some(payload) = payload_under_frames(source, &lines[scan_index], &opener.frames)
+            else {
+                break;
+            };
+            let rule = multiline_table_rule(payload);
+            if payload == opener_payload && body_content_seen {
+                if (headered && header_separator_seen) || (!headered && body_blank_seen) {
+                    closer_index = Some(scan_index);
+                }
+                break;
+            }
+            if headered && !header_separator_seen && rule.is_some_and(|segments| segments >= 2) {
+                header_separator_seen = true;
+            } else if payload.is_empty() {
+                if body_content_seen {
+                    body_blank_seen = true;
+                }
+            } else if !headered || header_separator_seen {
+                body_content_seen = true;
+            }
+            scan_index += 1;
+        }
+
+        let Some(closer_index) = closer_index else {
+            opener_index += 1;
+            continue;
+        };
+        let final_index = caption_extent_after(source, lines, closer_index, opener);
+        candidates.push(Candidate::block(
+            RegionKind::PandocMultilineTable,
+            opener.start,
+            lines[final_index].end,
+            opener.context,
+            opener.scaffold(source).to_owned(),
+        ));
+        opener_index = final_index + 1;
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
-    let mut candidates = Vec::new();
+    let mut candidates = scan_pandoc_multiline_tables(text, lines, opaque);
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -964,5 +1096,16 @@ mod tests {
         assert_eq!(regions.len(), 1);
         assert_eq!(regions[0].form, super::super::model::RegionForm::Block);
         assert_eq!(regions[0].source, source.text);
+    }
+
+    #[test]
+    fn multiline_table_requires_a_complete_structural_pair() {
+        let source = normalize_source(
+            "-----\nHeader A   Header B\n--- ---\nvalue      value\n\nnext       row\n-----\n\n---\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        assert_eq!(regions.len(), 1);
+        assert_eq!(regions[0].kind, RegionKind::PandocMultilineTable);
+        assert!(regions[0].source.ends_with("next       row\n-----\n"));
     }
 }
