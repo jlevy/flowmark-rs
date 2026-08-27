@@ -4,7 +4,7 @@
 
 **Author:** Senior review (Claude) with @jlevy direction
 
-**Status:** Draft — scope documented, no fixes made
+**Status:** Phase 1 and 2 complete — PR #81 is clean; the rest is a follow-on PR
 
 **Tracker:** `fmr-1xlk` epic.
 
@@ -75,9 +75,26 @@ it inherited. This is the axis that decides what blocks the PR.
 
 | Split | Checks | Files |
 | --- | ---: | ---: |
-| **Regressions introduced by PR #81** | **1** | **1** |
+| **Regressions introduced by PR #81** | **1** (now fixed) | **1** |
 | Pre-existing, still failing | 79 | 19 |
 | **Fixed by PR #81** | **146** | **25** |
+
+That one regression is fixed in `8fb4a1c` (`fmr-0pxh`), so **PR #81 now introduces no
+idempotence regression at all**. The ledger holds 67 entries across 17 files, every one
+of which also fails on the v0.3.2 release.
+
+A second sweep confirmed there is no regression on the output axis either. Comparing
+every shipped document in five modes against the Python reference, before and after:
+
+| Rust-vs-Python parity, v0.3.2 to this branch | Checks | Files |
+| --- | ---: | ---: |
+| **Regressions** (v0.3.2 matched Python, branch does not) | **0** | **0** |
+| Fixed (branch matches Python, v0.3.2 did not) | **1,458** | **297** |
+| Both diverge, output changed | 40 | 8 |
+
+Of the 40 where both versions diverge from Python, 30 moved **closer** to the reference
+and 10 stayed the same distance; **none moved farther**. So on both axes the preservation
+work is strictly better or equal, with no incorrect behavior change to block on.
 
 **PR #81 is a large net improvement to idempotence**: it fixes 146 failing checks across
 25 files and introduces exactly one regression, on one file. The preservation work has
@@ -234,15 +251,23 @@ None. This spec adds test infrastructure only.
 - [x] Confirm the full suite, the 776-case conformance corpus and the tryscript documents
       stay green.
 
-### Phase 2: Clear the one regression, so PR #81 lands clean
+### Phase 2: Clear the one regression, so PR #81 lands clean (done)
 
-- [ ] Fix `fmr-0pxh`: a wrapped continuation line beginning with `|` must not change list
-      spacing on the next pass. Python and v0.3.2 are both already correct, so this is a
-      match-the-reference fix needing no upstream decision.
-- [ ] Remove its ledger entry, which fails the gate until it is gone.
+- [x] Fix `fmr-0pxh`. A wrapped continuation line beginning with `|` was recognized as a
+      Pandoc line-block opener; a line block must *open* a block rather than continue a
+      paragraph, so recognition now excludes an opener whose previous line is non-blank in
+      the same container. Output matches Python byte for byte.
+- [x] Remove its ledger entry.
+- [x] Confirm no output-parity regression on any shipped document (table above).
 
-This is the only idempotence work that blocks the PR. Everything below is pre-existing
-and belongs in its own change.
+Two other fixes were tried first and rejected by the corpus, which is worth recording:
+dropping the synthetic block boundaries to match Python's bridge exactly, and gating them
+on list depth. Both broke `reference.testdoc.plain`, because comrak merges text following
+the token line into the token's own paragraph where marko does not. Those boundaries are
+load-bearing **for this parser**, so "replicate Python exactly" could not be applied to
+the bridge here and the fix belonged in recognition instead.
+
+Everything below is pre-existing and belongs in its own change.
 
 ### Phase 3: Agree intended bytes, upstream first
 
