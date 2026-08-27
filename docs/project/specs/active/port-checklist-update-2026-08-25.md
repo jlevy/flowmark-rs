@@ -19,7 +19,7 @@ It remains active until the release gates at the end are satisfied.
 | Branch starting Python baseline | v0.6.5, `f1228297c8e2380685c6a10383f59164b96f6c22` |
 | Merged Rust release baseline | Rust v0.3.2 / Python v0.7.2, Rust `015f23989af3e5cfb3f8b58dfc72822c534df25a` |
 | Current branch parity baseline | v0.7.3, `7912c322417ae49c5c45ab099997c142cf392db8` |
-| Preservation-contract target | `644be243d346b9e9a2ca8db0081a9dea2132033c` |
+| Preservation-contract target | `6f74a028698a1ff70200a5f6ab63f78a8e2559f2` |
 | Pre-cycle Rust reference | `cb744eb` |
 | Shared-test foundation | `ccc8897ac0cb6c21c017f13ac68311198da71a48` |
 | Current-main merge | `c6449a5cba5b069c5bd29be0e08e83d036279b59` (second parent `015f23989af3e5cfb3f8b58dfc72822c534df25a`) |
@@ -91,7 +91,7 @@ and keep golden evidence versioned with provenance.
 - [x] Advance `repos/flowmark` from `f122829` through `093c924` and `0d2bebb` to the
   `e9d5805` behavior tip, its integration-golden successor `b027fde`, and the Python
   Python 3.10 compatibility successors through `783b445`, followed by the shared GLFM
-  and issue-traceability target `644be24`.
+  and preservation-review target `6f74a02`.
 - [x] Advance `repos/rust-porting-playbook` from `df36b99` to `d24760a`.
 - [x] Record the shared source commit and change IDs in
   `admin/port-coverage-mapping/shared-conformance.toml`.
@@ -202,7 +202,7 @@ and traceability update.
 - [x] Treat the YAML Python/Rust function mapping as supplementary evidence.
 - [x] Complete the v0.7.3 supplemental mapping refresh (`fm-t81l`).
 - [x] Mark every core, math, code, extension, CLI, and fixed-point change ID implemented
-  at target `644be24`.
+  at target `6f74a02`.
 - [x] Remove four ledger entries that became exact; retain 34 exact inherited CommonMark
   divergences.
 - [x] Regenerate the Rust inventory after adding native preservation diagnostics and
@@ -260,7 +260,7 @@ and traceability update.
   and preservation-unit evidence for implementation commit `b76f635`.
 - [x] Append the final full-gate evidence after documentation and mapping stabilize.
 - [x] Re-run formatting, clippy, all-feature tests, no-default-feature tests, and native
-  shared conformance through `644be24`: 483 exact passes and the unchanged 34-entry
+  shared conformance through `6f74a02`: 484 exact passes and the unchanged 34-entry
   CommonMark ledger.
 - [x] Re-run the final local matrix: all-features and no-default-features tests, clippy,
   rustdoc warnings, build warnings, crate verification, packaged docs/skill smoke,
