@@ -31,7 +31,6 @@ struct Line {
     content_start: usize,
     logical_column: usize,
     context: ContainerContext,
-    key: Vec<ContainerFrame>,
     frames: Vec<ContainerFrame>,
     lazy: bool,
     starts_list: bool,
@@ -262,8 +261,9 @@ fn starts_block_structure(bytes: &[u8], start: usize, end: usize, column: usize)
             _ => false,
         }) && count >= 3
     };
-    let raw_html = std::str::from_utf8(content)
-        .is_ok_and(|payload| html_block_start(payload, false).is_some());
+    let raw_html = content.starts_with(b"<")
+        && std::str::from_utf8(content)
+            .is_ok_and(|payload| html_block_start(payload, false).is_some());
     atx_heading
         || consume_quote_marker(bytes, start, end, column).is_some()
         || consume_list_marker(bytes, start, end, column).is_some()
@@ -321,7 +321,6 @@ fn build_lines(source: &str) -> Vec<Line> {
             content_start,
             logical_column,
             context,
-            key: frames.clone(),
             frames: frames.clone(),
             lazy,
             starts_list,
@@ -428,11 +427,8 @@ fn backtick_runs(text: &str, start: usize, end: usize) -> Vec<ByteRange> {
     let bytes = text.as_bytes();
     let mut runs = Vec::new();
     let mut index = start;
-    while index < end {
-        if bytes[index] != b'`' {
-            index += text[index..].chars().next().map_or(1, char::len_utf8);
-            continue;
-        }
+    while let Some(relative) = text[index..end].find('`') {
+        index += relative;
         let run_start = index;
         while index < end && bytes[index] == b'`' {
             index += 1;
@@ -743,6 +739,9 @@ fn is_email_autolink(body: &str) -> bool {
 }
 
 fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
+    if !text[start..end].contains('<') {
+        return Vec::new();
+    }
     let bytes = text.as_bytes();
     let mut candidates = Vec::new();
     let mut quote_free_close = None;
@@ -1224,16 +1223,150 @@ fn merge_candidates_by_start(left: Vec<Candidate>, right: Vec<Candidate>) -> Vec
 }
 
 fn scan_inline_scope(text: &str, start: usize, end: usize) -> Vec<Candidate> {
-    let mut candidates = scan_composite_math(text, start, end);
-    candidates.extend(scan_myst_roles(text, start, end));
-    candidates.extend(scan_wikilinks(text, start, end));
-    candidates.extend(scan_gitlab_references(text, start, end));
-    candidates.extend(scan_backticks(text, start, end));
-    candidates.extend(scan_paren_math(text, start, end));
-    candidates.extend(scan_inline_environments(text, start, end));
-    candidates.extend(scan_attribute_groups(text, start, end));
-    candidates.extend(scan_dollars(text, start, end));
+    let scope = &text[start..end];
+    let mut backtick = false;
+    let mut backslash = false;
+    let mut brace = false;
+    let mut dollar = false;
+    for byte in scope.bytes() {
+        match byte {
+            b'`' => backtick = true,
+            b'\\' => backslash = true,
+            b'{' => brace = true,
+            b'$' => dollar = true,
+            _ => {}
+        }
+    }
+
+    let mut candidates = Vec::new();
+    if backtick {
+        if dollar || scope.contains("{math}") {
+            candidates.extend(scan_composite_math(text, start, end));
+        }
+        if brace {
+            candidates.extend(scan_myst_roles(text, start, end));
+        }
+        candidates.extend(scan_backticks(text, start, end));
+    }
+    if scope.contains("[[") {
+        candidates.extend(scan_wikilinks(text, start, end));
+    }
+    if [
+        "[cadence:",
+        "[contact:",
+        "[epic:",
+        "[feature_flag:",
+        "[issue:",
+        "[vulnerability:",
+        "[wiki_page:",
+        "[work_item:",
+    ]
+    .iter()
+    .any(|marker| scope.contains(marker))
+    {
+        candidates.extend(scan_gitlab_references(text, start, end));
+    }
+    if backslash {
+        if scope.contains("\\(") || scope.contains("\\)") {
+            candidates.extend(scan_paren_math(text, start, end));
+        }
+        if scope.contains("\\begin{") || scope.contains("\\end{") {
+            candidates.extend(scan_inline_environments(text, start, end));
+        }
+    }
+    if brace {
+        candidates.extend(scan_attribute_groups(text, start, end));
+    }
+    if dollar {
+        candidates.extend(scan_dollars(text, start, end));
+    }
     arbitrate(candidates, start, end)
+}
+
+fn scan_angle_scope_candidates(text: &str, scopes: &[ByteRange]) -> Vec<Candidate> {
+    #[cfg(feature = "cli")]
+    if text.len() >= 256 * 1_024 && scopes.len() > 1 {
+        use rayon::prelude::*;
+        return scopes
+            .par_iter()
+            .map(|(start, end)| scan_angle_spans(text, *start, *end))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect();
+    }
+    scopes.iter().flat_map(|(start, end)| scan_angle_spans(text, *start, *end)).collect()
+}
+
+fn scan_inline_scope_candidates(text: &str, scopes: &[ByteRange]) -> Vec<Candidate> {
+    #[cfg(feature = "cli")]
+    if text.len() >= 256 * 1_024 && scopes.len() > 1 {
+        use rayon::prelude::*;
+        return scopes
+            .par_iter()
+            .map(|(start, end)| scan_inline_scope(text, *start, *end))
+            .collect::<Vec<_>>()
+            .into_iter()
+            .flatten()
+            .collect();
+    }
+    scopes.iter().flat_map(|(start, end)| scan_inline_scope(text, *start, *end)).collect()
+}
+
+fn may_contain_protected_syntax(text: &str) -> bool {
+    // Definition markers may follow nested quote and list scaffolding. This deliberately
+    // accepts a superset of valid scaffolds, but avoids sending ordinary prose containing
+    // colons or tildes through the full scanner.
+    const GITLAB_PREFIXES: &[&[u8]] = &[
+        b"cadence:",
+        b"contact:",
+        b"epic:",
+        b"feature_flag:",
+        b"issue:",
+        b"vulnerability:",
+        b"wiki_page:",
+        b"work_item:",
+    ];
+    let bytes = text.as_bytes();
+    let mut scaffold_prefix = true;
+    for (index, byte) in bytes.iter().copied().enumerate() {
+        let tail = &bytes[index..];
+        match byte {
+            b'`' | b'$' | b'<' | b'{' | b'|' => return true,
+            b'\\'
+                if tail.starts_with(b"\\(")
+                    || tail.starts_with(b"\\[")
+                    || tail.starts_with(b"\\begin{") =>
+            {
+                return true;
+            }
+            b'[' if tail.starts_with(b"[[")
+                || tail.starts_with(b"[!")
+                || GITLAB_PREFIXES.iter().any(|prefix| tail[1..].starts_with(prefix)) =>
+            {
+                return true;
+            }
+            b':' if tail.starts_with(b":::") => return true,
+            b'+' if tail.starts_with(b"+++") => return true,
+            b'>' if tail.starts_with(b">>>") => return true,
+            b'-' if tail.starts_with(b"---") => return true,
+            b':' | b'~' if scaffold_prefix => {
+                let suffix = bytes.get(index + 1).copied();
+                if suffix.is_none_or(|next| matches!(next, b' ' | b'\t')) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+        if byte == b'\n' {
+            scaffold_prefix = true;
+        } else if scaffold_prefix
+            && !matches!(byte, b' ' | b'\t' | b'>' | b'-' | b'+' | b'*' | b'0'..=b'9' | b'.' | b')')
+        {
+            scaffold_prefix = false;
+        }
+    }
+    false
 }
 
 fn fence_opener(payload: &str) -> Option<(u8, usize)> {
@@ -1258,7 +1391,7 @@ fn opaque_line_flags(source: &str, lines: &[Line]) -> Vec<bool> {
     let mut covered = vec![false; lines.len()];
 
     if lines.first().is_some_and(|line| {
-        line.start == 0 && line.key.is_empty() && &source[line.start..line.content_end] == "---"
+        line.start == 0 && line.frames.is_empty() && &source[line.start..line.content_end] == "---"
     }) {
         if let Some(closer) = lines
             .iter()
@@ -1312,7 +1445,7 @@ fn opaque_line_flags(source: &str, lines: &[Line]) -> Vec<bool> {
                 cursor += 1;
                 continue;
             }
-            if lines[cursor].key == lines[index].key
+            if lines[cursor].frames == lines[index].frames
                 && line_indent_width(source, &lines[cursor]) >= 4
             {
                 final_index = cursor;
@@ -1558,7 +1691,7 @@ fn scan_colon_containers(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<C
         let Some(is_opener) = colon_fence_is_opener(line.payload(source)) else {
             continue;
         };
-        let stack = stacks.entry(line.key.clone()).or_default();
+        let stack = stacks.entry(line.frames.clone()).or_default();
         if is_opener {
             stack.push(line.index);
             continue;
@@ -1579,7 +1712,9 @@ fn scan_colon_containers(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<C
 }
 
 fn is_root_exact_delimiter(source: &str, line: &Line, delimiter: &str) -> bool {
-    line.key.is_empty() && !line.lazy && source.get(line.start..line.content_end) == Some(delimiter)
+    line.frames.is_empty()
+        && !line.lazy
+        && source.get(line.start..line.content_end) == Some(delimiter)
 }
 
 fn scan_toml_frontmatter(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
@@ -2056,13 +2191,16 @@ fn scan_raw_html_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Ca
     let mut opener_index = 0;
     while opener_index < lines.len() {
         let opener = &lines[opener_index];
+        let payload = opener.payload(source);
+        if opaque[opener_index] || opener.lazy || !payload.starts_with('<') {
+            opener_index += 1;
+            continue;
+        }
         let previous_allows_type_seven = opener_index == 0
             || lines[opener_index - 1].frames != opener.frames
             || payload_under_frames(source, &lines[opener_index - 1], &opener.frames)
                 .is_some_and(str::is_empty);
-        let start = (!opaque[opener_index] && !opener.lazy)
-            .then(|| html_block_start(opener.payload(source), previous_allows_type_seven))
-            .flatten();
+        let start = html_block_start(payload, previous_allows_type_seven);
         let Some(end_condition) = start else {
             opener_index += 1;
             continue;
@@ -2173,17 +2311,17 @@ fn gfm_table_lines(
     let mut gfm_table_lines = vec![false; lines.len()];
     let mut table_index = 0;
     while table_index + 1 < lines.len() {
-        let key = lines[table_index].key.as_slice();
+        let key = lines[table_index].frames.as_slice();
         if !excluded[table_index]
             && !excluded[table_index + 1]
-            && (!require_matching_container || lines[table_index + 1].key.as_slice() == key)
-            && cached_structural_pipe(source, &lines[table_index], structural_pipes)
+            && (!require_matching_container || lines[table_index + 1].frames.as_slice() == key)
             && is_table_delimiter(lines[table_index + 1].payload(source))
+            && cached_structural_pipe(source, &lines[table_index], structural_pipes)
         {
             let mut table_end = table_index + 2;
             while table_end < lines.len()
                 && !excluded[table_end]
-                && (!require_matching_container || lines[table_end].key.as_slice() == key)
+                && (!require_matching_container || lines[table_end].frames.as_slice() == key)
                 && cached_structural_pipe(source, &lines[table_end], structural_pipes)
             {
                 table_end += 1;
@@ -2253,7 +2391,7 @@ fn scan_gitlab_multiline_blockquotes(
         if opaque[line.index] || line.lazy || line.payload(source) != ">>>" {
             continue;
         }
-        if let Some(opener_index) = pending.remove(line.key.as_slice()) {
+        if let Some(opener_index) = pending.remove(line.frames.as_slice()) {
             let opener = &lines[opener_index];
             candidates.push(Candidate::block(
                 RegionKind::GitlabMultilineBlockquote,
@@ -2263,10 +2401,88 @@ fn scan_gitlab_multiline_blockquotes(
                 opener.scaffold(source).to_owned(),
             ));
         } else {
-            pending.insert(line.key.clone(), line.index);
+            pending.insert(line.frames.clone(), line.index);
         }
     }
     candidates
+}
+
+type BlockScanner = fn(&str, &[Line], &[bool]) -> Vec<Candidate>;
+
+fn scan_independent_block_batches(
+    source: &str,
+    lines: &[Line],
+    opaque: &[bool],
+) -> Vec<Vec<Candidate>> {
+    let scanners: [BlockScanner; 9] = [
+        scan_toml_frontmatter,
+        scan_pandoc_multiline_tables,
+        scan_obsidian_callouts,
+        scan_colon_containers,
+        scan_definition_lists,
+        scan_pandoc_grid_tables,
+        scan_raw_html_blocks,
+        scan_attribute_group_blocks,
+        scan_gitlab_multiline_blockquotes,
+    ];
+    let enabled = [
+        true,
+        source.contains("---"),
+        source.contains("[!"),
+        source.contains(":::"),
+        source.contains([':', '~']),
+        source.contains('+'),
+        source.contains('<'),
+        source.contains('{'),
+        source.contains(">>>"),
+    ];
+    #[cfg(feature = "cli")]
+    if source.len() >= 256 * 1_024 {
+        use rayon::prelude::*;
+        return scanners
+            .par_iter()
+            .zip(enabled)
+            .map(
+                |(scanner, enabled)| {
+                    if enabled { scanner(source, lines, opaque) } else { Vec::new() }
+                },
+            )
+            .collect();
+    }
+    scanners
+        .iter()
+        .zip(enabled)
+        .map(|(scanner, enabled)| if enabled { scanner(source, lines, opaque) } else { Vec::new() })
+        .collect()
+}
+
+fn scan_block_batches(
+    source: &str,
+    lines: &[Line],
+    opaque: &[bool],
+    structural_pipes: &mut [Option<bool>],
+) -> (Vec<Vec<Candidate>>, Vec<Candidate>) {
+    #[cfg(feature = "cli")]
+    if source.len() >= 256 * 1_024 {
+        return rayon::join(
+            || scan_independent_block_batches(source, lines, opaque),
+            || {
+                if source.contains('|') {
+                    scan_pandoc_line_blocks(source, lines, opaque, structural_pipes)
+                } else {
+                    Vec::new()
+                }
+            },
+        );
+    }
+    (
+        scan_independent_block_batches(source, lines, opaque),
+        if source.contains('|') {
+            scan_pandoc_line_blocks(source, lines, opaque, structural_pipes)
+        } else {
+            Vec::new()
+        },
+    )
 }
 
 fn scan_blocks(
@@ -2276,84 +2492,81 @@ fn scan_blocks(
     structural_pipes: &mut [Option<bool>],
 ) -> Vec<Candidate> {
     let text = source.text.as_str();
-    let mut candidates = scan_toml_frontmatter(text, lines, opaque);
-    candidates.extend(scan_pandoc_multiline_tables(text, lines, opaque));
-    candidates.extend(scan_obsidian_callouts(text, lines, opaque));
-    candidates.extend(scan_colon_containers(text, lines, opaque));
-    candidates.extend(scan_definition_lists(text, lines, opaque));
-    candidates.extend(scan_pandoc_grid_tables(text, lines, opaque));
-    candidates.extend(scan_raw_html_blocks(text, lines, opaque));
-    candidates.extend(scan_attribute_group_blocks(text, lines, opaque));
-    candidates.extend(scan_pandoc_line_blocks(text, lines, opaque, structural_pipes));
-    candidates.extend(scan_gitlab_multiline_blockquotes(text, lines, opaque));
-    let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
-    let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
-    let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
+    let (mut batches, line_blocks) = scan_block_batches(text, lines, opaque, structural_pipes);
+    let gitlab = batches.pop().expect("fixed block scanner batch");
+    let mut candidates: Vec<Candidate> = batches.into_iter().flatten().collect();
+    candidates.extend(line_blocks);
+    candidates.extend(gitlab);
+    if text.contains(['$', '\\']) {
+        let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
+        let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
+        let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
 
-    for line in lines {
-        if opaque[line.index] || line.lazy {
-            continue;
-        }
-        let payload = line.payload(text);
-        if payload == "$$" {
-            if let Some(opener_index) = dollars.remove(line.key.as_slice()) {
-                let opener = &lines[opener_index];
-                candidates.push(Candidate::block(
-                    RegionKind::MathDollarBlock,
-                    opener.start,
-                    line.end,
-                    opener.context,
-                    opener.scaffold(text).to_owned(),
-                ));
-            } else {
-                dollars.insert(line.key.clone(), line.index);
+        for line in lines {
+            if opaque[line.index] || line.lazy {
+                continue;
             }
-            continue;
-        }
-        if dollar_closer(payload) {
-            if let Some(opener_index) = dollars.remove(line.key.as_slice()) {
-                let opener = &lines[opener_index];
-                candidates.push(Candidate::block(
-                    RegionKind::MathDollarBlock,
-                    opener.start,
-                    line.end,
-                    opener.context,
-                    opener.scaffold(text).to_owned(),
-                ));
+            let payload = line.payload(text);
+            if payload == "$$" {
+                if let Some(opener_index) = dollars.remove(line.frames.as_slice()) {
+                    let opener = &lines[opener_index];
+                    candidates.push(Candidate::block(
+                        RegionKind::MathDollarBlock,
+                        opener.start,
+                        line.end,
+                        opener.context,
+                        opener.scaffold(text).to_owned(),
+                    ));
+                } else {
+                    dollars.insert(line.frames.clone(), line.index);
+                }
+                continue;
             }
-            continue;
-        }
-        if payload == "\\[" {
-            brackets.entry(line.key.clone()).or_insert(line.index);
-            continue;
-        }
-        if payload == "\\]" {
-            if let Some(opener_index) = brackets.remove(line.key.as_slice()) {
-                let opener = &lines[opener_index];
-                candidates.push(Candidate::block(
-                    RegionKind::MathBracketBlock,
-                    opener.start,
-                    line.end,
-                    opener.context,
-                    opener.scaffold(text).to_owned(),
-                ));
+            if dollar_closer(payload) {
+                if let Some(opener_index) = dollars.remove(line.frames.as_slice()) {
+                    let opener = &lines[opener_index];
+                    candidates.push(Candidate::block(
+                        RegionKind::MathDollarBlock,
+                        opener.start,
+                        line.end,
+                        opener.context,
+                        opener.scaffold(text).to_owned(),
+                    ));
+                }
+                continue;
             }
-            continue;
-        }
-        if let Some((command, name)) = exact_environment_line(payload) {
-            let stack = environments.entry(line.key.clone()).or_default();
-            if command == "begin" {
-                stack.push((name.to_owned(), line.index));
-            } else if stack.last().is_some_and(|(open_name, _)| open_name == name) {
-                let (_, opener_index) = stack.pop().expect("checked environment stack");
-                let opener = &lines[opener_index];
-                candidates.push(Candidate::block(
-                    RegionKind::MathEnvironmentBlock,
-                    opener.start,
-                    line.end,
-                    opener.context,
-                    opener.scaffold(text).to_owned(),
-                ));
+            if payload == "\\[" {
+                brackets.entry(line.frames.clone()).or_insert(line.index);
+                continue;
+            }
+            if payload == "\\]" {
+                if let Some(opener_index) = brackets.remove(line.frames.as_slice()) {
+                    let opener = &lines[opener_index];
+                    candidates.push(Candidate::block(
+                        RegionKind::MathBracketBlock,
+                        opener.start,
+                        line.end,
+                        opener.context,
+                        opener.scaffold(text).to_owned(),
+                    ));
+                }
+                continue;
+            }
+            if let Some((command, name)) = exact_environment_line(payload) {
+                let stack = environments.entry(line.frames.clone()).or_default();
+                if command == "begin" {
+                    stack.push((name.to_owned(), line.index));
+                } else if stack.last().is_some_and(|(open_name, _)| open_name == name) {
+                    let (_, opener_index) = stack.pop().expect("checked environment stack");
+                    let opener = &lines[opener_index];
+                    candidates.push(Candidate::block(
+                        RegionKind::MathEnvironmentBlock,
+                        opener.start,
+                        line.end,
+                        opener.context,
+                        opener.scaffold(text).to_owned(),
+                    ));
+                }
             }
         }
     }
@@ -2423,7 +2636,7 @@ fn inline_scopes(
         let payload = line.payload(source);
         if excluded[line.index]
             || payload.is_empty()
-            || paragraph_key.is_some_and(|key| key != line.key.as_slice())
+            || paragraph_key.is_some_and(|key| key != line.frames.as_slice())
         {
             flush(&mut scopes, &mut paragraph_start, paragraph_end);
             paragraph_key = None;
@@ -2449,7 +2662,7 @@ fn inline_scopes(
         }
         let (payload_start, _) = line_payload_bounds(source, line);
         paragraph_start.get_or_insert(payload_start);
-        paragraph_key.get_or_insert(line.key.as_slice());
+        paragraph_key.get_or_insert(line.frames.as_slice());
         paragraph_end = line.end;
     }
     flush(&mut scopes, &mut paragraph_start, paragraph_end);
@@ -2490,6 +2703,9 @@ fn angle_inline_scopes(source: &str, lines: &[Line], excluded: &[bool]) -> Vec<B
 pub(crate) fn scan_protected_regions(
     source: &NormalizedSource,
 ) -> Result<Vec<ProtectedRegion>, PreservationError> {
+    if !may_contain_protected_syntax(&source.text) {
+        return Ok(Vec::new());
+    }
     let lines = build_lines(&source.text);
     let opaque = opaque_line_flags(&source.text, &lines);
     let mut structural_pipes = vec![None; lines.len()];
@@ -2510,11 +2726,13 @@ pub(crate) fn scan_protected_regions(
     }
 
     let mut inline_candidates = Vec::new();
-    for (start, end) in angle_inline_scopes(&source.text, &lines, &excluded) {
-        inline_candidates.extend(scan_angle_spans(&source.text, start, end));
+    if source.text.contains('<') {
+        let angle_scopes = angle_inline_scopes(&source.text, &lines, &excluded);
+        inline_candidates.extend(scan_angle_scope_candidates(&source.text, &angle_scopes));
     }
-    for (start, end) in inline_scopes(&source.text, &lines, &excluded, &mut structural_pipes) {
-        inline_candidates.extend(scan_inline_scope(&source.text, start, end));
+    if source.text.contains(['`', '[', '\\', '{', '$']) {
+        let scopes = inline_scopes(&source.text, &lines, &excluded, &mut structural_pipes);
+        inline_candidates.extend(scan_inline_scope_candidates(&source.text, &scopes));
     }
     let inline_candidates = arbitrate(inline_candidates, 0, source.byte_length());
 
@@ -2534,6 +2752,32 @@ pub(crate) fn scan_protected_regions(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn preservation_admission_filter_covers_every_syntax_family() {
+        for source in [
+            "`code`",
+            "$math$",
+            "\\(math\\)",
+            "[[page]]",
+            "> [!NOTE] callout",
+            "<span>raw</span>",
+            "text{#id}",
+            "header | cell\n--- | ---",
+            "::: note\n:::",
+            "+++\ntitle = 'x'\n+++",
+            ">>>\nquote\n>>>",
+            "---\nvalue\n---",
+            "term\n: definition",
+            "> 1. ~ definition",
+            "[issue:123]",
+        ] {
+            assert!(may_contain_protected_syntax(source), "missed {source:?}");
+        }
+        assert!(!may_contain_protected_syntax(
+            "ordinary prose: punctuation, [links](target), and hyphen-words"
+        ));
+    }
     use crate::preservation::normalization::normalize_source;
 
     #[test]

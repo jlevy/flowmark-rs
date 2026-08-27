@@ -15,6 +15,7 @@ const ESCAPED_END: char = '\u{f0005}';
 const INDEX_SCALAR_START: u32 = 0xF0100;
 const INDEX_WIDTH: usize = 8;
 const TOKEN_LENGTH: usize = INDEX_WIDTH + 2;
+const TOKEN_BYTE_LENGTH: usize = TOKEN_LENGTH * 4;
 
 #[derive(Debug, Clone)]
 pub(crate) struct ProtectedSource {
@@ -57,11 +58,12 @@ impl ProtectedSource {
             if start > previous_end {
                 segments.push(InlineRewriteSegment::Mutable(&text[previous_end..start]));
             }
-            let token_end = text[start..]
-                .char_indices()
-                .nth(TOKEN_LENGTH)
-                .map_or(text.len(), |(offset, _)| start + offset);
-            let token = &text[start..token_end];
+            let token_end = start
+                .checked_add(TOKEN_BYTE_LENGTH)
+                .ok_or(PreservationError("malformed preservation token during rewrite"))?;
+            let token = text
+                .get(start..token_end)
+                .ok_or(PreservationError("malformed preservation token during rewrite"))?;
             let index = parse_token(token)?;
             let region = self
                 .regions
@@ -115,20 +117,18 @@ impl ProtectedSource {
                 position += scalar.len_utf8();
                 continue;
             }
-            let mut token_end = position;
-            for _ in 0..TOKEN_LENGTH {
-                let next = text[token_end..]
-                    .chars()
-                    .next()
-                    .ok_or(PreservationError("malformed preservation token during wrapping"))?;
-                token_end += next.len_utf8();
-            }
-            let index = parse_token(&text[position..token_end])?;
+            let token_end = position
+                .checked_add(TOKEN_BYTE_LENGTH)
+                .ok_or(PreservationError("malformed preservation token during wrapping"))?;
+            let token = text
+                .get(position..token_end)
+                .ok_or(PreservationError("malformed preservation token during wrapping"))?;
+            let index = parse_token(token)?;
             let region = self
                 .regions
                 .get(index)
                 .ok_or(PreservationError("unknown preservation token during wrapping"))?;
-            if self.tokens[index] != text[position..token_end] {
+            if self.tokens[index] != token {
                 return Err(PreservationError("unknown token reached inline wrapping"));
             }
             if region.form == RegionForm::Block {
@@ -209,18 +209,19 @@ pub(crate) fn encode_token(index: usize) -> String {
 }
 
 fn parse_token(token: &str) -> Result<usize, PreservationError> {
-    let scalars: Vec<char> = token.chars().collect();
-    if scalars.len() != TOKEN_LENGTH
-        || scalars.first() != Some(&TOKEN_START)
-        || scalars.last() != Some(&TOKEN_END)
-    {
+    let mut scalars = token.chars();
+    if scalars.next() != Some(TOKEN_START) {
         return Err(PreservationError("malformed preservation token"));
     }
     let mut bytes = [0_u8; INDEX_WIDTH];
-    for (slot, scalar) in bytes.iter_mut().zip(&scalars[1..=INDEX_WIDTH]) {
-        let value = u32::from(*scalar).checked_sub(INDEX_SCALAR_START);
+    for slot in &mut bytes {
+        let scalar = scalars.next().ok_or(PreservationError("malformed preservation token"))?;
+        let value = u32::from(scalar).checked_sub(INDEX_SCALAR_START);
         let value = value.and_then(|value| u8::try_from(value).ok());
         *slot = value.ok_or(PreservationError("malformed preservation token index"))?;
+    }
+    if scalars.next() != Some(TOKEN_END) || scalars.next().is_some() {
+        return Err(PreservationError("malformed preservation token"));
     }
     usize::try_from(u64::from_be_bytes(bytes))
         .map_err(|_| PreservationError("preservation token index exceeds platform size"))
@@ -319,15 +320,13 @@ fn parse_rendered_stream(rendered: &str) -> Result<(Vec<String>, Vec<usize>), Pr
                 position = code_start + code.len_utf8();
             }
             TOKEN_START => {
-                let mut token_end = position;
-                for _ in 0..TOKEN_LENGTH {
-                    let token_scalar = rendered[token_end..]
-                        .chars()
-                        .next()
-                        .ok_or(PreservationError("malformed preservation token"))?;
-                    token_end += token_scalar.len_utf8();
-                }
-                indexes.push(parse_token(&rendered[position..token_end])?);
+                let token_end = position
+                    .checked_add(TOKEN_BYTE_LENGTH)
+                    .ok_or(PreservationError("malformed preservation token"))?;
+                let token = rendered
+                    .get(position..token_end)
+                    .ok_or(PreservationError("malformed preservation token"))?;
+                indexes.push(parse_token(token)?);
                 gaps.push(std::mem::take(&mut gap));
                 position = token_end;
             }
@@ -356,12 +355,14 @@ pub(crate) fn restore_source(
         return Err(PreservationError("protected side-table lengths do not match"));
     }
     for (index, (region, token)) in protected.regions.iter().zip(&protected.tokens).enumerate() {
-        if region.index != index || *token != encode_token(index) {
+        if region.index != index || parse_token(token)? != index {
             return Err(PreservationError("protected side table is not canonical"));
         }
     }
     let (mut gaps, indexes) = parse_rendered_stream(rendered)?;
-    if indexes != (0..protected.regions.len()).collect::<Vec<_>>() {
+    if indexes.len() != protected.regions.len()
+        || indexes.iter().copied().ne(0..protected.regions.len())
+    {
         return Err(PreservationError(
             "preservation tokens are missing, duplicated, reordered, or malformed",
         ));
@@ -393,7 +394,10 @@ pub(crate) fn restore_source(
             }
         }
     }
-    let mut output = gaps[0].clone();
+    let capacity = gaps.iter().map(String::len).sum::<usize>()
+        + protected.regions.iter().map(|region| region.source.len()).sum::<usize>();
+    let mut output = String::with_capacity(capacity);
+    output.push_str(&gaps[0]);
     for (index, region) in protected.regions.iter().enumerate() {
         output.push_str(&region.source);
         output.push_str(&gaps[index + 1]);
