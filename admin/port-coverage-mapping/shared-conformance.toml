@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "783b445186df328d9354d4215079c6e56e9268fc"
+upstream_commit = "19c840eef664ac0c7fa8a7d3ce1b6252141ca648"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -44,6 +44,12 @@ status = "implemented"
 id = "FM-EXT-DEFINITION-LIST-001"
 python_bead = "fm-663e"
 rust_bead = "fm-663e"
+status = "implemented"
+
+[[change]]
+id = "FM-EXT-GLFM-001"
+python_bead = "fm-js19"
+rust_bead = "fmr-bnkr"
 status = "implemented"
 
 [[change]]

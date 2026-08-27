@@ -197,6 +197,12 @@ fn parse_new_frames(
 ) -> (usize, usize, bool) {
     let original_len = frames.len();
     while index < end {
+        let (payload_index, payload_column) = consume_indent(bytes, index, end, column, 3);
+        if &bytes[payload_index..end] == b">>>" {
+            index = payload_index;
+            column = payload_column;
+            break;
+        }
         if let Some((next, next_column, identity)) = consume_quote_marker(bytes, index, end, column)
         {
             frames.push(ContainerFrame { kind: ContainerKind::Quote, identity, content_column: 0 });
@@ -560,6 +566,65 @@ fn scan_wikilinks(text: &str, start: usize, end: usize) -> Vec<Candidate> {
         }
         if !closed {
             index += 1;
+        }
+    }
+    candidates
+}
+
+fn is_gitlab_reference_type(name: &str) -> bool {
+    matches!(
+        name,
+        "cadence"
+            | "contact"
+            | "epic"
+            | "feature_flag"
+            | "issue"
+            | "vulnerability"
+            | "wiki_page"
+            | "work_item"
+    )
+}
+
+fn scan_gitlab_references(text: &str, start: usize, end: usize) -> Vec<Candidate> {
+    let bytes = text.as_bytes();
+    let mut candidates = Vec::new();
+    let mut index = start;
+    while index < end {
+        while index < end && bytes[index] != b'[' {
+            index += 1;
+        }
+        if index >= end {
+            break;
+        }
+        let opener = index;
+        index += 1;
+        if !escape_is_even(text, opener) {
+            continue;
+        }
+        let mut colon = index;
+        while colon < end && !matches!(bytes[colon], b':' | b'[' | b']' | b'\n') {
+            colon += 1;
+        }
+        if colon >= end || bytes[colon] != b':' || !is_gitlab_reference_type(&text[index..colon]) {
+            continue;
+        }
+        let mut cursor = colon + 1;
+        while cursor < end && bytes[cursor] != b'\n' {
+            if bytes[cursor] == b'[' {
+                break;
+            }
+            if bytes[cursor] == b']' && escape_is_even(text, cursor) {
+                if cursor > colon + 1 {
+                    candidates.push(Candidate::inline(
+                        RegionKind::GitlabReferenceInline,
+                        opener,
+                        cursor + 1,
+                    ));
+                    index = cursor + 1;
+                }
+                break;
+            }
+            cursor += 1;
         }
     }
     candidates
@@ -1046,6 +1111,7 @@ fn scan_inline_scope(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     let mut candidates = scan_composite_math(text, start, end);
     candidates.extend(scan_myst_roles(text, start, end));
     candidates.extend(scan_wikilinks(text, start, end));
+    candidates.extend(scan_gitlab_references(text, start, end));
     candidates.extend(scan_backticks(text, start, end));
     candidates.extend(scan_paren_math(text, start, end));
     candidates.extend(scan_inline_environments(text, start, end));
@@ -2032,6 +2098,33 @@ fn scan_pandoc_line_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec
     candidates
 }
 
+fn scan_gitlab_multiline_blockquotes(
+    source: &str,
+    lines: &[Line],
+    opaque: &[bool],
+) -> Vec<Candidate> {
+    let mut pending = HashMap::<Vec<ContainerFrame>, usize>::new();
+    let mut candidates = Vec::new();
+    for line in lines {
+        if opaque[line.index] || line.lazy || line.payload(source) != ">>>" {
+            continue;
+        }
+        if let Some(opener_index) = pending.remove(line.key.as_slice()) {
+            let opener = &lines[opener_index];
+            candidates.push(Candidate::block(
+                RegionKind::GitlabMultilineBlockquote,
+                opener.start,
+                line.end,
+                opener.context,
+                opener.scaffold(source).to_owned(),
+            ));
+        } else {
+            pending.insert(line.key.clone(), line.index);
+        }
+    }
+    candidates
+}
+
 fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_toml_frontmatter(text, lines, opaque);
@@ -2043,6 +2136,7 @@ fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Ve
     candidates.extend(scan_raw_html_blocks(text, lines, opaque));
     candidates.extend(scan_attribute_group_blocks(text, lines, opaque));
     candidates.extend(scan_pandoc_line_blocks(text, lines, opaque));
+    candidates.extend(scan_gitlab_multiline_blockquotes(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut environments = HashMap::<Vec<ContainerFrame>, Vec<(String, usize)>>::new();
@@ -2125,6 +2219,7 @@ fn structural_pipe_ranges(text: &str, start: usize, end: usize) -> Vec<ByteRange
     let mut atomic_candidates = scan_backticks(text, start, end);
     atomic_candidates.extend(scan_myst_roles(text, start, end));
     atomic_candidates.extend(scan_wikilinks(text, start, end));
+    atomic_candidates.extend(scan_gitlab_references(text, start, end));
     let atomic: Vec<ByteRange> = arbitrate(atomic_candidates, start, end)
         .into_iter()
         .map(|candidate| (candidate.start, candidate.end))
@@ -2490,5 +2585,64 @@ mod tests {
         assert_eq!(regions[5].source, "[[outer [[inner]] tail]]");
         assert_eq!(regions[6].kind, RegionKind::CodeSpan);
         assert_eq!(regions[7].kind, RegionKind::CodeSpan);
+    }
+
+    #[test]
+    fn gitlab_references_are_allowlisted_and_fail_closed() {
+        let source = normalize_source(
+            "[issue:_123_] [cadence:\"plan a\"] [wiki_page:首页] [unknown:_123_] [issue:] \\[issue:_456_] `[issue:_789_]`\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        let kinds: Vec<RegionKind> = regions.iter().map(|region| region.kind).collect();
+        assert_eq!(
+            kinds,
+            vec![
+                RegionKind::GitlabReferenceInline,
+                RegionKind::GitlabReferenceInline,
+                RegionKind::GitlabReferenceInline,
+                RegionKind::CodeSpan,
+            ]
+        );
+        let sources: Vec<&str> = regions.iter().map(|region| region.source.as_str()).collect();
+        assert_eq!(
+            sources,
+            vec!["[issue:_123_]", "[cadence:\"plan a\"]", "[wiki_page:首页]", "`[issue:_789_]`",]
+        );
+    }
+
+    #[test]
+    fn gitlab_reference_pipe_is_not_a_table_cell_boundary() {
+        let source = normalize_source(
+            "| Kind | Reference |\n| --- | --- |\n| Cadence | [cadence:\"plan | a\"] |\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        let sources: Vec<&str> = regions.iter().map(|region| region.source.as_str()).collect();
+        assert_eq!(sources, vec!["[cadence:\"plan | a\"]"]);
+    }
+
+    #[test]
+    fn gitlab_multiline_blockquotes_require_compatible_paired_fences() {
+        let source = normalize_source(
+            ">>>\nroot\n\nsecond root block\n>>>\n\n- >>>\n  list body\n  >>>\n\n> >>>\n> nested body\n> >>>\n\n>>> unmatched\n\n    >>>\n    code\n    >>>\n\n>>>\n",
+        );
+        let regions = scan_protected_regions(&source).expect("valid scan");
+        let kinds: Vec<RegionKind> = regions.iter().map(|region| region.kind).collect();
+        assert_eq!(
+            kinds,
+            vec![
+                RegionKind::GitlabMultilineBlockquote,
+                RegionKind::GitlabMultilineBlockquote,
+                RegionKind::GitlabMultilineBlockquote,
+            ]
+        );
+        let sources: Vec<&str> = regions.iter().map(|region| region.source.as_str()).collect();
+        assert_eq!(
+            sources,
+            vec![
+                ">>>\nroot\n\nsecond root block\n>>>\n",
+                "- >>>\n  list body\n  >>>\n",
+                "> >>>\n> nested body\n> >>>\n",
+            ]
+        );
     }
 }
