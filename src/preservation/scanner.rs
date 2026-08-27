@@ -2335,16 +2335,19 @@ fn gfm_table_lines(
     gfm_table_lines
 }
 
-/// Whether this line continues the paragraph above it inside the same container.
+/// Whether this line continues the paragraph above it inside an existing list item.
 ///
-/// A Pandoc line block has to open a block. When a paragraph line wraps onto a line that
-/// happens to begin with `|` the result is paragraph continuation, not a line block, and
-/// protecting it as an opaque block forces a boundary the author never wrote: inside a
-/// list that turns the list loose on the next pass (fmr-0pxh).
-fn continues_a_paragraph(source: &str, lines: &[Line], index: usize) -> bool {
-    index.checked_sub(1).map(|previous| &lines[previous]).is_some_and(|previous| {
-        previous.frames == lines[index].frames && !previous.is_blank(source)
-    })
+/// A wrapped list item can put `|` at the start of a continuation line. Protecting that
+/// line as an opaque block forces a boundary the author never wrote and turns the list
+/// loose on the next pass (fmr-0pxh). Top-level and quote-only adjacency remains valid
+/// Pandoc line-block syntax and is pinned by the shared conformance corpus.
+fn continues_a_list_item_paragraph(source: &str, lines: &[Line], index: usize) -> bool {
+    let line = &lines[index];
+    line.context.list_depth > 0
+        && index
+            .checked_sub(1)
+            .map(|previous| &lines[previous])
+            .is_some_and(|previous| previous.frames == line.frames && !previous.is_blank(source))
 }
 
 fn scan_pandoc_line_blocks(
@@ -2361,7 +2364,7 @@ fn scan_pandoc_line_blocks(
         if opaque[opener_index]
             || gfm_table_lines[opener_index]
             || opener.lazy
-            || continues_a_paragraph(source, lines, opener_index)
+            || continues_a_list_item_paragraph(source, lines, opener_index)
             || !is_pandoc_line(opener.exact_payload(source))
         {
             opener_index += 1;

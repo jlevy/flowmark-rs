@@ -13,28 +13,31 @@
 Establish idempotence — `format(format(x)) == format(x)` — as a verified, corpus-wide
 property of flowmark, and document the full scope of where it does not hold today.
 
-Flowmark's value proposition is that it is safe to run repeatedly: in a pre-commit hook,
-in CI, on save. That rests on the formatter reaching a fixed point in one pass. Where it
-does not, `flowmark --check` reports files that flowmark itself just wrote, and repeated
-runs silently rewrite authored content.
+Flowmark’s value proposition is that it is safe to run repeatedly: in a pre-commit hook,
+in CI, on save. That rests on the formatter reaching a fixed point in one pass.
+Where it does not, `flowmark --check` reports files that flowmark itself just wrote, and
+repeated runs silently rewrite authored content.
 
-This spec deliberately **documents scope before proposing any fix**. Every defect below
-is measured in both implementations and left unfixed. Fixes follow the project's standard
-sequence: agree the intended bytes, land them in Python, then replicate exactly in Rust.
+This spec documents scope before changing behavior.
+The one regression introduced by PR #81 was isolated and fixed after measurement; the
+inherited defects remain follow-on work.
+Those fixes follow the project’s standard sequence: agree the intended bytes, land them
+in Python, then replicate exactly in Rust.
 
 ## Background
 
 ### What is already verified
 
-The language-neutral conformance corpus is in good shape on this axis. Of 776 cases,
-**768 declare `idempotent = true`** and the shared runner verifies exact second-pass
-output for each.
+The language-neutral conformance corpus is in good shape on this axis.
+Of 778 cases, **770 declare `idempotent = true`** and the shared runner verifies exact
+second-pass output for each.
 
-The limitation is that each case pins **one** CLI invocation. A case authored with
-`--width 0` proves nothing about `--width 40`; one authored with default flags proves
-nothing about `--semantic --cleanups`. Idempotence is a property of the formatter across
-its option space, and the corpus samples that space one point per document. Width is the
-axis sampled most thinly, and it is where most of the defects below hide.
+The limitation is that each case pins **one** CLI invocation.
+A case authored with `--width 0` proves nothing about `--width 40`; one authored with
+default flags proves nothing about `--semantic --cleanups`. Idempotence is a property of
+the formatter across its option space, and the corpus samples that space one point per
+document. Width is the axis sampled most thinly, and it is where most of the defects
+below hide.
 
 ### Method
 
@@ -43,18 +46,21 @@ across a six-mode matrix (`default`, `--semantic`, `--cleanups`, full typography
 `--width 0`, `--width 40`). Run against both implementations in process: flowmark-rs at
 `c00f74b` and Python flowmark at the pinned `9e9fd7c`.
 
+The counts below are an audit snapshot at those commits, not live repository counters.
+The committed gate recomputes the current corpus on every run.
+
 ### Measured scope
 
-| | Documents | Checks | Failing checks | Distinct files |
+|  | Documents | Checks | Failing checks | Distinct files |
 | --- | ---: | ---: | ---: | ---: |
 | **Python** (reference) | 1,528 | 9,168 | **138 (1.51%)** | **28** |
 | **Rust** (port) | 1,519 | 9,114 | **68 (0.75%)** | **18** |
 
-Overlap: 54 failing checks and 14 files fail in both. 84 checks / 14 files are
-Python-only; 14 checks / 4 files are Rust-only.
+Overlap: 54 failing checks and 14 files fail in both.
+84 checks / 14 files are Python-only; 14 checks / 4 files are Rust-only.
 
 **The reference implementation is the less stable of the two.** That is the headline
-result and the reason this work has to start upstream: roughly two thirds of Python's
+result and the reason this work has to start upstream: roughly two thirds of Python’s
 instability has no Rust counterpart, and fixing it will change bytes that Rust must then
 match. Fixing Rust first would mean fixing it twice.
 
@@ -63,7 +69,7 @@ behaving correctly, and are excluded throughout.
 
 ### Regressions versus pre-existing defects
 
-The audit was re-run against three Rust builds — v0.3.2 (the pre-PR release), PR #81's
+The audit was re-run against three Rust builds — v0.3.2 (the pre-PR release), PR #81’s
 head `f833ce8`, and this branch — to separate what the preservation work broke from what
 it inherited. This is the axis that decides what blocks the PR.
 
@@ -83,8 +89,9 @@ That one regression is fixed in `8fb4a1c` (`fmr-0pxh`), so **PR #81 now introduc
 idempotence regression at all**. The ledger holds 67 entries across 17 files, every one
 of which also fails on the v0.3.2 release.
 
-A second sweep confirmed there is no regression on the output axis either. Comparing
-every shipped document in five modes against the Python reference, before and after:
+A second sweep confirmed there is no regression on the output axis either.
+Comparing every shipped document in five modes against the Python reference, before and
+after:
 
 | Rust-vs-Python parity, v0.3.2 to this branch | Checks | Files |
 | --- | ---: | ---: |
@@ -93,13 +100,14 @@ every shipped document in five modes against the Python reference, before and af
 | Both diverge, output changed | 40 | 8 |
 
 Of the 40 where both versions diverge from Python, 30 moved **closer** to the reference
-and 10 stayed the same distance; **none moved farther**. So on both axes the preservation
-work is strictly better or equal, with no incorrect behavior change to block on.
+and 10 stayed the same distance; **none moved farther**. So on both axes the
+preservation work is strictly better or equal, with no incorrect behavior change to
+block on.
 
 **PR #81 is a large net improvement to idempotence**: it fixes 146 failing checks across
-25 files and introduces exactly one regression, on one file. The preservation work has
-made the formatter substantially more stable, not less. A further 12 checks were fixed by
-this branch's fence-escape work on top.
+25 files and introduces exactly one regression, on one file.
+The preservation work has made the formatter substantially more stable, not less.
+A further 12 checks were fixed by this branch’s fence-escape work on top.
 
 That one regression is the only item that blocks landing PR #81 on this axis, and it is
 tracked as `fmr-0pxh`:
@@ -114,17 +122,18 @@ $ flowmark --width 40 a.md > b.md && flowmark --width 40 b.md > c.md && diff b.m
 Pass 1 wraps the first item so a continuation line begins with `|`; pass 2 inserts a
 blank line before the third item, partially converting the tight list to loose.
 v0.3.2 and Python are both stable on it, so Rust needs only to match the reference — no
-upstream decision required. Substitution confirms the trigger: replacing the pipes with
-commas is stable, two items are stable, and an unrelated list containing a pipe is
-stable. The shape is a continuation line *beginning* with `|` plus a third item, which is
-what the new pre-parse scanner's structural-pipe and table detection reacts to.
+upstream decision required.
+Substitution confirms the trigger: replacing the pipes with commas is stable, two items
+are stable, and an unrelated list containing a pipe is stable.
+The shape is a continuation line *beginning* with `|` plus a third item, which is what
+the new pre-parse scanner’s structural-pipe and table detection reacts to.
 
 Everything else in the inventory below predates the PR and belongs in separate changes.
 
 ### Defect inventory
 
 | ID | Shape | Effect | Python | Rust |
-| --- | --- | --- | :-: | :-: |
+| --- | --- | --- | :---: | :---: |
 | A | Wrapped line begins with `=` | Reparsed as a setext H1 underline: list text is promoted to a heading and the list structure is destroyed | yes | yes |
 | B | Setext heading with multi-line content (CommonMark 0081, 0082, 0095) | Second pass splits the heading; the trailing line escapes into a paragraph | yes | yes |
 | C | Ordered list with an empty item (CommonMark 0283) | First pass drops the empty item, second pass renumbers | yes | yes |
@@ -151,20 +160,22 @@ $ printf -- '- alpha beta gamma delta epsilon word =\n' | flowmark --width 20 - 
 delta epsilon word
 ```
 
-The list item's text becomes an H1, the `=` is consumed, and the remaining text escapes
+The list item’s text becomes an H1, the `=` is consumed, and the remaining text escapes
 the list. The likely cause is a gap in the escape set used when wrapping: both ports
-guard a wrapped line starting with `-`, `*`, `+`, `>` or `#` (Rust's `MD_SPECIALS_PAT` is
-`^([-*+>]|#+)$`) but not `=`, and neither guards multi-character runs such as `---` or
-`===`. Any prose line ending in an equals sign — a config snippet, `x =`, an assignment
-quoted in prose — can trigger it at a narrow width. It also fires on the project's own
-reference document, `testdoc.orig.md`, and on one of this repository's specs.
+guard a wrapped line starting with `-`, `*`, `+`, `>` or `#` (Rust’s `MD_SPECIALS_PAT`
+is `^([-*+>]|#+)$`) but not `=`, and neither guards multi-character runs such as `---`
+or `===`. Any prose line ending in an equals sign — a config snippet, `x =`, an
+assignment quoted in prose — can trigger it at a narrow width.
+It also fires on the project’s own reference document, `testdoc.orig.md`, and on one of
+this repository’s specs.
 
 ### A correction worth recording
 
 An earlier draft of this audit asserted that formatting a corpus **golden** should be a
-no-op, and reported roughly 190 failures on that basis. That premise was wrong: **258 of
-the 673 CommonMark cases are tagged `deferred`**, so their `expected.default.md` files
-are aspirational spec expectations rather than output flowmark currently produces.
+no-op, and reported roughly 190 failures on that basis.
+That premise was wrong: **258 of the 673 CommonMark cases are tagged `deferred`**, so
+their `expected.default.md` files are aspirational spec expectations rather than output
+flowmark currently produces.
 Requiring `format(golden) == golden` therefore measures the deferred backlog, not
 stability. The check was removed; the fixed-point property over inputs already covers
 what it was reaching for, and the numbers in this spec exclude it.
@@ -179,19 +190,20 @@ what it was reaching for, and the numbers in this spec exclude it.
   build.
 - **The known set is exact and shrinking.** A known gap is a named entry with a tracking
   bead, asserted in both directions so it cannot rot or quietly grow.
-- **Python leads; Rust replicates exactly.** Every shared defect is fixed upstream first,
-  pinned as a shared case, and only then ported. Rust never changes shared behavior
-  unilaterally.
+- **Python leads; Rust replicates exactly.** Every shared defect is fixed upstream
+  first, pinned as a shared case, and only then ported.
+  Rust never changes shared behavior unilaterally.
 
 ## Non-Goals
 
-- **Fixing anything under this spec.** Phase 1 is measurement and gating only. Fixes are
-  Phase 2 and later, gated on agreed intended bytes.
-- **Convergence beyond two passes.** The contract is a fixed point after one format. A
-  document that stabilises only after three passes is a defect, not a weaker guarantee to
-  codify.
-- **Idempotence across option changes.** `format(format(x, A), B) == format(x, B)` is not
-  claimed and is not desirable; only same-options repetition is in scope.
+- **Clearing the inherited backlog in PR #81.** Phase 1 measures and gates the property;
+  Phase 2 fixes only the regression introduced by this PR. The remaining defects require
+  separate, upstream-led behavior changes.
+- **Convergence beyond two passes.** The contract is a fixed point after one format.
+  A document that stabilises only after three passes is a defect, not a weaker guarantee
+  to codify.
+- **Idempotence across option changes.** `format(format(x, A), B) == format(x, B)` is
+  not claimed and is not desirable; only same-options repetition is in scope.
 - **Clearing the CommonMark deferred backlog.** Defects B–F touch constructs already
   represented in the deferred set; this spec addresses their *instability*, not every
   inherited semantic difference.
@@ -205,7 +217,7 @@ For every corpus document `x` and every mode `m` in the matrix,
 
 ### Mode matrix
 
-Six modes covering the option space's independent axes rather than its combinations:
+Six modes covering the option space’s independent axes rather than its combinations:
 `default`, `--semantic`, `--cleanups`, full typography
 (`--semantic --cleanups --smartquotes --ellipses`), `--width 0`, and `--width 40`.
 
@@ -215,22 +227,26 @@ only when wrapping pushes a hazardous token to the start of a line.
 ### Corpus sources
 
 All of them: shared corpus inputs and goldens, CommonMark spec examples, reference
-testdocs, tryscript documents and fixtures, and the repository's own docs. Goldens are
-included as documents in their own right — not as an assertion that they are stable
-output, per the correction above. The repository's own docs matter because they are the
-only genuinely human-authored prose in the set, and defect A was found there.
+testdocs, tryscript documents and fixtures, and the repository’s own docs.
+Goldens are included as documents in their own right — not as an assertion that they are
+stable output, per the correction above.
+The repository’s own docs matter because they are the only genuinely human-authored
+prose in the set, and defect A was found there.
 
 ### Known-divergence ledger
 
 `tests/idempotence_known_divergences.toml` names each failing document, mode and bead,
-following the precedent of `tests/parity_corpus_known_divergences.toml`. The gate asserts
-it **exactly**: an unlisted failure fails the build, and a listed entry that now passes
-also fails it, so the ledger shrinks and cannot rot.
+following the precedent of `tests/parity_corpus_known_divergences.toml`. The gate
+asserts it **exactly**: an unlisted failure fails the build, and a listed entry that now
+passes also fails it, so the ledger shrinks and cannot rot.
+It also rejects malformed or duplicate ledger entries and fails loudly on filesystem
+errors; only deliberate invalid-UTF-8 fixtures are excluded from the library-level gate.
 
 ### Components
 
 - `tests/test_idempotence_corpus.rs` — the gate.
-- `tests/idempotence_known_divergences.toml` — the ledger, seeded with the 68 Rust entries.
+- `tests/idempotence_known_divergences.toml` — the exact 67-entry inherited-defect
+  ledger.
 - Upstream `tests/parity_corpus/` — where agreed bytes get pinned before any fix.
 
 ### API Changes
@@ -242,30 +258,32 @@ None. This spec adds test infrastructure only.
 ### Phase 1: Measure and gate (this change)
 
 - [x] Audit both implementations across the corpus and mode matrix; record the numbers
-      and the defect inventory above.
+  and the defect inventory above.
 - [x] Add `tests/test_idempotence_corpus.rs` asserting the fixed-point property, using
-      the library directly rather than spawning the CLI.
+  the library directly rather than spawning the CLI.
 - [x] Add `tests/idempotence_known_divergences.toml` seeded with the 68 current Rust
-      entries, each naming its bead.
+  entries, each naming its bead.
 - [x] Remove the incorrect golden-stability assertion and record why.
-- [x] Confirm the full suite, the 776-case conformance corpus and the tryscript documents
-      stay green.
+- [x] Confirm the full suite, the 778-case conformance corpus and the tryscript
+  documents stay green.
 
 ### Phase 2: Clear the one regression, so PR #81 lands clean (done)
 
-- [x] Fix `fmr-0pxh`. A wrapped continuation line beginning with `|` was recognized as a
-      Pandoc line-block opener; a line block must *open* a block rather than continue a
-      paragraph, so recognition now excludes an opener whose previous line is non-blank in
-      the same container. Output matches Python byte for byte.
+- [x] Fix `fmr-0pxh`. A wrapped list-item continuation beginning with `|` was recognized
+  as a Pandoc line-block opener, so recognition now excludes that ambiguous shape inside
+  an existing list item.
+  Top-level and quote-only adjacency remain valid line-block syntax.
+  Both behaviors are pinned by shared cases, and the output matches Python byte for
+  byte.
 - [x] Remove its ledger entry.
 - [x] Confirm no output-parity regression on any shipped document (table above).
 
 Two other fixes were tried first and rejected by the corpus, which is worth recording:
-dropping the synthetic block boundaries to match Python's bridge exactly, and gating them
-on list depth. Both broke `reference.testdoc.plain`, because comrak merges text following
-the token line into the token's own paragraph where marko does not. Those boundaries are
-load-bearing **for this parser**, so "replicate Python exactly" could not be applied to
-the bridge here and the fix belonged in recognition instead.
+dropping the synthetic block boundaries to match Python’s bridge exactly, and gating
+them on list depth. Both broke `reference.testdoc.plain`, because comrak merges text
+following the token line into the token’s own paragraph where marko does not.
+Those boundaries are load-bearing **for this parser**, so “replicate Python exactly”
+could not be applied to the bridge here and the fix belonged in recognition instead.
 
 Everything below is pre-existing and belongs in its own change.
 
@@ -273,44 +291,46 @@ Everything below is pre-existing and belongs in its own change.
 
 For each defect A–H, in severity order starting with A:
 
-- [ ] Decide the intended output. For several this is not obvious — defect C's *first*
-      pass already drops an empty list item, so idempotence alone is the wrong target.
+- [ ] Decide the intended output.
+  For several this is not obvious — defect C’s *first* pass already drops an empty list
+  item, so idempotence alone is the wrong target.
 - [ ] Add a shared case to the language-neutral manifest pinning those bytes.
 - [ ] Fix in Python, the reference implementation.
 - [ ] Replicate exactly in Rust; confirm byte-identical output.
 - [ ] Remove the ledger entry, which now fails the gate until it is gone.
 
 Defect D is Rust-only and Python is already correct, so it needs no upstream change —
-only a shared case pinning Python's existing bytes and a Rust fix to match.
+only a shared case pinning Python’s existing bytes and a Rust fix to match.
 
 ### Phase 4: Exact parity
 
-Idempotence is the weaker of the two properties this corpus can prove. The stronger one
-is **exactness**: for every shipped document and every mode, the Rust output equals the
-Python output byte for byte. Today that is measured but not gated.
+Idempotence is the weaker of the two properties this corpus can prove.
+The stronger one is **exactness**: for every shipped document and every mode, the Rust
+output equals the Python output byte for byte.
+Today that is measured but not gated.
 
 Current state, from the same audit: across 7,640 comparisons this branch matches Python
-everywhere v0.3.2 did, plus 1,458 checks across 297 files where v0.3.2 did not. What
-remains is 40 checks across 8 files where both ports diverge, and the 34 entries in
+everywhere v0.3.2 did, plus 1,458 checks across 297 files where v0.3.2 did not.
+What remains is 40 checks across 8 files where both ports diverge, and the 34 entries in
 `tests/parity_corpus_known_divergences.toml`, plus the 258 CommonMark cases upstream
 tags `deferred`.
 
 - [ ] Add an exactness gate alongside the idempotence gate: same corpus, same mode
-      matrix, asserting Rust output equals recorded Python output, with its own exact
-      ledger. It cannot call Python at test time, so the reference bytes come from the
-      shared corpus, generated upstream and pinned.
+  matrix, asserting Rust output equals recorded Python output, with its own exact
+  ledger. It cannot call Python at test time, so the reference bytes come from the shared
+  corpus, generated upstream and pinned.
 - [ ] Seed the ledger from the current divergence set and drive it to zero, defect by
-      defect, Python first.
+  defect, Python first.
 - [ ] Fold the 34-entry CommonMark ledger into the same mechanism so there is one place
-      that answers "where do the ports still disagree".
+  that answers “where do the ports still disagree”.
 - [ ] When both ledgers are empty, exactness subsumes idempotence: a formatter that
-      matches a fixed-point reference is itself a fixed point.
+  matches a fixed-point reference is itself a fixed point.
 
 ### Phase 5: Close the loop
 
 - [ ] When the ledger is empty, restore the excluded generator fragments and promote
-      `generated_documents_reach_a_fixed_point` in `tests/test_preservation_properties.rs`
-      from an on-demand harness to a gate.
+  `generated_documents_reach_a_fixed_point` in `tests/test_preservation_properties.rs`
+  from an on-demand harness to a gate.
 
 ## Producing per-item prompts
 
@@ -318,19 +338,21 @@ Phases 3 and 4 are a queue of independent defects, each needing its own agent se
 Rather than hand-writing prompts, each is derived mechanically from what the gates
 already record, so the prompt cannot drift from the evidence:
 
-1. **Group ledger entries by defect.** Both ledgers key every entry as
-   `document::mode` with a `bead`, so grouping by bead yields the exact document and mode
-   set for one item.
-2. **Minimize before prompting.** Run the delta reducer over each group's largest
-   document to get a byte-minimal reproducer. Every defect in this spec was reduced this
-   way, most to under ten bytes, and a minimal case is what makes a prompt actionable.
+1. **Group ledger entries by defect.** Both ledgers key every entry as `document::mode`
+   with a `bead`, so grouping by bead yields the exact document and mode set for one
+   item.
+2. **Minimize before prompting.** Run the delta reducer over each group’s largest
+   document to get a byte-minimal reproducer.
+   Every defect in this spec was reduced this way, most to under ten bytes, and a
+   minimal case is what makes a prompt actionable.
 3. **Record the three-way status.** For each reproducer capture v0.3.2, the current
-   branch, and Python, so the prompt states plainly whether it is a regression, inherited,
-   or a port divergence, and whether Python already has the intended bytes.
+   branch, and Python, so the prompt states plainly whether it is a regression,
+   inherited, or a port divergence, and whether Python already has the intended bytes.
 4. **State the target, or say it is undecided.** Where Python is already correct, the
-   target is "match this byte sequence". Where both ports are wrong (defects B, C, E, F)
-   the prompt must say the intended output is an open question and name it as the first
-   deliverable, so nobody pins the wrong golden.
+   target is “match this byte sequence”.
+   Where both ports are wrong (defects B, C, E, F) the prompt must say the intended
+   output is an open question and name it as the first deliverable, so nobody pins the
+   wrong golden.
 5. **Name the exit condition.** A shared case is added, both ports agree, and the ledger
    entry is removed, which the gate then requires.
 
@@ -340,40 +362,43 @@ example, and it is what let the fix land in one pass.
 ## Testing Strategy
 
 The gate is the test: every shipped document, formatted twice, in every mode, with the
-ledger asserted exactly in both directions. It runs in about 25 seconds in the debug test
-profile over roughly 9,100 format pairs, which is comfortably inline for the default
-`cargo test`.
+ledger asserted exactly in both directions.
+The current 1,533-document corpus produces 9,186 valid UTF-8 format pairs and ran in
+16–22 seconds across local debug-profile checks, which is comfortably inline for the
+default `cargo test`.
 
 Each defect additionally gets a focused regression test at the layer it lives in when it
 is fixed, so the behavior is pinned independently of the corpus walk.
 
-The Python audit script used for the numbers above is not committed; the equivalent gate
-belongs upstream and is proposed as part of Phase 2 so both ports carry the same
-guarantee.
+The Python audit script used for the snapshot above is not committed.
+`fm-sk2n` tracks an equivalent upstream gate so both ports carry the same continuously
+checked guarantee.
 
 ## Open Questions
 
 - **What are the intended bytes for defects B, C, E and F?** All four are CommonMark
-  shapes where the first pass is already arguably wrong. Fixing idempotence without
-  deciding the target risks pinning the wrong output.
+  shapes where the first pass is already arguably wrong.
+  Fixing idempotence without deciding the target risks pinning the wrong output.
 - **Should `=` be escaped at every line start, or only where a setext underline can
-  follow?** Unconditional is simpler and matches how `-` is handled today, at the cost of
-  emitting `\=` in a few more places.
-- **Should the repository's own docs stay in the gate?** They are the best source of human
-  prose but they change often, so a failure may reflect a new doc rather than a new
-  defect. Current proposal: keep them, since a doc flowmark cannot format stably is itself
-  a bug.
+  follow?** Unconditional is simpler and matches how `-` is handled today, at the cost
+  of emitting `\=` in a few more places.
+- **Should the repository’s own docs stay in the gate?** They are the best source of
+  human prose but they change often, so a failure may reflect a new doc rather than a
+  new defect. Current proposal: keep them, since a doc flowmark cannot format stably is
+  itself a bug.
 - **Should the ledger be shared rather than Rust-only?** Python has 14 files of
-  instability Rust does not. A shared ledger would make the asymmetry visible to both
-  ports, at the cost of coupling their test infrastructure.
+  instability Rust does not.
+  A shared ledger would make the asymmetry visible to both ports, at the cost of
+  coupling their test infrastructure.
 
 ## References
 
-- PR [jlevy/flowmark-rs#81](https://github.com/jlevy/flowmark-rs/pull/81) — review R10 and
-  the fence-escape work that prompted this.
-- `tests/test_preservation_properties.rs` — generated-input harness; found defects G and H.
-- `docs/project/specs/active/plan-2026-05-28-shared-parity-corpus.md` — the shared corpus
-  this builds on.
+- PR [jlevy/flowmark-rs#81](https://github.com/jlevy/flowmark-rs/pull/81) — review R10
+  and the fence-escape work that prompted this.
+- `tests/test_preservation_properties.rs` — generated-input harness; found defects G and
+  H.
+- `docs/project/specs/active/plan-2026-05-28-shared-parity-corpus.md` — the shared
+  corpus this builds on.
 - `tests/parity_corpus_known_divergences.toml` — the ledger pattern reused here.
 
 <!-- This document follows common-doc-guidelines.md.
