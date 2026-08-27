@@ -283,11 +283,59 @@ For each defect A–H, in severity order starting with A:
 Defect D is Rust-only and Python is already correct, so it needs no upstream change —
 only a shared case pinning Python's existing bytes and a Rust fix to match.
 
-### Phase 4: Close the loop
+### Phase 4: Exact parity
+
+Idempotence is the weaker of the two properties this corpus can prove. The stronger one
+is **exactness**: for every shipped document and every mode, the Rust output equals the
+Python output byte for byte. Today that is measured but not gated.
+
+Current state, from the same audit: across 7,640 comparisons this branch matches Python
+everywhere v0.3.2 did, plus 1,458 checks across 297 files where v0.3.2 did not. What
+remains is 40 checks across 8 files where both ports diverge, and the 34 entries in
+`tests/parity_corpus_known_divergences.toml`, plus the 258 CommonMark cases upstream
+tags `deferred`.
+
+- [ ] Add an exactness gate alongside the idempotence gate: same corpus, same mode
+      matrix, asserting Rust output equals recorded Python output, with its own exact
+      ledger. It cannot call Python at test time, so the reference bytes come from the
+      shared corpus, generated upstream and pinned.
+- [ ] Seed the ledger from the current divergence set and drive it to zero, defect by
+      defect, Python first.
+- [ ] Fold the 34-entry CommonMark ledger into the same mechanism so there is one place
+      that answers "where do the ports still disagree".
+- [ ] When both ledgers are empty, exactness subsumes idempotence: a formatter that
+      matches a fixed-point reference is itself a fixed point.
+
+### Phase 5: Close the loop
 
 - [ ] When the ledger is empty, restore the excluded generator fragments and promote
       `generated_documents_reach_a_fixed_point` in `tests/test_preservation_properties.rs`
       from an on-demand harness to a gate.
+
+## Producing per-item prompts
+
+Phases 3 and 4 are a queue of independent defects, each needing its own agent session.
+Rather than hand-writing prompts, each is derived mechanically from what the gates
+already record, so the prompt cannot drift from the evidence:
+
+1. **Group ledger entries by defect.** Both ledgers key every entry as
+   `document::mode` with a `bead`, so grouping by bead yields the exact document and mode
+   set for one item.
+2. **Minimize before prompting.** Run the delta reducer over each group's largest
+   document to get a byte-minimal reproducer. Every defect in this spec was reduced this
+   way, most to under ten bytes, and a minimal case is what makes a prompt actionable.
+3. **Record the three-way status.** For each reproducer capture v0.3.2, the current
+   branch, and Python, so the prompt states plainly whether it is a regression, inherited,
+   or a port divergence, and whether Python already has the intended bytes.
+4. **State the target, or say it is undecided.** Where Python is already correct, the
+   target is "match this byte sequence". Where both ports are wrong (defects B, C, E, F)
+   the prompt must say the intended output is an open question and name it as the first
+   deliverable, so nobody pins the wrong golden.
+5. **Name the exit condition.** A shared case is added, both ports agree, and the ledger
+   entry is removed, which the gate then requires.
+
+The bead descriptions in this epic already follow that shape; `fmr-0pxh` is the worked
+example, and it is what let the fix land in one pass.
 
 ## Testing Strategy
 
