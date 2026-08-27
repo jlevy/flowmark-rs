@@ -407,8 +407,15 @@ static NUMBERED_ITEM_TWO_SPACES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\d+)\.  ").expect("valid NUMBERED_ITEM_TWO_SPACES regex"));
 
 /// Normalize blank lines by removing trailing whitespace.
+///
+/// Fenced code content is literal, so a whitespace-only line inside a fence is authored
+/// data rather than stray trailing whitespace. Blanking it there diverges from Python
+/// and, for an unterminated fence, leaves an empty line that the next format run
+/// collapses, so the output is not a fixed point (fmr-00e2).
 fn normalize_blank_lines(text: &str) -> String {
-    BLANK_LINE_WS.replace_all(text, "").into_owned()
+    transform_outside_code_fences(text, |line| {
+        vec![BLANK_LINE_WS.replace_all(line, "").into_owned()]
+    })
 }
 
 /// Remove space between code fence and language identifier.
@@ -465,7 +472,15 @@ fn detect_opening_fence(trimmed: &str) -> Option<String> {
     let is_tilde_fence = trimmed.starts_with("~~~");
     if is_backtick_fence || is_tilde_fence {
         let fence_char = if is_backtick_fence { '`' } else { '~' };
-        let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
+        let info = trimmed.trim_start_matches(fence_char);
+        // CommonMark 0.31.2 section 4.5: a backtick fence's info string may not contain
+        // a backtick. Such a line opens no code block, so it must stay eligible for the
+        // escape protection below; otherwise comrak resolves the escape and the
+        // authored backslash is lost. Tilde fences carry no such restriction.
+        if is_backtick_fence && info.contains('`') {
+            return None;
+        }
+        let fence_len = trimmed.len() - info.len();
         Some(std::iter::repeat_n(fence_char, fence_len).collect())
     } else {
         None
@@ -3393,5 +3408,48 @@ mod tests {
         // as our internal marker since it lacks the PUA character.
         let user_comment = "<!-- REFDEF:see below -->";
         assert!(!user_comment.starts_with(REFDEF_MARKER_PREFIX));
+    }
+
+    /// `CommonMark` 0.31.2 section 4.5: a backtick fence's info string may not contain a
+    /// backtick, so such a line opens no code block. Treating it as a fence skipped
+    /// escape protection and silently dropped the backslash (fmr-5vfu, fmr-sh2b).
+    #[test]
+    fn backtick_fence_info_string_with_backtick_is_not_a_fence() {
+        assert_eq!(detect_opening_fence("```\\`"), None);
+        assert_eq!(detect_opening_fence("```a`b"), None);
+        assert_eq!(detect_opening_fence("```$`$"), None);
+        assert_eq!(detect_opening_fence("```rust"), Some("```".to_string()));
+        assert_eq!(detect_opening_fence("````"), Some("````".to_string()));
+        // Tilde fences carry no such restriction.
+        assert_eq!(detect_opening_fence("~~~`"), Some("~~~".to_string()));
+    }
+
+    fn fill_default(input: &str) -> String {
+        fill_markdown(input, false, 88, false, false, false, false, None, ListSpacing::Preserve)
+    }
+
+    /// fmr-5vfu: an escaped backtick in a false fence opener must survive the round
+    /// trip, and reformatting the result must not change it again.
+    ///
+    /// Python emits `` ```\` `` with no closing fence. Rust still appends one when the
+    /// escaped backtick is the only backtick on the line: protecting it hides the very
+    /// character that made the line a non-fence, so comrak opens a block after all.
+    /// Closing that last parity gap needs the legacy escape placeholders to keep a
+    /// fence-visible backtick, which is tracked in fmr-5vfu.
+    #[test]
+    fn false_fence_with_escaped_backtick_keeps_the_escape_and_is_idempotent() {
+        for input in ["```\\`", "```\\`x", "```a\\`b"] {
+            let once = fill_default(input);
+            assert!(once.starts_with(input), "escape must survive: {once:?}");
+            assert_eq!(fill_default(&once), once, "must reach a fixed point: {once:?}");
+        }
+    }
+
+    /// fmr-sh2b: the PR #81 review R10 reproducer, minimized to 7 bytes.
+    #[test]
+    fn unterminated_fence_with_escaped_dollar_is_preserved_and_idempotent() {
+        let once = fill_default("```\\$`$");
+        assert_eq!(once, "```\\$`$\n");
+        assert_eq!(fill_default(&once), once);
     }
 }
