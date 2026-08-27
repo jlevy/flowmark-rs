@@ -5,15 +5,16 @@ title: Interior BOM with leading whitespace is not a fixed point in either port
 kind: bug
 status: open
 priority: 3
-version: 2
+version: 3
+spec_path: docs/project/specs/active/plan-2026-08-27-idempotence-verification.md
 labels:
   - pr-review
   - idempotence
   - parity
 dependencies: []
-parent_id: is-01m10tcw81ta6bfvxa5xkj7707
+parent_id: is-01m12n1d12xj4jjmaczmn9etzm
 created_at: 2026-08-27T15:25:51.726Z
-updated_at: 2026-08-27T15:25:58.477Z
+updated_at: 2026-08-27T22:22:07.368Z
 ---
 Found by the generated-input property test added for fmr-htol. Like fmr-c6xs
 this is a SHARED bug: Python and Rust both fail to reach a fixed point, so the

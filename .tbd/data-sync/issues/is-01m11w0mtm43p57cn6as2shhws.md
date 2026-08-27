@@ -5,15 +5,16 @@ title: Unterminated fence with escaped backtick is non-idempotent and diverges f
 kind: bug
 status: open
 priority: 2
-version: 2
+version: 3
+spec_path: docs/project/specs/active/plan-2026-08-27-idempotence-verification.md
 labels:
   - pr-review
   - idempotence
   - parity
 dependencies: []
-parent_id: is-01m10tcw81ta6bfvxa5xkj7707
+parent_id: is-01m12n1d12xj4jjmaczmn9etzm
 created_at: 2026-08-27T15:04:32.852Z
-updated_at: 2026-08-27T15:31:35.719Z
+updated_at: 2026-08-27T22:22:08.061Z
 ---
 Found while recovering the exact reproducer for R10 (fmr-sh2b). This one is
 NOT a PR #81 regression: it reproduces on the shipped v0.3.2 release binary,
