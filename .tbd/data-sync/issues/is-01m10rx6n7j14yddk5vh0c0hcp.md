@@ -5,14 +5,14 @@ title: Port remaining shared GLFM preservation cases
 kind: bug
 status: closed
 priority: 1
-version: 4
+version: 5
 labels:
   - glfm
   - parity
   - preservation
 dependencies: []
 created_at: 2026-08-27T04:50:59.878Z
-updated_at: 2026-08-27T05:08:52.666Z
+updated_at: 2026-08-27T05:14:04.012Z
 closed_at: 2026-08-27T05:08:52.665Z
 close_reason: Ported FM-EXT-GLFM-001 from the shared upstream contract at 19c840e. Rust uses the same bracketed-reference allowlist, source-exact reference/table-pipe handling, and compatible paired >>> container scan. All four unchanged shared cases pass twice; focused Rust scanner tests, cargo fmt, clippy with warnings denied, all-feature tests, and no-default-feature tests pass. No divergence entry was added.
 resolution: null
@@ -22,4 +22,4 @@ Port the upstream language-neutral cases and behavior for the unresolved GitLab 
 
 ## Notes
 
-Pinned repos/flowmark and the machine-checked mapping to 19c840e. Direct Rust port adds the same GLFM reference allowlist, table-pipe shielding, exact paired >>> container scan, and three focused native invariant tests. Shared native conformance passes all four FM-EXT-GLFM-001 cases twice; full Rust gates remain before closure.
+Pinned repos/flowmark and the machine-checked mapping through 644be24. Direct Rust behavior remains identical to the Python contract for the GLFM allowlist, source-exact reference and table-pipe handling, paired >>> container scanning, and fail-closed fallback. Native shared conformance now passes all five FM-EXT-GLFM-001 cases twice: 483 exact passes overall with the unchanged 34-entry CommonMark ledger. Focused scanner tests, cargo fmt, clippy with warnings denied, all-feature tests, no-default-feature tests, and traceability passed; no divergence entry was added.
