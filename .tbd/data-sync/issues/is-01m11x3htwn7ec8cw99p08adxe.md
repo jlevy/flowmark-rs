@@ -5,7 +5,7 @@ title: Blank-line normalization strips whitespace-only lines inside code fences
 kind: bug
 status: closed
 priority: 2
-version: 2
+version: 5
 labels:
   - pr-review
   - idempotence
@@ -13,9 +13,9 @@ labels:
 dependencies: []
 parent_id: is-01m10tcw81ta6bfvxa5xkj7707
 created_at: 2026-08-27T15:23:36.668Z
-updated_at: 2026-08-27T15:31:19.548Z
-closed_at: 2026-08-27T15:31:19.548Z
-close_reason: Fixed in c00f74b on branch claude/pr-review-comment-9vmwd9. detect_opening_fence now applies the CommonMark backtick-info-string rule and normalize_blank_lines no longer blanks whitespace-only lines inside fences. Both reproducers now match Python byte for byte and reach a fixed point in one pass; regression tests added in src/formatter/filling.rs and tests/test_preservation_properties.rs.
+updated_at: 2026-08-27T16:42:40.328Z
+closed_at: 2026-08-27T16:42:40.325Z
+close_reason: "Fixed on PR #81 by preserving whitespace-only fenced content; focused property coverage, full local gates, and all 16 hosted checks passed."
 resolution: null
 duplicate_of: null
 ---
@@ -46,3 +46,7 @@ run collapses it.
 normalize_blank_lines now runs through transform_outside_code_fences, so fence
 bodies are left alone. Rust output now matches Python byte-for-byte on this
 input and reaches a fixed point in one pass.
+
+## Notes
+
+Reopened: Side-branch fixes are validated but not yet integrated into the active PR #81 branch; reopen until push and hosted CI complete.
