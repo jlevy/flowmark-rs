@@ -3,16 +3,20 @@ type: is
 id: is-01m10tdzkg4ct3eydzvh3jz06r
 title: "PR #81 review R10: unterminated fence needs extra passes"
 kind: bug
-status: open
+status: closed
 priority: 2
-version: 3
+version: 4
 labels:
   - pr-review
   - idempotence
 dependencies: []
 parent_id: is-01m10tcw81ta6bfvxa5xkj7707
 created_at: 2026-08-27T05:17:38.287Z
-updated_at: 2026-08-27T15:04:12.004Z
+updated_at: 2026-08-27T15:31:19.542Z
+closed_at: 2026-08-27T15:31:19.542Z
+close_reason: Fixed in c00f74b on branch claude/pr-review-comment-9vmwd9. detect_opening_fence now applies the CommonMark backtick-info-string rule and normalize_blank_lines no longer blanks whitespace-only lines inside fences. Both reproducers now match Python byte for byte and reach a fixed point in one pass; regression tests added in src/formatter/filling.rs and tests/test_preservation_properties.rs.
+resolution: null
+duplicate_of: null
 ---
 PR #81 R10. Differential fuzzing reported a malformed unterminated code-fence case that needs extra passes to stabilize. Recover an exact reproduction, add a shared fallback case if Python and Rust should agree, and fix or explicitly defer the malformed-input policy.
 

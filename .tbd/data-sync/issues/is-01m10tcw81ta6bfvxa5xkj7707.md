@@ -5,7 +5,7 @@ title: "Address review: PR #81 — source-exact Markdown preservation"
 kind: task
 status: open
 priority: 1
-version: 18
+version: 21
 labels:
   - pr-review
   - preservation
@@ -25,8 +25,11 @@ child_order_hints:
   - is-01m10z6ry0tnxax6rst8h4s9sz
   - is-01m10z6s8q6tj6rbpqde9mr9bg
   - is-01m11w0mtm43p57cn6as2shhws
+  - is-01m11x3htwn7ec8cw99p08adxe
+  - is-01m11x43tnahwvqq0174fym25x
+  - is-01m11x7nqfc6m3vkxqf2f3wjq0
 created_at: 2026-08-27T05:17:02.079Z
-updated_at: 2026-08-27T15:05:02.109Z
+updated_at: 2026-08-27T15:25:51.726Z
 ---
 Track and explicitly disposition every finding R1-R11 in the senior engineering review posted as PR #81 issue comment 5434439321. Cross-language observable fixes begin in the shared Python corpus; Rust-only API and error-path fixes use focused native tests. Close only after a published per-finding disposition map and final hosted CI.
 
