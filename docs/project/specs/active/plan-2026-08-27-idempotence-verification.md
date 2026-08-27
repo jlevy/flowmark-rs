@@ -1,0 +1,255 @@
+# Feature: General idempotence verification
+
+**Date:** 2026-08-27
+
+**Author:** Senior review (Claude) with @jlevy direction
+
+**Status:** Draft — scope documented, no fixes made
+
+**Tracker:** `fmr-1xlk` epic.
+
+## Overview
+
+Establish idempotence — `format(format(x)) == format(x)` — as a verified, corpus-wide
+property of flowmark, and document the full scope of where it does not hold today.
+
+Flowmark's value proposition is that it is safe to run repeatedly: in a pre-commit hook,
+in CI, on save. That rests on the formatter reaching a fixed point in one pass. Where it
+does not, `flowmark --check` reports files that flowmark itself just wrote, and repeated
+runs silently rewrite authored content.
+
+This spec deliberately **documents scope before proposing any fix**. Every defect below
+is measured in both implementations and left unfixed. Fixes follow the project's standard
+sequence: agree the intended bytes, land them in Python, then replicate exactly in Rust.
+
+## Background
+
+### What is already verified
+
+The language-neutral conformance corpus is in good shape on this axis. Of 776 cases,
+**768 declare `idempotent = true`** and the shared runner verifies exact second-pass
+output for each.
+
+The limitation is that each case pins **one** CLI invocation. A case authored with
+`--width 0` proves nothing about `--width 40`; one authored with default flags proves
+nothing about `--semantic --cleanups`. Idempotence is a property of the formatter across
+its option space, and the corpus samples that space one point per document. Width is the
+axis sampled most thinly, and it is where most of the defects below hide.
+
+### Method
+
+Every Markdown document the project ships, formatted twice and compared byte for byte,
+across a six-mode matrix (`default`, `--semantic`, `--cleanups`, full typography,
+`--width 0`, `--width 40`). Run against both implementations in process: flowmark-rs at
+`c00f74b` and Python flowmark at the pinned `9e9fd7c`.
+
+### Measured scope
+
+| | Documents | Checks | Failing checks | Distinct files |
+| --- | ---: | ---: | ---: | ---: |
+| **Python** (reference) | 1,528 | 9,168 | **138 (1.51%)** | **28** |
+| **Rust** (port) | 1,519 | 9,114 | **68 (0.75%)** | **18** |
+
+Overlap: 54 failing checks and 14 files fail in both. 84 checks / 14 files are
+Python-only; 14 checks / 4 files are Rust-only.
+
+**The reference implementation is the less stable of the two.** That is the headline
+result and the reason this work has to start upstream: roughly two thirds of Python's
+instability has no Rust counterpart, and fixing it will change bytes that Rust must then
+match. Fixing Rust first would mean fixing it twice.
+
+Twelve further non-zero results in each run were the deliberate invalid-UTF-8 fixture
+behaving correctly, and are excluded throughout.
+
+### Defect inventory
+
+| ID | Shape | Effect | Python | Rust |
+| --- | --- | --- | :-: | :-: |
+| A | Wrapped line begins with `=` | Reparsed as a setext H1 underline: list text is promoted to a heading and the list structure is destroyed | yes | yes |
+| B | Setext heading with multi-line content (CommonMark 0081, 0082, 0095) | Second pass splits the heading; the trailing line escapes into a paragraph | yes | yes |
+| C | Ordered list with an empty item (CommonMark 0283) | First pass drops the empty item, second pass renumbers | yes | yes |
+| D | Link label containing a newline (CommonMark 0552) | Second pass rewrites a shortcut reference as a collapsed reference | no | yes |
+| E | Blockquote with a heading then prose (CommonMark 0228–0232) | Passes oscillate between splitting the quote in two and rejoining it | yes | no |
+| F | Nested list indentation (CommonMark 0307, 0315) | Second pass inserts a blank line after the outer item, changing tight to loose | yes | no |
+| G | Escape sequences in a fence info string | Loses one escape level per pass (`fmr-c6xs` / `fm-ww33`) | yes | yes |
+| H | Interior `U+FEFF` with leading whitespace | Leading space dropped on the second pass (`fmr-uao3` / `fm-jtwj`) | yes | yes |
+
+G and H were found by the generated-input harness in
+`tests/test_preservation_properties.rs` rather than the corpus walk, and are already
+tracked; they are listed here so the inventory is complete.
+
+**Defect A is the most serious.** It is content corruption, not merely instability:
+
+```console
+$ printf -- '- alpha beta gamma delta epsilon word =\n' | flowmark --width 20 -
+- alpha beta gamma
+  delta epsilon word
+  =
+
+$ printf -- '- alpha beta gamma delta epsilon word =\n' | flowmark --width 20 - | flowmark --width 20 -
+- # alpha beta gamma
+delta epsilon word
+```
+
+The list item's text becomes an H1, the `=` is consumed, and the remaining text escapes
+the list. The likely cause is a gap in the escape set used when wrapping: both ports
+guard a wrapped line starting with `-`, `*`, `+`, `>` or `#` (Rust's `MD_SPECIALS_PAT` is
+`^([-*+>]|#+)$`) but not `=`, and neither guards multi-character runs such as `---` or
+`===`. Any prose line ending in an equals sign — a config snippet, `x =`, an assignment
+quoted in prose — can trigger it at a narrow width. It also fires on the project's own
+reference document, `testdoc.orig.md`, and on one of this repository's specs.
+
+### A correction worth recording
+
+An earlier draft of this audit asserted that formatting a corpus **golden** should be a
+no-op, and reported roughly 190 failures on that basis. That premise was wrong: **258 of
+the 673 CommonMark cases are tagged `deferred`**, so their `expected.default.md` files
+are aspirational spec expectations rather than output flowmark currently produces.
+Requiring `format(golden) == golden` therefore measures the deferred backlog, not
+stability. The check was removed; the fixed-point property over inputs already covers
+what it was reaching for, and the numbers in this spec exclude it.
+
+## Goals
+
+- **Document the scope completely before changing behavior.** The inventory above, the
+  ledger, and the gate are the deliverable; no defect is fixed under this spec until its
+  intended bytes are agreed.
+- **Idempotence becomes a gate, not an assumption.** Every shipped document is formatted
+  twice across the option space on every CI run, and any *new* instability fails the
+  build.
+- **The known set is exact and shrinking.** A known gap is a named entry with a tracking
+  bead, asserted in both directions so it cannot rot or quietly grow.
+- **Python leads; Rust replicates exactly.** Every shared defect is fixed upstream first,
+  pinned as a shared case, and only then ported. Rust never changes shared behavior
+  unilaterally.
+
+## Non-Goals
+
+- **Fixing anything under this spec.** Phase 1 is measurement and gating only. Fixes are
+  Phase 2 and later, gated on agreed intended bytes.
+- **Convergence beyond two passes.** The contract is a fixed point after one format. A
+  document that stabilises only after three passes is a defect, not a weaker guarantee to
+  codify.
+- **Idempotence across option changes.** `format(format(x, A), B) == format(x, B)` is not
+  claimed and is not desirable; only same-options repetition is in scope.
+- **Clearing the CommonMark deferred backlog.** Defects B–F touch constructs already
+  represented in the deferred set; this spec addresses their *instability*, not every
+  inherited semantic difference.
+
+## Design
+
+### The property
+
+For every corpus document `x` and every mode `m` in the matrix,
+`format(format(x, m), m) == format(x, m)`.
+
+### Mode matrix
+
+Six modes covering the option space's independent axes rather than its combinations:
+`default`, `--semantic`, `--cleanups`, full typography
+(`--semantic --cleanups --smartquotes --ellipses`), `--width 0`, and `--width 40`.
+
+The narrow width earns its place: defect A is invisible at the default width and appears
+only when wrapping pushes a hazardous token to the start of a line.
+
+### Corpus sources
+
+All of them: shared corpus inputs and goldens, CommonMark spec examples, reference
+testdocs, tryscript documents and fixtures, and the repository's own docs. Goldens are
+included as documents in their own right — not as an assertion that they are stable
+output, per the correction above. The repository's own docs matter because they are the
+only genuinely human-authored prose in the set, and defect A was found there.
+
+### Known-divergence ledger
+
+`tests/idempotence_known_divergences.toml` names each failing document, mode and bead,
+following the precedent of `tests/parity_corpus_known_divergences.toml`. The gate asserts
+it **exactly**: an unlisted failure fails the build, and a listed entry that now passes
+also fails it, so the ledger shrinks and cannot rot.
+
+### Components
+
+- `tests/test_idempotence_corpus.rs` — the gate.
+- `tests/idempotence_known_divergences.toml` — the ledger, seeded with the 68 Rust entries.
+- Upstream `tests/parity_corpus/` — where agreed bytes get pinned before any fix.
+
+### API Changes
+
+None. This spec adds test infrastructure only.
+
+## Implementation Plan
+
+### Phase 1: Measure and gate (this change)
+
+- [x] Audit both implementations across the corpus and mode matrix; record the numbers
+      and the defect inventory above.
+- [x] Add `tests/test_idempotence_corpus.rs` asserting the fixed-point property, using
+      the library directly rather than spawning the CLI.
+- [x] Add `tests/idempotence_known_divergences.toml` seeded with the 68 current Rust
+      entries, each naming its bead.
+- [x] Remove the incorrect golden-stability assertion and record why.
+- [x] Confirm the full suite, the 776-case conformance corpus and the tryscript documents
+      stay green.
+
+### Phase 2: Agree intended bytes, upstream first
+
+For each defect A–H, in severity order starting with A:
+
+- [ ] Decide the intended output. For several this is not obvious — defect C's *first*
+      pass already drops an empty list item, so idempotence alone is the wrong target.
+- [ ] Add a shared case to the language-neutral manifest pinning those bytes.
+- [ ] Fix in Python, the reference implementation.
+- [ ] Replicate exactly in Rust; confirm byte-identical output.
+- [ ] Remove the ledger entry, which now fails the gate until it is gone.
+
+Defect D is Rust-only and Python is already correct, so it needs no upstream change —
+only a shared case pinning Python's existing bytes and a Rust fix to match.
+
+### Phase 3: Close the loop
+
+- [ ] When the ledger is empty, restore the excluded generator fragments and promote
+      `generated_documents_reach_a_fixed_point` in `tests/test_preservation_properties.rs`
+      from an on-demand harness to a gate.
+
+## Testing Strategy
+
+The gate is the test: every shipped document, formatted twice, in every mode, with the
+ledger asserted exactly in both directions. It runs in about 25 seconds in the debug test
+profile over roughly 9,100 format pairs, which is comfortably inline for the default
+`cargo test`.
+
+Each defect additionally gets a focused regression test at the layer it lives in when it
+is fixed, so the behavior is pinned independently of the corpus walk.
+
+The Python audit script used for the numbers above is not committed; the equivalent gate
+belongs upstream and is proposed as part of Phase 2 so both ports carry the same
+guarantee.
+
+## Open Questions
+
+- **What are the intended bytes for defects B, C, E and F?** All four are CommonMark
+  shapes where the first pass is already arguably wrong. Fixing idempotence without
+  deciding the target risks pinning the wrong output.
+- **Should `=` be escaped at every line start, or only where a setext underline can
+  follow?** Unconditional is simpler and matches how `-` is handled today, at the cost of
+  emitting `\=` in a few more places.
+- **Should the repository's own docs stay in the gate?** They are the best source of human
+  prose but they change often, so a failure may reflect a new doc rather than a new
+  defect. Current proposal: keep them, since a doc flowmark cannot format stably is itself
+  a bug.
+- **Should the ledger be shared rather than Rust-only?** Python has 14 files of
+  instability Rust does not. A shared ledger would make the asymmetry visible to both
+  ports, at the cost of coupling their test infrastructure.
+
+## References
+
+- PR [jlevy/flowmark-rs#81](https://github.com/jlevy/flowmark-rs/pull/81) — review R10 and
+  the fence-escape work that prompted this.
+- `tests/test_preservation_properties.rs` — generated-input harness; found defects G and H.
+- `docs/project/specs/active/plan-2026-05-28-shared-parity-corpus.md` — the shared corpus
+  this builds on.
+- `tests/parity_corpus_known_divergences.toml` — the ledger pattern reused here.
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->
