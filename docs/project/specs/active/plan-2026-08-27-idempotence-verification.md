@@ -61,6 +61,49 @@ match. Fixing Rust first would mean fixing it twice.
 Twelve further non-zero results in each run were the deliberate invalid-UTF-8 fixture
 behaving correctly, and are excluded throughout.
 
+### Regressions versus pre-existing defects
+
+The audit was re-run against three Rust builds — v0.3.2 (the pre-PR release), PR #81's
+head `f833ce8`, and this branch — to separate what the preservation work broke from what
+it inherited. This is the axis that decides what blocks the PR.
+
+| Build | Failing checks | Files |
+| --- | ---: | ---: |
+| v0.3.2 (pre-PR release) | **225** | 44 |
+| PR #81 head `f833ce8` | **80** | 20 |
+| This branch `c00f74b` | **68** | 18 |
+
+| Split | Checks | Files |
+| --- | ---: | ---: |
+| **Regressions introduced by PR #81** | **1** | **1** |
+| Pre-existing, still failing | 79 | 19 |
+| **Fixed by PR #81** | **146** | **25** |
+
+**PR #81 is a large net improvement to idempotence**: it fixes 146 failing checks across
+25 files and introduces exactly one regression, on one file. The preservation work has
+made the formatter substantially more stable, not less. A further 12 checks were fixed by
+this branch's fence-escape work on top.
+
+That one regression is the only item that blocks landing PR #81 on this axis, and it is
+tracked as `fmr-0pxh`:
+
+```console
+$ printf -- '- Bead: fmr-hr43 | Scope: Phase 8.5/8.6 | Repo: playbook\n- Depends on: WI-1, WI-4\n- Findings: F1-F12 (12 lessons + anti-patterns)\n' > a.md
+$ flowmark --width 40 a.md > b.md && flowmark --width 40 b.md > c.md && diff b.md c.md
+4a5
+>
+```
+
+Pass 1 wraps the first item so a continuation line begins with `|`; pass 2 inserts a
+blank line before the third item, partially converting the tight list to loose.
+v0.3.2 and Python are both stable on it, so Rust needs only to match the reference — no
+upstream decision required. Substitution confirms the trigger: replacing the pipes with
+commas is stable, two items are stable, and an unrelated list containing a pipe is
+stable. The shape is a continuation line *beginning* with `|` plus a third item, which is
+what the new pre-parse scanner's structural-pipe and table detection reacts to.
+
+Everything else in the inventory below predates the PR and belongs in separate changes.
+
 ### Defect inventory
 
 | ID | Shape | Effect | Python | Rust |
@@ -191,7 +234,17 @@ None. This spec adds test infrastructure only.
 - [x] Confirm the full suite, the 776-case conformance corpus and the tryscript documents
       stay green.
 
-### Phase 2: Agree intended bytes, upstream first
+### Phase 2: Clear the one regression, so PR #81 lands clean
+
+- [ ] Fix `fmr-0pxh`: a wrapped continuation line beginning with `|` must not change list
+      spacing on the next pass. Python and v0.3.2 are both already correct, so this is a
+      match-the-reference fix needing no upstream decision.
+- [ ] Remove its ledger entry, which fails the gate until it is gone.
+
+This is the only idempotence work that blocks the PR. Everything below is pre-existing
+and belongs in its own change.
+
+### Phase 3: Agree intended bytes, upstream first
 
 For each defect A–H, in severity order starting with A:
 
@@ -205,7 +258,7 @@ For each defect A–H, in severity order starting with A:
 Defect D is Rust-only and Python is already correct, so it needs no upstream change —
 only a shared case pinning Python's existing bytes and a Rust fix to match.
 
-### Phase 3: Close the loop
+### Phase 4: Close the loop
 
 - [ ] When the ledger is empty, restore the excluded generator fragments and promote
       `generated_documents_reach_a_fixed_point` in `tests/test_preservation_properties.rs`
