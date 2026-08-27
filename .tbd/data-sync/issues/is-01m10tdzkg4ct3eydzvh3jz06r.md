@@ -5,16 +5,16 @@ title: "PR #81 review R10: unterminated fence needs extra passes"
 kind: bug
 status: closed
 priority: 2
-version: 4
+version: 7
 labels:
   - pr-review
   - idempotence
 dependencies: []
 parent_id: is-01m10tcw81ta6bfvxa5xkj7707
 created_at: 2026-08-27T05:17:38.287Z
-updated_at: 2026-08-27T15:31:19.542Z
-closed_at: 2026-08-27T15:31:19.542Z
-close_reason: Fixed in c00f74b on branch claude/pr-review-comment-9vmwd9. detect_opening_fence now applies the CommonMark backtick-info-string rule and normalize_blank_lines no longer blanks whitespace-only lines inside fences. Both reproducers now match Python byte for byte and reach a fixed point in one pass; regression tests added in src/formatter/filling.rs and tests/test_preservation_properties.rs.
+updated_at: 2026-08-27T16:42:39.816Z
+closed_at: 2026-08-27T16:42:39.814Z
+close_reason: "Fixed on PR #81 by 6b41887, pinned by shared change FM-FENCED-CODE-001 at Python 85b6093 and Rust c50df77; all local gates and all 16 hosted Rust checks passed."
 resolution: null
 duplicate_of: null
 ---
@@ -68,3 +68,5 @@ idempotence regression. Worth a shared malformed-fallback golden covering both.
 A 1,500-case differential fuzz of head f833ce8 (4 modes, PUA-hostile alphabet)
 found 0 crashes and 0 content loss versus v0.3.2; this idempotence case was the
 ONLY defect found. See also the separate pre-existing bug filed for "```\`".
+
+Reopened: Side-branch fixes are validated but not yet integrated into the active PR #81 branch; reopen until push and hosted CI complete.

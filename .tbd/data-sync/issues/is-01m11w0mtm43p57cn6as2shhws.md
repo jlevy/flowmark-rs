@@ -5,7 +5,7 @@ title: Unterminated fence with escaped backtick is non-idempotent and diverges f
 kind: bug
 status: open
 priority: 2
-version: 3
+version: 5
 spec_path: docs/project/specs/active/plan-2026-08-27-idempotence-verification.md
 labels:
   - pr-review
@@ -14,7 +14,7 @@ labels:
 dependencies: []
 parent_id: is-01m12n1d12xj4jjmaczmn9etzm
 created_at: 2026-08-27T15:04:32.852Z
-updated_at: 2026-08-27T22:22:08.061Z
+updated_at: 2026-08-27T22:35:51.924Z
 ---
 Found while recovering the exact reproducer for R10 (fmr-sh2b). This one is
 NOT a PR #81 regression: it reproduces on the shipped v0.3.2 release binary,
@@ -49,45 +49,4 @@ sibling PR-regression case is tracked in fmr-sh2b; both belong to the same
 
 ## Notes
 
-Substantially improved in c00f74b (branch claude/pr-review-comment-9vmwd9) but
-NOT fully closed.
-
-## Fixed
-
-detect_opening_fence now applies the CommonMark 0.31.2 section 4.5 rule, so a
-backtick fence opener whose info string contains a backtick is no longer
-mistaken for a code fence. The escape now survives and the output reaches a
-fixed point in one pass:
-
-    ```\`     ->  "```\\`\n```\n"    (was "````\n" -> "````\n````\n")
-    ```\`x    ->  "```\\`x\n```\n"
-    ```a\`b   ->  "```a\\`b\n```\n"
-
-The --check contract is restored for these inputs, and the sibling case
-```\$`$ now matches Python exactly (closed as fmr-sh2b).
-
-## Residual: still diverges from Python
-
-Python emits "```\`\n" with no closing fence; Rust appends one.
-
-Cause: the legacy PUA escape placeholder replaces `\`` with a non-backtick
-scalar, which removes the very character that made the line a non-fence. comrak
-then sees a valid fence opener and closes it. This only bites when the escaped
-backtick is the ONLY backtick on the line; ```\$`$ keeps a literal backtick and
-is therefore correct already.
-
-## Options
-
-1. Have the escape placeholder for a backtick stay fence-visible on a line that
-   detect_opening_fence rejected for containing a backtick, so comrak still sees
-   a non-fence.
-2. Protect the whole false-fence line (leading run included) and restore it
-   verbatim, which avoids depending on comrak's fence rule at all.
-
-Option 1 is narrower; option 2 is more robust and fits the direction in fmr-oe3g
-(consolidating the legacy token system into the preservation registry). Either
-way, add the agreed bytes as a shared case first so both ports move together.
-
-Behavior is pinned by false_fence_with_escaped_backtick_keeps_the_escape_and_is_idempotent
-in src/formatter/filling.rs, which asserts what is fixed without asserting the
-parity gap.
+Partial fix is active on PR #81 as commit 6b41887: the escape survives and output reaches a fixed point in one pass. Exact Python parity remains open because Rust still appends a closing fence to this incomplete construct. This residual overlaps token-system consolidation bead fmr-oe3g and was explicitly deferred in PR comment 5442270412.
