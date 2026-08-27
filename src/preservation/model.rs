@@ -13,7 +13,7 @@ impl fmt::Display for PreservationError {
 
 impl std::error::Error for PreservationError {}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum RegionKind {
     MathGitlabInline,
     MathMystInline,

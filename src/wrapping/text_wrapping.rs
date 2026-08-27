@@ -252,9 +252,9 @@ pub(crate) fn wrap_paragraph_lines_protected(
     let mut first_line = true;
 
     for word in words {
-        let metrics = protected
-            .measure_inline_text(&word)
-            .expect("scanner-selected preservation tokens must remain canonical during wrapping");
+        let Ok(metrics) = protected.measure_inline_text(&word) else {
+            return vec![text.to_owned()];
+        };
         let space_width = usize::from(!current_line.is_empty());
         if current_width + space_width + metrics.first_width <= width {
             current_line.push(word);
@@ -274,9 +274,9 @@ pub(crate) fn wrap_paragraph_lines_protected(
             first_line = false;
         }
         let escaped = if is_markdown && !first_line { markdown_escape_word(&word) } else { word };
-        let escaped_metrics = protected
-            .measure_inline_text(&escaped)
-            .expect("escaped preservation word must remain canonical");
+        let Ok(escaped_metrics) = protected.measure_inline_text(&escaped) else {
+            return vec![text.to_owned()];
+        };
         current_line = vec![escaped];
         current_width = if escaped_metrics.has_authored_break {
             first_line = false;

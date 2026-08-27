@@ -8,5 +8,6 @@ mod registry;
 mod scanner;
 
 pub(crate) use bridge::{InlineRewriteSegment, ProtectedSource, protect_source, restore_source};
+pub(crate) use model::{NormalizedSource, PreservationError};
 pub(crate) use normalization::{finalize_output, normalize_source};
 pub(crate) use scanner::scan_protected_regions;

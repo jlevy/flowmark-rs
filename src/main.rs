@@ -259,6 +259,16 @@ Use `flowmark --docs` for full documentation.
         false
     }
 
+    fn path_resolution_error(path: &str, error: &std::io::Error) -> String {
+        let Some(code) = error.raw_os_error() else {
+            return format!("{error}: '{path}'");
+        };
+        let rendered = error.to_string();
+        let rust_suffix = format!(" (os error {code})");
+        let message = rendered.strip_suffix(&rust_suffix).unwrap_or(&rendered);
+        format!("[Errno {code}] {message}: '{path}'")
+    }
+
     /// Resolve files using the file resolver if needed.
     #[allow(clippy::too_many_arguments)]
     fn resolve_files(
@@ -276,8 +286,11 @@ Use `flowmark --docs` for full documentation.
         if !needs_file_resolution(files) && !list_files && !force_exclude {
             // Validate all non-stdin paths exist (matches Python's file_resolver behavior).
             for f in files {
-                if f != "-" && !Path::new(f).exists() {
-                    eprintln!("Error: [Errno 2] No such file or directory: '{f}'");
+                if f == "-" {
+                    continue;
+                }
+                if let Err(error) = std::fs::symlink_metadata(f) {
+                    eprintln!("Error: {}", path_resolution_error(f, &error));
                     std::process::exit(2);
                 }
             }
@@ -844,7 +857,7 @@ Use `flowmark --docs` for full documentation.
 
         // A direct single input (stdin or file) may use an explicit output path.
         let has_explicit_output = args.output != "-";
-        if has_explicit_output && resolved_files.len() != 1 {
+        if has_explicit_output && resolved_files.len() > 1 {
             eprintln!(
                 "Error: Cannot specify output file when processing multiple files \
                  (use --inplace instead)"
@@ -1056,14 +1069,9 @@ fn main() -> std::process::ExitCode {
     {
         if let Err(e) = cli::run() {
             if e.chain().any(|cause| {
-                cause.downcast_ref::<flowmark::Error>().is_some_and(|error| {
-                    matches!(
-                        error,
-                        flowmark::Error::Io(source)
-                            if source.kind() == std::io::ErrorKind::InvalidData
-                                && source.to_string() == "input is not valid UTF-8"
-                    )
-                })
+                cause
+                    .downcast_ref::<flowmark::Error>()
+                    .is_some_and(flowmark::Error::is_invalid_utf8)
             }) {
                 eprintln!("Error: input is not valid UTF-8");
                 return std::process::ExitCode::from(2);

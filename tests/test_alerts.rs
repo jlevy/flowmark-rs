@@ -13,6 +13,12 @@ fn test_basic_note_alert() {
 }
 
 #[test]
+fn test_callout_marker_adjacent_to_protected_inline_content_does_not_abort() {
+    let input = "> [!NOTE]<v>";
+    assert_eq!(fmt(input), "> [!NOTE]<v>\n");
+}
+
+#[test]
 fn test_all_valid_alert_types() {
     let alert_types = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"];
     for alert_type in &alert_types {

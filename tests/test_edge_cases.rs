@@ -12,7 +12,7 @@ fn fmt(input: &str) -> String {
 }
 
 #[test]
-fn test_invalid_utf8_uses_the_existing_io_error_surface() {
+fn test_invalid_utf8_preserves_a_typed_decode_cause() {
     let error = FormatOptions::default()
         .reformat_bytes(b"before\xffafter")
         .expect_err("invalid UTF-8 must fail");
@@ -20,9 +20,30 @@ fn test_invalid_utf8_uses_the_existing_io_error_surface() {
     match error {
         Error::Io(source) => {
             assert_eq!(source.kind(), std::io::ErrorKind::InvalidData);
-            assert_eq!(source.to_string(), "input is not valid UTF-8");
+            let decode_error = source
+                .get_ref()
+                .and_then(|cause| cause.downcast_ref::<std::str::Utf8Error>())
+                .expect("invalid UTF-8 must retain its typed decode cause");
+            assert_eq!(decode_error.valid_up_to(), 6);
         }
     }
+}
+
+#[test]
+fn test_invalid_utf8_has_a_stable_typed_discriminator() {
+    let error = FormatOptions::default()
+        .reformat_bytes(b"before\xffafter")
+        .expect_err("invalid UTF-8 must fail");
+
+    assert!(error.is_invalid_utf8());
+}
+
+#[test]
+fn test_reformat_text_retains_markdown_indentation() {
+    let result =
+        FormatOptions { width: 0, ..FormatOptions::default() }.reformat_text("    indented code\n");
+
+    assert_eq!(result, "```\nindented code\n```\n");
 }
 
 // === Edge case 1: Code fence with indented YAML-like content ===

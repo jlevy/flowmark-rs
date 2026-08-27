@@ -49,6 +49,10 @@ impl FormatOptions {
     /// let result = opts.reformat_text("He said \"hello.\" She said \"goodbye.\"");
     /// assert!(result.contains('\u{201c}')); // curly quotes applied
     /// ```
+    ///
+    /// Markdown input is never implicitly dedented. Call [`fill_markdown`] with
+    /// `dedent_input = true` only when formatting docstring-style source whose common
+    /// indentation is not part of the Markdown structure.
     pub fn reformat_text(&self, text: &str) -> String {
         if self.plaintext {
             // Python uses Wrap.WRAP (not WRAP_FULL) with the HTML/Markdown-aware
@@ -75,11 +79,8 @@ impl FormatOptions {
 
     /// Decode UTF-8 bytes strictly and reformat them without replacement characters.
     pub fn reformat_bytes(&self, bytes: &[u8]) -> Result<String> {
-        let text = std::str::from_utf8(bytes).map_err(|_| {
-            Error::Io(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "input is not valid UTF-8",
-            ))
+        let text = std::str::from_utf8(bytes).map_err(|source| {
+            Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, source))
         })?;
         Ok(self.reformat_text(text))
     }

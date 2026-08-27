@@ -220,12 +220,13 @@ pub(crate) fn line_wrap_by_sentence_protected(
         for sentence in split_sentences_atomic(&text, 0) {
             let mut starts_new_output_line = !lines.is_empty();
             let base_column = if first_line { initial_indent_len } else { subsequent_indent_len };
-            let last_width = lines.last().map_or(0, |line| {
-                protected
-                    .measure_inline_text(line)
-                    .expect("rendered preservation tokens must remain canonical")
-                    .final_width
-            });
+            let last_width = match lines.last() {
+                Some(line) => match protected.measure_inline_text(line) {
+                    Ok(metrics) => metrics.final_width,
+                    Err(_) => return format!("{initial_indent}{text}"),
+                },
+                None => 0,
+            };
             let last_is_short = !lines.is_empty() && last_width < min_line_len;
             let current_column = if last_is_short { base_column + last_width } else { base_column };
             let mut wrapped = wrap_paragraph_lines_protected(
@@ -237,12 +238,13 @@ pub(crate) fn line_wrap_by_sentence_protected(
                 is_markdown,
                 &protected,
             );
-            let next_first_width = wrapped.first().map_or(0, |line| {
-                protected
-                    .measure_inline_text(line)
-                    .expect("rendered preservation tokens must remain canonical")
-                    .first_width
-            });
+            let next_first_width = match wrapped.first() {
+                Some(line) => match protected.measure_inline_text(line) {
+                    Ok(metrics) => metrics.first_width,
+                    Err(_) => return format!("{initial_indent}{text}"),
+                },
+                None => 0,
+            };
             if last_is_short && !wrapped.is_empty() && last_width + 1 + next_first_width <= width {
                 let last = lines.last_mut().expect("non-empty lines");
                 *last = format!("{last} {}", wrapped.remove(0));

@@ -216,8 +216,8 @@ use crate::config::{DEFAULT_MIN_LINE_LEN, ListSpacing};
 use crate::formatter::markdown::flowmark_comrak_options;
 use crate::parser::frontmatter::split_frontmatter;
 use crate::preservation::{
-    InlineRewriteSegment, ProtectedSource, finalize_output, normalize_source, protect_source,
-    restore_source, scan_protected_regions,
+    InlineRewriteSegment, NormalizedSource, PreservationError, ProtectedSource, finalize_output,
+    normalize_source, protect_source, restore_source, scan_protected_regions,
 };
 use crate::transform::cleanups::doc_cleanups;
 use crate::typography::ellipses::ellipses as apply_ellipses;
@@ -2671,9 +2671,26 @@ fn min_fence_length(code_content: &str, fence_char: char) -> usize {
     std::cmp::max(3, max_len + 1)
 }
 
+fn restore_or_fallback(
+    source: &NormalizedSource,
+    protected: &ProtectedSource,
+    rendered: &str,
+) -> String {
+    let restored = restore_source(rendered, protected).unwrap_or_else(|_| source.text.clone());
+    finalize_output(source, &restored)
+}
+
 /// Normalize and wrap Markdown text filling paragraphs to the full width.
 ///
 /// This is the main entry point for Markdown formatting.
+/// Preservation-invariant failures return the normalized input unchanged rather than
+/// emitting partial output or aborting the caller.
+///
+/// A custom `line_wrapper` receives parser-facing text that may contain private
+/// preservation tokens. It must return every token unchanged and in the same order.
+/// Prefer `None` or [`crate::config::FormatOptions::reformat_text`] unless the wrapper is
+/// deliberately preservation-aware; the built-in protected wrappers also measure tokens
+/// using their authored widths.
 #[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
 pub fn fill_markdown(
     markdown_text: &str,
@@ -2704,10 +2721,13 @@ pub fn fill_markdown(
         input = dedent(&input);
     }
     let source = normalize_source(&input);
-    let regions = scan_protected_regions(&source)
-        .expect("valid UTF-8 source must produce canonical preservation regions");
-    let protected = protect_source(&source, regions)
-        .expect("canonical preservation regions must produce parser-safe source");
+    let fallback = || finalize_output(&source, &source.text);
+    let Ok(regions) = scan_protected_regions(&source) else {
+        return fallback();
+    };
+    let Ok(protected) = protect_source(&source, regions) else {
+        return fallback();
+    };
     let line_wrapper = line_wrapper.unwrap_or_else(|| {
         if semantic {
             line_wrap_by_sentence_protected(width, DEFAULT_MIN_LINE_LEN, true, protected.clone())
@@ -2782,11 +2802,11 @@ pub fn fill_markdown(
     if cleanups {
         doc_cleanups(root);
     }
-    if smartquotes {
-        apply_smart_quotes_to_ast(root, &protected);
+    if smartquotes && apply_smart_quotes_to_ast(root, &protected).is_err() {
+        return fallback();
     }
-    if ellipses {
-        apply_ellipses_to_ast(root, &protected);
+    if ellipses && apply_ellipses_to_ast(root, &protected).is_err() {
+        return fallback();
     }
     if let Some(start) = transforms_start {
         perf_sample.transforms = start.elapsed();
@@ -2827,9 +2847,7 @@ pub fn fill_markdown(
     } else {
         format!("{frontmatter}{result}")
     };
-    let restored = restore_source(&result, &protected)
-        .expect("parser and renderer must preserve the canonical token stream");
-    let result = finalize_output(&source, &restored);
+    let result = restore_or_fallback(&source, &protected, &result);
     if let Some(start) = postprocess_start {
         perf_sample.postprocess = start.elapsed();
     }
@@ -2841,22 +2859,29 @@ pub fn fill_markdown(
 
 /// Apply smart quotes to all text nodes in the AST.
 /// Works at the paragraph level so quotes spanning inline elements are handled.
-fn apply_smart_quotes_to_ast<'a>(root: &'a AstNode<'a>, protected: &ProtectedSource) {
+fn apply_smart_quotes_to_ast<'a>(
+    root: &'a AstNode<'a>,
+    protected: &ProtectedSource,
+) -> Result<(), PreservationError> {
     for node in root.descendants() {
         let is_para = matches!(
             node.data.borrow().value,
             NodeValue::Paragraph | NodeValue::Heading(_) | NodeValue::TableCell
         );
         if is_para {
-            apply_smart_quotes_to_inline_tree(node, protected);
+            apply_smart_quotes_to_inline_tree(node, protected)?;
         }
     }
+    Ok(())
 }
 
 /// Collect text nodes from inline tree, apply smart quotes to concatenated text,
 /// then redistribute back.
 #[allow(clippy::items_after_statements)]
-fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>, protected: &ProtectedSource) {
+fn apply_smart_quotes_to_inline_tree<'a>(
+    node: &'a AstNode<'a>,
+    protected: &ProtectedSource,
+) -> Result<(), PreservationError> {
     #[derive(Debug)]
     enum RewritePart {
         Mutable { start: usize, len: usize },
@@ -2872,16 +2897,13 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>, protected: &Prot
         protected: &ProtectedSource,
         text_nodes: &mut Vec<(&'a AstNode<'a>, Vec<RewritePart>)>,
         concatenated: &mut String,
-    ) {
+    ) -> Result<(), PreservationError> {
         for child in node.children() {
             let data = child.data.borrow();
             match &data.value {
                 NodeValue::Text(text) => {
                     let mut parts = Vec::new();
-                    for segment in protected
-                        .inline_rewrite_segments(text)
-                        .expect("protected tokens in the AST must remain canonical")
-                    {
+                    for segment in protected.inline_rewrite_segments(text)? {
                         match segment {
                             InlineRewriteSegment::Mutable(value) => {
                                 let start = concatenated.chars().count();
@@ -2927,16 +2949,17 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>, protected: &Prot
                 _ => {
                     // Recurse into emphasis, strong, link, etc.
                     drop(data);
-                    collect_text_nodes(child, protected, text_nodes, concatenated);
+                    collect_text_nodes(child, protected, text_nodes, concatenated)?;
                 }
             }
         }
+        Ok(())
     }
 
-    collect_text_nodes(node, protected, &mut text_nodes, &mut concatenated);
+    collect_text_nodes(node, protected, &mut text_nodes, &mut concatenated)?;
 
     if text_nodes.is_empty() {
-        return;
+        return Ok(());
     }
 
     // Apply smart quotes to the full concatenated text
@@ -2959,18 +2982,19 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>, protected: &Prot
             *text = rebuilt.into();
         }
     }
+    Ok(())
 }
 
 /// Apply ellipsis conversion to mutable text while retaining exact inline tokens.
-fn apply_ellipses_to_ast<'a>(root: &'a AstNode<'a>, protected: &ProtectedSource) {
+fn apply_ellipses_to_ast<'a>(
+    root: &'a AstNode<'a>,
+    protected: &ProtectedSource,
+) -> Result<(), PreservationError> {
     for node in root.descendants() {
         let mut data = node.data.borrow_mut();
         if let NodeValue::Text(ref mut text) = data.value {
             let mut rewritten = String::new();
-            for segment in protected
-                .inline_rewrite_segments(text)
-                .expect("protected tokens in the AST must remain canonical")
-            {
+            for segment in protected.inline_rewrite_segments(text)? {
                 match segment {
                     InlineRewriteSegment::Mutable(value) => {
                         rewritten.push_str(&apply_ellipses(value));
@@ -2981,6 +3005,7 @@ fn apply_ellipses_to_ast<'a>(root: &'a AstNode<'a>, protected: &ProtectedSource)
             *text = rewritten.into();
         }
     }
+    Ok(())
 }
 
 /// Simple dedent: remove common leading whitespace from all lines.
@@ -3013,6 +3038,16 @@ fn dedent(text: &str) -> String {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn restoration_failure_returns_the_normalized_source() {
+        let source = normalize_source("Before $x$ after.");
+        let regions = scan_protected_regions(&source).unwrap();
+        let protected = protect_source(&source, regions).unwrap();
+
+        assert_ne!(protected.text, source.text);
+        assert_eq!(restore_or_fallback(&source, &protected, "Before after."), source.text);
+    }
 
     // ---- extract_link_ref_defs ----
 

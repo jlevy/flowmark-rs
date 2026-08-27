@@ -235,6 +235,41 @@ fn test_auto_list_files_no_args_errors() {
     );
 }
 
+#[test]
+fn test_empty_directory_with_output_is_a_clean_noop() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::create_dir(dir.path().join("empty")).expect("create empty input dir");
+
+    let output = Command::new(flowmark_bin())
+        .args(["empty", "--output", "out.md"])
+        .current_dir(dir.path())
+        .output()
+        .expect("run flowmark");
+
+    assert!(output.status.success(), "zero resolved files should match Python's no-op");
+    assert!(output.stderr.is_empty());
+    assert!(!dir.path().join("out.md").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn test_non_directory_path_reports_the_actual_errno() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    fs::write(dir.path().join("real.md"), "text\n").expect("write non-directory component");
+
+    let output = Command::new(flowmark_bin())
+        .arg("real.md/child.md")
+        .current_dir(dir.path())
+        .output()
+        .expect("run flowmark");
+
+    assert_eq!(output.status.code(), Some(2));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "Error: [Errno 20] Not a directory: 'real.md/child.md'\n"
+    );
+}
+
 // --- Formatting integration (4 tests) ---
 
 #[test]
