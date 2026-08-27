@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "9e9fd7cc63dc01324fdf8518c9204e6be51706bf"
+upstream_commit = "85b6093ccdda9c53cfe9dc41b785c43ec2ac8ef8"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -92,6 +92,12 @@ status = "implemented"
 id = "FM-EXT-RAW-HTML-001"
 python_bead = "fm-w1tn"
 rust_bead = "fm-w1tn"
+status = "implemented"
+
+[[change]]
+id = "FM-FENCED-CODE-001"
+python_bead = "fm-j6na"
+rust_bead = "fmr-sh2b"
 status = "implemented"
 
 [[change]]
