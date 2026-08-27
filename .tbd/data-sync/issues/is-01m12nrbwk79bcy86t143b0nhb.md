@@ -3,9 +3,9 @@ type: is
 id: is-01m12nrbwk79bcy86t143b0nhb
 title: "Regression: wrapped continuation line starting with a pipe flips list spacing"
 kind: bug
-status: open
+status: closed
 priority: 1
-version: 1
+version: 3
 spec_path: docs/project/specs/active/plan-2026-08-27-idempotence-verification.md
 labels:
   - idempotence
@@ -14,7 +14,11 @@ labels:
 dependencies: []
 parent_id: is-01m12n1d12xj4jjmaczmn9etzm
 created_at: 2026-08-27T22:34:24.531Z
-updated_at: 2026-08-27T22:34:24.531Z
+updated_at: 2026-08-27T23:04:54.190Z
+closed_at: 2026-08-27T23:04:54.190Z
+close_reason: "Fixed in 8fb4a1c. A wrapped continuation line beginning with '|' is no longer recognized as a Pandoc line-block opener, since a line block must open a block rather than continue a paragraph. Output now matches Python byte for byte on the reproducer and on the affected document. Two earlier attempts were rejected by the corpus first: matching Python's bridge exactly by dropping the synthetic block boundaries, and gating them on list depth. Both broke reference.testdoc.plain because comrak merges text after the token line into the token's paragraph where marko does not, so those boundaries are load-bearing for this parser and the fix belongs in recognition. Regression test added; ledger entry removed."
+resolution: null
+duplicate_of: null
 ---
 THE ONLY IDEMPOTENCE REGRESSION PR #81 INTRODUCES. Everything else the corpus
 audit found predates the PR. This is the one item blocking a no-regression land.
