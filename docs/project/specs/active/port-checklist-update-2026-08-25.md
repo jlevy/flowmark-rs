@@ -19,7 +19,7 @@ It remains active until the release gates at the end are satisfied.
 | Branch starting Python baseline | v0.6.5, `f1228297c8e2380685c6a10383f59164b96f6c22` |
 | Merged Rust release baseline | Rust v0.3.2 / Python v0.7.2, Rust `015f23989af3e5cfb3f8b58dfc72822c534df25a` |
 | Current branch parity baseline | v0.7.3, `7912c322417ae49c5c45ab099997c142cf392db8` |
-| Preservation-contract target | `783b445186df328d9354d4215079c6e56e9268fc` |
+| Preservation-contract target | `19c840eef664ac0c7fa8a7d3ce1b6252141ca648` |
 | Pre-cycle Rust reference | `cb744eb` |
 | Shared-test foundation | `ccc8897ac0cb6c21c017f13ac68311198da71a48` |
 | Current-main merge | `c6449a5cba5b069c5bd29be0e08e83d036279b59` (second parent `015f23989af3e5cfb3f8b58dfc72822c534df25a`) |
@@ -90,7 +90,8 @@ and keep golden evidence versioned with provenance.
 
 - [x] Advance `repos/flowmark` from `f122829` through `093c924` and `0d2bebb` to the
   `e9d5805` behavior tip, its integration-golden successor `b027fde`, and the Python
-  Python 3.10 compatibility successors through `783b445`.
+  Python 3.10 compatibility successors through `783b445`, followed by the shared GLFM
+  and issue-traceability target `19c840e`.
 - [x] Advance `repos/rust-porting-playbook` from `df36b99` to `d24760a`.
 - [x] Record the shared source commit and change IDs in
   `admin/port-coverage-mapping/shared-conformance.toml`.
@@ -151,6 +152,7 @@ and traceability update.
 | `FM-EXT-COLON-CONTAINER-001` | Colon-fenced containers | `fm-dvl6` | Implemented |
 | `FM-EXT-TOML-FRONTMATTER-001` | TOML frontmatter | `fm-bl2j` | Implemented |
 | `FM-EXT-DEFINITION-LIST-001` | Pandoc definition lists | `fm-663e` | Implemented |
+| `FM-EXT-GLFM-001` | GitLab bracketed references and multiline blockquotes | `fmr-bnkr` | Implemented |
 | `FM-EXT-GRID-TABLE-001` | Pandoc grid tables | `fm-z8xh` | Implemented |
 | `FM-EXT-RAW-HTML-001` | Raw HTML and angle-span fallback | `fm-w1tn` | Implemented |
 | `FM-EXT-ATTRIBUTE-GROUP-001` | Markdown attribute groups | `fm-c57j` | Implemented |
@@ -168,6 +170,8 @@ and traceability update.
   not stack family-specific parser workarounds over it.
 - [x] Port automatic recognition for code spans and every registered opaque extension
   without adding dialect configuration.
+- [x] Port the issue #67 follow-up for allowlisted GitLab references, reference pipes in
+  tables, and compatible paired `>>>` fences.
 - [x] Activate the three reference-document fixed-point cases.
 - [x] Promote recovered-corpus failures for angle comparisons and prose pipes into
   shared cases before fixing Rust.
@@ -198,7 +202,7 @@ and traceability update.
 - [x] Treat the YAML Python/Rust function mapping as supplementary evidence.
 - [x] Complete the v0.7.3 supplemental mapping refresh (`fm-t81l`).
 - [x] Mark every core, math, code, extension, CLI, and fixed-point change ID implemented
-  at target `783b445`.
+  at target `19c840e`.
 - [x] Remove four ledger entries that became exact; retain 34 exact inherited CommonMark
   divergences.
 - [x] Regenerate the Rust inventory after adding native preservation diagnostics and
@@ -255,6 +259,9 @@ and traceability update.
 - [x] Record the Python shared-conformance, Rust focused conformance, formatter, clippy,
   and preservation-unit evidence for implementation commit `b76f635`.
 - [x] Append the final full-gate evidence after documentation and mapping stabilize.
+- [x] Re-run formatting, clippy, all-feature tests, no-default-feature tests, and native
+  shared conformance at `19c840e`: 482 exact passes and the unchanged 34-entry
+  CommonMark ledger.
 - [x] Re-run the final local matrix: all-features and no-default-features tests, clippy,
   rustdoc warnings, build warnings, crate verification, packaged docs/skill smoke,
   administration lint/types/tests, and mapping validation.

@@ -8,19 +8,21 @@
 
 **Last declared whole-program Python baseline:** v0.7.3
 
-**In-progress upstream contract:** `783b445186df328d9354d4215079c6e56e9268fc`
+**In-progress upstream contract:** `19c840eef664ac0c7fa8a7d3ce1b6252141ca648`
 
 ## Summary
 
 The current branch implements the complete shared Markdown-preservation behavior through
-`e9d5805`, the integration-golden successor `b027fde`, and the Python 3.10 compatibility
-successors through `783b445`. Math remains the highest-priority syntax family, but the
-same automatic, parser-independent mechanism now covers inline code and the supported
-opaque Markdown extensions without requiring dialect flags.
+`e9d5805`, the integration-golden successor `b027fde`, the Python 3.10 compatibility
+successors through `783b445`, and the GLFM and issue-traceability target `19c840e`. Math
+remains the highest-priority syntax family, but the same automatic, parser-independent
+mechanism now covers inline code and the supported opaque Markdown extensions without
+requiring dialect flags.
 
 The contract includes source-exact math, code spans, Pandoc multiline and grid tables,
 definition lists, line blocks, Obsidian callouts, colon containers, TOML frontmatter,
-raw HTML, attribute groups, MyST roles, and wikilinks.
+raw HTML, attribute groups, MyST roles, wikilinks, GitLab bracketed references, and
+GitLab multiline blockquotes.
 Malformed or ambiguous openers degrade to ordinary Markdown behavior.
 Whole-document semantic, cleanup, and typography outputs reach fixed points.
 
@@ -40,7 +42,7 @@ gitlink from the configured remotes.
 
 | Source | Recorded commit | Purpose |
 | --- | --- | --- |
-| Python Flowmark | `783b445186df328d9354d4215079c6e56e9268fc` | Source, shared manifest, expected bytes, reference documents, CommonMark, and tryscript |
+| Python Flowmark | `19c840eef664ac0c7fa8a7d3ce1b6252141ca648` | Source, shared manifest, expected bytes, reference documents, CommonMark, and tryscript |
 | Rust porting playbook | `d24760a3fbd2951c730a199269aeb082abb46a42` | Latest reviewed `origin/main`; canonical update workflow and Rust guidance |
 | Released parity baseline | Python v0.7.3 at `7912c322417ae49c5c45ab099997c142cf392db8` | Supplemental whole-program mapping and release correspondence |
 
@@ -55,7 +57,7 @@ Both resolve to `d24760a`, so no new playbook gitlink change is required.
 
 | Layer | Role | Current state |
 | --- | --- | --- |
-| Shared conformance manifest | Exact stdout, stderr, exit, filesystem, timeout, and idempotence contract | 476 exact passes, 34 exact known divergences |
+| Shared conformance manifest | Exact stdout, stderr, exit, filesystem, timeout, and idempotence contract | 482 exact passes, 34 exact known divergences |
 | Shared tryscript | End-to-end CLI workflows and fixture interactions | Rust executes upstream documents against Cargo-built artifacts |
 | Reference and topic documents | Broad whole-document and cross-family interactions | Exact for all implemented change IDs; fixed-point cases active |
 | CommonMark 0.31.2 | Large standard-Markdown syntax sweep | Active cases pass or have exact ledger entries |
@@ -79,6 +81,7 @@ All current statuses come from `admin/port-coverage-mapping/shared-conformance.t
 | `FM-EXT-ATTRIBUTE-GROUP-001` | Implemented |
 | `FM-EXT-COLON-CONTAINER-001` | Implemented |
 | `FM-EXT-DEFINITION-LIST-001` | Implemented |
+| `FM-EXT-GLFM-001` | Implemented |
 | `FM-EXT-GRID-TABLE-001` | Implemented |
 | `FM-EXT-LINE-BLOCK-001` | Implemented |
 | `FM-EXT-MULTILINE-TABLE-001` | Implemented |
