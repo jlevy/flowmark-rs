@@ -92,7 +92,7 @@ pub fn line_wrap_to_width(width: usize, is_markdown: bool) -> LineWrapper {
 pub(crate) fn line_wrap_to_width_protected(
     width: usize,
     is_markdown: bool,
-    protected: ProtectedSource,
+    protected: Arc<ProtectedSource>,
 ) -> LineWrapper {
     let line_wrapper: LineWrapper = Box::new(move |text, initial_indent, subsequent_indent| {
         wrap_paragraph_protected(
@@ -204,7 +204,7 @@ pub(crate) fn line_wrap_by_sentence_protected(
     width: usize,
     min_line_len: usize,
     is_markdown: bool,
-    protected: ProtectedSource,
+    protected: Arc<ProtectedSource>,
 ) -> LineWrapper {
     let line_wrapper: LineWrapper = Box::new(move |text, initial_indent, subsequent_indent| {
         let text = text.replace('\n', " ");

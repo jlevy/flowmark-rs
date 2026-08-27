@@ -206,7 +206,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use comrak::nodes::{AstNode, ListType, NodeValue, TableAlignment};
@@ -233,7 +233,7 @@ use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
 pub struct FillPerfStats {
     /// Number of `fill_markdown` calls recorded.
     pub files: u64,
-    /// Total preprocessing time.
+    /// Total source normalization, preservation, and parser preprocessing time.
     pub preprocess_ns: u128,
     /// Total comrak parse time.
     pub parse_ns: u128,
@@ -2716,6 +2716,7 @@ pub fn fill_markdown(
     let perf_enabled = PERF_STATS_ENABLED.load(Ordering::Relaxed);
     let mut perf_sample = FillPerfSample::default();
 
+    let preprocess_start = perf_enabled.then(Instant::now);
     let mut input = markdown_text.to_owned();
     if dedent_input {
         input = dedent(&input);
@@ -2728,6 +2729,7 @@ pub fn fill_markdown(
     let Ok(protected) = protect_source(&source, regions) else {
         return fallback();
     };
+    let protected = Arc::new(protected);
     let line_wrapper = line_wrapper.unwrap_or_else(|| {
         if semantic {
             line_wrap_by_sentence_protected(width, DEFAULT_MIN_LINE_LEN, true, protected.clone())
@@ -2745,8 +2747,6 @@ pub fn fill_markdown(
     } else {
         text = text.trim_start_matches('\n').to_owned();
     }
-    let preprocess_start = perf_enabled.then(Instant::now);
-
     // === Pre-parse workarounds (see module-level COMRAK-WORKAROUND docs) ===
 
     // COMRAK-WORKAROUND6: Ensure proper blank lines around block content within tags.

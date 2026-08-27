@@ -517,12 +517,62 @@ fn scan_myst_roles(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     candidates
 }
 
+fn closable_wikilink_openers(text: &str, start: usize, end: usize) -> Vec<usize> {
+    let bytes = text.as_bytes();
+    let mut closable = Vec::new();
+    let mut summary_plus_one = (0_isize, 0_isize);
+    let mut summary_plus_two = (0_isize, 0_isize);
+
+    for position in (start..end).rev() {
+        let summary = if bytes[position] == b'\n' {
+            (0, 0)
+        } else if position + 1 < end
+            && &bytes[position..position + 2] == b"[["
+            && escape_is_even(text, position)
+        {
+            let net = 1 + summary_plus_two.0;
+            (net, 0.min(1 + summary_plus_two.1))
+        } else if position + 1 < end
+            && &bytes[position..position + 2] == b"]]"
+            && escape_is_even(text, position)
+        {
+            let net = -1 + summary_plus_two.0;
+            (net, 0.min(-1 + summary_plus_two.1))
+        } else {
+            summary_plus_one
+        };
+
+        if position >= start + 2 {
+            let opener = position - 2;
+            if &bytes[opener..opener + 2] == b"[["
+                && escape_is_even(text, opener)
+                && summary.1 <= -1
+            {
+                closable.push(opener);
+            }
+        }
+        summary_plus_two = summary_plus_one;
+        summary_plus_one = summary;
+    }
+    closable.reverse();
+    closable
+}
+
 fn scan_wikilinks(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     let bytes = text.as_bytes();
+    let closable = closable_wikilink_openers(text, start, end);
+    let mut closable_index = 0;
     let mut candidates = Vec::new();
     let mut index = start;
     while index + 1 < end {
         if &bytes[index..index + 2] != b"[[" || !escape_is_even(text, index) {
+            index += 1;
+            continue;
+        }
+        while closable.get(closable_index).is_some_and(|opener| *opener < index) {
+            closable_index += 1;
+        }
+        if closable.get(closable_index) != Some(&index) {
             index += 1;
             continue;
         }
@@ -557,6 +607,7 @@ fn scan_wikilinks(text: &str, start: usize, end: usize) -> Vec<Candidate> {
                         ));
                     }
                     index = cursor;
+                    closable_index += 1;
                     closed = true;
                     break;
                 }
@@ -694,57 +745,72 @@ fn is_email_autolink(body: &str) -> bool {
 fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     let bytes = text.as_bytes();
     let mut candidates = Vec::new();
-    let mut index = start;
-    while index < end {
+    let mut quote_free_close = None;
+    let mut single_quoted_close = None;
+    let mut double_quoted_close = None;
+    let mut fallback_close = None;
+    let mut comment_close = None;
+    let mut cdata_close = None;
+    let mut processing_close = None;
+    let mut processing_close_after = None;
+
+    for index in (start..end).rev() {
+        if bytes[index..end].starts_with(b"-->") {
+            comment_close = Some(index + 3);
+        }
+        if bytes[index..end].starts_with(b"]]>") {
+            cdata_close = Some(index + 3);
+        }
+        if bytes[index..end].starts_with(b"?>") {
+            processing_close_after = processing_close;
+            processing_close = Some(index + 2);
+        }
+
+        match bytes[index] {
+            b'>' => {
+                quote_free_close = Some(index);
+                fallback_close = Some(index);
+            }
+            b'\'' => std::mem::swap(&mut quote_free_close, &mut single_quoted_close),
+            b'"' => std::mem::swap(&mut quote_free_close, &mut double_quoted_close),
+            _ => {}
+        }
+
         if bytes[index] != b'<' || index + 1 >= end {
-            index += 1;
             continue;
         }
         let next = text[index + 1..end].chars().next().expect("nonempty angle-span tail");
         if next.is_whitespace() || matches!(next, '<' | '>') {
-            index += 1;
             continue;
         }
 
-        let terminator = if text[index..end].starts_with("<!--") {
-            Some("-->")
+        let special_end = if bytes[index..end].starts_with(b"<!--") {
+            comment_close
         } else if text[index..end].starts_with("<![CDATA[") {
-            Some("]]>")
+            cdata_close
         } else if text[index..end].starts_with("<?") {
-            Some("?>")
+            // Match the forward scanner's search after the two-byte opener:
+            // the opener's own `?>` overlap in `<?>` is not a terminator.
+            if processing_close == Some(index + 3) {
+                processing_close_after
+            } else {
+                processing_close
+            }
         } else {
             None
         };
-        if let Some(terminator) = terminator {
-            if let Some(relative) = text[index + 2..end].find(terminator) {
-                let span_end = index + 2 + relative + terminator.len();
+        if text[index..end].starts_with("<!--")
+            || text[index..end].starts_with("<![CDATA[")
+            || text[index..end].starts_with("<?")
+        {
+            if let Some(span_end) = special_end {
                 candidates.push(Candidate::inline(RegionKind::RawHtmlInline, index, span_end));
-                index = span_end;
-                continue;
             }
-            index += 1;
             continue;
         }
 
-        let fallback_close = bytes[index + 1..end].iter().position(|byte| *byte == b'>');
-        let mut quote = None;
-        let mut cursor = index + 1;
-        let mut close = None;
-        while cursor < end {
-            match (quote, bytes[cursor]) {
-                (Some(active), byte) if active == byte => quote = None,
-                (None, byte @ (b'\'' | b'"')) => quote = Some(byte),
-                (None, b'>') => {
-                    close = Some(cursor);
-                    break;
-                }
-                _ => {}
-            }
-            cursor += 1;
-        }
-        let close = close.or_else(|| fallback_close.map(|relative| index + 1 + relative));
+        let close = quote_free_close.or(fallback_close);
         let Some(close) = close else {
-            index += 1;
             continue;
         };
         let span_end = close + 1;
@@ -756,13 +822,20 @@ fn scan_angle_spans(text: &str, start: usize, end: usize) -> Vec<Candidate> {
             || is_email_autolink(body)
             || text[start..index].ends_with("]("))
         {
-            index += 1;
             continue;
         }
         candidates.push(Candidate::inline(RegionKind::RawHtmlInline, index, span_end));
-        index = span_end;
     }
-    candidates
+    candidates.reverse();
+    let mut selected = Vec::with_capacity(candidates.len());
+    let mut previous_end = start;
+    for candidate in candidates {
+        if candidate.start >= previous_end {
+            previous_end = candidate.end;
+            selected.push(candidate);
+        }
+    }
+    selected
 }
 
 fn attribute_atom_end(text: &str, mut index: usize, end: usize, value: bool) -> Option<usize> {
@@ -1075,9 +1148,35 @@ fn scan_dollars(text: &str, start: usize, end: usize) -> Vec<Candidate> {
     candidates
 }
 
+fn radix_sort_by_start(mut candidates: Vec<Candidate>) -> Vec<Candidate> {
+    if candidates.len() < 2 {
+        return candidates;
+    }
+    let mut output: Vec<Option<Candidate>> = (0..candidates.len()).map(|_| None).collect();
+    for shift in (0..64).step_by(8) {
+        let mut positions = [0_usize; 256];
+        for candidate in &candidates {
+            positions[((candidate.start as u64 >> shift) & 0xff) as usize] += 1;
+        }
+        let mut next = 0;
+        for count in &mut positions {
+            let bucket_start = next;
+            next += *count;
+            *count = bucket_start;
+        }
+        for candidate in candidates.drain(..) {
+            let bucket = ((candidate.start as u64 >> shift) & 0xff) as usize;
+            output[positions[bucket]] = Some(candidate);
+            positions[bucket] += 1;
+        }
+        candidates.extend(output.iter_mut().map(|slot| slot.take().expect("filled radix slot")));
+    }
+    candidates
+}
+
 fn arbitrate(mut candidates: Vec<Candidate>, start: usize, end: usize) -> Vec<Candidate> {
     candidates.retain(|candidate| candidate.start >= start && candidate.end <= end);
-    candidates.sort_by_key(|candidate| candidate.start);
+    let candidates = radix_sort_by_start(candidates);
     let mut selected = Vec::new();
     let mut previous_end = start;
     let mut index = 0;
@@ -1105,6 +1204,23 @@ fn arbitrate(mut candidates: Vec<Candidate>, start: usize, end: usize) -> Vec<Ca
         }
     }
     selected
+}
+
+fn merge_candidates_by_start(left: Vec<Candidate>, right: Vec<Candidate>) -> Vec<Candidate> {
+    let capacity = left.len() + right.len();
+    let mut left = left.into_iter().peekable();
+    let mut right = right.into_iter().peekable();
+    let mut merged = Vec::with_capacity(capacity);
+    while left.peek().is_some() && right.peek().is_some() {
+        if left.peek().expect("checked left").start <= right.peek().expect("checked right").start {
+            merged.push(left.next().expect("checked left"));
+        } else {
+            merged.push(right.next().expect("checked right"));
+        }
+    }
+    merged.extend(left);
+    merged.extend(right);
+    merged
 }
 
 fn scan_inline_scope(text: &str, start: usize, end: usize) -> Vec<Candidate> {
@@ -2038,19 +2154,37 @@ fn has_structural_pipe(source: &str, line: &Line) -> bool {
         || source[start..line.content_end].trim_start_matches([' ', '\t']).starts_with('|')
 }
 
-fn scan_pandoc_line_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+fn cached_structural_pipe(source: &str, line: &Line, cache: &mut [Option<bool>]) -> bool {
+    if let Some(value) = cache[line.index] {
+        return value;
+    }
+    let value = has_structural_pipe(source, line);
+    cache[line.index] = Some(value);
+    value
+}
+
+fn gfm_table_lines(
+    source: &str,
+    lines: &[Line],
+    excluded: &[bool],
+    require_matching_container: bool,
+    structural_pipes: &mut [Option<bool>],
+) -> Vec<bool> {
     let mut gfm_table_lines = vec![false; lines.len()];
     let mut table_index = 0;
     while table_index + 1 < lines.len() {
-        if !opaque[table_index]
-            && !opaque[table_index + 1]
-            && has_structural_pipe(source, &lines[table_index])
+        let key = lines[table_index].key.as_slice();
+        if !excluded[table_index]
+            && !excluded[table_index + 1]
+            && (!require_matching_container || lines[table_index + 1].key.as_slice() == key)
+            && cached_structural_pipe(source, &lines[table_index], structural_pipes)
             && is_table_delimiter(lines[table_index + 1].payload(source))
         {
             let mut table_end = table_index + 2;
             while table_end < lines.len()
-                && !opaque[table_end]
-                && has_structural_pipe(source, &lines[table_end])
+                && !excluded[table_end]
+                && (!require_matching_container || lines[table_end].key.as_slice() == key)
+                && cached_structural_pipe(source, &lines[table_end], structural_pipes)
             {
                 table_end += 1;
             }
@@ -2060,6 +2194,16 @@ fn scan_pandoc_line_blocks(source: &str, lines: &[Line], opaque: &[bool]) -> Vec
             table_index += 1;
         }
     }
+    gfm_table_lines
+}
+
+fn scan_pandoc_line_blocks(
+    source: &str,
+    lines: &[Line],
+    opaque: &[bool],
+    structural_pipes: &mut [Option<bool>],
+) -> Vec<Candidate> {
+    let gfm_table_lines = gfm_table_lines(source, lines, opaque, false, structural_pipes);
     let mut candidates = Vec::new();
     let mut opener_index = 0;
     while opener_index < lines.len() {
@@ -2125,7 +2269,12 @@ fn scan_gitlab_multiline_blockquotes(
     candidates
 }
 
-fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Vec<Candidate> {
+fn scan_blocks(
+    source: &NormalizedSource,
+    lines: &[Line],
+    opaque: &[bool],
+    structural_pipes: &mut [Option<bool>],
+) -> Vec<Candidate> {
     let text = source.text.as_str();
     let mut candidates = scan_toml_frontmatter(text, lines, opaque);
     candidates.extend(scan_pandoc_multiline_tables(text, lines, opaque));
@@ -2135,7 +2284,7 @@ fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Ve
     candidates.extend(scan_pandoc_grid_tables(text, lines, opaque));
     candidates.extend(scan_raw_html_blocks(text, lines, opaque));
     candidates.extend(scan_attribute_group_blocks(text, lines, opaque));
-    candidates.extend(scan_pandoc_line_blocks(text, lines, opaque));
+    candidates.extend(scan_pandoc_line_blocks(text, lines, opaque, structural_pipes));
     candidates.extend(scan_gitlab_multiline_blockquotes(text, lines, opaque));
     let mut dollars = HashMap::<Vec<ContainerFrame>, usize>::new();
     let mut brackets = HashMap::<Vec<ContainerFrame>, usize>::new();
@@ -2211,10 +2360,6 @@ fn scan_blocks(source: &NormalizedSource, lines: &[Line], opaque: &[bool]) -> Ve
     arbitrate(candidates, 0, source.byte_length())
 }
 
-fn overlaps(range: ByteRange, ranges: &[ByteRange]) -> bool {
-    ranges.iter().any(|other| range.0 < other.1 && other.0 < range.1)
-}
-
 fn structural_pipe_ranges(text: &str, start: usize, end: usize) -> Vec<ByteRange> {
     let mut atomic_candidates = scan_backticks(text, start, end);
     atomic_candidates.extend(scan_myst_roles(text, start, end));
@@ -2226,11 +2371,14 @@ fn structural_pipe_ranges(text: &str, start: usize, end: usize) -> Vec<ByteRange
         .collect();
     let mut boundaries = vec![start];
     let mut index = start;
+    let mut atomic_index = 0;
     while index < end {
-        if text.as_bytes()[index] == b'|'
-            && escape_is_even(text, index)
-            && !overlaps((index, index + 1), &atomic)
-        {
+        while atomic.get(atomic_index).is_some_and(|range| range.1 <= index) {
+            atomic_index += 1;
+        }
+        let inside_atomic =
+            atomic.get(atomic_index).is_some_and(|range| range.0 <= index && index < range.1);
+        if text.as_bytes()[index] == b'|' && escape_is_even(text, index) && !inside_atomic {
             boundaries.push(index);
             boundaries.push(index + 1);
         }
@@ -2250,32 +2398,13 @@ fn is_heading(payload: &str) -> bool {
             || payload.as_bytes().get(hashes).is_some_and(|byte| matches!(byte, b' ' | b'\t')))
 }
 
-fn inline_scopes(source: &str, lines: &[Line], excluded: &[bool]) -> Vec<ByteRange> {
-    let mut table_lines = vec![false; lines.len()];
-    let mut table_index = 0;
-    while table_index + 1 < lines.len() {
-        let key = lines[table_index].key.as_slice();
-        if !excluded[table_index]
-            && !excluded[table_index + 1]
-            && !lines[table_index].payload(source).is_empty()
-            && lines[table_index + 1].key.as_slice() == key
-            && has_structural_pipe(source, &lines[table_index])
-            && is_table_delimiter(lines[table_index + 1].payload(source))
-        {
-            let mut table_end = table_index + 2;
-            while table_end < lines.len()
-                && !excluded[table_end]
-                && lines[table_end].key.as_slice() == key
-                && has_structural_pipe(source, &lines[table_end])
-            {
-                table_end += 1;
-            }
-            table_lines[table_index..table_end].fill(true);
-            table_index = table_end;
-        } else {
-            table_index += 1;
-        }
-    }
+fn inline_scopes(
+    source: &str,
+    lines: &[Line],
+    excluded: &[bool],
+    structural_pipes: &mut [Option<bool>],
+) -> Vec<ByteRange> {
+    let table_lines = gfm_table_lines(source, lines, excluded, true, structural_pipes);
 
     let mut scopes = Vec::new();
     let mut paragraph_start = None;
@@ -2363,12 +2492,18 @@ pub(crate) fn scan_protected_regions(
 ) -> Result<Vec<ProtectedRegion>, PreservationError> {
     let lines = build_lines(&source.text);
     let opaque = opaque_line_flags(&source.text, &lines);
-    let block_candidates = scan_blocks(source, &lines, &opaque);
+    let mut structural_pipes = vec![None; lines.len()];
+    let block_candidates = scan_blocks(source, &lines, &opaque, &mut structural_pipes);
     let mut excluded = opaque;
+    let mut block_index = 0;
     for (line_index, line) in lines.iter().enumerate() {
+        while block_candidates.get(block_index).is_some_and(|candidate| candidate.end <= line.start)
+        {
+            block_index += 1;
+        }
         if block_candidates
-            .iter()
-            .any(|candidate| line.start < candidate.end && candidate.start < line.end)
+            .get(block_index)
+            .is_some_and(|candidate| line.start < candidate.end && candidate.start < line.end)
         {
             excluded[line_index] = true;
         }
@@ -2378,14 +2513,12 @@ pub(crate) fn scan_protected_regions(
     for (start, end) in angle_inline_scopes(&source.text, &lines, &excluded) {
         inline_candidates.extend(scan_angle_spans(&source.text, start, end));
     }
-    for (start, end) in inline_scopes(&source.text, &lines, &excluded) {
+    for (start, end) in inline_scopes(&source.text, &lines, &excluded, &mut structural_pipes) {
         inline_candidates.extend(scan_inline_scope(&source.text, start, end));
     }
     let inline_candidates = arbitrate(inline_candidates, 0, source.byte_length());
 
-    let mut candidates = block_candidates;
-    candidates.extend(inline_candidates);
-    candidates.sort_by_key(|candidate| candidate.start);
+    let candidates = merge_candidates_by_start(block_candidates, inline_candidates);
     let mut regions = Vec::with_capacity(candidates.len());
     let mut previous_end = 0;
     for candidate in candidates {
@@ -2518,6 +2651,45 @@ mod tests {
                 "<!DOCTYPE html>",
             ]
         );
+    }
+
+    #[test]
+    fn angle_scanner_handles_many_unclosed_prose_comparisons() {
+        assert!(scan_angle_spans("<?>", 0, 3).is_empty());
+        let processing = scan_angle_spans("<??>", 0, 4);
+        assert_eq!(processing.len(), 1);
+        assert_eq!((processing[0].start, processing[0].end), (0, 4));
+
+        let text = "The build takes <15min and speedup is <1.5x.\n".repeat(8_192);
+        assert!(scan_angle_spans(&text, 0, text.len()).is_empty());
+    }
+
+    #[test]
+    fn wikilink_closability_preserves_nested_and_overlapping_fallbacks() {
+        let nested = "[[ [[ y ]] x";
+        let nested_candidates = scan_wikilinks(nested, 0, nested.len());
+        assert_eq!(nested_candidates.len(), 1);
+        assert_eq!(&nested[nested_candidates[0].start..nested_candidates[0].end], "[[ y ]]");
+
+        let overlapping = "[[[[x]]";
+        let overlapping_candidates = scan_wikilinks(overlapping, 0, overlapping.len());
+        assert_eq!(overlapping_candidates.len(), 1);
+        assert_eq!(
+            &overlapping[overlapping_candidates[0].start..overlapping_candidates[0].end],
+            "[[[x]]"
+        );
+
+        let unclosed = "[[".repeat(32_768);
+        assert!(scan_wikilinks(&unclosed, 0, unclosed.len()).is_empty());
+    }
+
+    #[test]
+    fn many_protected_blocks_retain_source_order() {
+        let text = "$$\nx\n$$\n\n".repeat(4_096);
+        let source = normalize_source(&text);
+        let regions = scan_protected_regions(&source).expect("valid repeated display math");
+        assert_eq!(regions.len(), 4_096);
+        assert!(regions.windows(2).all(|pair| pair[0].end <= pair[1].start));
     }
 
     #[test]

@@ -1,5 +1,7 @@
 //! Collision-safe parser substitution and fail-closed restoration.
 
+use std::borrow::Cow;
+
 use super::model::{
     NormalizedSource, PreservationError, ProtectedRegion, RegionForm, RegionKind, validate_regions,
 };
@@ -173,7 +175,10 @@ fn code_span_rewrite_context(source: &str) -> Result<String, PreservationError> 
     Ok(body)
 }
 
-fn escape_authored_markers(text: &str) -> String {
+fn escape_authored_markers(text: &str) -> Cow<'_, str> {
+    if !text.contains(ESCAPE_MARKER) && !text.contains(TOKEN_START) && !text.contains(TOKEN_END) {
+        return Cow::Borrowed(text);
+    }
     let mut output = String::with_capacity(text.len());
     for scalar in text.chars() {
         let escaped = match scalar {
@@ -189,7 +194,7 @@ fn escape_authored_markers(text: &str) -> String {
             output.push(scalar);
         }
     }
-    output
+    Cow::Owned(output)
 }
 
 pub(crate) fn encode_token(index: usize) -> String {
@@ -282,39 +287,57 @@ pub(crate) fn protect_source(
 }
 
 fn parse_rendered_stream(rendered: &str) -> Result<(Vec<String>, Vec<usize>), PreservationError> {
-    let scalars: Vec<char> = rendered.chars().collect();
+    if !rendered.contains(ESCAPE_MARKER)
+        && !rendered.contains(TOKEN_START)
+        && !rendered.contains(TOKEN_END)
+    {
+        return Ok((vec![rendered.to_owned()], Vec::new()));
+    }
+
     let mut gaps = Vec::new();
     let mut indexes = Vec::new();
     let mut gap = String::new();
     let mut position = 0;
-    while position < scalars.len() {
-        match scalars[position] {
+    while position < rendered.len() {
+        let scalar = rendered[position..]
+            .chars()
+            .next()
+            .ok_or(PreservationError("invalid rendered UTF-8 position"))?;
+        match scalar {
             ESCAPE_MARKER => {
-                let code = scalars
-                    .get(position + 1)
+                let code_start = position + scalar.len_utf8();
+                let code = rendered[code_start..]
+                    .chars()
+                    .next()
                     .ok_or(PreservationError("malformed preservation marker escape"))?;
-                gap.push(match *code {
+                gap.push(match code {
                     ESCAPED_ESCAPE => ESCAPE_MARKER,
                     ESCAPED_START => TOKEN_START,
                     ESCAPED_END => TOKEN_END,
                     _ => return Err(PreservationError("malformed preservation marker escape")),
                 });
-                position += 2;
+                position = code_start + code.len_utf8();
             }
             TOKEN_START => {
-                let end = position + TOKEN_LENGTH;
-                if end > scalars.len() {
-                    return Err(PreservationError("malformed preservation token"));
+                let mut token_end = position;
+                for _ in 0..TOKEN_LENGTH {
+                    let token_scalar = rendered[token_end..]
+                        .chars()
+                        .next()
+                        .ok_or(PreservationError("malformed preservation token"))?;
+                    token_end += token_scalar.len_utf8();
                 }
-                let token: String = scalars[position..end].iter().collect();
-                indexes.push(parse_token(&token)?);
+                indexes.push(parse_token(&rendered[position..token_end])?);
                 gaps.push(std::mem::take(&mut gap));
-                position = end;
+                position = token_end;
             }
             TOKEN_END => return Err(PreservationError("malformed preservation token")),
-            scalar => {
-                gap.push(scalar);
-                position += 1;
+            _ => {
+                let marker_start = rendered[position..]
+                    .find([ESCAPE_MARKER, TOKEN_START, TOKEN_END])
+                    .map_or(rendered.len(), |relative| position + relative);
+                gap.push_str(&rendered[position..marker_start]);
+                position = marker_start;
             }
         }
     }
@@ -394,7 +417,8 @@ mod tests {
     #[test]
     fn authored_marker_escapes_retain_one_column_each() {
         let escaped =
-            escape_authored_markers(&format!("a{ESCAPE_MARKER}{TOKEN_START}{TOKEN_END}b"));
+            escape_authored_markers(&format!("a{ESCAPE_MARKER}{TOKEN_START}{TOKEN_END}b"))
+                .into_owned();
         let protected = ProtectedSource {
             text: escaped.clone(),
             regions: vec![],
@@ -406,6 +430,17 @@ mod tests {
         assert_eq!(metrics.first_width, 5);
         assert_eq!(metrics.final_width, 5);
         assert!(!metrics.has_authored_break);
+    }
+
+    #[test]
+    fn marker_free_text_uses_bulk_fast_paths() {
+        let escaped = escape_authored_markers("ordinary text");
+        assert!(matches!(escaped, Cow::Borrowed("ordinary text")));
+
+        let (gaps, indexes) = parse_rendered_stream("ordinary rendered text")
+            .expect("marker-free rendered text is valid");
+        assert_eq!(gaps, ["ordinary rendered text"]);
+        assert!(indexes.is_empty());
     }
 
     #[test]

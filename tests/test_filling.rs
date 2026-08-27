@@ -292,6 +292,7 @@ fn test_fill_perf_stats_records_stage_times_when_enabled() {
     let stats = get_fill_perf_stats();
     assert!(stats.files >= 1, "expected at least one recorded file");
     assert!(stats.total_ns() > 0, "expected non-zero total measured time");
+    assert!(stats.preprocess_ns > 0, "expected preservation/preprocess timing");
     assert!(stats.parse_ns > 0, "expected non-zero parse stage");
     assert!(stats.render_ns > 0, "expected non-zero render stage");
     reset_fill_perf_stats();

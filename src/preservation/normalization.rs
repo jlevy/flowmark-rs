@@ -5,7 +5,11 @@ use super::model::NormalizedSource;
 const BOM: char = '\u{feff}';
 
 fn normalize_line_endings(text: &str) -> String {
-    text.replace("\r\n", "\n").replace('\r', "\n")
+    if text.as_bytes().contains(&b'\r') {
+        text.replace("\r\n", "\n").replace('\r', "\n")
+    } else {
+        text.to_owned()
+    }
 }
 
 fn canonical_terminal_lf(mut text: String) -> String {
