@@ -3,15 +3,20 @@ type: is
 id: is-01m12r7kpzpf0bc7km9bbbftt9
 title: "Vacuous exclusion assertions: file-discovery fixtures are deleted before the test runs"
 kind: bug
-status: open
+status: closed
 priority: 2
-version: 1
+version: 4
 labels:
   - testing
   - parity
 dependencies: []
+parent_id: is-01m12r94hb1se4rttk097t6zea
 created_at: 2026-08-27T23:17:41.215Z
-updated_at: 2026-08-27T23:17:41.215Z
+updated_at: 2026-08-28T00:06:31.456Z
+closed_at: 2026-08-28T00:06:31.456Z
+close_reason: "Implemented and verified: fixed list-specific pipe-continuation idempotence, restored strict shared discovery coverage, restored Rust-only cache help assertions, hardened the ledger gate, and passed the complete Linux, macOS, and Windows matrix."
+resolution: null
+duplicate_of: null
 ---
 Found by auditing whether PR #81's test changes are strict improvements.
 
@@ -55,3 +60,7 @@ flowmark-rs then picks up with the next submodule pin.
 
 Note the assertions still PASS today; this is a loss of test power, not a
 failure, so it does not block PR #81.
+
+## Notes
+
+Fixed upstream in flowmark ba9de9e3: restored all four committed exclusion fixtures, removed the vacuous cleanup, and restored nested gitignore/no-respect-gitignore scenarios. Rust pins that commit and the shared tryscript passes.

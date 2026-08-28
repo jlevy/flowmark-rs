@@ -3,14 +3,22 @@ type: is
 id: is-01m12r94hb1se4rttk097t6zea
 title: "Audit: PR #81 test changes are net stricter, with two small losses"
 kind: task
-status: open
+status: closed
 priority: 2
-version: 1
+version: 6
 labels:
   - testing
 dependencies: []
+child_order_hints:
+  - is-01m12r7kpzpf0bc7km9bbbftt9
+  - is-01m12r8er7sz7h65gbjrq1n0ge
+  - is-01m12trgfqww61d2dq68ckvq68
 created_at: 2026-08-27T23:18:31.211Z
-updated_at: 2026-08-27T23:18:31.211Z
+updated_at: 2026-08-28T00:06:31.741Z
+closed_at: 2026-08-28T00:06:31.740Z
+close_reason: "Test-strictness audit completed: both identified coverage losses and the hosted Windows portability defect are fixed; all local and hosted gates pass. Longer-standing idempotence defects remain separately tracked under fmr-1xlk."
+resolution: null
+duplicate_of: null
 ---
 Audit of whether PR #81's test changes are strict improvements in strictness and
 completeness, or whether anything was relaxed.
@@ -78,3 +86,7 @@ pre-existing baseline:
 Added in the same change: the corpus idempotence gate (9,114 checks with a
 67-entry bidirectional ledger), a no-abort sweep and an output-normalization
 sweep (10,000 cases each), and four regression tests.
+
+## Notes
+
+Both losses found by the test-strictness audit are repaired: shared discovery fixtures upstream and Rust-only cache help assertions locally. Awaiting hosted CI and review disposition before closure.

@@ -5,7 +5,7 @@ title: "Regression: wrapped continuation line starting with a pipe flips list sp
 kind: bug
 status: closed
 priority: 1
-version: 3
+version: 7
 spec_path: docs/project/specs/active/plan-2026-08-27-idempotence-verification.md
 labels:
   - idempotence
@@ -14,9 +14,9 @@ labels:
 dependencies: []
 parent_id: is-01m12n1d12xj4jjmaczmn9etzm
 created_at: 2026-08-27T22:34:24.531Z
-updated_at: 2026-08-27T23:04:54.190Z
-closed_at: 2026-08-27T23:04:54.190Z
-close_reason: "Fixed in 8fb4a1c. A wrapped continuation line beginning with '|' is no longer recognized as a Pandoc line-block opener, since a line block must open a block rather than continue a paragraph. Output now matches Python byte for byte on the reproducer and on the affected document. Two earlier attempts were rejected by the corpus first: matching Python's bridge exactly by dropping the synthetic block boundaries, and gating them on list depth. Both broke reference.testdoc.plain because comrak merges text after the token line into the token's paragraph where marko does not, so those boundaries are load-bearing for this parser and the fix belongs in recognition. Regression test added; ledger entry removed."
+updated_at: 2026-08-28T00:06:31.446Z
+closed_at: 2026-08-28T00:06:31.445Z
+close_reason: "Implemented and verified: fixed list-specific pipe-continuation idempotence, restored strict shared discovery coverage, restored Rust-only cache help assertions, hardened the ledger gate, and passed the complete Linux, macOS, and Windows matrix."
 resolution: null
 duplicate_of: null
 ---
@@ -73,3 +73,7 @@ tests/idempotence_known_divergences.toml, which will fail once this is fixed.
 
 Fix before merging PR #81. Python is already correct here, so unlike the other
 idempotence defects this needs no upstream decision: make Rust match Python.
+
+## Notes
+
+Integrated the active-PR blocker fix, then strengthened the shared adjacency golden after review exposed that the initial predicate was too broad. The final predicate is list-item-specific; both exact shared cases and the corpus-wide idempotence gate pass.
