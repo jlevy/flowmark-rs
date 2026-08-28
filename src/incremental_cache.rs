@@ -322,4 +322,33 @@ mod tests {
 
         assert_ne!(first, second);
     }
+
+    /// Two dev builds of one release share `CARGO_PKG_VERSION`, so the fingerprint has to
+    /// key on the long version instead — otherwise a rebuilt binary reuses the previous
+    /// build's "already formatted" verdicts and silently emits stale output.
+    #[test]
+    fn formatter_fingerprint_changes_between_dev_builds_of_one_release() {
+        let opts = FormatOptions {
+            width: 88,
+            plaintext: false,
+            semantic: true,
+            cleanups: true,
+            smartquotes: true,
+            ellipses: true,
+            list_spacing: ListSpacing::Preserve,
+        };
+
+        let before = compute_formatter_fingerprint(
+            &opts,
+            "0.3.2-dev.78+gaaaaaaa (Rust port of flowmark-py 0.7.3; base v0.3.2)",
+            None,
+        );
+        let after = compute_formatter_fingerprint(
+            &opts,
+            "0.3.2-dev.79+gbbbbbbb (Rust port of flowmark-py 0.7.3; base v0.3.2)",
+            None,
+        );
+
+        assert_ne!(before, after);
+    }
 }

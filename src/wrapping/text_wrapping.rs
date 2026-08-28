@@ -5,6 +5,9 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
+use crate::escape_placeholders::{
+    rendered_width, rendered_width_at_line_start, retains_leading_period_escape,
+};
 use crate::preservation::ProtectedSource;
 use crate::wrapping::atomic_patterns::ATOMIC_CONSTRUCT_PATTERN;
 use crate::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacent_tags};
@@ -188,8 +191,14 @@ pub fn wrap_paragraph_lines(
     let mut first_line = true;
 
     for word in &words {
-        let word_width = word.chars().count();
+        // A word that lands first on a line keeps a `DIGITS\.` escape, so it is measured
+        // one column wider there than it is mid-line.
         let space_width: usize = usize::from(!current_line.is_empty());
+        let word_width = if current_line.is_empty() {
+            rendered_width_at_line_start(word)
+        } else {
+            rendered_width(word)
+        };
 
         if current_width + word_width + space_width <= width {
             current_line.push(word.clone());
@@ -209,7 +218,7 @@ pub fn wrap_paragraph_lines(
             let escaped_word =
                 if is_markdown && !first_line { markdown_escape_word(word) } else { word.clone() };
 
-            let escaped_word_width = escaped_word.chars().count();
+            let escaped_word_width = rendered_width_at_line_start(&escaped_word);
             current_line = vec![escaped_word];
             current_width = subsequent_offset + escaped_word_width;
         }
@@ -256,13 +265,18 @@ pub(crate) fn wrap_paragraph_lines_protected(
             return vec![text.to_owned()];
         };
         let space_width = usize::from(!current_line.is_empty());
-        if current_width + space_width + metrics.first_width <= width {
+        // A `DIGITS\.` escape survives only where it begins a line, so a word placed first
+        // on one is a column wider than `measure_inline_text` reports. When the word carries
+        // an authored break the retained escape sits in its first segment, not its last.
+        let line_start_extra =
+            usize::from(current_line.is_empty() && retains_leading_period_escape(&word));
+        if current_width + space_width + metrics.first_width + line_start_extra <= width {
             current_line.push(word);
             if metrics.has_authored_break {
                 current_width = metrics.final_width;
                 first_line = false;
             } else {
-                current_width += space_width + metrics.final_width;
+                current_width += space_width + metrics.final_width + line_start_extra;
             }
             continue;
         }
@@ -277,12 +291,13 @@ pub(crate) fn wrap_paragraph_lines_protected(
         let Ok(escaped_metrics) = protected.measure_inline_text(&escaped) else {
             return vec![text.to_owned()];
         };
+        let escaped_line_start_extra = usize::from(retains_leading_period_escape(&escaped));
         current_line = vec![escaped];
         current_width = if escaped_metrics.has_authored_break {
             first_line = false;
             escaped_metrics.final_width
         } else {
-            subsequent_offset + escaped_metrics.final_width
+            subsequent_offset + escaped_metrics.final_width + escaped_line_start_extra
         };
     }
     if !current_line.is_empty() {

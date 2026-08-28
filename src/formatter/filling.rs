@@ -34,7 +34,12 @@
 //! | `U+F004`   | `AUTOLINK_CLOSE`    | Autolink `>` replacement                 |
 //! | `U+F005`   | `ENTITY_AMP`        | HTML entity `&` replacement              |
 //! | `U+E0xx`   | (computed)          | Escape placeholder for `\x` (xx = ASCII) |
-//! | `U+E100`   | (filler)            | Width-preserving filler for escape pairs  |
+//! | `U+E100`   | (filler)            | Second scalar of every escape pair       |
+//!
+//! The escape pair is two scalars so it stands in for `\<c>` at equal width. That holds
+//! for every escape except the period, which COMRAK-WORKAROUND11 reduces back to a bare
+//! `.` after rendering — see `crate::escape_placeholders`, which owns the constants and
+//! the width rule that wrapping measures against.
 //!
 //! ## Pre-parse workarounds (input → comrak)
 //!
@@ -202,6 +207,7 @@
 //! `normalize_code_fences`, `normalize_numbered_lists`,
 //! `collapse_blank_lines_outside_code`)
 
+use crate::escape_placeholders::{ESCAPE_PLACEHOLDER_BASE, ESCAPE_PLACEHOLDER_FILLER};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::Write as _;
@@ -1110,8 +1116,6 @@ fn protect_escapes_outside_code(text: &str, escape_set: &[char]) -> String {
 /// corresponding PUA placeholder (U+E000 + `char_value`, U+E100 filler).
 /// This replaces 32 sequential `.replace()` calls with one scan.
 fn replace_escapes_in_line(line: &str, escape_set: &[char]) -> String {
-    const PUA_FILLER: char = '\u{E100}';
-
     // Fast path: no backslash means no escapes to replace.
     if !line.contains('\\') {
         return line.to_string();
@@ -1125,9 +1129,10 @@ fn replace_escapes_in_line(line: &str, escape_set: &[char]) -> String {
             if let Some(&next) = chars.peek() {
                 if escape_set.contains(&next) {
                     chars.next(); // consume the escaped char
-                    let pua = char::from_u32(0xE000 + next as u32).expect("valid PUA");
+                    let pua =
+                        char::from_u32(ESCAPE_PLACEHOLDER_BASE + next as u32).expect("valid PUA");
                     result.push(pua);
-                    result.push(PUA_FILLER);
+                    result.push(ESCAPE_PLACEHOLDER_FILLER);
                     continue;
                 }
             }
@@ -1145,8 +1150,6 @@ fn replace_escapes_in_line(line: &str, escape_set: &[char]) -> String {
 /// PUA char (U+E000 + `original_ascii`) followed by filler U+E100.
 /// This replaces 32 sequential `.replace()` calls with one scan.
 fn restore_pua_escape_placeholders(text: &str) -> String {
-    const PUA_FILLER: char = '\u{E100}';
-
     // Fast path: if no PUA chars present, return as-is.
     if !text.contains(|c: char| ('\u{E000}'..='\u{E0FF}').contains(&c)) {
         return text.to_string();
@@ -1157,10 +1160,10 @@ fn restore_pua_escape_placeholders(text: &str) -> String {
 
     while let Some(ch) = chars.next() {
         if ('\u{E000}'..='\u{E0FF}').contains(&ch) {
-            if chars.peek() == Some(&PUA_FILLER) {
+            if chars.peek() == Some(&ESCAPE_PLACEHOLDER_FILLER) {
                 chars.next(); // consume filler
                 // Recover original ASCII char: pua_char = 0xE000 + ascii_value
-                let original = char::from_u32(ch as u32 - 0xE000).unwrap_or(ch);
+                let original = char::from_u32(ch as u32 - ESCAPE_PLACEHOLDER_BASE).unwrap_or(ch);
                 result.push('\\');
                 result.push(original);
             } else {

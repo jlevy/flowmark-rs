@@ -212,3 +212,80 @@ fn test_pua_adjacent_to_escape() {
     let result = fmt(input);
     assert!(result.contains('\u{E080}'), "PUA char should be preserved next to escape: {result:?}");
 }
+
+/// A source `\.` is protected as a two-scalar PUA pair before parsing, but
+/// `postprocess_period_escapes` drops the backslash again after rendering. Wrapping runs
+/// in between, so it has to measure the pair at its rendered width (one column) rather
+/// than its scalar count (two). Measuring the scalar count breaks the line a word early
+/// and re-escapes the word pushed to the new line start, so the premature break survives
+/// every later reformat.
+#[test]
+fn test_source_period_escape_does_not_shift_the_wrap_point() {
+    // `... b 5.` lands exactly on column 88 once the escape is dropped.
+    let prefix = "alpha ".repeat(14) + "b";
+    let escaped = format!("{prefix} 5\\. Second sentence follows here with more words to wrap.\n");
+    let bare = format!("{prefix} 5. Second sentence follows here with more words to wrap.\n");
+
+    assert_eq!(
+        fmt(&escaped),
+        fmt(&bare),
+        "a source-escaped period must not change where the line breaks"
+    );
+
+    let first_line = fmt(&escaped).lines().next().unwrap_or_default().to_string();
+    assert!(
+        first_line.ends_with("b 5."),
+        "the period should still fit on the first line: got {first_line:?}"
+    );
+}
+
+/// Reformatting output that already contains a source `\.` must be a no-op.
+#[test]
+fn test_period_escape_wrapping_is_idempotent() {
+    let prefix = "alpha ".repeat(14) + "b";
+    let input = format!("{prefix} 5\\. Second sentence follows here with more words to wrap.\n");
+
+    let once = fmt(&input);
+    assert_eq!(fmt(&once), once, "wrapping around a period escape should be stable");
+}
+
+/// The period escape is the one placeholder whose width depends on where it lands: the
+/// backslash is dropped mid-line but kept where a line begins `DIGITS\.`. Measuring the
+/// dropped width at a line start too leaves the retained backslash unaccounted for, and the
+/// line overruns the wrap width by a column.
+///
+/// The head must be 86..=88 columns wide: at 85 a following `5.` still fits at exactly 88,
+/// the escape never reaches a line start, and this test silently checks nothing.
+#[test]
+fn test_period_escape_at_a_line_start_does_not_overrun_the_width() {
+    let mut reached_a_line_start = false;
+
+    for head_len in 86..=88 {
+        let head = "alpha ".repeat(14) + &"b".repeat(head_len - 84);
+        assert_eq!(head.chars().count(), head_len);
+
+        for tail_words in 0..12 {
+            for pad in 1..8 {
+                let tail = format!("{}{}", "alpha ".repeat(tail_words), "b".repeat(pad));
+                let input = format!("{head} 5\\. {tail} end end end end end end end end.\n");
+                let output = fmt(&input);
+
+                for line in output.lines() {
+                    if line.starts_with("5\\.") {
+                        reached_a_line_start = true;
+                    }
+                    assert!(
+                        line.chars().count() <= 88,
+                        "line is {} cols for head_len={head_len} tail_words={tail_words} pad={pad}: {line:?}",
+                        line.chars().count()
+                    );
+                }
+            }
+        }
+    }
+
+    assert!(
+        reached_a_line_start,
+        "no case put the escaped numeral at a line start, so nothing was actually tested"
+    );
+}

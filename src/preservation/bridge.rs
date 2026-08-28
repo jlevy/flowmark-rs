@@ -2,6 +2,10 @@
 
 use std::borrow::Cow;
 
+use crate::escape_placeholders::{
+    ESCAPE_PLACEHOLDER_FILLER, PERIOD_ESCAPE_PLACEHOLDER, placeholder_pair_width,
+};
+
 use super::model::{
     NormalizedSource, PreservationError, ProtectedRegion, RegionForm, RegionKind, validate_regions,
 };
@@ -123,6 +127,14 @@ impl ProtectedSource {
                 column += 1;
                 position = marker_end + code.len_utf8();
                 continue;
+            }
+            if scalar == PERIOD_ESCAPE_PLACEHOLDER {
+                let pair_end = position + scalar.len_utf8();
+                if text[pair_end..].starts_with(ESCAPE_PLACEHOLDER_FILLER) {
+                    column += placeholder_pair_width(scalar);
+                    position = pair_end + ESCAPE_PLACEHOLDER_FILLER.len_utf8();
+                    continue;
+                }
             }
             if scalar != TOKEN_START {
                 column += 1;
