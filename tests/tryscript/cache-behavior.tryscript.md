@@ -4,7 +4,7 @@ env:
   NO_COLOR: "1"
   LC_ALL: C
 path:
-  - $TRYSCRIPT_GIT_ROOT/target/debug
+  - $FLOWMARK_BIN_DIR
 patterns:
   PROJECT_MANIFEST: '[0-9a-f]{16}\.toml'
   MS: '\d+\.\d{3}'

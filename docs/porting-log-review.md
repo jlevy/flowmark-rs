@@ -13,6 +13,14 @@ Anyone working on this codebase should read the [Key Lessons](#key-lessons) sect
 
 **Reference version:** Python flowmark v0.6.4
 
+> [!NOTE]
+> This is a historical defect log.
+> The current port contract and workflow are recorded in
+> [`docs/port-status.md`](port-status.md) and
+> [`docs/port-sync-playbook.md`](port-sync-playbook.md).
+> The Rust suite now consumes versioned upstream golden evidence directly instead of
+> maintaining copied portable fixtures or requiring Python at normal test time.
+
 **Foundational principles:** The
 [Porting Principles and Anti-Patterns](../repos/rust-porting-playbook/guidelines/porting-principles-and-antipatterns.md)
 document defines 8 non-negotiable rules for agent-driven porting.
@@ -93,30 +101,18 @@ This prevents the PR #17 failure mode where tests were written to pass from the 
 --- they never actually validated anything because they asserted the wrong expected
 output. Red-first ensures the test can distinguish broken from fixed.
 
-**L11. Parity tests should be dynamic assertions that two programs behave identically,
-not static assertions about a single expected behavior.** What makes a parity test
-“dynamic” is that it ensures exact matching of two pieces of code, not matching of code
-against a test assertion.
-A static assertion compares output against a hand-copied string literal --- the copying
-process itself introduces errors (see PR #17 D15). A dynamic assertion ensures the two
-implementations produce identical results, with three equally strong variations:
+**L11. Share reviewed, versioned golden evidence; do not hand-copy expectations.** A
+static assertion is weak when its expected string was guessed or copied by the port
+author. It is strong when the source implementation produced the bytes, a reviewer
+accepted the exact diff, the source commit and command are recorded, and both languages
+execute the same case definition.
 
-1. **Run both and assert equivalent:** Execute both implementations on the same input in
-   the test harness and assert `rs_output == py_output` directly.
-   The D11 CLI tests do this.
-2. **Run both and auto-compare saved results:** Execute both implementations separately,
-   save their outputs, and have an automatic process (e.g., `diff -rq`) assert they are
-   identical. This is how corpus validation works (L5).
-3. **Shared golden test script:** Maintain a shared input corpus and a test script that
-   runs on both codebases, so the same test definition validates both implementations.
-
-All three forms are fundamentally stronger than static assertions because the parity
-gate is code-to-code, not code-to-copied-value.
-Static assertions are still useful as supplementary documentation, but the primary
-parity gate should be one of these dynamic forms wherever practical.
-When none is practical (e.g., library-level tests without CLI invocation), capture the
-expected output by running the original program and saving to a fixture file, not by
-guessing.
+Flowmark’s primary portable contract now consists of one upstream manifest and tryscript
+suite consumed directly by both implementations.
+This preserves exact provenance, works in clean Rust CI, and cannot drift into two
+fixture copies. Live cross-binary and corpus comparison is still required as a
+baseline-transition and discrepancy-discovery audit.
+Promote every real difference it finds into a minimal shared case before fixing it.
 
 **L8. Error parity is a first-class surface.** CLI error messages, exit codes, and
 stderr output must be tested with the same rigor as formatting output.
@@ -404,3 +400,7 @@ When fixing a parity bug, follow the red/green process (**L10**):
 If the bug reveals a new reusable lesson, add it to the [Key Lessons](#key-lessons)
 section with the next available number (L11, L12, ...) and cross-reference it from the
 bug entry.
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->

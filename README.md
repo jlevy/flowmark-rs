@@ -29,7 +29,7 @@ source) and regenerate via `scripts/generate_rust_readme.py`. -->
 > CLI usage and formatting behavior.
 > It is now the recommended version for CLI and IDE usage.
 > 
-> Last sync: **2026-07-14** against **Python v0.7.2**
+> Last sync: **2026-08-26** against **Python v0.7.3**
 > 
 > For more on the **automated porting methodology** used to build flowmark-rs, see the
 > [**port status report**](docs/port-status.md) and the
@@ -156,7 +156,7 @@ No install needed for one-off usage:
 ```shell
 uvx --from flowmark-rs==0.3.2 flowmark --help
 uvx --from flowmark-rs==0.3.2 flowmark --auto somefile.md
-uvx --from flowmark==0.7.2 flowmark --help  # Python reference
+uvx --from flowmark==0.7.3 flowmark --help  # Python reference
 ```
 
 ### Install as a Global CLI
@@ -413,6 +413,14 @@ File discovery flags:
 | `--force-exclude` | Apply exclusions (incl. `.flowmarkignore`) to explicitly-named files too (for pre-commit) |
 | `--files-max-size BYTES` | Skip files larger than this (default: 1 MiB) |
 
+Exit status is part of the Python/Rust parity contract:
+
+- `0`: the command completed successfully; in `--check` mode, no file would change.
+- `1`: an expected command-level condition prevented success, such as a dirty `--check`,
+  missing required arguments, or incompatible options.
+- `2`: an input or processing error occurred, such as an unreadable path or invalid
+  UTF-8.
+
 ## File Discovery
 
 When you pass a directory to Flowmark (e.g., `flowmark --auto .`), it recursively
@@ -461,8 +469,9 @@ deliberately ignored in pre-commit.
 The `--force-exclude` flag resolves this: with it, all exclusion sources
 (`.flowmarkignore`, `--exclude`/`--extend-exclude`, and the built-in defaults) are
 applied to explicitly-named files too.
-This is why Flowmark’s [published pre-commit hooks](#3-run-on-pre-commit) set
-`--force-exclude` — exactly as
+This is why Flowmark’s
+[published pre-commit hooks](https://github.com/jlevy/flowmark/blob/main/skills/flowmark/references/project-setup.md#auto-fix-on-commit)
+set `--force-exclude` — exactly as
 [`ruff-pre-commit`](https://github.com/astral-sh/ruff-pre-commit) does — so your
 `.flowmarkignore` is respected on the staged files pre-commit hands the hook.
 
@@ -632,11 +641,15 @@ Then add to your `settings.json`:
     "commands": [
         {
             "match": "(\\.md|\\.md\\.jinja|\\.mdc)$",
-            "cmd": "flowmark --auto ${file}"
+            "cmd": "flowmark --auto \"${file}\""
         }
     ]
   }
 ```
+
+The quotes around `${file}` matter: the command runs through a shell, so an unquoted
+path containing spaces splits into multiple arguments and the save silently skips
+formatting.
 
 The `--auto` option is just the same as
 `--inplace --nobackup --semantic --cleanups --smartquotes --ellipses`.

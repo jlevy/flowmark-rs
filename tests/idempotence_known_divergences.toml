@@ -1,0 +1,364 @@
+# Documents that do not reach a formatting fixed point in one pass.
+#
+# Asserted exactly by tests/test_idempotence_corpus.rs: an unlisted failure fails the
+# build, and an entry here that now passes also fails it, so this list shrinks and
+# cannot rot. Every entry names the bead tracking its defect.
+#
+# Every entry below reproduces in the Python reference implementation as well, except
+# CommonMark 0552, and every one of them also fails on the v0.3.2 release, so these are
+# inherited shared-contract gaps rather than regressions from the preservation work. The
+# one regression PR #81 did introduce (fmr-0pxh) is fixed and no longer listed. Per
+# project convention the intended bytes are agreed and fixed upstream in Python first,
+# then replicated exactly in Rust, and the entry is removed here.
+#
+# The reference implementation keeps the same gate and a file of the same name. It
+# currently lists 138 entries to this file's 67; the difference is the Python-only
+# blockquote and nested-list spacing defects tracked as fm-82mg.
+#
+# See docs/project/specs/active/plan-2026-08-27-idempotence-verification.md.
+
+schema_version = 1
+
+
+# wrapped line beginning with '=' is reparsed as a setext underline (fmr-6zg6)
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/cases/preservation/extensions/raw-html/angle-comparisons/input.md"
+mode = "narrow"
+bead = "fmr-6zg6"
+
+[[divergence]]
+document = "repos/flowmark/tests/testdocs/testdoc.expected.auto.md"
+mode = "narrow"
+bead = "fmr-6zg6"
+
+[[divergence]]
+document = "repos/flowmark/tests/testdocs/testdoc.expected.cleaned.md"
+mode = "narrow"
+bead = "fmr-6zg6"
+
+[[divergence]]
+document = "repos/flowmark/tests/testdocs/testdoc.expected.plain.md"
+mode = "narrow"
+bead = "fmr-6zg6"
+
+[[divergence]]
+document = "repos/flowmark/tests/testdocs/testdoc.expected.semantic.md"
+mode = "narrow"
+bead = "fmr-6zg6"
+
+[[divergence]]
+document = "repos/flowmark/tests/testdocs/testdoc.orig.md"
+mode = "narrow"
+bead = "fmr-6zg6"
+
+[[divergence]]
+document = "repos/flowmark/tests/tryscript/fixtures/content/parity-corner-cases.md"
+mode = "narrow"
+bead = "fmr-6zg6"
+
+# setext heading with multi-line content splits on the second pass (fmr-gmqc)
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/expected.default.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/expected.default.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/expected.default.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/expected.default.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/expected.default.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/expected.default.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/input.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/input.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/input.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/input.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/input.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0081/input.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/expected.default.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/expected.default.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/expected.default.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/expected.default.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/expected.default.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/expected.default.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/input.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/input.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/input.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/input.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/input.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0082/input.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/expected.default.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/expected.default.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/expected.default.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/expected.default.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/expected.default.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/expected.default.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/input.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/input.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/input.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/input.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/input.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0095/input.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+# empty ordered-list item is dropped, then the list renumbers (fmr-gmqc)
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/expected.default.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/expected.default.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/expected.default.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/expected.default.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/expected.default.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/expected.default.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/input.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/input.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/input.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/input.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/input.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0283/input.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+# link label containing a newline becomes a collapsed reference (fmr-gmqc)
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/expected.default.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/expected.default.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/expected.default.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/expected.default.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/expected.default.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/expected.default.md"
+mode = "typography"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/input.md"
+mode = "cleanups"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/input.md"
+mode = "default"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/input.md"
+mode = "narrow"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/input.md"
+mode = "nowrap"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/input.md"
+mode = "semantic"
+bead = "fmr-gmqc"
+
+[[divergence]]
+document = "repos/flowmark/tests/parity_corpus/spec/commonmark-0.31.2/examples/0552/input.md"
+mode = "typography"
+bead = "fmr-gmqc"

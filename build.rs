@@ -43,14 +43,22 @@ fn main() {
     println!("cargo::rustc-env=FLOWMARK_GIT_HASH={}", metadata.git_hash);
     println!("cargo::rustc-env=FLOWMARK_LONG_VERSION={}", metadata.long_version);
 
-    // Canonical docs source for runtime `--docs`: Rust README.
-    // The Rust README is generated from a shared docs body + Rust wrapper preface.
-    // Fallback to shared docs source if README is unavailable.
-    let rust_readme = Path::new("README.md");
-    let shared_docs = Path::new("repos/flowmark/docs/shared/flowmark-readme-shared.md");
-    let docs_source = if rust_readme.exists() { rust_readme } else { shared_docs };
-    let docs_content = std::fs::read_to_string(docs_source)
-        .unwrap_or_else(|e| panic!("Failed to read docs source {}: {e}", docs_source.display()));
+    // Bundle the canonical docs so crates.io builds do not depend on the excluded
+    // upstream submodule. Source checkouts fail fast if the bundled copy drifts.
+    let upstream_readme = Path::new("repos/flowmark/README.md");
+    let bundled_readme = Path::new("src/flowmark-docs.md");
+    let docs_content = std::fs::read_to_string(bundled_readme).unwrap_or_else(|e| {
+        panic!("Failed to read bundled docs {}: {e}", bundled_readme.display())
+    });
+    if upstream_readme.exists() {
+        let upstream_content = std::fs::read_to_string(upstream_readme).unwrap_or_else(|e| {
+            panic!("Failed to read upstream docs {}: {e}", upstream_readme.display())
+        });
+        assert_eq!(
+            docs_content, upstream_content,
+            "src/flowmark-docs.md must match the pinned upstream README"
+        );
+    }
     let out_dir = std::env::var_os("OUT_DIR").expect("OUT_DIR not set");
     let generated_docs = Path::new(&out_dir).join("flowmark_docs.md");
     std::fs::write(&generated_docs, docs_content).unwrap_or_else(|e| {
@@ -59,7 +67,8 @@ fn main() {
 
     emit_git_rerun_hints();
     println!("cargo::rerun-if-changed=Cargo.toml");
-    println!("cargo::rerun-if-changed=README.md");
+    println!("cargo::rerun-if-changed=src/flowmark-docs.md");
+    println!("cargo::rerun-if-changed=repos/flowmark/README.md");
     println!("cargo::rerun-if-changed=repos/flowmark/docs/shared/flowmark-readme-shared.md");
     println!("cargo::rerun-if-env-changed=FLOWMARK_RELEASE_TAG");
 }

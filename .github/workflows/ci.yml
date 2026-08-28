@@ -9,8 +9,7 @@ env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
   CARGO_PROFILE_TEST_DEBUG: 0
-  # Python flowmark version for parity tests — sync with [package.metadata.parity] in Cargo.toml
-  FLOWMARK_PY_VERSION: "0.7.2"
+  FLOWMARK_DOC_FORMATTER_VERSION: "0.7.3"
 
 jobs:
   fmt:
@@ -41,20 +40,56 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
+      - name: Enable symlink checkout on Windows
+        if: runner.os == 'Windows'
+        run: git config --global core.symlinks true
       - uses: actions/checkout@v6
+      - name: Initialize complete submodules on Unix
+        if: runner.os != 'Windows'
+        run: git submodule update --init --recursive
+      - name: Initialize exact shared test assets on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $upstreamCommit = git rev-parse HEAD:repos/flowmark
+          $upstreamUrl = git config -f .gitmodules --get submodule.repos/flowmark.url
+          $upstreamRepository = Join-Path $env:RUNNER_TEMP "flowmark-upstream.git"
+          $upstreamArchive = Join-Path $env:RUNNER_TEMP "flowmark-shared-tests.tar"
+          New-Item -ItemType Directory -Force repos/flowmark | Out-Null
+          git init --bare $upstreamRepository
+          git -C $upstreamRepository fetch --depth=1 $upstreamUrl $upstreamCommit
+          $actualCommit = git -C $upstreamRepository rev-parse FETCH_HEAD
+          if ($actualCommit -ne $upstreamCommit) {
+            throw "Expected Flowmark $upstreamCommit, got $actualCommit"
+          }
+          # Git validates the complete source tree on Windows even though this archive
+          # selects only portable paths. Disable that validation for this read-only
+          # archive operation; the extraction remains limited to README.md and tests/.
+          git -c core.protectNTFS=false -c core.autocrlf=false -C $upstreamRepository archive --format=tar --output=$upstreamArchive FETCH_HEAD README.md tests
+          tar -xf $upstreamArchive -C repos/flowmark
+          if (-not (Test-Path repos/flowmark/README.md)) {
+            throw "Shared README was not materialized"
+          }
+          if (-not (Test-Path repos/flowmark/tests/parity_corpus/manifest.toml)) {
+            throw "Shared conformance manifest was not materialized"
+          }
+          git -C repos/flowmark init
+          git -C repos/flowmark remote add origin $upstreamUrl
+          git -C repos/flowmark fetch --depth=1 $upstreamRepository $upstreamCommit
+          git -C repos/flowmark update-ref --no-deref HEAD $upstreamCommit
+          $materializedCommit = git -C repos/flowmark rev-parse HEAD
+          if ($materializedCommit -ne $upstreamCommit) {
+            throw "Expected materialized Flowmark $upstreamCommit, got $materializedCommit"
+          }
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
       - name: Pre-install tryscript
-        run: npm install -g tryscript@latest
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.14"
-          enable-cache: true
-      - name: Install Python flowmark for parity tests
-        run: uv tool install flowmark==${{ env.FLOWMARK_PY_VERSION }}
+        run: npm install -g tryscript@0.1.7
       - name: Build flowmark binary for tryscript tests
         run: cargo build --locked --all-features
         env:
@@ -62,18 +97,14 @@ jobs:
       - run: cargo test --locked --all-features
         env:
           RUSTFLAGS: "-D warnings"
-          # fmr-gkas: enable the cross-binary + golden-drift parity tests
-          # (tests/test_parity_cross_binary.rs) so CI actually gates parity and
-          # detects golden drift against Python flowmark. Scoped to Linux: those
-          # tests compare Python vs Rust output byte-for-byte and would fail on
-          # Windows CRLF; parity is platform-independent, so one runner suffices.
-          FLOWMARK_PARITY_PYTHON: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
 
   test-lib-only:
     name: Test library (no default features)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test --locked --no-default-features
@@ -85,6 +116,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - uses: dtolnay/rust-toolchain@1.85
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --locked --all-features
@@ -112,18 +145,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: recursive
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
       - uses: Swatinem/rust-cache@v2
       - uses: taiki-e/install-action@cargo-llvm-cov
-      - uses: astral-sh/setup-uv@v7
-        with:
-          python-version: "3.14"
-          enable-cache: true
-      - name: Install Python flowmark for parity tests
-        run: uv tool install flowmark==${{ env.FLOWMARK_PY_VERSION }}
-      - name: Build flowmark binary for parity tests
+      - name: Build flowmark binary for shared conformance tests
         run: cargo build --locked --all-features
         env:
           RUSTFLAGS: "-D warnings"
@@ -161,13 +190,13 @@ jobs:
           python-version: "3.14"
           enable-cache: true
       - name: Format markdown with flowmark
-        run: uvx flowmark@${{ env.FLOWMARK_PY_VERSION }} --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" --extend-exclude "README.md" .
+        run: uvx flowmark@${{ env.FLOWMARK_DOC_FORMATTER_VERSION }} --auto --extend-exclude "tests/" --extend-exclude "attic/" --extend-exclude ".claude/" --extend-exclude "python/" --extend-exclude "README.md" .
       - name: Exclude generated README from markdown drift check
         run: git checkout -- README.md
       - name: Check for formatting changes
         run: >-
           git diff --exit-code -- '*.md' || echo "::warning::Some markdown files need
-          formatting. Run: uvx flowmark@${FLOWMARK_PY_VERSION} --auto --extend-exclude
+          formatting. Run: uvx flowmark@${FLOWMARK_DOC_FORMATTER_VERSION} --auto --extend-exclude
           tests/ --extend-exclude attic/ --extend-exclude .claude/ --extend-exclude
           python/ --extend-exclude README.md ."
 

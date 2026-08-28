@@ -13,6 +13,12 @@ fn test_basic_note_alert() {
 }
 
 #[test]
+fn test_callout_marker_adjacent_to_protected_inline_content_does_not_abort() {
+    let input = "> [!NOTE]<v>";
+    assert_eq!(fmt(input), "> [!NOTE]<v>\n");
+}
+
+#[test]
 fn test_all_valid_alert_types() {
     let alert_types = ["NOTE", "TIP", "IMPORTANT", "WARNING", "CAUTION"];
     for alert_type in &alert_types {
@@ -32,12 +38,12 @@ fn test_all_valid_alert_types() {
 }
 
 #[test]
-fn test_lowercase_alert_normalized_to_uppercase() {
-    let input = "> [!note]\n> This lowercase alert should be normalized.";
+fn test_lowercase_alert_marker_is_preserved_source_exactly() {
+    let input = "> [!note]\n> This lowercase alert should be preserved.";
     let result = fmt(input);
-    assert!(result.contains("> [!NOTE]"));
-    assert!(!result.contains("> [!note]"));
-    assert!(result.contains("normalized"));
+    assert!(result.contains("> [!note]"));
+    assert!(!result.contains("> [!NOTE]"));
+    assert!(result.contains("preserved"));
 }
 
 #[test]
@@ -103,7 +109,7 @@ fn test_alert_with_multiline_content() {
 #[test]
 fn test_alert_with_multiple_paragraphs() {
     let input = "> [!TIP]\n> First paragraph.\n>\n> Second paragraph.";
-    let expected = "> [!TIP]\n> First paragraph.\n> \n> Second paragraph.\n";
+    let expected = "> [!TIP]\n> First paragraph.\n>\n> Second paragraph.\n";
     assert_eq!(fmt(input), expected);
 }
 

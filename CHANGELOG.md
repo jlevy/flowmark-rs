@@ -4,6 +4,38 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased][unreleased]
 
+### Formatter behavior
+
+- Preserve recognized math, code spans, and opaque Markdown-extension regions from the
+  shared Python corpus as exact normalized-source slices, including GitLab references
+  and multiline blockquotes.
+- Return normalized input unchanged if a parser or renderer violates preservation-token
+  invariants, instead of aborting the process.
+- Match the Python `reformat_text()` contract by retaining Markdown indentation rather
+  than implicitly dedenting it.
+  Direct `fill_markdown(..., dedent_input = true, ...)` remains the explicit
+  docstring-oriented opt-in.
+
+### CLI behavior
+
+- Append `.orig` for in-place backups instead of replacing the input extension with
+  `.bak`.
+- Allow one direct file or standard input to write to `--output`; multiple inputs still
+  reject a single output path.
+- Reject invalid UTF-8 with exit status 2 instead of inserting replacement characters.
+- Report missing or invalid explicit paths with their actual operating-system error and
+  exit status 2.
+- Document the shared exit-status contract: 0 for success, 1 for expected command-level
+  conditions, and 2 for input or processing errors.
+
+### Testing and porting
+
+- Consume the Python repository’s language-neutral conformance manifest, golden files,
+  reference documents, CommonMark corpus, and tryscript fixtures through a pinned
+  submodule.
+- Require exact stdout, stderr, exit status, filesystem effects, and idempotence without
+  executing Python during Rust tests.
+
 ## [0.3.2][] (parity: flowmark-py 0.7.2)
 
 Patch release completing the cross-agent Flowmark skill distribution while keeping
@@ -348,3 +380,7 @@ Early development release.
 [0.3.1]: https://github.com/jlevy/flowmark-rs/compare/v0.3.0...v0.3.1
 [0.3.2]: https://github.com/jlevy/flowmark-rs/compare/v0.3.1...v0.3.2
 [unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.3.2...HEAD
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->

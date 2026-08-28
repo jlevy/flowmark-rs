@@ -1,5 +1,5 @@
 # Python flowmark test manifest
-# Auto-generated. Manual edits are preserved on re-generation.
+# Auto-generated. Regenerate with flowmark-dev; do not edit by hand.
 
 - file: tests/test_alerts.py
   function: test_alert_after_heading
@@ -1039,302 +1039,305 @@
   function: test_block_is_flowmark_auto_stable
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 258
+  line_number: 309
   doc_string: A flowmark format pass over a host AGENTS.md must leave the block unchanged.
 - file: tests/test_skill.py
   function: test_block_is_marker_bounded_with_format
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 251
+  line_number: 302
 - file: tests/test_skill.py
   function: test_install_skill_creates_directories
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 332
+  line_number: 384
   doc_string: Skill installation creates necessary directories.
 - file: tests/test_skill.py
   function: test_install_skill_custom_base
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 320
+  line_number: 371
   doc_string: Skill installs to custom agent base directory.
 - file: tests/test_skill.py
   function: test_install_skill_overwrites_existing
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 341
+  line_number: 394
   doc_string: Skill installation overwrites existing SKILL.md.
 - file: tests/test_skill.py
   function: test_update_collapses_duplicate_stale_blocks
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 293
+  line_number: 344
   doc_string: Multiple stale flowmark blocks collapse to one current block on re-run.
 - file: tests/test_skill.py
   function: test_update_creates_and_preserves_user_content
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 264
+  line_number: 315
 - file: tests/test_skill.py
   function: test_update_guard_blocks_newer_format
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 310
+  line_number: 361
 - file: tests/test_skill.py
   function: test_update_is_idempotent
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 288
+  line_number: 339
 - file: tests/test_skill.py
   function: test_update_replaces_only_the_marked_region
   class_name: TestAgentsMdBlock
   test_type: infrastructure
-  line_number: 274
+  line_number: 325
 - file: tests/test_skill.py
   function: test_compose_default_pins_installed_version
   class_name: TestComposeSkill
   test_type: infrastructure
-  line_number: 73
+  line_number: 82
 - file: tests/test_skill.py
   function: test_compose_doc_pin_is_stable
   class_name: TestComposeSkill
   test_type: infrastructure
-  line_number: 78
+  line_number: 87
 - file: tests/test_skill.py
   function: test_compose_preserves_frontmatter
   class_name: TestComposeSkill
   test_type: infrastructure
-  line_number: 85
+  line_number: 94
+- file: tests/test_skill.py
+  function: test_compose_project_setup_substitutes_rust_pin
+  class_name: TestComposeSkill
+  test_type: infrastructure
+  line_number: 98
 - file: tests/test_skill.py
   function: test_compose_recommends_rust_offers_python
   class_name: TestComposeSkill
   test_type: infrastructure
-  line_number: 66
+  line_number: 75
   doc_string: The skill names both packages and links each one.
 - file: tests/test_skill.py
   function: test_compose_substitutes_both_package_pins
   class_name: TestComposeSkill
   test_type: infrastructure
-  line_number: 58
+  line_number: 67
   doc_string: Both the Python and the recommended Rust-port placeholders are filled in.
 - file: tests/test_skill.py
   function: test_compose_substitutes_explicit_version
   class_name: TestComposeSkill
   test_type: infrastructure
-  line_number: 53
+  line_number: 62
 - file: tests/test_skill.py
   function: test_skill_routes_details_to_cli
   class_name: TestComposeSkill
   test_type: infrastructure
-  line_number: 89
+  line_number: 103
   doc_string: 'The skill stays minimal: it routes to the self-documenting CLI rather than'
 - file: tests/test_skill.py
   function: test_docs_content_has_vscode_cursor_setup
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 170
+  line_number: 186
   doc_string: README/docs content includes VS Code/Cursor run-on-save setup.
 - file: tests/test_skill.py
   function: test_docs_content_is_readme
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 160
+  line_number: 176
   doc_string: get_docs_content returns README.md content.
 - file: tests/test_skill.py
   function: test_docs_content_loads
   class_name: TestGetDocsContent
   test_type: infrastructure
-  line_number: 154
+  line_number: 170
   doc_string: README.md content can be loaded.
 - file: tests/test_skill.py
   function: test_skill_content_has_metadata
   class_name: TestGetSkillContent
   test_type: infrastructure
-  line_number: 36
+  line_number: 38
   doc_string: SKILL.md contains required metadata fields.
 - file: tests/test_skill.py
   function: test_skill_content_has_usage
   class_name: TestGetSkillContent
   test_type: infrastructure
-  line_number: 43
+  line_number: 45
   doc_string: SKILL.md contains usage instructions.
-- file: tests/test_skill.py
-  function: test_skill_content_has_vscode_cursor_setup
-  class_name: TestGetSkillContent
-  test_type: infrastructure
-  line_number: 32
-  doc_string: SKILL.md includes VS Code/Cursor run-on-save guidance.
 - file: tests/test_skill.py
   function: test_skill_content_loads
   class_name: TestGetSkillContent
   test_type: infrastructure
-  line_number: 30
+  line_number: 32
   doc_string: SKILL.md can be loaded from package data.
+- file: tests/test_skill.py
+  function: test_skill_routes_repository_adoption_to_bundled_reference
+  class_name: TestGetSkillContent
+  test_type: infrastructure
+  line_number: 51
 - file: tests/test_skill.py
   function: test_forward_compat_guard_blocks_newer_format
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 236
+  line_number: 263
   doc_string: A surface stamped with a newer format is not clobbered.
+- file: tests/test_skill.py
+  function: test_forward_compat_guard_checks_bundled_reference
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 274
 - file: tests/test_skill.py
   function: test_install_agent_base_skips_git_recommendation
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 228
+  line_number: 255
   doc_string: An explicit `--agent-base` install never warns about git (it's intentional).
 - file: tests/test_skill.py
   function: test_install_default_writes_both_project_local_surfaces
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 180
+  line_number: 196
   doc_string: Default project-local install writes both portable and Claude surfaces.
+- file: tests/test_skill.py
+  function: test_install_does_not_publish_skill_before_reference
+  class_name: TestInstallSkill
+  test_type: infrastructure
+  line_number: 287
 - file: tests/test_skill.py
   function: test_install_inside_git_repo_has_no_recommendation
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 219
+  line_number: 246
   doc_string: Inside a git repo, no project-root recommendation is printed.
 - file: tests/test_skill.py
   function: test_install_is_idempotent
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 205
+  line_number: 232
 - file: tests/test_skill.py
   function: test_install_outside_git_repo_recommends_project_root
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 211
+  line_number: 238
   doc_string: A project-local install outside a git repo recommends a project root.
-- file: tests/test_skill.py
-  function: test_install_skill_creates_directories
-  class_name: TestInstallSkill
-  test_type: infrastructure
-  line_number: 91
-  doc_string: Skill installation creates necessary directories.
-- file: tests/test_skill.py
-  function: test_install_skill_custom_base
-  class_name: TestInstallSkill
-  test_type: infrastructure
-  line_number: 79
-  doc_string: Skill installs to custom agent base directory.
-- file: tests/test_skill.py
-  function: test_install_skill_default
-  class_name: TestInstallSkill
-  test_type: infrastructure
-  line_number: 66
-  doc_string: Skill installs to ~/.claude by default.
-- file: tests/test_skill.py
-  function: test_install_skill_overwrites_existing
-  class_name: TestInstallSkill
-  test_type: infrastructure
-  line_number: 100
-  doc_string: Skill installation overwrites existing SKILL.md.
 - file: tests/test_skill.py
   function: test_install_target_selection
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 190
+  line_number: 210
   doc_string: The `surfaces` set selects which surfaces are written.
 - file: tests/test_skill.py
   function: test_installed_file_has_do_not_edit_and_format_stamp
   class_name: TestInstallSkill
   test_type: infrastructure
-  line_number: 197
+  line_number: 220
 - file: tests/test_skill.py
   function: test_default_writes_all_three_surfaces
   class_name: TestInstallSkillCli
   test_type: infrastructure
-  line_number: 361
+  line_number: 414
 - file: tests/test_skill.py
   function: test_empty_surfaces_value_errors_out
   class_name: TestInstallSkillCli
   test_type: infrastructure
-  line_number: 398
+  line_number: 451
 - file: tests/test_skill.py
   function: test_surfaces_all_alias
   class_name: TestInstallSkillCli
   test_type: infrastructure
-  line_number: 377
+  line_number: 430
 - file: tests/test_skill.py
   function: test_surfaces_subset
   class_name: TestInstallSkillCli
   test_type: infrastructure
-  line_number: 370
+  line_number: 423
 - file: tests/test_skill.py
   function: test_surfaces_with_agent_base_errors_out
   class_name: TestInstallSkillCli
   test_type: infrastructure
-  line_number: 410
+  line_number: 463
 - file: tests/test_skill.py
   function: test_unknown_surface_errors_out
   class_name: TestInstallSkillCli
   test_type: infrastructure
-  line_number: 384
+  line_number: 437
 - file: tests/test_skill.py
   function: test_dev_version_falls_back_to_discovery_pin
   class_name: TestVersionPin
   test_type: infrastructure
-  line_number: 127
+  line_number: 143
   doc_string: On a dev/editable checkout, flowmark_version() yields a real PyPI pin.
 - file: tests/test_skill.py
   function: test_non_releases_are_rejected
   class_name: TestVersionPin
   test_type: infrastructure
-  line_number: 124
+  line_number: 140
 - file: tests/test_skill.py
   function: test_real_release_is_passed_through
   class_name: TestVersionPin
   test_type: infrastructure
-  line_number: 141
+  line_number: 157
 - file: tests/test_skill.py
   function: test_real_releases_are_accepted
   class_name: TestVersionPin
   test_type: infrastructure
-  line_number: 107
+  line_number: 123
 - file: tests/test_skill_artifacts.py
   function: test_discovery_copy_has_resolvable_version_pin
   test_type: unit
-  line_number: 120
+  line_number: 149
   doc_string: The committed discovery copy must pin a real, PyPI-installable version.
 - file: tests/test_skill_artifacts.py
   function: test_discovery_copy_is_flowmark_stable
   test_type: unit
-  line_number: 58
+  line_number: 65
   doc_string: '`flowmark --auto` over the discovery copy must be a no-op (it lives under `skills/`).'
 - file: tests/test_skill_artifacts.py
   function: test_discovery_copy_matches_generator
   test_type: unit
-  line_number: 53
+  line_number: 59
   doc_string: The committed repo-root discovery copy must match the generator output.
 - file: tests/test_skill_artifacts.py
   function: test_discovery_copy_references_both_packages
   test_type: unit
-  line_number: 148
+  line_number: 177
   doc_string: The skill recommends the Rust port and offers the Python build, so the discovery
+- file: tests/test_skill_artifacts.py
+  function: test_discovery_skill_bundles_its_project_setup_reference
+  test_type: unit
+  line_number: 73
+- file: tests/test_skill_artifacts.py
+  function: test_project_setup_hooks_cover_common_markdown_extensions
+  test_type: unit
+  line_number: 87
+- file: tests/test_skill_artifacts.py
+  function: test_readme_uses_main_repository_for_skill_distribution
+  test_type: unit
+  line_number: 79
+  doc_string: The Python repository is the sole public discovery and documentation source.
 - file: tests/test_skill_artifacts.py
   function: test_rs_discovery_version_is_resolvable
   test_type: unit
-  line_number: 100
+  line_number: 129
   doc_string: The recommended Rust-port pin must be a real, PyPI-installable release.
 - file: tests/test_skill_artifacts.py
   function: test_shipped_artifacts_never_use_at_latest
   test_type: unit
-  line_number: 106
+  line_number: 135
   doc_string: Shipped runner examples must pin a version, never an unpinned `@latest`.
 - file: tests/test_skill_artifacts.py
   function: test_shipped_artifacts_pin_discovery_version
   test_type: unit
-  line_number: 65
+  line_number: 94
   doc_string: Every concrete `flowmark==` pin in a shipped artifact equals DISCOVERY_VERSION.
 - file: tests/test_skill_artifacts.py
   function: test_shipped_artifacts_pin_rs_discovery_version
   test_type: unit
-  line_number: 83
+  line_number: 112
   doc_string: Every `flowmark-rs==` pin in a skill surface equals FLOWMARK_RS_DISCOVERY_VERSION.
 - file: tests/test_skill_artifacts.py
   function: test_skill_frontmatter_is_valid
   test_type: unit
-  line_number: 158
+  line_number: 187
 - file: tests/test_smartquotes.py
   function: test_apostrophes_and_contractions
   test_type: unit
@@ -1850,11 +1853,6 @@
   line_number: 836
   doc_string: Test block heuristics with mixed content (text + block elements).
 - file: tests/test_wrapping.py
-  function: test_block_heuristics_only_with_tags
-  test_type: unit
-  line_number: 712
-  doc_string: Test that block heuristics only apply when tags are present.
-- file: tests/test_wrapping.py
   function: test_block_heuristics_only_with_tags_for_lists
   test_type: unit
   line_number: 807
@@ -2062,54 +2060,47 @@
   function: auto-mode
   test_type: golden
   line_number: 0
-  doc_string: Auto mode formatting tests (6 scenarios)
 - file: tests/tryscript/cli-golden.tryscript.md
   function: cli-golden
   test_type: golden
   line_number: 0
-  doc_string: Basic CLI golden tests — version, errors, file discovery (31 scenarios)
 - file: tests/tryscript/config-interaction.tryscript.md
   function: config-interaction
   test_type: golden
   line_number: 0
-  doc_string: Config file interaction tests (9 scenarios)
 - file: tests/tryscript/errors-version.tryscript.md
   function: errors-version
   test_type: golden
   line_number: 0
-  doc_string: Error handling and version info tests (8 scenarios)
 - file: tests/tryscript/file-discovery.tryscript.md
   function: file-discovery
   test_type: golden
   line_number: 0
-  doc_string: File discovery with patterns and exclusions (13 scenarios)
 - file: tests/tryscript/file-ops.tryscript.md
   function: file-ops
   test_type: golden
   line_number: 0
-  doc_string: File operations — inplace, backup, output (8 scenarios)
 - file: tests/tryscript/formatting.tryscript.md
   function: formatting
   test_type: golden
   line_number: 0
-  doc_string: Core formatting tests — width, plaintext, semantic, cleanups (12 scenarios)
+- file: tests/tryscript/help.tryscript.md
+  function: help
+  test_type: golden
+  line_number: 0
 - file: tests/tryscript/list-spacing.tryscript.md
   function: list-spacing
   test_type: golden
   line_number: 0
-  doc_string: List spacing behavior — preserve, loose, tight (6 scenarios)
 - file: tests/tryscript/stdin.tryscript.md
   function: stdin
   test_type: golden
   line_number: 0
-  doc_string: Stdin input tests (4 scenarios)
 - file: tests/tryscript/typography-tests.tryscript.md
   function: typography-tests
   test_type: golden
   line_number: 0
-  doc_string: Typography features — smartquotes, ellipses (8 scenarios)
 - file: tests/tryscript/verbose-docs.tryscript.md
   function: verbose-docs
   test_type: golden
   line_number: 0
-  doc_string: Verbose output, skills, and docs tests (5 scenarios)

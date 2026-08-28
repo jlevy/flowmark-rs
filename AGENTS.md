@@ -3,7 +3,7 @@
 This file provides instructions and context for AI coding agents working on this
 project.
 
-<!-- BEGIN TBD INTEGRATION format=f06 surface=agents-md -->
+<!-- BEGIN TBD INTEGRATION format=f08 surface=agents-md -->
 ## tbd
 
 This repository uses **tbd** for git-native issue tracking (beads), spec-driven

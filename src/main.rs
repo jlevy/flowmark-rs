@@ -259,6 +259,16 @@ Use `flowmark --docs` for full documentation.
         false
     }
 
+    fn path_resolution_error(path: &str, error: &std::io::Error) -> String {
+        let Some(code) = error.raw_os_error() else {
+            return format!("{error}: '{path}'");
+        };
+        let rendered = error.to_string();
+        let rust_suffix = format!(" (os error {code})");
+        let message = rendered.strip_suffix(&rust_suffix).unwrap_or(&rendered);
+        format!("[Errno {code}] {message}: '{path}'")
+    }
+
     /// Resolve files using the file resolver if needed.
     #[allow(clippy::too_many_arguments)]
     fn resolve_files(
@@ -276,9 +286,12 @@ Use `flowmark --docs` for full documentation.
         if !needs_file_resolution(files) && !list_files && !force_exclude {
             // Validate all non-stdin paths exist (matches Python's file_resolver behavior).
             for f in files {
-                if f != "-" && !Path::new(f).exists() {
-                    eprintln!("Error: Path not found: {f}");
-                    std::process::exit(1);
+                if f == "-" {
+                    continue;
+                }
+                if let Err(error) = std::fs::symlink_metadata(f) {
+                    eprintln!("Error: {}", path_resolution_error(f, &error));
+                    std::process::exit(2);
                 }
             }
             return files.to_vec();
@@ -551,19 +564,21 @@ Use `flowmark --docs` for full documentation.
         nobackup: bool,
         cache: &IncrementalCache,
     ) -> Result<bool> {
-        let content = std::fs::read_to_string(path)?;
-        if cache.is_known_formatted(path, content.as_bytes()) {
+        let content = std::fs::read(path)?;
+        if cache.is_known_formatted(path, &content) {
             return Ok(true);
         }
 
-        let formatted = opts.reformat_text(&content);
-        if formatted == content {
-            cache.record_formatted(path, content.as_bytes());
+        let formatted = opts.reformat_bytes(&content)?;
+        if formatted.as_bytes() == content {
+            cache.record_formatted(path, &content);
             return Ok(false);
         }
 
         if !nobackup {
-            let backup_path = path.with_extension("bak");
+            let mut backup_name = path.as_os_str().to_os_string();
+            backup_name.push(".orig");
+            let backup_path = PathBuf::from(backup_name);
             std::fs::copy(path, &backup_path)?;
         }
 
@@ -796,14 +811,13 @@ Use `flowmark --docs` for full documentation.
             let mut changed: Vec<&str> = Vec::new();
             for file in &resolved_files {
                 let content = if file == "-" {
-                    let mut input = String::new();
-                    std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
+                    let mut input = Vec::new();
+                    std::io::stdin().read_to_end(&mut input).context("failed to read stdin")?;
                     input
                 } else {
-                    std::fs::read_to_string(file)
-                        .with_context(|| format!("failed to read {file}"))?
+                    std::fs::read(file).with_context(|| format!("failed to read {file}"))?
                 };
-                if opts.reformat_text(&content) != content {
+                if opts.reformat_bytes(&content)?.as_bytes() != content {
                     changed.push(file);
                 }
             }
@@ -841,7 +855,7 @@ Use `flowmark --docs` for full documentation.
             std::process::exit(1);
         }
 
-        // Validate: cannot use --output with multiple files
+        // A direct single input (stdin or file) may use an explicit output path.
         let has_explicit_output = args.output != "-";
         if has_explicit_output && resolved_files.len() > 1 {
             eprintln!(
@@ -857,13 +871,23 @@ Use `flowmark --docs` for full documentation.
 
         // Handle stdin sequentially
         for _file in &stdin_files {
-            let mut input = String::new();
-            std::io::stdin().read_to_string(&mut input).context("failed to read stdin")?;
-
-            let output = opts.reformat_text(&input);
-            let stdout = std::io::stdout().lock();
-            let mut writer = BufWriter::new(stdout);
-            writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
+            let mut input = Vec::new();
+            std::io::stdin().read_to_end(&mut input).context("failed to read stdin")?;
+            let output = opts.reformat_bytes(&input)?;
+            if has_explicit_output {
+                let output_path = PathBuf::from(&args.output);
+                if let Some(parent) = output_path.parent() {
+                    std::fs::create_dir_all(parent).with_context(|| {
+                        format!("failed to create output directory {}", parent.display())
+                    })?;
+                }
+                atomic_write(&output_path, &output)
+                    .with_context(|| format!("failed to write {}", output_path.display()))?;
+            } else {
+                let stdout = std::io::stdout().lock();
+                let mut writer = BufWriter::new(stdout);
+                writer.write_all(output.as_bytes()).context("failed to write to stdout")?;
+            }
         }
 
         // Format regular files: parallel when inplace, sequential for stdout output
@@ -1044,6 +1068,14 @@ fn main() -> std::process::ExitCode {
     #[cfg(feature = "cli")]
     {
         if let Err(e) = cli::run() {
+            if e.chain().any(|cause| {
+                cause
+                    .downcast_ref::<flowmark::Error>()
+                    .is_some_and(flowmark::Error::is_invalid_utf8)
+            }) {
+                eprintln!("Error: input is not valid UTF-8");
+                return std::process::ExitCode::from(2);
+            }
             eprintln!("error: {e:#}");
             return std::process::ExitCode::FAILURE;
         }

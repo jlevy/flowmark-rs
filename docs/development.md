@@ -11,10 +11,9 @@ How to build, test, and work on flowmark-rs.
 ## Prerequisites
 
 - **Rust 1.85+** (see `rust-version` in `Cargo.toml` for MSRV)
-- **Python flowmark v0.7.0:** for cross-binary parity tests
-  (`uv tool install flowmark==0.7.0`)
-- **Node.js 22+** and **tryscript:** for golden CLI tests
-  (`npm install -g tryscript@latest`)
+- **Git submodules**, initialized with `git submodule update --init --recursive`
+- **Node.js 22+** and **tryscript 0.1.7** for golden CLI tests
+  (`npm install -g tryscript@0.1.7`)
 
 All test dependencies are required.
 Tests fail loudly when a dependency is missing, there is no skip logic.
@@ -35,15 +34,23 @@ Without it, only the library crate is built.
 cargo test --all-features
 ```
 
-The full suite (501 tests) includes:
+The full suite includes:
 
 | Category | Description |
 | --- | --- |
 | Unit tests (`src/`) | Module-level tests for parsers, formatters, wrappers |
 | Integration tests (`tests/`) | Full-pipeline formatting, CLI, file discovery |
 | Doc tests | Library API usage example |
-| Tryscript golden tests | End-to-end CLI behavior specs |
-| D11 parity tests | Cross-binary comparison (invokes both Python and Rust) |
+| Shared conformance tests | Exact process and filesystem behavior from the pinned upstream manifest |
+| Shared tryscript tests | End-to-end CLI behavior from the pinned upstream suite |
+| Rust-only golden tests | Rust-only features and regressions that have no portable source equivalent |
+
+The native Rust adapter runs every portable case against the Cargo-built binary.
+It reads inputs and reviewed outputs directly from `repos/flowmark`; it does not invoke
+Python, regenerate expected output, normalize bytes, or copy fixtures into this
+repository.
+Exact known differences live in `tests/parity_corpus_known_divergences.toml`,
+and the runner fails for both unlisted differences and entries that have become stale.
 
 Zero `#[ignore]` annotations.
 Zero skipped tests.
@@ -101,7 +108,7 @@ The CI runs 12 checks on every push and PR:
 | --- | --- |
 | `fmt` | `cargo fmt --check` |
 | `clippy` | Pedantic clippy with `-D warnings` |
-| `test` (Ubuntu + macOS) | Full test suite with Python parity + tryscript golden tests |
+| `test` (Ubuntu, macOS, and Windows) | Full Rust suite against the pinned upstream assets |
 | `test-lib-only` | Library builds and tests without CLI feature |
 | `msrv` | Compiles on minimum supported Rust version (1.85) |
 | `deny` | License allowlist and supply chain audit |
@@ -109,7 +116,7 @@ The CI runs 12 checks on every push and PR:
 | `coverage` | `cargo-llvm-cov` with Codecov upload |
 | `semver-checks` | API breakage detection (PRs only) |
 | `markdown-fmt` | Markdown formatting consistency |
-| `check-mapping` | Test mapping completeness (347 Python tests: 323 mapped + 24 excluded) |
+| `check-mapping` | Supplementary function-level test provenance and shared change-ID traceability |
 | `readme-sync` | README generation stays in sync with template |
 
 ## Configuration
@@ -146,3 +153,7 @@ For syncing with new Python flowmark upstream releases, see
 
 For the full port overview and parity verification history, see
 [`docs/port-status.md`](port-status.md).
+
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->

@@ -1,0 +1,166 @@
+# Every entry is an active shared case that currently differs in Rust.
+# The native runner rejects unlisted mismatches and entries that have become stale.
+[[divergence]]
+case_id = "commonmark.default.0022"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0023"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0027"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0078"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0115"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0141"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0193"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0194"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0198"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0208"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0210"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0214"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0215"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0218"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0235"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0236"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0239"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0240"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0241"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0249"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0317"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0320"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0528"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0532"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0540"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0541"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0544"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0550"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0560"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0568"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0569"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0571"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
+
+[[divergence]]
+case_id = "commonmark.default.0593"
+tracker = "fmr-rz9f"
+reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."

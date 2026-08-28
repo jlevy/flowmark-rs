@@ -18,6 +18,25 @@ fn is_word_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_'
 }
 
+fn is_follow_boundary(c: char) -> bool {
+    is_word_char(c)
+        || matches!(
+            c,
+            ',' | ':'
+                | ';'
+                | '?'
+                | '!'
+                | ')'
+                | '-'
+                | '\u{2014}'
+                | '"'
+                | '\''
+                | '\u{201d}'
+                | '\u{2019}'
+                | '>'
+        )
+}
+
 /// Replace three consecutive dots with a proper ellipsis character (\u{2026}).
 pub fn ellipses(text: &str) -> String {
     // We need to process matches with access to the rest of the text,
@@ -41,9 +60,9 @@ pub fn ellipses(text: &str) -> String {
         let remaining = &text[full_match_end..];
         let next_char = remaining.chars().next();
 
-        // Check boundary - must be followed by word or end of line
+        // Allow prose or punctuation, but not a longer dot run.
         if let Some(nc) = next_char {
-            if !is_word_char(nc) {
+            if !is_follow_boundary(nc) {
                 // Not a valid boundary, keep original
                 result.push_str(&text[last_end..full_match_end]);
                 last_end = full_match_end;
@@ -106,5 +125,11 @@ mod tests {
     #[test]
     fn test_ellipsis_with_punct() {
         assert_eq!(ellipses("Hello...!"), "Hello \u{2026}!");
+    }
+
+    #[test]
+    fn test_ellipsis_before_shell_redirection_but_not_longer_dot_runs() {
+        assert_eq!(ellipses("importtime... > import.log"), "importtime \u{2026} > import.log");
+        assert_eq!(ellipses("word....."), "word.....");
     }
 }

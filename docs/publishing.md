@@ -201,7 +201,7 @@ git push origin main
 > If `git commit` fails with a signing error, add `--no-gpg-sign`; if `git push` fails
 > with `could not read Username for 'https://github.com'`, supply credentials via the
 > `gh` helper:
-> 
+>
 > ```bash
 > git commit --no-gpg-sign -m "Update flowmark to ${TAG}"
 > git -c credential.helper='!gh auth git-credential' push origin main

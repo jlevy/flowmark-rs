@@ -153,18 +153,15 @@ A third paragraph.
 
 <!--window-br-->
 
-<!--window-br--> Words and words and words and words and words and
-<span data-foo=\"bar\">some HTML</span> and words and words and words and words and words
-and words.
+<!--window-br--> Words and words and words and words and words and <span data-foo=\"bar\">some HTML</span> and words and words and words and words and words and words.
 
 <span data-foo=\"bar\">Inline HTML.</span> And some following words and words and words
 and words and words and words.
 
 <h1 data-foo=\"bar\">Block HTML.</h1> And some following words.
 
-<div class=\"foo\"> Some more HTML. Words and words and words and words and words and
-<span data-foo=\"bar\">more HTML</span> and words and words and words and words and words
-and words.</div>
+<div class=\"foo\">
+Some more HTML. Words and words and words and words and    words and <span data-foo=\"bar\">more HTML</span> and words and words and words and words and words and words.</div>
 
 > This is a quote block.
 > With a couple sentences.
@@ -197,8 +194,10 @@ and more
 - **Intelligent:** Kmd understands itself.
   It reads its own code and docs and gives you assistance!
 
-<p style=\"max-width: 450px;\"> \"*Simple should be simple.
-Complex should be possible.*\" —Alan Kay </p>
+<p style=\"max-width: 450px;\">
+\"*Simple should be simple.
+Complex should be possible.*\" —Alan Kay
+</p>
 
 ### Building
 
@@ -293,6 +292,7 @@ fn test_fill_perf_stats_records_stage_times_when_enabled() {
     let stats = get_fill_perf_stats();
     assert!(stats.files >= 1, "expected at least one recorded file");
     assert!(stats.total_ns() > 0, "expected non-zero total measured time");
+    assert!(stats.preprocess_ns > 0, "expected preservation/preprocess timing");
     assert!(stats.parse_ns > 0, "expected non-zero parse stage");
     assert!(stats.render_ns > 0, "expected non-zero render stage");
     reset_fill_perf_stats();

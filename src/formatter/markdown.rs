@@ -31,7 +31,10 @@ pub(crate) fn flowmark_comrak_options<'c>() -> Options<'c> {
     options.extension.greentext = false;
     options.extension.image_url_rewriter = None;
     options.extension.link_url_rewriter = None;
-    options.extension.alerts = true;
+    // Preservation owns callout recognition. Leaving comrak alerts enabled lets
+    // comrak accept a broader marker/title grammar than the source scanner and
+    // can make it discard an inline preservation token as alert metadata.
+    options.extension.alerts = false;
 
     // Parse options
     options.parse.smart = false;

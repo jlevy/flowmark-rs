@@ -363,8 +363,8 @@ fn test_smart_quotes_complex_redistribution() {
     let result = fmt_sq(text);
     assert!(result.contains("\u{201c}this"), "Opening double quote should be converted");
     assert!(result.contains("important\u{201d}"), "Closing double quote should be converted");
-    // Note: single quotes inside double quotes are not converted (matches Python behavior)
-    assert!(result.contains("'quite'"), "Single quotes inside double quotes preserved");
+    // Nested quotes must converge in one call under the shared fixed-point contract.
+    assert!(result.contains("‘quite’"), "Nested single quotes should be converted");
     // Verify no text lost (main purpose of this test)
     assert!(result.contains("is"), "'is' should not be lost");
     assert!(result.contains("really"), "'really' should not be lost");

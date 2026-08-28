@@ -63,6 +63,14 @@ fn test_help_includes_agent_guidance() {
 }
 
 #[test]
+fn test_help_lists_rust_only_cache_options() {
+    let out = render_help();
+    for option in ["--cache-dir", "--clear-cache", "--no-cache", "--perf-stats", "--show-cache"] {
+        assert!(out.contains(option), "missing Rust cache option {option:?}; got:\n{out}");
+    }
+}
+
+#[test]
 fn test_help_omits_old_long_epilog() {
     let out = render_help();
     for snippet in

@@ -960,3 +960,24 @@ fn test_sentence_wrapper_combines_short_lines() {
         );
     }
 }
+
+#[test]
+fn test_semantic_sentence_break_escapes_a_new_markdown_block_marker() {
+    use flowmark::wrapping::line_wrappers::line_wrap_by_sentence;
+
+    let wrapper = line_wrap_by_sentence(88, 20, true);
+    let text = concat!(
+        "Testing - : Is Ketamine Contraindicated in Patients with Psychiatric Disorders? ",
+        "- REBEL EM - more words - accessed April 24, 2025, ",
+        "<https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/>"
+    );
+
+    assert_eq!(
+        wrapper(text, "[^217]: ", "    "),
+        concat!(
+            "[^217]: Testing - : Is Ketamine Contraindicated in Patients with Psychiatric Disorders?\n",
+            "    \\- REBEL EM - more words - accessed April 24, 2025,\n",
+            "    <https://rebelem.com/is-ketamine-contraindicated-in-patients-with-psychiatric-disorders/>"
+        )
+    );
+}

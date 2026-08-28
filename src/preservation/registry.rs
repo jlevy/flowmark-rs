@@ -1,0 +1,60 @@
+//! Stable recognizer precedence shared with the Python implementation.
+
+use super::model::RegionKind;
+
+pub(crate) const fn priority(kind: RegionKind) -> u8 {
+    match kind {
+        RegionKind::MathGitlabInline | RegionKind::MathMystInline => 10,
+        RegionKind::RawHtmlInline => 15,
+        RegionKind::MystRoleInline
+        | RegionKind::WikilinkInline
+        | RegionKind::GitlabReferenceInline => 18,
+        RegionKind::CodeSpan => 20,
+        RegionKind::MathParenInline | RegionKind::MathEnvironmentInline => 30,
+        RegionKind::AttributeGroupInline => 35,
+        RegionKind::MathDollarInline | RegionKind::MathDoubleDollarInline => 40,
+        RegionKind::PandocMultilineTable
+        | RegionKind::ObsidianCallout
+        | RegionKind::ColonContainer
+        | RegionKind::TomlFrontmatter
+        | RegionKind::DefinitionList
+        | RegionKind::PandocGridTable
+        | RegionKind::RawHtmlBlock
+        | RegionKind::AttributeGroupBlock
+        | RegionKind::PandocLineBlock
+        | RegionKind::GitlabMultilineBlockquote => 45,
+        RegionKind::MathDollarBlock
+        | RegionKind::MathBracketBlock
+        | RegionKind::MathEnvironmentBlock => 50,
+    }
+}
+
+pub(crate) const fn stable_name(kind: RegionKind) -> &'static str {
+    match kind {
+        RegionKind::MathGitlabInline => "math_gitlab_inline",
+        RegionKind::MathMystInline => "math_myst_inline",
+        RegionKind::RawHtmlInline => "raw_html_inline",
+        RegionKind::MystRoleInline => "myst_role_inline",
+        RegionKind::WikilinkInline => "wikilink_inline",
+        RegionKind::GitlabReferenceInline => "gitlab_reference_inline",
+        RegionKind::CodeSpan => "code_span",
+        RegionKind::MathParenInline => "math_paren_inline",
+        RegionKind::MathEnvironmentInline => "math_environment_inline",
+        RegionKind::AttributeGroupInline => "attribute_group_inline",
+        RegionKind::MathDollarInline => "math_dollar_inline",
+        RegionKind::MathDoubleDollarInline => "math_double_dollar_inline",
+        RegionKind::PandocMultilineTable => "pandoc_multiline_table",
+        RegionKind::ObsidianCallout => "obsidian_callout",
+        RegionKind::ColonContainer => "colon_container",
+        RegionKind::TomlFrontmatter => "toml_frontmatter",
+        RegionKind::DefinitionList => "definition_list",
+        RegionKind::PandocGridTable => "pandoc_grid_table",
+        RegionKind::RawHtmlBlock => "raw_html_block",
+        RegionKind::AttributeGroupBlock => "attribute_group_block",
+        RegionKind::PandocLineBlock => "pandoc_line_block",
+        RegionKind::GitlabMultilineBlockquote => "gitlab_multiline_blockquote",
+        RegionKind::MathDollarBlock => "math_dollar_block",
+        RegionKind::MathBracketBlock => "math_bracket_block",
+        RegionKind::MathEnvironmentBlock => "math_environment_block",
+    }
+}

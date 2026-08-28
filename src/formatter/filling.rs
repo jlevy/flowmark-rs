@@ -206,7 +206,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant};
 
 use comrak::nodes::{AstNode, ListType, NodeValue, TableAlignment};
@@ -215,11 +215,17 @@ use comrak::{Arena, Options};
 use crate::config::{DEFAULT_MIN_LINE_LEN, ListSpacing};
 use crate::formatter::markdown::flowmark_comrak_options;
 use crate::parser::frontmatter::split_frontmatter;
+use crate::preservation::{
+    InlineRewriteSegment, NormalizedSource, PreservationError, ProtectedSource, finalize_output,
+    normalize_source, protect_source, restore_source, scan_protected_regions,
+};
 use crate::transform::cleanups::doc_cleanups;
 use crate::typography::ellipses::ellipses as apply_ellipses;
 use crate::typography::quotes::smart_quotes;
 use crate::wrapping::LineWrapper;
-use crate::wrapping::line_wrappers::{line_wrap_by_sentence, line_wrap_to_width};
+use crate::wrapping::line_wrappers::{
+    line_wrap_by_sentence_protected, line_wrap_to_width_protected,
+};
 use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
 
 /// Aggregated stage-level performance counters for `fill_markdown`.
@@ -227,7 +233,7 @@ use crate::wrapping::tag_handling::preprocess_tag_block_spacing;
 pub struct FillPerfStats {
     /// Number of `fill_markdown` calls recorded.
     pub files: u64,
-    /// Total preprocessing time.
+    /// Total source normalization, preservation, and parser preprocessing time.
     pub preprocess_ns: u128,
     /// Total comrak parse time.
     pub parse_ns: u128,
@@ -301,6 +307,18 @@ fn record_fill_perf_sample(sample: FillPerfSample) {
     if let Ok(mut stats) = PERF_STATS.lock() {
         stats.add_sample(sample);
     }
+}
+
+fn split_leading_blank_lines(text: &str) -> (String, String) {
+    let mut consumed = 0;
+    for line in text.split_inclusive('\n') {
+        if !line.trim().is_empty() {
+            break;
+        }
+        consumed += line.len();
+    }
+    let prefix = if consumed > 0 { "\n" } else { "" };
+    (prefix.to_owned(), text[consumed..].to_owned())
 }
 
 // ===== PUA (Private Use Area) markers =====
@@ -389,8 +407,15 @@ static NUMBERED_ITEM_TWO_SPACES: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\d+)\.  ").expect("valid NUMBERED_ITEM_TWO_SPACES regex"));
 
 /// Normalize blank lines by removing trailing whitespace.
+///
+/// Fenced code content is literal, so a whitespace-only line inside a fence is authored
+/// data rather than stray trailing whitespace. Blanking it there diverges from Python
+/// and, for an unterminated fence, leaves an empty line that the next format run
+/// collapses, so the output is not a fixed point (fmr-00e2).
 fn normalize_blank_lines(text: &str) -> String {
-    BLANK_LINE_WS.replace_all(text, "").into_owned()
+    transform_outside_code_fences(text, |line| {
+        vec![BLANK_LINE_WS.replace_all(line, "").into_owned()]
+    })
 }
 
 /// Remove space between code fence and language identifier.
@@ -447,7 +472,15 @@ fn detect_opening_fence(trimmed: &str) -> Option<String> {
     let is_tilde_fence = trimmed.starts_with("~~~");
     if is_backtick_fence || is_tilde_fence {
         let fence_char = if is_backtick_fence { '`' } else { '~' };
-        let fence_len = trimmed.chars().take_while(|&c| c == fence_char).count();
+        let info = trimmed.trim_start_matches(fence_char);
+        // CommonMark 0.31.2 section 4.5: a backtick fence's info string may not contain
+        // a backtick. Such a line opens no code block, so it must stay eligible for the
+        // escape protection below; otherwise comrak resolves the escape and the
+        // authored backslash is lost. Tilde fences carry no such restriction.
+        if is_backtick_fence && info.contains('`') {
+            return None;
+        }
+        let fence_len = trimmed.len() - info.len();
         Some(std::iter::repeat_n(fence_char, fence_len).collect())
     } else {
         None
@@ -2653,9 +2686,26 @@ fn min_fence_length(code_content: &str, fence_char: char) -> usize {
     std::cmp::max(3, max_len + 1)
 }
 
+fn restore_or_fallback(
+    source: &NormalizedSource,
+    protected: &ProtectedSource,
+    rendered: &str,
+) -> String {
+    let restored = restore_source(rendered, protected).unwrap_or_else(|_| source.text.clone());
+    finalize_output(source, &restored)
+}
+
 /// Normalize and wrap Markdown text filling paragraphs to the full width.
 ///
 /// This is the main entry point for Markdown formatting.
+/// Preservation-invariant failures return the normalized input unchanged rather than
+/// emitting partial output or aborting the caller.
+///
+/// A custom `line_wrapper` receives parser-facing text that may contain private
+/// preservation tokens. It must return every token unchanged and in the same order.
+/// Prefer `None` or [`crate::config::FormatOptions::reformat_text`] unless the wrapper is
+/// deliberately preservation-aware; the built-in protected wrappers also measure tokens
+/// using their authored widths.
 #[allow(clippy::too_many_arguments, clippy::fn_params_excessive_bools)]
 pub fn fill_markdown(
     markdown_text: &str,
@@ -2678,29 +2728,40 @@ pub fn fill_markdown(
         '`', '"', '%', '&', '\'', ',', '/', ':', ';', '<', '=', '?', '@', '^',
     ];
 
-    let line_wrapper = line_wrapper.unwrap_or_else(|| {
-        if semantic {
-            line_wrap_by_sentence(width, DEFAULT_MIN_LINE_LEN, true)
-        } else {
-            line_wrap_to_width(width, true)
-        }
-    });
     let perf_enabled = PERF_STATS_ENABLED.load(Ordering::Relaxed);
     let mut perf_sample = FillPerfSample::default();
 
-    // Extract frontmatter before any processing
-    let (frontmatter, content) = split_frontmatter(markdown_text);
-
-    let mut text = if frontmatter.is_empty() { markdown_text.to_string() } else { content };
-
-    if dedent_input {
-        text = dedent(&text);
-    }
-
-    text = text.trim().to_string();
-    text.push('\n');
     let preprocess_start = perf_enabled.then(Instant::now);
+    let mut input = markdown_text.to_owned();
+    if dedent_input {
+        input = dedent(&input);
+    }
+    let source = normalize_source(&input);
+    let fallback = || finalize_output(&source, &source.text);
+    let Ok(regions) = scan_protected_regions(&source) else {
+        return fallback();
+    };
+    let Ok(protected) = protect_source(&source, regions) else {
+        return fallback();
+    };
+    let protected = Arc::new(protected);
+    let line_wrapper = line_wrapper.unwrap_or_else(|| {
+        if semantic {
+            line_wrap_by_sentence_protected(width, DEFAULT_MIN_LINE_LEN, true, protected.clone())
+        } else {
+            line_wrap_to_width_protected(width, true, protected.clone())
+        }
+    });
 
+    // Frontmatter stays outside comrak only after document normalization and
+    // protection have established the complete source contract.
+    let (frontmatter, mut text) = split_frontmatter(&protected.text);
+    let mut leading_blank_lines = String::new();
+    if frontmatter.is_empty() {
+        (leading_blank_lines, text) = split_leading_blank_lines(&text);
+    } else {
+        text = text.trim_start_matches('\n').to_owned();
+    }
     // === Pre-parse workarounds (see module-level COMRAK-WORKAROUND docs) ===
 
     // COMRAK-WORKAROUND6: Ensure proper blank lines around block content within tags.
@@ -2711,6 +2772,9 @@ pub fn fill_markdown(
     // reference *links* with PUA markers. Must happen before escape placeholder
     // substitution, which would mangle `\[` etc.
     let (ref_defs, text_without_defs) = extract_link_ref_defs(&text);
+    // Shield escaped opening brackets before reference-link regexes run. An
+    // authored `\[label]` is literal Markdown, not a shortcut reference link.
+    let text_without_defs = protect_escapes_outside_code(&text_without_defs, &['[']);
     text = inline_image_refs(&text_without_defs, &ref_defs);
     text = encode_ref_links(&text, &ref_defs);
 
@@ -2750,14 +2814,15 @@ pub fn fill_markdown(
 
     // === AST transforms (not comrak workarounds) ===
     let transforms_start = perf_enabled.then(Instant::now);
+    repair_synthetic_list_looseness(root, &protected);
     if cleanups {
         doc_cleanups(root);
     }
-    if smartquotes {
-        apply_smart_quotes_to_ast(root);
+    if smartquotes && apply_smart_quotes_to_ast(root, &protected).is_err() {
+        return fallback();
     }
-    if ellipses {
-        apply_ellipses_to_ast(root);
+    if ellipses && apply_ellipses_to_ast(root, &protected).is_err() {
+        return fallback();
     }
     if let Some(start) = transforms_start {
         perf_sample.transforms = start.elapsed();
@@ -2792,11 +2857,13 @@ pub fn fill_markdown(
     // COMRAK-WORKAROUND12: Normalize comrak output formatting differences.
     let result = normalize_comrak_output(&result);
 
-    // Python always outputs at least a trailing newline for empty/whitespace input.
-    let result = if result.is_empty() { "\n".to_string() } else { result };
-
     // Reattach frontmatter if present
-    let result = if frontmatter.is_empty() { result } else { format!("{frontmatter}{result}") };
+    let result = if frontmatter.is_empty() {
+        format!("{leading_blank_lines}{result}")
+    } else {
+        format!("{frontmatter}{result}")
+    };
+    let result = restore_or_fallback(&source, &protected, &result);
     if let Some(start) = postprocess_start {
         perf_sample.postprocess = start.elapsed();
     }
@@ -2806,44 +2873,117 @@ pub fn fill_markdown(
     result
 }
 
+/// Restore the authored tightness of lists loosened only by bridge scaffolding.
+///
+/// The preservation bridge inserts a blank line around a protected block token so that
+/// comrak starts a new block there. Python needs no such line: its parser knows the
+/// token is a block element and breaks the paragraph itself. The blank line is therefore
+/// parser scaffolding, and `CommonMark` makes scaffolding of exactly that shape visible —
+/// a blank line inside a list makes the whole list loose, which the renderer then spends
+/// on blank lines between items that restoration cannot take back, because they are
+/// nowhere near the token (fmr-0pxh).
+///
+/// A list is re-tightened only when every blank line inside it is one this bridge wrote.
+/// One authored blank anywhere in the span leaves the list loose, so a list the author
+/// really did write loose stays loose.
+fn repair_synthetic_list_looseness<'a>(root: &'a AstNode<'a>, protected: &ProtectedSource) {
+    let synthetic = protected.synthetic_blank_lines();
+    if synthetic.is_empty() {
+        return;
+    }
+    let blank_lines: Vec<usize> = protected
+        .text
+        .lines()
+        .enumerate()
+        .filter(|(_, line)| line.trim().is_empty())
+        .map(|(index, _)| index + 1)
+        .collect();
+
+    for node in root.descendants() {
+        let mut data = node.data.borrow_mut();
+        let span = data.sourcepos;
+        let NodeValue::List(ref mut list) = data.value else { continue };
+        if list.tight {
+            continue;
+        }
+        // Blank lines strictly inside the span are the ones that decide looseness; a
+        // blank on the closing line is trailing separation comrak folds into the list.
+        let mut interior = blank_lines
+            .iter()
+            .copied()
+            .filter(|line| *line > span.start.line && *line < span.end.line);
+        let mut saw_blank = false;
+        let all_synthetic = interior.all(|line| {
+            saw_blank = true;
+            synthetic.binary_search(&line).is_ok()
+        });
+        if saw_blank && all_synthetic {
+            list.tight = true;
+        }
+    }
+}
+
 /// Apply smart quotes to all text nodes in the AST.
 /// Works at the paragraph level so quotes spanning inline elements are handled.
-fn apply_smart_quotes_to_ast<'a>(root: &'a AstNode<'a>) {
+fn apply_smart_quotes_to_ast<'a>(
+    root: &'a AstNode<'a>,
+    protected: &ProtectedSource,
+) -> Result<(), PreservationError> {
     for node in root.descendants() {
         let is_para = matches!(
             node.data.borrow().value,
             NodeValue::Paragraph | NodeValue::Heading(_) | NodeValue::TableCell
         );
         if is_para {
-            apply_smart_quotes_to_inline_tree(node);
+            apply_smart_quotes_to_inline_tree(node, protected)?;
         }
     }
+    Ok(())
 }
 
 /// Collect text nodes from inline tree, apply smart quotes to concatenated text,
 /// then redistribute back.
 #[allow(clippy::items_after_statements)]
-fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
-    // Collect all text nodes with their content
-    let mut text_nodes: Vec<&'a AstNode<'a>> = Vec::new();
+fn apply_smart_quotes_to_inline_tree<'a>(
+    node: &'a AstNode<'a>,
+    protected: &ProtectedSource,
+) -> Result<(), PreservationError> {
+    #[derive(Debug)]
+    enum RewritePart {
+        Mutable { start: usize, len: usize },
+        Immutable(String),
+    }
+
+    // Collect all text nodes and the mutable/immutable pieces needed to rebuild them.
+    let mut text_nodes: Vec<(&'a AstNode<'a>, Vec<RewritePart>)> = Vec::new();
     let mut concatenated = String::new();
-    let mut char_boundaries: Vec<(usize, usize)> = Vec::new(); // (start, len) in chars
 
     fn collect_text_nodes<'a>(
         node: &'a AstNode<'a>,
-        text_nodes: &mut Vec<&'a AstNode<'a>>,
+        protected: &ProtectedSource,
+        text_nodes: &mut Vec<(&'a AstNode<'a>, Vec<RewritePart>)>,
         concatenated: &mut String,
-        char_boundaries: &mut Vec<(usize, usize)>,
-    ) {
+    ) -> Result<(), PreservationError> {
         for child in node.children() {
             let data = child.data.borrow();
             match &data.value {
                 NodeValue::Text(text) => {
-                    let start = concatenated.chars().count();
-                    let len = text.chars().count();
-                    concatenated.push_str(text);
-                    char_boundaries.push((start, len));
-                    text_nodes.push(child);
+                    let mut parts = Vec::new();
+                    for segment in protected.inline_rewrite_segments(text)? {
+                        match segment {
+                            InlineRewriteSegment::Mutable(value) => {
+                                let start = concatenated.chars().count();
+                                let len = value.chars().count();
+                                concatenated.push_str(value);
+                                parts.push(RewritePart::Mutable { start, len });
+                            }
+                            InlineRewriteSegment::Immutable { source, context } => {
+                                concatenated.push_str(&context);
+                                parts.push(RewritePart::Immutable(source.to_owned()));
+                            }
+                        }
+                    }
+                    text_nodes.push((child, parts));
                 }
                 NodeValue::Code(code) => {
                     // Skip code spans - don't apply smart quotes inside them.
@@ -2875,16 +3015,17 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
                 _ => {
                     // Recurse into emphasis, strong, link, etc.
                     drop(data);
-                    collect_text_nodes(child, text_nodes, concatenated, char_boundaries);
+                    collect_text_nodes(child, protected, text_nodes, concatenated)?;
                 }
             }
         }
+        Ok(())
     }
 
-    collect_text_nodes(node, &mut text_nodes, &mut concatenated, &mut char_boundaries);
+    collect_text_nodes(node, protected, &mut text_nodes, &mut concatenated)?;
 
     if text_nodes.is_empty() {
-        return;
+        return Ok(());
     }
 
     // Apply smart quotes to the full concatenated text
@@ -2892,26 +3033,45 @@ fn apply_smart_quotes_to_inline_tree<'a>(node: &'a AstNode<'a>) {
 
     // Redistribute characters back to text nodes
     let converted_chars: Vec<char> = converted.chars().collect();
-    for (i, text_node) in text_nodes.iter().enumerate() {
-        let (start, len) = char_boundaries[i];
-        if start + len <= converted_chars.len() {
-            let new_text: String = converted_chars[start..start + len].iter().collect();
-            let mut data = text_node.data.borrow_mut();
-            if let NodeValue::Text(ref mut text) = data.value {
-                *text = new_text.into();
+    for (text_node, parts) in text_nodes {
+        let mut rebuilt = String::new();
+        for part in parts {
+            match part {
+                RewritePart::Mutable { start, len } => {
+                    rebuilt.extend(&converted_chars[start..start + len]);
+                }
+                RewritePart::Immutable(source) => rebuilt.push_str(&source),
             }
         }
+        let mut data = text_node.data.borrow_mut();
+        if let NodeValue::Text(ref mut text) = data.value {
+            *text = rebuilt.into();
+        }
     }
+    Ok(())
 }
 
-/// Apply ellipsis conversion to all text nodes in the AST.
-fn apply_ellipses_to_ast<'a>(root: &'a AstNode<'a>) {
+/// Apply ellipsis conversion to mutable text while retaining exact inline tokens.
+fn apply_ellipses_to_ast<'a>(
+    root: &'a AstNode<'a>,
+    protected: &ProtectedSource,
+) -> Result<(), PreservationError> {
     for node in root.descendants() {
         let mut data = node.data.borrow_mut();
         if let NodeValue::Text(ref mut text) = data.value {
-            *text = apply_ellipses(text).into();
+            let mut rewritten = String::new();
+            for segment in protected.inline_rewrite_segments(text)? {
+                match segment {
+                    InlineRewriteSegment::Mutable(value) => {
+                        rewritten.push_str(&apply_ellipses(value));
+                    }
+                    InlineRewriteSegment::Immutable { source, .. } => rewritten.push_str(source),
+                }
+            }
+            *text = rewritten.into();
         }
     }
+    Ok(())
 }
 
 /// Simple dedent: remove common leading whitespace from all lines.
@@ -2944,6 +3104,16 @@ fn dedent(text: &str) -> String {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn restoration_failure_returns_the_normalized_source() {
+        let source = normalize_source("Before $x$ after.");
+        let regions = scan_protected_regions(&source).unwrap();
+        let protected = protect_source(&source, regions).unwrap();
+
+        assert_ne!(protected.text, source.text);
+        assert_eq!(restore_or_fallback(&source, &protected, "Before after."), source.text);
+    }
 
     // ---- extract_link_ref_defs ----
 
@@ -3289,5 +3459,48 @@ mod tests {
         // as our internal marker since it lacks the PUA character.
         let user_comment = "<!-- REFDEF:see below -->";
         assert!(!user_comment.starts_with(REFDEF_MARKER_PREFIX));
+    }
+
+    /// `CommonMark` 0.31.2 section 4.5: a backtick fence's info string may not contain a
+    /// backtick, so such a line opens no code block. Treating it as a fence skipped
+    /// escape protection and silently dropped the backslash (fmr-5vfu, fmr-sh2b).
+    #[test]
+    fn backtick_fence_info_string_with_backtick_is_not_a_fence() {
+        assert_eq!(detect_opening_fence("```\\`"), None);
+        assert_eq!(detect_opening_fence("```a`b"), None);
+        assert_eq!(detect_opening_fence("```$`$"), None);
+        assert_eq!(detect_opening_fence("```rust"), Some("```".to_string()));
+        assert_eq!(detect_opening_fence("````"), Some("````".to_string()));
+        // Tilde fences carry no such restriction.
+        assert_eq!(detect_opening_fence("~~~`"), Some("~~~".to_string()));
+    }
+
+    fn fill_default(input: &str) -> String {
+        fill_markdown(input, false, 88, false, false, false, false, None, ListSpacing::Preserve)
+    }
+
+    /// fmr-5vfu: an escaped backtick in a false fence opener must survive the round
+    /// trip, and reformatting the result must not change it again.
+    ///
+    /// Python emits `` ```\` `` with no closing fence. Rust still appends one when the
+    /// escaped backtick is the only backtick on the line: protecting it hides the very
+    /// character that made the line a non-fence, so comrak opens a block after all.
+    /// Closing that last parity gap needs the legacy escape placeholders to keep a
+    /// fence-visible backtick, which is tracked in fmr-5vfu.
+    #[test]
+    fn false_fence_with_escaped_backtick_keeps_the_escape_and_is_idempotent() {
+        for input in ["```\\`", "```\\`x", "```a\\`b"] {
+            let once = fill_default(input);
+            assert!(once.starts_with(input), "escape must survive: {once:?}");
+            assert_eq!(fill_default(&once), once, "must reach a fixed point: {once:?}");
+        }
+    }
+
+    /// fmr-sh2b: the PR #81 review R10 reproducer, minimized to 7 bytes.
+    #[test]
+    fn unterminated_fence_with_escaped_dollar_is_preserved_and_idempotent() {
+        let once = fill_default("```\\$`$");
+        assert_eq!(once, "```\\$`$\n");
+        assert_eq!(fill_default(&once), once);
     }
 }

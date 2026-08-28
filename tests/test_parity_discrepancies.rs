@@ -7,8 +7,8 @@
 //! is exact parity, not an intentional divergence). All 18 discrepancies (D1-D18) are
 //! resolved — every test passes.
 //!
-//! D11 tests invoke both the Python and Rust binaries and compare error output.
-//! They require Python flowmark to be installed (e.g., `uv tool install flowmark==0.7.0`).
+//! D11 CLI errors are covered by the pinned shared tryscript workflows, which run
+//! against the built Rust binary without requiring Python at test time.
 //!
 //! See: docs/project/specs/done/plan-2026-02-18-parity-discrepancies.md
 #![allow(clippy::unwrap_used)]
@@ -322,122 +322,6 @@ fn test_d10_html_entity_in_paragraph() {
     assert!(
         result.contains("&gt;") && result.contains("&lt;"),
         "D10: HTML entities should be preserved in paragraphs, got:\n{result}"
-    );
-}
-
-// =============================================================================
-// D11: CLI error handling parity (fmr-8ixa)
-// Verify that Rust CLI error messages match Python's error messages.
-// Requires the Python flowmark binary to be available at the expected path.
-// =============================================================================
-
-#[cfg(feature = "cli")]
-/// Run a CLI binary with args and capture stderr + exit code.
-fn run_cli(bin: &str, args: &[&str]) -> (String, i32) {
-    let output = std::process::Command::new(bin)
-        .args(args)
-        .output()
-        .unwrap_or_else(|e| panic!("Failed to run {bin}: {e}"));
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let code = output.status.code().unwrap_or(-1);
-    (stderr.trim_end().to_string(), code)
-}
-
-#[cfg(feature = "cli")]
-fn run_cli_stdin(bin: &str, args: &[&str], stdin: &str) -> (String, i32) {
-    use std::io::Write;
-    let mut child = std::process::Command::new(bin)
-        .args(args)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .unwrap_or_else(|e| panic!("Failed to run {bin}: {e}"));
-    // The child may reject its arguments and exit before reading stdin (e.g.
-    // `--inplace -`), closing the read end of the pipe. The resulting broken-pipe write
-    // is expected and benign here — we assert on the child's stderr and exit code, not on
-    // the write succeeding — so ignore the error instead of `.unwrap()`ing it (which
-    // races against process teardown and flakes intermittently, especially on Windows).
-    if let Some(mut stdin_pipe) = child.stdin.take() {
-        let _ = stdin_pipe.write_all(stdin.as_bytes());
-    }
-    let output = child.wait_with_output().unwrap();
-    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-    let code = output.status.code().unwrap_or(-1);
-    (stderr.trim_end().to_string(), code)
-}
-
-#[cfg(feature = "cli")]
-fn python_flowmark() -> &'static str {
-    "flowmark"
-}
-
-#[cfg(feature = "cli")]
-fn rust_flowmark() -> String {
-    let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    root.join("target/debug/flowmark").to_string_lossy().to_string()
-}
-
-#[test]
-#[cfg(feature = "cli")]
-fn test_d11_no_args_error_matches_python() {
-    let (py_err, py_code) = run_cli(python_flowmark(), &[]);
-    let (rs_err, rs_code) = run_cli(&rust_flowmark(), &[]);
-    assert_eq!(rs_err, py_err, "D11: No-args error message should match Python");
-    assert_eq!(rs_code, py_code, "D11: No-args exit code should match Python");
-}
-
-#[test]
-#[cfg(feature = "cli")]
-fn test_d11_auto_no_args_error_matches_python() {
-    let (py_err, py_code) = run_cli(python_flowmark(), &["--auto"]);
-    let (rs_err, rs_code) = run_cli(&rust_flowmark(), &["--auto"]);
-    assert_eq!(rs_err, py_err, "D11: --auto no-args error should match Python");
-    assert_eq!(rs_code, py_code, "D11: --auto no-args exit code should match Python");
-}
-
-#[test]
-#[cfg(feature = "cli")]
-fn test_d11_inplace_stdin_error_matches_python() {
-    let (py_err, py_code) = run_cli_stdin(python_flowmark(), &["--inplace", "-"], "hello\n");
-    let (rs_err, rs_code) = run_cli_stdin(&rust_flowmark(), &["--inplace", "-"], "hello\n");
-    assert_eq!(rs_err, py_err, "D11: --inplace stdin error should match Python");
-    assert_eq!(rs_code, py_code, "D11: --inplace stdin exit code should match Python");
-}
-
-#[test]
-#[cfg(feature = "cli")]
-fn test_d11_output_multiple_files_error_matches_python() {
-    let (py_err, py_code) = run_cli(python_flowmark(), &["-o", "out.md", "/dev/null", "/dev/null"]);
-    let (rs_err, rs_code) = run_cli(&rust_flowmark(), &["-o", "out.md", "/dev/null", "/dev/null"]);
-    assert_eq!(rs_err, py_err, "D11: multi-file output error should match Python");
-    assert_eq!(rs_code, py_code, "D11: multi-file output exit code should match Python");
-}
-
-#[test]
-#[cfg(feature = "cli")]
-fn test_d11_nonexistent_file_error_format() {
-    let (py_err, _py_code) = run_cli(python_flowmark(), &["nonexistent.md"]);
-    let (rs_err, _rs_code) = run_cli(&rust_flowmark(), &["nonexistent.md"]);
-    // Python: "Error: [Errno 2] No such file or directory: 'nonexistent.md'" (exit 2)
-    // Rust:   "Error: Path not found: nonexistent.md" (exit 1)
-    // Exact byte-for-byte match isn't possible ([Errno 2] is a Python-ism),
-    // but both must: start with "Error:", mention the filename.
-    assert!(
-        rs_err.starts_with("Error:"),
-        "D11: Rust nonexistent file error should start with 'Error:', got: {rs_err}"
-    );
-    assert!(
-        rs_err.contains("nonexistent.md"),
-        "D11: Rust error should mention the filename, got: {rs_err}"
-    );
-    assert!(
-        py_err.starts_with("Error:"),
-        "D11: Python nonexistent file error should start with 'Error:', got: {py_err}"
-    );
-    assert!(
-        py_err.contains("nonexistent.md"),
-        "D11: Python error should mention the filename, got: {py_err}"
     );
 }
 

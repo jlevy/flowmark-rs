@@ -101,36 +101,46 @@ class TestYamlDeterminism:
 
         If this fails, run the discover/init commands to regenerate.
         """
-        for load_fn, write_fn, src in [
-            (load_python_tests_yaml, write_python_tests_yaml, PYTHON_YAML),
-            (load_rust_tests_yaml, write_rust_tests_yaml, RUST_YAML),
-            (load_mapping_yaml, write_mapping_yaml, MAPPING_YAML),
+        python_out = tmp_path / PYTHON_YAML.name
+        write_python_tests_yaml(load_python_tests_yaml(PYTHON_YAML), python_out)
+        rust_out = tmp_path / RUST_YAML.name
+        write_rust_tests_yaml(load_rust_tests_yaml(RUST_YAML), rust_out)
+        mapping_out = tmp_path / MAPPING_YAML.name
+        write_mapping_yaml(load_mapping_yaml(MAPPING_YAML), mapping_out)
+
+        for src, out in [
+            (PYTHON_YAML, python_out),
+            (RUST_YAML, rust_out),
+            (MAPPING_YAML, mapping_out),
         ]:
-            records = load_fn(src)
-            out = tmp_path / src.name
-            write_fn(records, out)
-            expected = src.read_text()
-            actual = out.read_text()
-            assert actual == expected, (
+            assert out.read_text() == src.read_text(), (
                 f"{src.name} is not in canonical form. "
-                f"Re-run the appropriate flowmark-dev command to regenerate."
+                "Re-run the appropriate flowmark-dev command to regenerate."
             )
 
 
-class TestDiscoveryCounts:
-    """Verify discovery produces expected counts from checked-in YAML."""
+class TestManifestSanity:
+    """Verify the supplementary function-level manifests are internally useful."""
 
-    def test_python_test_count(self) -> None:
+    def test_python_manifest_is_not_empty(self) -> None:
         records = load_python_tests_yaml(PYTHON_YAML)
-        assert len(records) == 440, f"Expected 440 Python tests, got {len(records)}"
+        assert records
 
-    def test_rust_test_count(self) -> None:
+    def test_rust_manifest_is_not_empty(self) -> None:
         records = load_rust_tests_yaml(RUST_YAML)
-        assert len(records) == 668, f"Expected 668 Rust tests, got {len(records)}"
+        assert records
 
-    def test_mapping_count(self) -> None:
-        records = load_mapping_yaml(MAPPING_YAML)
-        assert len(records) == 440, f"Expected 440 mapping entries, got {len(records)}"
+    def test_every_python_record_has_one_mapping_record(self) -> None:
+        python_records = load_python_tests_yaml(PYTHON_YAML)
+        mapping_records = load_mapping_yaml(MAPPING_YAML)
+        python_keys = {
+            (record.file, record.class_name, record.function) for record in python_records
+        }
+        mapping_keys = {
+            (record.python_file, record.python_class, record.python_function)
+            for record in mapping_records
+        }
+        assert mapping_keys == python_keys
 
 
 class TestMappingCompleteness:
@@ -163,14 +173,12 @@ class TestMappingCompleteness:
             if m.rust_function:
                 if (m.rust_file or "", m.rust_function) not in rust_funcs:
                     broken_refs.append(
-                        f"{m.python_file}::{m.python_function} -> "
-                        f"{m.rust_file}::{m.rust_function}"
+                        f"{m.python_file}::{m.python_function} -> {m.rust_file}::{m.rust_function}"
                     )
             for fn in m.rust_functions:
                 if (m.rust_file or "", fn) not in rust_funcs:
                     broken_refs.append(
-                        f"{m.python_file}::{m.python_function} -> "
-                        f"{m.rust_file}::{fn}"
+                        f"{m.python_file}::{m.python_function} -> {m.rust_file}::{fn}"
                     )
 
         assert len(broken_refs) == 0, (

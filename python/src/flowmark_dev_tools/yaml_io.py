@@ -60,14 +60,24 @@ def write_python_tests_yaml(records: list[PythonTestRecord], output_path: Path) 
     """Write Python test records to a YAML file with deterministic ordering."""
     sorted_records = sorted(records, key=lambda r: (r.file, r.class_name or "", r.function))
     data = [_ordered_dict(asdict(r), _PYTHON_KEY_ORDER) for r in sorted_records]
-    _write_yaml(data, output_path, comment="Python flowmark test manifest")
+    _write_yaml(
+        data,
+        output_path,
+        comment="Python flowmark test manifest",
+        maintenance_note="Auto-generated. Regenerate with flowmark-dev; do not edit by hand.",
+    )
 
 
 def write_rust_tests_yaml(records: list[RustTestRecord], output_path: Path) -> None:
     """Write Rust test records to a YAML file with deterministic ordering."""
     sorted_records = sorted(records, key=lambda r: (r.file, r.function))
     data = [_ordered_dict(asdict(r), _RUST_KEY_ORDER) for r in sorted_records]
-    _write_yaml(data, output_path, comment="Rust flowmark-rs test manifest")
+    _write_yaml(
+        data,
+        output_path,
+        comment="Rust flowmark-rs test manifest",
+        maintenance_note="Auto-generated. Regenerate with flowmark-dev; do not edit by hand.",
+    )
 
 
 def write_mapping_yaml(records: list[MappingRecord], output_path: Path) -> None:
@@ -76,13 +86,23 @@ def write_mapping_yaml(records: list[MappingRecord], output_path: Path) -> None:
         records, key=lambda r: (r.python_file, r.python_class or "", r.python_function)
     )
     data = [_ordered_dict(asdict(r), _MAPPING_KEY_ORDER) for r in sorted_records]
-    _write_yaml(data, output_path, comment="Python-to-Rust test mapping")
+    _write_yaml(
+        data,
+        output_path,
+        comment="Python-to-Rust test mapping",
+        maintenance_note="Auto-generated skeleton. Mapping decisions are preserved on re-generation.",
+    )
 
 
-def _write_yaml(data: list[dict[str, object]], output_path: Path, comment: str) -> None:
+def _write_yaml(
+    data: list[dict[str, object]],
+    output_path: Path,
+    comment: str,
+    maintenance_note: str,
+) -> None:
     """Write data to YAML with a header comment, using atomic file writes."""
     content = f"# {comment}\n"
-    content += "# Auto-generated. Manual edits are preserved on re-generation.\n\n"
+    content += f"# {maintenance_note}\n\n"
     content += yaml.dump(
         data,
         default_flow_style=False,

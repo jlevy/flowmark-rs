@@ -8,13 +8,14 @@ pub mod file_resolver;
 pub mod formatter;
 pub mod incremental_cache;
 pub mod parser;
+mod preservation;
 pub mod settings;
 pub mod skills;
 pub mod transform;
 pub mod typography;
 pub mod wrapping;
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 pub use config::{DEFAULT_WRAP_WIDTH, FormatOptions, ListSpacing};
 pub use error::{Error, Result};
@@ -48,6 +49,10 @@ impl FormatOptions {
     /// let result = opts.reformat_text("He said \"hello.\" She said \"goodbye.\"");
     /// assert!(result.contains('\u{201c}')); // curly quotes applied
     /// ```
+    ///
+    /// Markdown input is never implicitly dedented. Call [`fill_markdown`] with
+    /// `dedent_input = true` only when formatting docstring-style source whose common
+    /// indentation is not part of the Markdown structure.
     pub fn reformat_text(&self, text: &str) -> String {
         if self.plaintext {
             // Python uses Wrap.WRAP (not WRAP_FULL) with the HTML/Markdown-aware
@@ -60,7 +65,7 @@ impl FormatOptions {
         } else {
             fill_markdown(
                 text,
-                true,
+                false,
                 self.width,
                 self.semantic,
                 self.cleanups,
@@ -72,6 +77,14 @@ impl FormatOptions {
         }
     }
 
+    /// Decode UTF-8 bytes strictly and reformat them without replacement characters.
+    pub fn reformat_bytes(&self, bytes: &[u8]) -> Result<String> {
+        let text = std::str::from_utf8(bytes).map_err(|source| {
+            Error::Io(std::io::Error::new(std::io::ErrorKind::InvalidData, source))
+        })?;
+        Ok(self.reformat_text(text))
+    }
+
     /// Reformat a Markdown or plain text file.
     pub fn reformat_file(
         &self,
@@ -80,17 +93,19 @@ impl FormatOptions {
         inplace: bool,
         nobackup: bool,
     ) -> Result<()> {
-        let content = std::fs::read_to_string(path)?;
-        let formatted = self.reformat_text(&content);
+        let content = std::fs::read(path)?;
+        let formatted = self.reformat_bytes(&content)?;
 
         // Skip write if content is unchanged (preserves mtime, avoids I/O)
-        if inplace && formatted == content {
+        if inplace && formatted.as_bytes() == content {
             return Ok(());
         }
 
         if inplace {
             if !nobackup {
-                let backup_path = path.with_extension("bak");
+                let mut backup_name = path.as_os_str().to_os_string();
+                backup_name.push(".orig");
+                let backup_path = PathBuf::from(backup_name);
                 std::fs::copy(path, &backup_path)?;
             }
             atomic_write(path, &formatted)?;

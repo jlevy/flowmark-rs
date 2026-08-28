@@ -5,10 +5,45 @@
 //! all of these correctly without post-processing.
 
 use flowmark::config::ListSpacing;
-use flowmark::fill_markdown;
+use flowmark::{Error, FormatOptions, fill_markdown};
 
 fn fmt(input: &str) -> String {
     fill_markdown(input, true, 88, true, false, false, false, None, ListSpacing::Preserve)
+}
+
+#[test]
+fn test_invalid_utf8_preserves_a_typed_decode_cause() {
+    let error = FormatOptions::default()
+        .reformat_bytes(b"before\xffafter")
+        .expect_err("invalid UTF-8 must fail");
+
+    match error {
+        Error::Io(source) => {
+            assert_eq!(source.kind(), std::io::ErrorKind::InvalidData);
+            let decode_error = source
+                .get_ref()
+                .and_then(|cause| cause.downcast_ref::<std::str::Utf8Error>())
+                .expect("invalid UTF-8 must retain its typed decode cause");
+            assert_eq!(decode_error.valid_up_to(), 6);
+        }
+    }
+}
+
+#[test]
+fn test_invalid_utf8_has_a_stable_typed_discriminator() {
+    let error = FormatOptions::default()
+        .reformat_bytes(b"before\xffafter")
+        .expect_err("invalid UTF-8 must fail");
+
+    assert!(error.is_invalid_utf8());
+}
+
+#[test]
+fn test_reformat_text_retains_markdown_indentation() {
+    let result =
+        FormatOptions { width: 0, ..FormatOptions::default() }.reformat_text("    indented code\n");
+
+    assert_eq!(result, "```\nindented code\n```\n");
 }
 
 // === Edge case 1: Code fence with indented YAML-like content ===
@@ -267,28 +302,27 @@ fn test_html_comment_after_blank_line_tight_text() {
     );
 }
 
-// === GAP13: Blank line before closing HTML comment after list/table ===
+// === GAP13: Source-exact adjacency before HTML comments after list/table ===
 
 #[test]
-fn test_list_then_html_comment_gets_blank_line() {
-    // Python adds a blank line between a list and a following HTML comment
-    // even when original is tight (list output already ends with \n).
+fn test_list_then_html_comment_stays_tight() {
+    // Protected HTML comment adjacency is source-exact in the shared contract.
     let input = "<!-- f:field -->\n- Option 1\n- Option 2\n- Option 3\n<!-- /f:field -->\n";
     let result = fmt(input);
     assert!(
-        result.contains("- Option 3\n\n<!-- /f:field -->"),
-        "Should have blank line between list and closing HTML comment: got {result:?}"
+        result.contains("- Option 3\n<!-- /f:field -->"),
+        "List and closing HTML comment should retain tight source adjacency: got {result:?}"
     );
 }
 
 #[test]
-fn test_table_then_html_comment_gets_blank_line() {
-    // Python adds a blank line between a table and a following HTML comment
+fn test_table_then_html_comment_stays_tight() {
+    // Protected HTML comment adjacency is source-exact in the shared contract.
     let input = "| A | B |\n|---|---|\n| 1 | 2 |\n<!-- end -->\n";
     let result = fmt(input);
     assert!(
-        result.contains("| 1 | 2 |\n\n<!-- end -->"),
-        "Should have blank line between table and closing HTML comment: got {result:?}"
+        result.contains("| 1 | 2 |\n<!-- end -->"),
+        "Table and HTML comment should retain tight source adjacency: got {result:?}"
     );
 }
 

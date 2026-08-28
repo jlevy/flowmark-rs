@@ -1,446 +1,261 @@
 ---
-title: Rust-Python Parity E2E QA Playbook
-description: Manual end-to-end QA workflow for validating Rust flowmark against Python source and documentation alignment
-author: Codex (adapted from tbd QA playbook template)
+title: Flowmark Rust Port End-to-End QA
+description: Clean, language-neutral validation of the built Rust CLI against the pinned Flowmark contract
+author: Codex
 ---
-# QA Playbook: Rust-Python Parity End-to-End Validation
+# QA Playbook: Flowmark Rust Port End-to-End Validation
 
-Manual QA playbook for validating that the Rust port remains behaviorally aligned with
-Python flowmark and that docs/versioning stay consistent.
+Use this runbook when accepting a new upstream commit, changing the conformance adapter,
+closing a parity bead, or preparing a release.
+It validates the Cargo-built executable against the exact shared assets in the pinned
+Python submodule.
 
-**Purpose**: Prove that automated tests pass, tryscript golden outputs still make sense
-on manual inspection, and documentation/version references are synchronized across Rust
-and Python sources.
+Most checks below are automated.
+The manual work is limited to reviewing the complete golden diffs, confirming the
+selected evidence matches the intended change, and recording the results.
+If a manual observation can be made deterministic, add it to the shared manifest or
+tryscript suite and remove it from this runbook.
 
-**Estimated Time**: ~35-50 minutes
+## Run Record
 
-> [!IMPORTANT]
-> Scope rule: This playbook should cover only checks that are **not already enforced**
-> by automated tests. If a recurring issue can be automated, add or update an automated
-> test first, then remove or reduce the corresponding manual check here.
+Fill this section during execution.
 
-> This is a manual validation playbook on top of automated tests.
-> Goals:
-> 
-> - Run all automated checks that are expected for parity confidence.
-> - Manually sanity-check tryscript golden sessions for output quality.
-> - Verify documentation and parity-version metadata are aligned.
+| Field | Value |
+| --- | --- |
+| Date | `<YYYY-MM-DD>` |
+| Rust commit | `<full SHA>` |
+| Python submodule commit | `<full SHA>` |
+| Shared schema | `<integer>` |
+| Playbook submodule commit | `<full SHA>` |
+| Change IDs under review | `<FM-...>` |
+| Reviewer | `<name>` |
 
-* * *
+Final result: **Pending**
 
-## Current Status (last update 2026-02-25)
-
-| Phase | Status | Notes |
-| --- | --- | --- |
-| Phase 1: Setup & Environment | ⏳ Pending | Validate tools, submodules, and version pointers |
-| Phase 2: Automated Test Suite | ⏳ Pending | Run full Rust tests + parity/mapping checks |
-| Phase 3: Tryscript Sanity Review | ⏳ Pending | Human-read outputs for reasonableness |
-| Phase 4: Docs & Version Sync | ⏳ Pending | Verify README/--docs/version alignment |
-| Phase 5: Cleanup & Report | ⏳ Pending | Summarize findings and archive evidence |
-
-**Status Legend**: ✅ Passed | ❌ Failed | ⏳ Pending | ⏸️ Blocked
-
-**Test Results (last update 2026-02-25):** *(fill in during execution)*
-
-- `cargo test` → [✅/❌] [summary]
-- `cargo test --test test_tryscript_golden` → [✅/❌] [summary]
-- Tryscript manual sanity review → [✅/❌] [summary]
-- Docs/version alignment checks → [✅/❌] [summary]
-
-**Next Steps:**
-
-1. Run Phase 1 prerequisites and environment checks.
-2. Execute all Phase 2 automated checks.
-3. Complete manual sanity and docs alignment checks in Phases 3-4.
-
-* * *
-
-**Prerequisites**:
-
-- Rust toolchain installed (`cargo`, matching project MSRV policy)
-- Node.js + `tryscript` available (`npx tryscript@latest` or global `tryscript`)
-- `uv`/`uvx` available for Python parity checks and README generation
-- Git submodules initialized (`repos/flowmark`, `repos/rust-porting-playbook`)
-- Working tree in a known state (clean or intentionally dirty, but understood)
-
-* * *
-
-## Related Documentation — Read for Context
-
-- [port-sync-playbook.md](/Users/levy/wrk/github/flowmark-rs/docs/port-sync-playbook.md)
-  \- Operational sync process, mapping workflow, and coverage mapping
-- [port-status.md](/Users/levy/wrk/github/flowmark-rs/docs/port-status.md) - Current
-  project status and parity scope
-- [plan-2026-02-25-cli-help-cleanup.md](/Users/levy/wrk/github/flowmark-rs/docs/project/specs/done/plan-2026-02-25-cli-help-cleanup.md)
-  \- Current CLI/help/doc sync plan
-
-## Phase 1: Setup & Environment
-
-### 1.1 Verify repository and submodules
+## 1. Establish a Reproducible Checkout
 
 ```bash
-pwd
+git status --short --branch
+git submodule update --init --recursive
 git submodule status
+git -C repos/flowmark rev-parse HEAD
+git -C repos/rust-porting-playbook rev-parse HEAD
 ```
 
-**Expected output**:
+Verify:
 
-- Current directory is repository root.
-- `repos/flowmark` and `repos/rust-porting-playbook` are present.
+- [ ] The worktree contains no unexplained changes.
+- [ ] Every submodule is initialized at the parent-recorded gitlink.
+- [ ] The Flowmark commit equals `upstream_commit` in
+  `admin/port-coverage-mapping/shared-conformance.toml`.
+- [ ] The exact Flowmark commit is fetchable from its configured remote.
+  If not, record `fm-zah1` as a release/remote-CI blocker.
+- [ ] The playbook commit is the reviewed commit named in the current sync artifact.
 
-**Verify**:
+Do not use an exact-SHA fetch from an existing source checkout as the publication proof:
+if that object already exists locally, Git can report success without receiving it from
+the remote. Use a fresh recursive clone or an empty object store.
 
-- [ ] `repos/flowmark` exists and has a checked-out commit
-- [ ] `repos/rust-porting-playbook` exists and has a checked-out commit
+Do not continue with a substituted tag or nearby commit.
+The expected bytes and change IDs are valid only for the recorded source commit.
 
-**Troubleshooting**:
-
-- **Issue**: Submodule missing.
-  **Fix**: `git submodule update --init --recursive`
-
-### 1.2 Verify required tools
+## 2. Build the Executable Once
 
 ```bash
-cargo --version
-uv --version
-uvx --version
-node --version
-npx tryscript@latest --version
+cargo build --locked --all-features
 ```
 
-**Expected output**:
+Verify:
 
-- All commands return successfully.
+- [ ] `target/debug/flowmark` exists.
+- [ ] The build used `Cargo.lock` without changing it.
+- [ ] No Python formatter was installed or invoked to create expected output.
 
-**Verify**:
+The conformance and tryscript harnesses must exercise the Cargo-built binary, not a
+global `flowmark` command.
 
-- [ ] Rust tooling available
-- [ ] `uv` available for script-based tooling
-- [ ] `uvx` available for Python parity checks
-- [ ] Node/tryscript available for golden tests
-
-**Troubleshooting**:
-
-- **Issue**: `tryscript` unavailable.
-  **Fix**: install Node.js and rerun `npx tryscript@latest --version`
-
-* * *
-
-## Phase 2: Automated Test Suite
-
-### 2.1 Run full Rust test suite
+## 3. Run the Shared Contract
 
 ```bash
-cargo test
+cargo test --locked --test test_conformance -- --nocapture
+cargo test --locked --test test_tryscript_golden -- --nocapture
 ```
 
-**Expected behavior**:
+Verify:
 
-- Entire suite passes.
-- No failing unit, integration, parity, or tryscript-wrapper tests.
+- [ ] The native adapter loads schema version 1 and validates every referenced path.
+- [ ] Every selected case either passes or has an exact current entry in
+  `tests/parity_corpus_known_divergences.toml`.
+- [ ] An unlisted mismatch fails.
+- [ ] A stale known-divergence entry fails.
+- [ ] The upstream tryscript documents run from isolated temporary copies.
+- [ ] No test silently skips because Python, Node.js, or another executable is absent.
 
-**Verify**:
+Record selected change IDs and case IDs in the dated sync artifact.
+Do not use only a total test count; generated and parameterized cases make totals an
+unstable proxy for coverage.
 
-- [ ] `test result: ok` across all crates/targets
-- [ ] No failed tests in parity/tryscript groups
-
-**Check for ERROR conditions** (any of these = FAIL):
-
-- [ ] No panics or failed tests
-- [ ] No silently skipped critical groups
-
-### 2.2 Run explicit golden/tryscript check
-
-```bash
-cargo test --test test_tryscript_golden
-```
-
-**Expected behavior**:
-
-- All tryscript golden sessions pass.
-
-**Verify**:
-
-- [ ] 12/12 tryscript tests pass (or current expected count)
-- [ ] `tryscript_errors_version`, `tryscript_file_discovery`, `tryscript_help`, and `tryscript_verbose_docs` pass
-
-### 2.3 Run file-discovery and skill/docs focused suites
+## 4. Run the Rust and Administrative Gates
 
 ```bash
-cargo test --test test_cli_file_discovery
-cargo test --test test_skill
-```
+cargo fmt --all -- --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --all-features
+cargo test --locked --no-default-features
+RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps --all-features
 
-**Expected behavior**:
-
-- CLI file-discovery behavior and `--skill`/`--docs` tests pass.
-
-**Verify**:
-
-- [ ] No regressions in `--auto`, `--list-files`, stdin, and error-path checks
-- [ ] Skill/docs checks pass (including VSCode/Cursor snippet checks)
-
-### 2.4 Run optional cross-binary parity suite (recommended)
-
-```bash
-FLOWMARK_PARITY_PYTHON=1 cargo test --test test_parity_cross_binary
-```
-
-**Expected behavior**:
-
-- Python and Rust outputs match for the cross-binary parity corpus modes.
-
-**Verify**:
-
-- [ ] `test_cross_binary_corner_cases` passes
-- [ ] `test_golden_files_match_python` passes
-
-**Troubleshooting**:
-
-- **Issue**: Python flowmark missing via `uvx`. **Fix**: ensure network access and
-  `uvx flowmark@<parity-version> --version` works.
-
-### 2.5 Run mapping integrity checks
-
-```bash
 cd python
-uv run flowmark-dev discover-python --local-path ../repos/flowmark
-uv run flowmark-dev discover-rust
+uv run ruff check .
+uv run basedpyright
+uv run pytest -q
 uv run flowmark-dev check-mapping
 cd ..
 ```
 
-**Expected behavior**:
+Verify:
 
-- Mapping check passes with no missing Python test mappings.
+- [ ] All commands exit zero.
+- [ ] No required test is ignored or quarantined without a bead.
+- [ ] Rust-only tests remain focused on Rust-specific helpers and boundaries.
+- [ ] The supplemental function map has no broken Rust references or unexplained missing
+  entries for its declared baseline.
 
-**Verify**:
+## 5. Review the Affected Golden Surface
 
-- [ ] Discovery commands complete without errors
-- [ ] `check-mapping` passes
+Before accepting an upstream expectation change, run its exact case IDs in the Python
+repository without write mode and inspect the complete diff.
+Use the upstream runner’s documented selector and write commands; never edit expected
+output to make Rust pass.
 
-* * *
+For every changed case, verify:
 
-## Phase 3: Tryscript Sanity Review
+- [ ] Input, arguments, environment, exit status, stdout, stderr, and file-tree state
+  are intentional.
+- [ ] Meaningful Markdown whitespace is not normalized away.
+- [ ] The case is small enough to diagnose or is deliberately a broad reference/corpus
+  layer.
+- [ ] The case has a stable `FM-*` change ID and bead owner.
+- [ ] The new expectation reaches a fixed point when idempotence is part of the
+  contract.
+- [ ] The broader affected tag, reference document, CommonMark layer, and tryscript
+  workflow still pass.
 
-### 3.1 Manually inspect key tryscript session outputs
+For math changes, inspect at least inline and block delimiters, escaped dollars,
+currency, code precedence, links/images, tables, blockquotes, list indentation,
+frontmatter, HTML containers, line endings, adjacent delimiters, unmatched markers, and
+sibling containers with the same apparent indentation.
+Use an observable transform in container-boundary cases so accidental over-protection
+cannot look like a pass.
 
-```bash
-npx tryscript@latest run tests/tryscript/errors-version.tryscript.md
-npx tryscript@latest run tests/tryscript/file-discovery.tryscript.md
-npx tryscript@latest run tests/tryscript/help.tryscript.md
-npx tryscript@latest run tests/tryscript/verbose-docs.tryscript.md
-```
+## 6. Audit a New Whole-Program Baseline
 
-**Expected behavior**:
+This phase is required when the declared Python baseline advances.
+It is not required for an ordinary Rust-only change against an unchanged pinned
+contract.
 
-- Sessions pass.
-- Output text is coherent, readable, and behaviorally sensible.
-
-**Verify**:
-
-- [ ] Help output is concise and includes expected common usage + `--skill` guidance
-- [ ] Error messages read clearly and match intended UX
-- [ ] Skill/docs outputs look intentional (not placeholders/truncated nonsense)
-
-**Check for ERROR conditions** (any of these = FAIL):
-
-- [ ] No suspicious output masking that hides real differences
-- [ ] No contradictory command behavior within a session
-
-### 3.2 Sanity spot-check representative formatting output
-
-```bash
-printf '# Title\n\nFirst sentence. Second sentence that is long enough to wrap.\n' | target/debug/flowmark --semantic -
-printf 'He said "hello"...\n' | target/debug/flowmark --smartquotes --ellipses -
-```
-
-**Expected behavior**:
-
-- Semantic line break behavior appears reasonable.
-- Typography conversions match expectations.
-
-**Verify**:
-
-- [ ] Semantic wrapping is sentence-aware
-- [ ] Smart quotes + ellipses conversion is sensible in prose
-
-* * *
-
-## Phase 4: Docs & Version Sync
-
-### 4.1 Verify parity-version alignment
+Run both pinned implementations over the same isolated real-world and syntactic-surface
+corpora. `scripts/corpus-parity-check.sh` is the transition-audit helper:
 
 ```bash
-PARITY_VERSION=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
-echo "Cargo parity version: $PARITY_VERSION"
-uvx "flowmark@${PARITY_VERSION}" --version
+cargo build --locked --release
+
+FLOWMARK_PARITY_PYTHON_BIN=/absolute/path/to/flowmark \
+FLOWMARK_PARITY_PYTHON_LABEL='flowmark <full-commit>' \
+FLOWMARK_PARITY_EXPECTED_CORPUS_SHA256='<corpus-digest>' \
+FLOWMARK_PARITY_REPORT_DIR='target/corpus-parity/<run-id>' \
+scripts/corpus-parity-check.sh /absolute/path/to/corpus target/release/flowmark
 ```
 
-**Expected output**:
+Verify:
 
-- `uvx` resolves the same version declared in Cargo metadata.
+- [ ] The Python command resolves the exact proposed baseline, never `latest`.
+- [ ] The corpus source, immutable source commit or reconstruction limit, file count,
+  and digest are recorded in `docs/test-corpora.md` and the dated sync artifact.
+- [ ] Both binaries select the same list, and that list contains every Markdown file in
+  the corpus.
+- [ ] The full diff is retained and reviewed without truncation.
+- [ ] Every difference is classified as port defect, source defect, dependency/platform
+  behavior, nondeterminism outside the contract, or approved intentional divergence.
+- [ ] Each real class receives a minimal shared case before its fix.
+- [ ] Current Rust main is merged (`fm-mfvi`) and the v0.7.2-to-v0.7.3 inventory bead
+  `fm-t81l` is complete before a new broad parity claim.
 
-**Verify**:
+The transition audit may require Python.
+The normal Rust conformance suite must not.
 
-- [ ] Cargo parity metadata points to a real Python release
-- [ ] `uvx` version check succeeds for that exact version
-
-### 4.2 README/docs generation sync (manual fallback)
-
-> This is automatically enforced by GitHub Actions job `readme-sync` in
-> `.github/workflows/ci.yml`. Run this manually only when validating outside CI.
+## 7. Verify Packaged Behavior
 
 ```bash
-scripts/generate_rust_readme.py
-git diff -- README.md
+cargo package --locked --allow-dirty
 ```
 
-**Expected behavior**:
+Extract the generated crate into a temporary directory and run its built binary for the
+surfaces changed by this sync.
+At minimum verify `--help`, `--version`, `--docs`, `--skill`, stdin formatting, and one
+isolated file operation when those features are in scope.
 
-- Script runs successfully.
-- No diff after generation when repo is already in sync.
+Verify:
 
-**Verify**:
+- [ ] Bundled documentation and skill resources are present.
+- [ ] Packaged CLI output does not depend on files under `repos/`.
+- [ ] The crate excludes development-only shared fixtures and submodules.
+- [ ] Package creation does not modify tracked files.
 
-- [ ] README generation is reproducible
-- [ ] Rust README reflects Python canonical content + Rust preface
-
-### 4.3 Verify runtime docs output (`--docs`) and help metadata
+## 8. Confirm Documentation and Traceability
 
 ```bash
-target/debug/flowmark --help | head -40
-target/debug/flowmark --docs | head -30
-target/debug/flowmark --docs | rg -n "Use in VSCode/Cursor|Use in VS Code/Cursor|Agent Use|Configuration|CLI Reference"
+rg -n "upstream_commit|schema_version|FM-" \
+  admin/port-coverage-mapping/shared-conformance.toml \
+  docs/port-status.md \
+  docs/sync-artifacts/2026-08-26-sync-0d2bebb-to-e9d5805.md
+git diff --check
 ```
 
-**Expected behavior**:
+Verify:
 
-- `--help` includes concise guidance and key flags.
-- `--docs` shows comprehensive orientation and specific docs sections.
+- [ ] The commit, schema, change IDs, Python beads, Rust beads, and statuses agree.
+- [ ] Every ledger entry names an active case and tracker.
+- [ ] The dated checklist contains each command and result.
+- [ ] README generation is stable if shared user documentation changed.
+- [ ] No document claims whole-program parity beyond the evidence.
 
-**Verify**:
+## 9. Clean-Clone Gate
 
-- [ ] `--help` tagline and bottom guidance are present and readable
-- [ ] `--docs` contains major sections expected from canonical docs
-- [ ] VSCode/Cursor setup is present in docs output
-
-### 4.4 Verify version references in status/docs are not stale
+Before remote CI or release, test from a clean clone or equivalent fresh worktree:
 
 ```bash
-cargo pkgid
-rg -n "v0\.|parity target|Python parity target|Last updated" docs/port-status.md docs/publishing.md README.md -S
+git submodule update --init --recursive
+cargo test --locked --all-features
 ```
 
-**Expected behavior**:
+Verify:
 
-- Version references are consistent or have documented intentional differences.
+- [ ] No local sibling repository or Git alternate is required.
+- [ ] No untracked fixture copy is required.
+- [ ] No Python runtime is required for the Rust behavioral suite.
+- [ ] The same exact upstream commit and expected bytes are used.
 
-**Verify**:
+## Result Template
 
-- [ ] No obvious version contradictions across core docs
-- [ ] Any stale values are captured as follow-up action items
-
-### 4.5 Manual cross-language docs/help equivalence check (Python vs Rust)
-
-```bash
-PARITY_VERSION=$(grep -A1 '\\[package.metadata.parity\\]' Cargo.toml | grep version | sed 's/.*\"\\(.*\\)\"/\\1/')
-
-# Capture outputs
-target/debug/flowmark --help > /tmp/flowmark-rust-help.txt
-target/debug/flowmark --docs > /tmp/flowmark-rust-docs.txt
-target/debug/flowmark --skill > /tmp/flowmark-rust-skill.txt
-
-uvx "flowmark@${PARITY_VERSION}" --help > /tmp/flowmark-py-help.txt
-uvx "flowmark@${PARITY_VERSION}" --docs > /tmp/flowmark-py-docs.txt
-uvx "flowmark@${PARITY_VERSION}" --skill > /tmp/flowmark-py-skill.txt
-
-# Quick headline and guidance checks
-head -5 /tmp/flowmark-rust-help.txt
-head -5 /tmp/flowmark-py-help.txt
-rg -n "Flowmark: Better auto-formatting|Common usage|--skill|--docs" /tmp/flowmark-rust-help.txt /tmp/flowmark-py-help.txt -S
-rg -n "^# |Use in VSCode/Cursor|Use in VS Code/Cursor|Agent Use|Configuration|CLI Reference" /tmp/flowmark-rust-docs.txt /tmp/flowmark-py-docs.txt -S
+```text
+Result: PASS | FAIL | BLOCKED
+Rust commit: <full SHA>
+Python contract commit: <full SHA>
+Playbook commit: <full SHA>
+Shared schema: <integer>
+Change IDs: <IDs>
+Passing evidence: <commands and selected cases>
+Known divergences: <exact case IDs or ledger reference>
+New divergences: <none or trackers>
+Blockers: <none or bead IDs>
+Manual golden review: <reviewer and scope>
 ```
 
-**Expected behavior**:
+A run is **PASS** only when every required phase succeeds and the report has no
+unexplained differences.
+An unavailable pinned gitlink is **BLOCKED**, even if a local checkout can be repaired
+from a sibling repository.
 
-- Rust and Python descriptions and help/docs/skill outputs are substantially equivalent
-  in meaning and user guidance.
-- Layout differences (argparse vs clap) may exist, but the overall orientation and
-  recommended usage should match.
-
-**Verify**:
-
-- [ ] Program description/tagline intent is equivalent in both CLIs
-- [ ] `--help` surfaces equivalent key flags and usage guidance (`--auto`,
-  `--list-files`, `--skill`, `--docs`)
-- [ ] `--docs` and `--skill` are both comprehensive and appropriate for each runtime
-  context
-- [ ] Differences are intentional and documented (not accidental drift)
-
-* * *
-
-## Phase 5: Cleanup & Report
-
-### 5.1 Cleanup temporary artifacts and summarize
-
-```bash
-# Remove any temporary parity debug outputs if generated
-git status --short
-```
-
-**Verify**:
-
-- [ ] No unintended artifacts left untracked (unless intentionally kept)
-- [ ] QA result summary recorded in this file
-
-* * *
-
-## Troubleshooting
-
-### Cross-binary parity tests skip or fail to launch Python
-
-```bash
-PARITY_VERSION=$(grep -A1 '\[package.metadata.parity\]' Cargo.toml | grep version | sed 's/.*"\(.*\)"/\1/')
-uvx "flowmark@${PARITY_VERSION}" --version
-```
-
-**Solution**: Ensure `uvx` can fetch/run the pinned Python package version and network
-access is available.
-
-### Tryscript runs but output seems suspiciously weak
-
-```bash
-npx tryscript@latest run tests/tryscript/errors-version.tryscript.md
-npx tryscript@latest run tests/tryscript/file-discovery.tryscript.md
-sed -n '1,220p' tests/tryscript/errors-version.tryscript.md
-sed -n '1,260p' tests/tryscript/file-discovery.tryscript.md
-```
-
-**Solution**: Inspect for over-broad match patterns and tighten assertions if needed.
-
-### README generation drift
-
-```bash
-scripts/generate_rust_readme.py
-git diff -- README.md repos/flowmark/README.md
-```
-
-**Solution**: Regenerate README, then commit generated output or investigate canonical
-source changes.
-
-* * *
-
-## Success Criteria
-
-Before marking this test as **PASSED**, verify:
-
-- [ ] Full automated Rust suite passes (`cargo test`)
-- [ ] Golden/tryscript suite passes and manual sanity review confirms outputs make sense
-- [ ] Docs are in sync (`README` generation stable, `--docs` comprehensive)
-- [ ] Parity version metadata aligns with Python source version used for checks
-- [ ] Python and Rust project description + `--help`/`--docs`/`--skill` outputs are
-  substantially equivalent and appropriate
-- [ ] Any drift or TODOs are documented with explicit follow-up actions
-
-* * *
+<!-- This document follows common-doc-guidelines.md.
+See github.com/jlevy/practical-prose and review guidelines before editing.
+-->
