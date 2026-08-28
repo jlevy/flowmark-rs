@@ -116,11 +116,6 @@ tracker = "fmr-rz9f"
 reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
 
 [[divergence]]
-case_id = "commonmark.default.0532"
-tracker = "fmr-rz9f"
-reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
-
-[[divergence]]
 case_id = "commonmark.default.0540"
 tracker = "fmr-rz9f"
 reason = "The Rust formatter still differs from the pinned Python output for this CommonMark example."
