@@ -5,7 +5,7 @@ title: "Regression: wrapped continuation line starting with a pipe flips list sp
 kind: bug
 status: closed
 priority: 1
-version: 7
+version: 8
 spec_path: docs/project/specs/active/plan-2026-08-27-idempotence-verification.md
 labels:
   - idempotence
@@ -14,7 +14,7 @@ labels:
 dependencies: []
 parent_id: is-01m12n1d12xj4jjmaczmn9etzm
 created_at: 2026-08-27T22:34:24.531Z
-updated_at: 2026-08-28T00:06:31.446Z
+updated_at: 2026-08-28T03:15:16.713Z
 closed_at: 2026-08-28T00:06:31.445Z
 close_reason: "Implemented and verified: fixed list-specific pipe-continuation idempotence, restored strict shared discovery coverage, restored Rust-only cache help assertions, hardened the ledger gate, and passed the complete Linux, macOS, and Windows matrix."
 resolution: null
@@ -76,4 +76,28 @@ idempotence defects this needs no upstream decision: make Rust match Python.
 
 ## Notes
 
-Integrated the active-PR blocker fix, then strengthened the shared adjacency golden after review exposed that the initial predicate was too broad. The final predicate is list-item-specific; both exact shared cases and the corpus-wide idempotence gate pass.
+Closed once with a scanner rule, then re-fixed in the bridge after review.
+
+The scanner rule — excluding a `|` opener whose previous line is non-blank inside a list
+item — clears the regression but drops protection from a line block a list item really
+does contain:
+
+    - Verse "quoted" text follows...
+      | first "raw"... line
+
+    Python:      | first "raw"... line
+    that rule:   | first “raw”… line
+
+Python's scanner yields a `pandoc_line_block` region for that input, so recognition has
+to stay identical to the reference and the difference belongs elsewhere. The bridge's
+synthetic blank line — the stand-in for the parser break Python performs directly with
+its `ProtectedBlock` element — is what actually loosens the list.
+`repair_synthetic_list_looseness` takes that side effect back without changing what
+counts as a line block, re-tightening a list only when every blank line inside its span
+is one the bridge wrote, so an authored loose list is untouched.
+
+Upstream pins both shapes:
+`preservation.extension.line-block.wrapped-pipe-continuation` (the regression) and
+`preservation.extension.line-block.list-item-adjacency` (the loss the scanner rule
+caused). Native coverage is `synthetic_block_boundaries_leave_list_spacing_as_authored`,
+which also asserts an authored loose list stays loose.
