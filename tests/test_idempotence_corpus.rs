@@ -55,13 +55,25 @@ fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+/// Render a repository-relative path with the ledger's platform-neutral separator.
+fn portable_path(path: &Path) -> String {
+    path.components()
+        .map(|component| component.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
 fn collect_markdown(root: &Path, out: &mut Vec<PathBuf>) {
-    let Ok(entries) = std::fs::read_dir(root) else {
-        return;
-    };
-    for entry in entries.flatten() {
+    let entries = std::fs::read_dir(root)
+        .unwrap_or_else(|error| panic!("cannot enumerate {}: {error}", root.display()));
+    for entry in entries {
+        let entry = entry
+            .unwrap_or_else(|error| panic!("cannot read an entry in {}: {error}", root.display()));
         let path = entry.path();
-        if path.is_dir() {
+        let file_type = entry
+            .file_type()
+            .unwrap_or_else(|error| panic!("cannot inspect {}: {error}", path.display()));
+        if file_type.is_dir() {
             collect_markdown(&path, out);
         } else if path.extension().is_some_and(|ext| ext == "md") {
             out.push(path);
@@ -105,19 +117,36 @@ fn load_ledger() -> BTreeSet<String> {
     let value = text
         .parse::<toml::Table>()
         .unwrap_or_else(|error| panic!("cannot parse {}: {error}", path.display()));
-    value
+    assert_eq!(
+        value.get("schema_version").and_then(toml::Value::as_integer),
+        Some(1),
+        "ledger schema_version must be 1"
+    );
+    let entries = value
         .get("divergence")
         .and_then(toml::Value::as_array)
-        .expect("ledger must define a divergence array")
-        .iter()
-        .map(|entry| {
-            let document = entry.get("document").and_then(toml::Value::as_str);
-            let mode = entry.get("mode").and_then(toml::Value::as_str);
-            let (document, mode) =
-                document.zip(mode).expect("each divergence needs a document and a mode");
-            format!("{document}::{mode}")
-        })
-        .collect()
+        .expect("ledger must define a divergence array");
+    let mut ledger = BTreeSet::new();
+    for entry in entries {
+        let document = entry
+            .get("document")
+            .and_then(toml::Value::as_str)
+            .filter(|value| !value.is_empty())
+            .expect("each divergence needs a non-empty document");
+        let mode = entry
+            .get("mode")
+            .and_then(toml::Value::as_str)
+            .filter(|value| !value.is_empty())
+            .expect("each divergence needs a non-empty mode");
+        entry
+            .get("bead")
+            .and_then(toml::Value::as_str)
+            .filter(|value| !value.is_empty())
+            .expect("each divergence needs a non-empty bead");
+        let key = format!("{document}::{mode}");
+        assert!(ledger.insert(key.clone()), "duplicate ledger entry: {key}");
+    }
+    ledger
 }
 
 /// Formatting must reach a fixed point in one pass for every shipped document in every
@@ -131,11 +160,18 @@ fn every_corpus_document_reaches_a_fixed_point() {
     let mut checks = 0_usize;
 
     for document in corpus_documents() {
-        let Ok(source) = std::fs::read_to_string(&document) else {
-            // Deliberately invalid UTF-8 fixtures are not Markdown documents.
-            continue;
+        let source = match std::fs::read_to_string(&document) {
+            Ok(source) => source,
+            // Deliberately invalid UTF-8 fixtures are byte-level I/O cases, not
+            // formatter inputs for this UTF-8 library gate.
+            Err(error) if error.kind() == std::io::ErrorKind::InvalidData => continue,
+            Err(error) => panic!("cannot read {}: {error}", document.display()),
         };
-        let relative = document.strip_prefix(&root).unwrap_or(&document).display().to_string();
+        let relative = portable_path(
+            document
+                .strip_prefix(&root)
+                .expect("every corpus document must be under the project root"),
+        );
         for (name, options) in &modes {
             checks += 1;
             let once = options.reformat_text(&source);
@@ -161,4 +197,10 @@ fn every_corpus_document_reaches_a_fixed_point() {
         stale.len(),
         stale.join("\n  ")
     );
+}
+
+#[test]
+fn ledger_document_paths_are_platform_neutral() {
+    let path = PathBuf::from("repos").join("flowmark").join("tests").join("input.md");
+    assert_eq!(portable_path(&path), "repos/flowmark/tests/input.md");
 }
