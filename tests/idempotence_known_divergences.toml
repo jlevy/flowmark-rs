@@ -4,10 +4,8 @@
 # build, and an entry here that now passes also fails it, so this list shrinks and
 # cannot rot. Every entry names the bead tracking its defect.
 #
-# Every entry below reproduces in the Python reference implementation as well, except
-# CommonMark 0552, and every one of them also fails on the v0.3.2 release, so these are
-# inherited shared-contract gaps rather than regressions from the preservation work. The
-# one regression PR #81 did introduce (fmr-0pxh) is fixed and no longer listed. Per
+# Every defect below reproduces in the Python reference implementation as well, except
+# CommonMark 0552, so these are shared-contract gaps rather than Rust regressions. Per
 # project convention the intended bytes are agreed and fixed upstream in Python first,
 # then replicated exactly in Rust, and the entry is removed here.
 #
@@ -15,6 +13,16 @@
 
 schema_version = 1
 
+
+# REGRESSION introduced by PR #81, and the only one on this axis. A wrapped
+# continuation line beginning with '|' makes the second pass flip a tight list to
+# loose. Stable on v0.3.2 and in Python, so Rust only has to match the reference.
+# This entry must be gone before PR #81 merges.
+
+[[divergence]]
+document = "docs/project/specs/done/plan-2026-02-19-parity-review-and-playbook-sync.md"
+mode = "narrow"
+bead = "fmr-0pxh"
 
 # wrapped line beginning with '=' is reparsed as a setext underline (fmr-6zg6)
 

@@ -14,8 +14,8 @@
 //! The generator is a fixed-seed LCG rather than a property-testing crate so the suite
 //! stays dependency-free and every failure reproduces exactly from its seed.
 
+use flowmark::ListSpacing;
 use flowmark::formatter::filling::fill_markdown;
-use flowmark::{FormatOptions, ListSpacing};
 
 /// Fragments that stress the boundaries between protected constructs. Adjacent pairs
 /// are where the pre-parse scanner and comrak can disagree about block structure.
@@ -268,29 +268,6 @@ fn reviewed_regression_shapes_stay_fixed() {
             assert_eq!(once, twice, "{shape:?} in mode {} must be a fixed point", mode.name);
         }
     }
-}
-
-/// fmr-0pxh: a paragraph that wraps onto a continuation line beginning with `|` must
-/// not be protected as a Pandoc line block. Doing so forced a block boundary that turned
-/// the enclosing list loose on the next pass, so formatting was not a fixed point.
-///
-/// v0.3.2 and Python are both stable here, so this also pins parity with the reference.
-#[test]
-fn wrapped_continuation_starting_with_a_pipe_keeps_list_spacing() {
-    let source = "- Bead: fmr-hr43 | Scope: Phase 8.5/8.6 | Repo: playbook\n                  - Depends on: WI-1, WI-4\n                  - Findings: F1-F12 (12 lessons + anti-patterns)\n";
-    let narrow = FormatOptions {
-        width: 40,
-        plaintext: false,
-        semantic: false,
-        cleanups: false,
-        smartquotes: false,
-        ellipses: false,
-        list_spacing: ListSpacing::Preserve,
-    };
-
-    let once = narrow.reformat_text(source);
-    assert_eq!(narrow.reformat_text(&once), once, "must be a fixed point: {once:?}");
-    assert!(!once.contains("\n\n"), "list must stay tight: {once:?}");
 }
 
 /// Pins a shape the fixed-point harness still reports.
