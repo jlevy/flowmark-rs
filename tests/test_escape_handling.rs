@@ -248,3 +248,44 @@ fn test_period_escape_wrapping_is_idempotent() {
     let once = fmt(&input);
     assert_eq!(fmt(&once), once, "wrapping around a period escape should be stable");
 }
+
+/// The period escape is the one placeholder whose width depends on where it lands: the
+/// backslash is dropped mid-line but kept where a line begins `DIGITS\.`. Measuring the
+/// dropped width at a line start too leaves the retained backslash unaccounted for, and the
+/// line overruns the wrap width by a column.
+///
+/// The head must be 86..=88 columns wide: at 85 a following `5.` still fits at exactly 88,
+/// the escape never reaches a line start, and this test silently checks nothing.
+#[test]
+fn test_period_escape_at_a_line_start_does_not_overrun_the_width() {
+    let mut reached_a_line_start = false;
+
+    for head_len in 86..=88 {
+        let head = "alpha ".repeat(14) + &"b".repeat(head_len - 84);
+        assert_eq!(head.chars().count(), head_len);
+
+        for tail_words in 0..12 {
+            for pad in 1..8 {
+                let tail = format!("{}{}", "alpha ".repeat(tail_words), "b".repeat(pad));
+                let input = format!("{head} 5\\. {tail} end end end end end end end end.\n");
+                let output = fmt(&input);
+
+                for line in output.lines() {
+                    if line.starts_with("5\\.") {
+                        reached_a_line_start = true;
+                    }
+                    assert!(
+                        line.chars().count() <= 88,
+                        "line is {} cols for head_len={head_len} tail_words={tail_words} pad={pad}: {line:?}",
+                        line.chars().count()
+                    );
+                }
+            }
+        }
+    }
+
+    assert!(
+        reached_a_line_start,
+        "no case put the escaped numeral at a line start, so nothing was actually tested"
+    );
+}

@@ -9,12 +9,15 @@
 //! it stands in for. That holds for every escape except the period: COMRAK-WORKAROUND11
 //! (`postprocess_period_escapes`) drops `\.` back to `.` after rendering, keeping the
 //! backslash only where a line begins `DIGITS\.` and would otherwise parse as an ordered
-//! list marker. A period pair therefore occupies one column in the output, not two.
+//! list marker.
 //!
-//! Line wrapping runs *before* that cleanup, so it has to measure the pair at the width
-//! the output will actually have. Measuring the raw scalar count instead breaks a line one
-//! word early, and the word pushed to the new line start is then re-escaped — which makes
-//! the premature break survive every subsequent reformat.
+//! A period pair is therefore the one placeholder whose rendered width depends on where it
+//! lands: one column in general, two at the start of a line it keeps its backslash on. Line
+//! wrapping runs *before* the cleanup, so it has to ask for the right one. Measuring the raw
+//! scalar count everywhere breaks a line one word early, and the word pushed to the new line
+//! start is then re-escaped, so the premature break survives every subsequent reformat.
+//! Measuring one column everywhere is the mirror-image error: the retained backslash is
+//! unaccounted for and the line overruns the wrap width by a column.
 
 /// First scalar of an escape placeholder pair: `U+E000 + <escaped ASCII char>`.
 pub(crate) const ESCAPE_PLACEHOLDER_BASE: u32 = 0xE000;
@@ -61,6 +64,30 @@ pub(crate) fn rendered_width(text: &str) -> usize {
     width
 }
 
+/// Whether `text` placed at the start of a line keeps a leading period escape.
+///
+/// Mirrors the one case `postprocess_period_escapes` preserves: a line that begins
+/// `DIGITS\.`, which would otherwise parse as an ordered list marker. Everywhere else the
+/// backslash is dropped, so only this shape is a column wider than [`rendered_width`] says.
+pub(crate) fn retains_leading_period_escape(text: &str) -> bool {
+    let mut chars = text.chars();
+    let mut digits = 0usize;
+    loop {
+        match chars.next() {
+            Some(scalar) if scalar.is_ascii_digit() => digits += 1,
+            Some(PERIOD_ESCAPE_PLACEHOLDER) => {
+                return digits > 0 && chars.next() == Some(ESCAPE_PLACEHOLDER_FILLER);
+            }
+            _ => return false,
+        }
+    }
+}
+
+/// Column width of `text` when it starts a line, where a `DIGITS\.` escape is retained.
+pub(crate) fn rendered_width_at_line_start(text: &str) -> usize {
+    rendered_width(text) + usize::from(retains_leading_period_escape(text))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -99,5 +126,34 @@ mod tests {
             char::from_u32(ESCAPE_PLACEHOLDER_BASE + u32::from(b'.')),
             Some(PERIOD_ESCAPE_PLACEHOLDER)
         );
+    }
+
+    #[test]
+    fn digits_then_period_pair_keeps_its_backslash_at_a_line_start() {
+        let protected = format!("5{PERIOD_ESCAPE_PLACEHOLDER}{ESCAPE_PLACEHOLDER_FILLER}");
+        assert!(retains_leading_period_escape(&protected));
+        // Mid-line the backslash is dropped; at a line start it is not.
+        assert_eq!(rendered_width(&protected), 2);
+        assert_eq!(rendered_width_at_line_start(&protected), 3);
+    }
+
+    #[test]
+    fn a_period_pair_not_preceded_by_digits_is_dropped_everywhere() {
+        let protected = format!("a{PERIOD_ESCAPE_PLACEHOLDER}{ESCAPE_PLACEHOLDER_FILLER}");
+        assert!(!retains_leading_period_escape(&protected));
+        assert_eq!(rendered_width_at_line_start(&protected), rendered_width(&protected));
+    }
+
+    #[test]
+    fn a_leading_period_pair_with_no_digits_is_dropped() {
+        let protected = format!("{PERIOD_ESCAPE_PLACEHOLDER}{ESCAPE_PLACEHOLDER_FILLER}x");
+        assert!(!retains_leading_period_escape(&protected));
+    }
+
+    #[test]
+    fn other_leading_escapes_do_not_trigger_the_line_start_adjustment() {
+        let star = char::from_u32(ESCAPE_PLACEHOLDER_BASE + u32::from(b'*')).expect("valid PUA");
+        let protected = format!("5{star}{ESCAPE_PLACEHOLDER_FILLER}");
+        assert!(!retains_leading_period_escape(&protected));
     }
 }
