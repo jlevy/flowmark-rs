@@ -11,9 +11,10 @@
 use std::path::PathBuf;
 use std::process::Command;
 
+/// Cargo points `CARGO_BIN_EXE_flowmark` at the CLI it built for this test, so the path
+/// follows the active profile and carries the platform executable suffix.
 fn rust_binary() -> PathBuf {
-    let name = if cfg!(windows) { "flowmark.exe" } else { "flowmark" };
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug").join(name)
+    PathBuf::from(env!("CARGO_BIN_EXE_flowmark"))
 }
 
 struct RunOutput {

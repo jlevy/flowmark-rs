@@ -10,17 +10,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// Get the path to the built binary.
+/// Path to the CLI cargo built for this test.
+///
+/// Walking up from `current_exe()` also finds the right profile, but it appends a bare
+/// `flowmark` with no platform executable suffix. `CARGO_BIN_EXE_flowmark` carries the
+/// suffix and needs no path arithmetic.
 fn flowmark_bin() -> PathBuf {
-    // cargo test builds the binary in target/debug/
-    let mut path = std::env::current_exe().expect("current exe");
-    // Go up from deps/ to debug/
-    path.pop();
-    if path.ends_with("deps") {
-        path.pop();
-    }
-    path.push("flowmark");
-    path
+    PathBuf::from(env!("CARGO_BIN_EXE_flowmark"))
 }
 
 /// Create a minimal project directory tree for testing.
