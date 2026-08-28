@@ -235,6 +235,9 @@ prose in the set, and defect A was found there.
 
 ### Known-divergence ledger
 
+Each port keeps its own, and each asserts the other's existence rather than its contents:
+`tests/idempotence_known_divergences.toml` here, and the file of the same name upstream.
+
 `tests/idempotence_known_divergences.toml` names each failing document, mode and bead,
 following the precedent of `tests/parity_corpus_known_divergences.toml`. The gate
 asserts it **exactly**: an unlisted failure fails the build, and a listed entry that now
@@ -266,6 +269,13 @@ None. This spec adds test infrastructure only.
 - [x] Remove the incorrect golden-stability assertion and record why.
 - [x] Confirm the full suite, the 778-case conformance corpus and the tryscript
   documents stay green.
+- [x] Give the reference implementation the same gate: `tests/test_idempotence_corpus.py`
+  and its own `tests/idempotence_known_divergences.toml` upstream, 1,580 documents and
+  9,480 checks over the identical mode matrix, asserted exactly in both directions.
+  Without it a fixed-point regression could only be caught in the port, which is the
+  wrong way round for a reference implementation. The two ledgers stay separate on
+  purpose: 67 entries here against 138 there is itself the finding, and the difference is
+  defects E and F, where Python is unstable and Rust is not.
 
 ### Phase 2: Clear the one regression, so PR #81 lands clean (done)
 

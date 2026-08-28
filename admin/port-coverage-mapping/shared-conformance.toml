@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "88ea1c43043754171405ada21890e4a94eecbdf7"
+upstream_commit = "43b2ad5b61d7bb3dbadd799dab30db4947b803a3"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
