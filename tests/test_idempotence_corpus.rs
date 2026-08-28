@@ -55,6 +55,14 @@ fn project_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
 }
 
+/// Render a repository-relative path with the ledger's platform-neutral separator.
+fn portable_path(path: &Path) -> String {
+    path.components()
+        .map(|component| component.as_os_str().to_string_lossy())
+        .collect::<Vec<_>>()
+        .join("/")
+}
+
 fn collect_markdown(root: &Path, out: &mut Vec<PathBuf>) {
     let entries = std::fs::read_dir(root)
         .unwrap_or_else(|error| panic!("cannot enumerate {}: {error}", root.display()));
@@ -159,11 +167,11 @@ fn every_corpus_document_reaches_a_fixed_point() {
             Err(error) if error.kind() == std::io::ErrorKind::InvalidData => continue,
             Err(error) => panic!("cannot read {}: {error}", document.display()),
         };
-        let relative = document
-            .strip_prefix(&root)
-            .expect("every corpus document must be under the project root")
-            .display()
-            .to_string();
+        let relative = portable_path(
+            document
+                .strip_prefix(&root)
+                .expect("every corpus document must be under the project root"),
+        );
         for (name, options) in &modes {
             checks += 1;
             let once = options.reformat_text(&source);
@@ -189,4 +197,10 @@ fn every_corpus_document_reaches_a_fixed_point() {
         stale.len(),
         stale.join("\n  ")
     );
+}
+
+#[test]
+fn ledger_document_paths_are_platform_neutral() {
+    let path = PathBuf::from("repos").join("flowmark").join("tests").join("input.md");
+    assert_eq!(portable_path(&path), "repos/flowmark/tests/input.md");
 }

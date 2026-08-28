@@ -363,9 +363,9 @@ example, and it is what let the fix land in one pass.
 
 The gate is the test: every shipped document, formatted twice, in every mode, with the
 ledger asserted exactly in both directions.
-The current 1,533-document corpus produces 9,186 valid UTF-8 format pairs and ran in
-16–22 seconds across local debug-profile checks, which is comfortably inline for the
-default `cargo test`.
+The current Unix checkout contains 1,533 documents and produces 9,186 valid UTF-8 format
+pairs; the Windows CI archive produces 9,192. Local debug-profile checks ran in 16–22
+seconds, which is comfortably inline for the default `cargo test`.
 
 Each defect additionally gets a focused regression test at the layer it lives in when it
 is fixed, so the behavior is pinned independently of the corpus walk.
