@@ -12,8 +12,10 @@
 # then replicated exactly in Rust, and the entry is removed here.
 #
 # The reference implementation keeps the same gate and a file of the same name. It
-# currently lists 138 entries to this file's 66; the difference is the Python-only
-# blockquote and nested-list spacing defects tracked as fm-82mg.
+# currently lists 90 entries to this file's 66; the difference is the Python-only
+# nested-list spacing defect tracked as fm-82mg. That bead's other half — a blockquote
+# holding a heading then prose — was fixed upstream in jlevy/flowmark#75 and is gone from
+# both files.
 #
 # See docs/project/specs/active/plan-2026-08-27-idempotence-verification.md.
 
