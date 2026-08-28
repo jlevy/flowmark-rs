@@ -102,7 +102,7 @@ Key design decisions:
 
 ## CI Pipeline
 
-The CI runs 12 checks on every push and PR:
+The CI runs 13 checks on every push and PR:
 
 | Job | What It Checks |
 | --- | --- |
@@ -118,6 +118,7 @@ The CI runs 12 checks on every push and PR:
 | `markdown-fmt` | Markdown formatting consistency |
 | `check-mapping` | Supplementary function-level test provenance and shared change-ID traceability |
 | `readme-sync` | README generation stays in sync with template |
+| `workflow-scripts` | Unit tests for the repository workflow scripts |
 
 ## Configuration
 

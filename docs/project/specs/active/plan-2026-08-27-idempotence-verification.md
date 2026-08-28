@@ -29,7 +29,7 @@ in Python, then replicate exactly in Rust.
 ### What is already verified
 
 The language-neutral conformance corpus is in good shape on this axis.
-Of 778 cases, **770 declare `idempotent = true`** and the shared runner verifies exact
+Of 780 cases, **772 declare `idempotent = true`** and the shared runner verifies exact
 second-pass output for each.
 
 The limitation is that each case pins **one** CLI invocation.
@@ -235,8 +235,9 @@ prose in the set, and defect A was found there.
 
 ### Known-divergence ledger
 
-Each port keeps its own, and each asserts the other's existence rather than its contents:
-`tests/idempotence_known_divergences.toml` here, and the file of the same name upstream.
+Each port keeps its own, and each asserts the other’s existence rather than its
+contents: `tests/idempotence_known_divergences.toml` here, and the file of the same name
+upstream.
 
 `tests/idempotence_known_divergences.toml` names each failing document, mode and bead,
 following the precedent of `tests/parity_corpus_known_divergences.toml`. The gate
@@ -267,15 +268,17 @@ None. This spec adds test infrastructure only.
 - [x] Add `tests/idempotence_known_divergences.toml` seeded with the 68 current Rust
   entries, each naming its bead.
 - [x] Remove the incorrect golden-stability assertion and record why.
-- [x] Confirm the full suite, the 778-case conformance corpus and the tryscript
+- [x] Confirm the full suite, the 780-case conformance corpus and the tryscript
   documents stay green.
-- [x] Give the reference implementation the same gate: `tests/test_idempotence_corpus.py`
-  and its own `tests/idempotence_known_divergences.toml` upstream, 1,580 documents and
-  9,480 checks over the identical mode matrix, asserted exactly in both directions.
+- [x] Give the reference implementation the same gate:
+  `tests/test_idempotence_corpus.py` and its own
+  `tests/idempotence_known_divergences.toml` upstream, 1,580 documents and 9,480 checks
+  over the identical mode matrix, asserted exactly in both directions.
   Without it a fixed-point regression could only be caught in the port, which is the
-  wrong way round for a reference implementation. The two ledgers stay separate on
-  purpose: 67 entries here against 138 there is itself the finding, and the difference is
-  defects E and F, where Python is unstable and Rust is not.
+  wrong way round for a reference implementation.
+  The two ledgers stay separate on purpose: 67 entries here against 138 there is itself
+  the finding, and the difference is defects E and F, where Python is unstable and Rust
+  is not.
 
 ### Phase 2: Clear the one regression, so PR #81 lands clean (done)
 
@@ -285,25 +288,27 @@ None. This spec adds test infrastructure only.
 - [x] Remove its ledger entry.
 - [x] Confirm no output-parity regression on any shipped document (table above).
 
-Three earlier attempts were rejected, which is worth recording because each one located a
-layer the fix does *not* belong in.
+Three earlier attempts were rejected, which is worth recording because each one located
+a layer the fix does *not* belong in.
 
 **Not the bridge’s block boundaries.** Dropping the synthetic blank lines to match
-Python’s bridge exactly, and gating them on list depth, both failed. Python teaches its
-parser about block tokens — `ProtectedBlock` is a real block element and
-`Paragraph.break_paragraph` yields to it — so the parser breaks the paragraph and no blank
-line is needed. comrak cannot be extended that way, so the blank line stands in for that
-break. Without it comrak merges the token into the surrounding paragraph and, at
-`--width 0`, renders `Before … TOKEN … After` on one line, destroying the line structure
-restoration depends on. “Replicate Python exactly” means replicate the *behavior*; these
-boundaries are how this parser reaches it.
+Python’s bridge exactly, and gating them on list depth, both failed.
+Python teaches its parser about block tokens — `ProtectedBlock` is a real block element
+and `Paragraph.break_paragraph` yields to it — so the parser breaks the paragraph and no
+blank line is needed.
+comrak cannot be extended that way, so the blank line stands in for that break.
+Without it comrak merges the token into the surrounding paragraph and, at `--width 0`,
+renders `Before … TOKEN … After` on one line, destroying the line structure restoration
+depends on. “Replicate Python exactly” means replicate the *behavior*; these boundaries
+are how this parser reaches it.
 
-**Not the scanner.** Two rules were tried there. Excluding any line-block opener whose
-previous line is non-blank in the same container dropped protection for a line block
-following a paragraph, which upstream requires; the corpus case
-`preservation.extension.line-block.adjacency` now carries typography-shaped text so that
-failure is loud. Narrowing the same rule to list items only moves the loss one container
-deeper — it is still observable:
+**Not the scanner.** Two rules were tried there.
+Excluding any line-block opener whose previous line is non-blank in the same container
+dropped protection for a line block following a paragraph, which upstream requires; the
+corpus case `preservation.extension.line-block.adjacency` now carries typography-shaped
+text so that failure is loud.
+Narrowing the same rule to list items only moves the loss one container deeper — it is
+still observable:
 
 ```console
 $ printf -- '- Verse text follows\n  | first "raw"... line\n' |
@@ -316,10 +321,11 @@ Recognition has to stay identical to the reference, so neither rule can stand.
 
 **The bridge’s *observable side effects*.** A blank line is not inert in CommonMark: one
 inside a list makes the whole list loose, and the renderer then spends it on separation
-between items nowhere near the token, which restoration cannot take back. The fix
-re-tightens a list only when every blank line inside it is one the bridge wrote, so an
-authored loose list is untouched. That keeps the parser scaffolding invisible in the
-output — the property Python gets for free.
+between items nowhere near the token, which restoration cannot take back.
+The fix re-tightens a list only when every blank line inside it is one the bridge wrote,
+so an authored loose list is untouched.
+That keeps the parser scaffolding invisible in the output — the property Python gets for
+free.
 
 Everything below is pre-existing and belongs in its own change.
 
@@ -347,7 +353,7 @@ Today that is measured but not gated.
 
 Current state, from the same audit: across 7,640 comparisons this branch matches Python
 everywhere v0.3.2 did, plus 1,458 checks across 297 files where v0.3.2 did not.
-What remains is 40 checks across 8 files where both ports diverge, and the 34 entries in
+What remains is 40 checks across 8 files where both ports diverge, and the 33 entries in
 `tests/parity_corpus_known_divergences.toml`, plus the 258 CommonMark cases upstream
 tags `deferred`.
 
@@ -357,7 +363,7 @@ tags `deferred`.
   corpus, generated upstream and pinned.
 - [ ] Seed the ledger from the current divergence set and drive it to zero, defect by
   defect, Python first.
-- [ ] Fold the 34-entry CommonMark ledger into the same mechanism so there is one place
+- [ ] Fold the 33-entry CommonMark ledger into the same mechanism so there is one place
   that answers “where do the ports still disagree”.
 - [ ] When both ledgers are empty, exactness subsumes idempotence: a formatter that
   matches a fixed-point reference is itself a fixed point.

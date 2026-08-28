@@ -33,7 +33,7 @@ Focused Rust tests cover only language-specific scanner, bridge, parser-adapter,
 timeout, and error invariants.
 
 This is not yet a released whole-program parity declaration.
-The shared branch contract is exact except for 34 inherited, explicitly ledgered
+The shared branch contract is exact except for 33 inherited, explicitly ledgered
 CommonMark differences.
 The target Python commit is published, and a fresh recursive clone initialized every
 gitlink from the configured remotes.
@@ -57,7 +57,7 @@ Both resolve to `d24760a`, so no new playbook gitlink change is required.
 
 | Layer | Role | Current state |
 | --- | --- | --- |
-| Shared conformance manifest | Exact stdout, stderr, exit, filesystem, timeout, and idempotence contract | 484 exact passes, 34 exact known divergences |
+| Shared conformance manifest | Exact stdout, stderr, exit, filesystem, timeout, and idempotence contract | 489 exact passes, 33 exact known divergences |
 | Shared tryscript | End-to-end CLI workflows and fixture interactions | Rust executes upstream documents against Cargo-built artifacts |
 | Reference and topic documents | Broad whole-document and cross-family interactions | Exact for all implemented change IDs; fixed-point cases active |
 | CommonMark 0.31.2 | Large standard-Markdown syntax sweep | Active cases pass or have exact ledger entries |
@@ -93,7 +93,7 @@ All current statuses come from `admin/port-coverage-mapping/shared-conformance.t
 | `FM-MATH-INLINE-001` | Implemented |
 | `FM-PRESERVE-CORE-001` | Implemented |
 | `FM-REFERENCE-IDEMPOTENCE-001` | Implemented |
-| `FM-COMMONMARK-001` | 34 exact known divergences |
+| `FM-COMMONMARK-001` | 33 exact known divergences |
 | `FM-PARITY-BASELINE-001` | Exact except for the same inherited ledger |
 
 Future portable behavior must receive a stable `FM-*` ID before language-specific
@@ -129,7 +129,7 @@ portable regions and exact restoration side table.
 
 ## Divergence Policy
 
-`tests/parity_corpus_known_divergences.toml` is a closed, bidirectional ledger with 34
+`tests/parity_corpus_known_divergences.toml` is a closed, bidirectional ledger with 33
 inherited CommonMark case IDs owned by `fmr-rz9f`.
 
 - An unlisted mismatch fails.
@@ -183,7 +183,7 @@ adjacent protected blocks, table detection, lazy continuation, and malformed bou
 
 ### Inherited CommonMark Differences
 
-The 34 exact ledger entries are visible debt rather than parity.
+The 33 exact ledger entries are visible debt rather than parity.
 Reducing them is useful, but they do not obscure the result of any new shared change ID.
 
 ## Completion Criteria
