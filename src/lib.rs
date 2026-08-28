@@ -4,6 +4,7 @@
 
 pub mod config;
 pub mod error;
+mod escape_placeholders;
 pub mod file_resolver;
 pub mod formatter;
 pub mod incremental_cache;

@@ -212,3 +212,39 @@ fn test_pua_adjacent_to_escape() {
     let result = fmt(input);
     assert!(result.contains('\u{E080}'), "PUA char should be preserved next to escape: {result:?}");
 }
+
+/// A source `\.` is protected as a two-scalar PUA pair before parsing, but
+/// `postprocess_period_escapes` drops the backslash again after rendering. Wrapping runs
+/// in between, so it has to measure the pair at its rendered width (one column) rather
+/// than its scalar count (two). Measuring the scalar count breaks the line a word early
+/// and re-escapes the word pushed to the new line start, so the premature break survives
+/// every later reformat.
+#[test]
+fn test_source_period_escape_does_not_shift_the_wrap_point() {
+    // `... b 5.` lands exactly on column 88 once the escape is dropped.
+    let prefix = "alpha ".repeat(14) + "b";
+    let escaped = format!("{prefix} 5\\. Second sentence follows here with more words to wrap.\n");
+    let bare = format!("{prefix} 5. Second sentence follows here with more words to wrap.\n");
+
+    assert_eq!(
+        fmt(&escaped),
+        fmt(&bare),
+        "a source-escaped period must not change where the line breaks"
+    );
+
+    let first_line = fmt(&escaped).lines().next().unwrap_or_default().to_string();
+    assert!(
+        first_line.ends_with("b 5."),
+        "the period should still fit on the first line: got {first_line:?}"
+    );
+}
+
+/// Reformatting output that already contains a source `\.` must be a no-op.
+#[test]
+fn test_period_escape_wrapping_is_idempotent() {
+    let prefix = "alpha ".repeat(14) + "b";
+    let input = format!("{prefix} 5\\. Second sentence follows here with more words to wrap.\n");
+
+    let once = fmt(&input);
+    assert_eq!(fmt(&once), once, "wrapping around a period escape should be stable");
+}

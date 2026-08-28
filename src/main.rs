@@ -543,8 +543,13 @@ Use `flowmark --docs` for full documentation.
 
         let project_root = std::env::current_dir().ok()?;
         let cache_root = resolve_cache_root(cache_dir_override, true);
+        // Use the long version, not CARGO_PKG_VERSION: the package version is unchanged
+        // across every dev build of a release (0.3.2, 0.3.2-dev.1+g…, 0.3.2-dev.79+g…),
+        // so keying on it lets a rebuilt binary reuse "already formatted" verdicts that
+        // the previous build produced. The long version carries the commit count and git
+        // hash, so any rebuild off a new commit invalidates the manifest.
         let fingerprint =
-            compute_formatter_fingerprint(opts, env!("CARGO_PKG_VERSION"), config_path);
+            compute_formatter_fingerprint(opts, env!("FLOWMARK_LONG_VERSION"), config_path);
 
         match IncrementalCache::open(&cache_root, &project_root, fingerprint) {
             Ok(cache) => Some(Arc::new(cache)),

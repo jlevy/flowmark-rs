@@ -5,6 +5,7 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
+use crate::escape_placeholders::rendered_width;
 use crate::preservation::ProtectedSource;
 use crate::wrapping::atomic_patterns::ATOMIC_CONSTRUCT_PATTERN;
 use crate::wrapping::tag_handling::{denormalize_adjacent_tags, normalize_adjacent_tags};
@@ -188,7 +189,7 @@ pub fn wrap_paragraph_lines(
     let mut first_line = true;
 
     for word in &words {
-        let word_width = word.chars().count();
+        let word_width = rendered_width(word);
         let space_width: usize = usize::from(!current_line.is_empty());
 
         if current_width + word_width + space_width <= width {
@@ -209,7 +210,7 @@ pub fn wrap_paragraph_lines(
             let escaped_word =
                 if is_markdown && !first_line { markdown_escape_word(word) } else { word.clone() };
 
-            let escaped_word_width = escaped_word.chars().count();
+            let escaped_word_width = rendered_width(&escaped_word);
             current_line = vec![escaped_word];
             current_width = subsequent_offset + escaped_word_width;
         }
