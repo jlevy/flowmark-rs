@@ -32,20 +32,17 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+/// Cargo builds the CLI for this integration test and points `CARGO_BIN_EXE_flowmark` at
+/// it, so the path is right for whichever profile is being built and carries the platform
+/// executable suffix. This keeps the "fail loudly rather than silently skip" property the
+/// porting playbook asks for (Principle 4) and strengthens it: the binary cannot be
+/// missing, so there is nothing left to assert.
 fn rust_binary() -> PathBuf {
-    let name = if cfg!(windows) { "flowmark.exe" } else { "flowmark" };
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/debug").join(name)
+    PathBuf::from(env!("CARGO_BIN_EXE_flowmark"))
 }
 
 fn run_rust_stdin(args: &[&str], input: &str) -> String {
     let bin = rust_binary();
-    // Fail loudly rather than silently skipping (porting playbook, Principle 4):
-    // `cargo test --all-features` builds this binary, so its absence is a real error.
-    assert!(
-        bin.exists(),
-        "Rust binary not found at {}. Build with `cargo build --all-features`.",
-        bin.display()
-    );
     let mut child = Command::new(&bin)
         .args(args)
         .stdin(Stdio::piped())

@@ -48,8 +48,8 @@ jobs:
   build-linux-x86_64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           maturin-version: v1.12.5
           command: build
@@ -58,7 +58,7 @@ jobs:
           manylinux: "2_17"
       - name: Smoke test
         run: python ./scripts/pypi_smoke_test.py --target x86_64-unknown-linux-gnu
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: wheels-linux-x86_64
           path: dist/*.whl
@@ -67,15 +67,15 @@ jobs:
   build-linux-aarch64:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           maturin-version: v1.12.5
           command: build
           args: --release --locked --out dist
           target: aarch64-unknown-linux-gnu
           manylinux: "2_17"
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: wheels-linux-aarch64
           path: dist/*.whl
@@ -84,8 +84,8 @@ jobs:
   build-macos-x86_64:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v6
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           maturin-version: v1.12.5
           command: build
@@ -93,7 +93,7 @@ jobs:
           target: x86_64-apple-darwin
       - name: Smoke test
         run: python ./scripts/pypi_smoke_test.py --target x86_64-apple-darwin
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: wheels-macos-x86_64
           path: dist/*.whl
@@ -102,8 +102,8 @@ jobs:
   build-macos-aarch64:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v6
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           maturin-version: v1.12.5
           command: build
@@ -111,7 +111,7 @@ jobs:
           target: aarch64-apple-darwin
       - name: Smoke test
         run: python ./scripts/pypi_smoke_test.py --target aarch64-apple-darwin
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: wheels-macos-aarch64
           path: dist/*.whl
@@ -120,8 +120,8 @@ jobs:
   build-windows-x86_64:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           maturin-version: v1.12.5
           command: build
@@ -129,7 +129,7 @@ jobs:
           target: x86_64-pc-windows-msvc
       - name: Smoke test
         run: python ./scripts/pypi_smoke_test.py --target x86_64-pc-windows-msvc
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: wheels-windows-x86_64
           path: dist/*.whl
@@ -138,13 +138,13 @@ jobs:
   build-sdist:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: PyO3/maturin-action@v1
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1
         with:
           maturin-version: v1.12.5
           command: sdist
           args: --out dist
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: wheels-sdist
           path: dist/*.tar.gz
@@ -159,8 +159,8 @@ jobs:
       - build-windows-x86_64
       - build-sdist
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/download-artifact@v8
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: wheels-*
           merge-multiple: true
@@ -176,9 +176,9 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v6
-      - uses: astral-sh/setup-uv@v7
-      - uses: actions/download-artifact@v8
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: wheels-*
           merge-multiple: true
