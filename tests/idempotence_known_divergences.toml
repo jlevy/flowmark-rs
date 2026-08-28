@@ -13,17 +13,6 @@
 
 schema_version = 1
 
-
-# REGRESSION introduced by PR #81, and the only one on this axis. A wrapped
-# continuation line beginning with '|' makes the second pass flip a tight list to
-# loose. Stable on v0.3.2 and in Python, so Rust only has to match the reference.
-# This entry must be gone before PR #81 merges.
-
-[[divergence]]
-document = "docs/project/specs/done/plan-2026-02-19-parity-review-and-playbook-sync.md"
-mode = "narrow"
-bead = "fmr-0pxh"
-
 # wrapped line beginning with '=' is reparsed as a setext underline (fmr-6zg6)
 
 [[divergence]]

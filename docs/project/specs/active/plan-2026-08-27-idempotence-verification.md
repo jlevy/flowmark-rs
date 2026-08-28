@@ -79,9 +79,9 @@ it inherited. This is the axis that decides what blocks the PR.
 | Pre-existing, still failing | 79 | 19 |
 | **Fixed by PR #81** | **146** | **25** |
 
-That one regression is fixed in `8fb4a1c` (`fmr-0pxh`), so **PR #81 now introduces no
-idempotence regression at all**. The ledger holds 67 entries across 17 files, every one
-of which also fails on the v0.3.2 release.
+That one regression is fixed (`fmr-0pxh`), so **PR #81 now introduces no idempotence
+regression at all**. The ledger holds 67 entries across 17 files, every one of which also
+fails on the v0.3.2 release.
 
 A second sweep confirmed there is no regression on the output axis either. Comparing
 every shipped document in five modes against the Python reference, before and after:
@@ -253,19 +253,38 @@ None. This spec adds test infrastructure only.
 
 ### Phase 2: Clear the one regression, so PR #81 lands clean (done)
 
-- [x] Fix `fmr-0pxh`. A wrapped continuation line beginning with `|` was recognized as a
-      Pandoc line-block opener; a line block must *open* a block rather than continue a
-      paragraph, so recognition now excludes an opener whose previous line is non-blank in
-      the same container. Output matches Python byte for byte.
+- [x] Fix `fmr-0pxh` in the bridge, at `repair_synthetic_list_looseness`. Output matches
+      Python byte for byte, and upstream now pins the exact bytes as the shared case
+      `preservation.extension.line-block.wrapped-pipe-continuation`.
 - [x] Remove its ledger entry.
 - [x] Confirm no output-parity regression on any shipped document (table above).
 
-Two other fixes were tried first and rejected by the corpus, which is worth recording:
-dropping the synthetic block boundaries to match Python's bridge exactly, and gating them
-on list depth. Both broke `reference.testdoc.plain`, because comrak merges text following
-the token line into the token's own paragraph where marko does not. Those boundaries are
-load-bearing **for this parser**, so "replicate Python exactly" could not be applied to
-the bridge here and the fix belonged in recognition instead.
+Three earlier attempts were rejected, which is worth recording because each one located
+the layer the fix does *not* belong in.
+
+**Not the bridge's block boundaries.** Dropping the synthetic blank lines to match
+Python's bridge exactly, and gating them on list depth, both failed. Python teaches its
+parser about block tokens — `ProtectedBlock` is a real block element and
+`Paragraph.break_paragraph` yields to it — so the parser breaks the paragraph and no
+blank line is needed. comrak cannot be extended that way, so the blank line stands in for
+that break. Without it comrak merges the token into the surrounding paragraph, and at
+`--width 0` renders `Before … TOKEN … After` on one line, which destroys the line
+structure restoration depends on. Here "replicate Python exactly" means replicate the
+*behavior*, and the boundaries are how this parser reaches it.
+
+**Not the scanner.** Excluding a line-block opener whose previous line is non-blank in the
+same container did fix the shape and passed every test then in the tree, but it dropped
+protection for a line block that follows a paragraph — which upstream requires. It was
+reverted once the pin caught up (`2fc45fa`); the corpus case
+`preservation.extension.line-block.adjacency` now carries typography-shaped text so the
+same mistake fails loudly instead of silently.
+
+**The bridge's *observable side effects*.** A blank line is not inert in CommonMark: one
+inside a list makes the whole list loose, and the renderer then spends it on separation
+between items nowhere near the token, which restoration cannot take back. The fix
+re-tightens a list only when every blank line inside it is one the bridge wrote, so an
+authored loose list is untouched. That keeps the parser scaffolding invisible in the
+output, which is the property Python gets for free.
 
 Everything below is pre-existing and belongs in its own change.
 

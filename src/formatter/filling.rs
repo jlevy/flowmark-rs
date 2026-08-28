@@ -2814,6 +2814,7 @@ pub fn fill_markdown(
 
     // === AST transforms (not comrak workarounds) ===
     let transforms_start = perf_enabled.then(Instant::now);
+    repair_synthetic_list_looseness(root, &protected);
     if cleanups {
         doc_cleanups(root);
     }
@@ -2870,6 +2871,56 @@ pub fn fill_markdown(
         record_fill_perf_sample(perf_sample);
     }
     result
+}
+
+/// Restore the authored tightness of lists loosened only by bridge scaffolding.
+///
+/// The preservation bridge inserts a blank line around a protected block token so that
+/// comrak starts a new block there. Python needs no such line: its parser knows the
+/// token is a block element and breaks the paragraph itself. The blank line is therefore
+/// parser scaffolding, and `CommonMark` makes scaffolding of exactly that shape visible —
+/// a blank line inside a list makes the whole list loose, which the renderer then spends
+/// on blank lines between items that restoration cannot take back, because they are
+/// nowhere near the token (fmr-0pxh).
+///
+/// A list is re-tightened only when every blank line inside it is one this bridge wrote.
+/// One authored blank anywhere in the span leaves the list loose, so a list the author
+/// really did write loose stays loose.
+fn repair_synthetic_list_looseness<'a>(root: &'a AstNode<'a>, protected: &ProtectedSource) {
+    let synthetic = protected.synthetic_blank_lines();
+    if synthetic.is_empty() {
+        return;
+    }
+    let blank_lines: Vec<usize> = protected
+        .text
+        .lines()
+        .enumerate()
+        .filter(|(_, line)| line.trim().is_empty())
+        .map(|(index, _)| index + 1)
+        .collect();
+
+    for node in root.descendants() {
+        let mut data = node.data.borrow_mut();
+        let span = data.sourcepos;
+        let NodeValue::List(ref mut list) = data.value else { continue };
+        if list.tight {
+            continue;
+        }
+        // Blank lines strictly inside the span are the ones that decide looseness; a
+        // blank on the closing line is trailing separation comrak folds into the list.
+        let mut interior = blank_lines
+            .iter()
+            .copied()
+            .filter(|line| *line > span.start.line && *line < span.end.line);
+        let mut saw_blank = false;
+        let all_synthetic = interior.all(|line| {
+            saw_blank = true;
+            synthetic.binary_search(&line).is_ok()
+        });
+        if saw_blank && all_synthetic {
+            list.tight = true;
+        }
+    }
 }
 
 /// Apply smart quotes to all text nodes in the AST.

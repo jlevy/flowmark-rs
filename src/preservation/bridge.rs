@@ -24,6 +24,13 @@ pub(crate) struct ProtectedSource {
     pub(crate) tokens: Vec<String>,
     synthetic_block_prefixes: Vec<bool>,
     synthetic_block_suffixes: Vec<bool>,
+    /// 1-based line numbers in `text` holding a blank line this bridge inserted.
+    ///
+    /// The reference implementation teaches its parser about block tokens directly, so
+    /// it needs no such line. comrak cannot be extended that way, so these lines stand
+    /// in for the parser break — and, like the break they replace, they must leave no
+    /// trace in the output. See `repair_synthetic_list_looseness`.
+    synthetic_blank_lines: Vec<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -40,6 +47,11 @@ pub(crate) enum InlineRewriteSegment<'a> {
 }
 
 impl ProtectedSource {
+    /// 1-based protected-text line numbers holding a bridge-inserted blank line.
+    pub(crate) fn synthetic_blank_lines(&self) -> &[usize] {
+        &self.synthetic_blank_lines
+    }
+
     /// Split parser-facing text into mutable gaps and immutable preservation tokens.
     ///
     /// Code-span tokens contribute their CommonMark-normalized body only as rewrite
@@ -227,6 +239,15 @@ fn parse_token(token: &str) -> Result<usize, PreservationError> {
         .map_err(|_| PreservationError("preservation token index exceeds platform size"))
 }
 
+/// 1-based line number of the empty line just closed by the trailing LF of `output`.
+///
+/// Called immediately after pushing the LF that terminates a synthetic blank line, so
+/// the blank line is the one ending at `output.len()`: one less than the line the next
+/// character would open.
+fn line_number_of_last_line(output: &str) -> usize {
+    output.bytes().filter(|byte| *byte == b'\n').count()
+}
+
 pub(crate) fn protect_source(
     source: &NormalizedSource,
     regions: Vec<ProtectedRegion>,
@@ -251,6 +272,7 @@ pub(crate) fn protect_source(
         })
         .collect();
     let mut output = String::with_capacity(source.text.len());
+    let mut synthetic_blank_lines = Vec::new();
     let mut previous_end = 0;
     for ((region, token), synthetic_suffix) in
         regions.iter().zip(&tokens).zip(&synthetic_block_suffixes)
@@ -263,6 +285,7 @@ pub(crate) fn protect_source(
                 // inside a quote or list scaffold; otherwise it can merge the token
                 // into the preceding paragraph and restoration would discard prose.
                 output.push('\n');
+                synthetic_blank_lines.push(line_number_of_last_line(&output));
             }
             output.push_str(&region.scaffold_prefix);
             output.push_str(token);
@@ -271,6 +294,7 @@ pub(crate) fn protect_source(
                 // Keep following Markdown out of comrak's token paragraph. Restoration
                 // removes this parser-only blank line using the aligned side-table bit.
                 output.push('\n');
+                synthetic_blank_lines.push(line_number_of_last_line(&output));
             }
         } else {
             output.push_str(token);
@@ -284,6 +308,7 @@ pub(crate) fn protect_source(
         tokens,
         synthetic_block_prefixes,
         synthetic_block_suffixes,
+        synthetic_blank_lines,
     })
 }
 
@@ -384,12 +409,9 @@ pub(crate) fn restore_source(
                 return Err(PreservationError("protected block token lost its structural LF"));
             }
             gaps[index + 1].remove(0);
-            if protected.synthetic_block_suffixes[index] {
-                if !gaps[index + 1].starts_with('\n') {
-                    return Err(PreservationError(
-                        "protected block token lost its synthetic paragraph boundary",
-                    ));
-                }
+            // Remove the synthetic paragraph boundary when the renderer kept it. A
+            // tight list drops it on its own, and there is then nothing to take back.
+            if protected.synthetic_block_suffixes[index] && gaps[index + 1].starts_with('\n') {
                 gaps[index + 1].remove(0);
             }
         }
@@ -429,6 +451,7 @@ mod tests {
             tokens: vec![],
             synthetic_block_prefixes: vec![],
             synthetic_block_suffixes: vec![],
+            synthetic_blank_lines: vec![],
         };
         let metrics = protected.measure_inline_text(&escaped).expect("valid authored escapes");
         assert_eq!(metrics.first_width, 5);

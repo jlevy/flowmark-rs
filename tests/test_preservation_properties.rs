@@ -146,6 +146,14 @@ const MODES: &[Mode] = &[
     },
 ];
 
+/// Format at an explicit width with every optional transform off.
+///
+/// The `MODES` table fixes each mode's width; list spacing only misbehaves when wrapping
+/// actually splits a line, so these cases need to choose the width directly.
+fn format_at_width(width: usize, input: &str) -> String {
+    fill_markdown(input, false, width, false, false, false, false, None, ListSpacing::Preserve)
+}
+
 fn format_with(mode: Mode, input: &str) -> String {
     fill_markdown(
         input,
@@ -268,6 +276,48 @@ fn reviewed_regression_shapes_stay_fixed() {
             assert_eq!(once, twice, "{shape:?} in mode {} must be a fixed point", mode.name);
         }
     }
+}
+
+/// The bridge's synthetic block boundary must not be observable in list spacing.
+///
+/// A wrapped list continuation beginning with `|` is a Pandoc line block, so the bridge
+/// protects it and gives comrak a blank line where Python's parser simply breaks the
+/// paragraph. That blank line loosened the whole list, and the renderer then spent it on
+/// separation between items far from the token, which restoration cannot take back
+/// (fmr-0pxh). The shared corpus pins the exact bytes as
+/// `preservation.extension.line-block.wrapped-pipe-continuation`; this covers the
+/// invariant behind it in both directions, which no single golden can.
+#[test]
+fn synthetic_block_boundaries_leave_list_spacing_as_authored() {
+    let tight = concat!(
+        "- Bead: fmr-hr43 | Scope: Phase 8.5/8.6 | Repo: playbook\n",
+        "- Depends on: WI-1, WI-4\n",
+        "- Findings: F1-F12 (12 lessons + anti-patterns)\n",
+    );
+    let wrapped = format_at_width(40, tight);
+    assert_eq!(
+        wrapped,
+        concat!(
+            "- Bead: fmr-hr43 | Scope: Phase 8.5/8.6\n",
+            "  | Repo: playbook\n",
+            "- Depends on: WI-1, WI-4\n",
+            "- Findings: F1-F12 (12 lessons +\n",
+            "  anti-patterns)\n",
+        ),
+        "wrapping must not loosen a tight list around a protected line block"
+    );
+    assert_eq!(format_at_width(40, &wrapped), wrapped, "the wrapped form must be a fixed point");
+
+    // The repair must not reach a list the author really did write loose.
+    let loose = concat!(
+        "- Bead: fmr-hr43 | Scope: Phase 8.5/8.6\n",
+        "  | Repo: playbook\n",
+        "\n",
+        "- Depends on: WI-1, WI-4\n",
+        "\n",
+        "- Findings: F1-F12\n",
+    );
+    assert_eq!(format_at_width(40, loose), loose, "an authored loose list must stay loose");
 }
 
 /// Pins a shape the fixed-point harness still reports.
