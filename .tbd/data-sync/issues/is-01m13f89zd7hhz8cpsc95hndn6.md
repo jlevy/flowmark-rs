@@ -3,15 +3,19 @@ type: is
 id: is-01m13f89zd7hhz8cpsc95hndn6
 title: Three test files hard-code target/debug, so cargo test --release fails spuriously
 kind: bug
-status: open
+status: closed
 priority: 2
-version: 1
+version: 3
 labels:
   - testing
 dependencies: []
 parent_id: is-01khq6kjwwq12m46jr9e3v2hfw
 created_at: 2026-08-28T06:00:01.261Z
-updated_at: 2026-08-28T06:00:01.261Z
+updated_at: 2026-09-04T08:18:00.610Z
+closed_at: 2026-09-04T08:18:00.609Z
+close_reason: "Fixed by 10f44c2 (PR #82); the hard-coded debug paths no longer exist."
+resolution: null
+duplicate_of: null
 ---
 `tests/test_known_parity_gaps.rs`, `tests/test_cli_file_discovery.rs` and
 `tests/test_skill_cli.rs` locate the CLI as `CARGO_MANIFEST_DIR/target/debug/flowmark`.
@@ -48,3 +52,7 @@ prerequisite build step. Switch the three stragglers to it and delete the
 
 Keep the "fail loudly rather than skip" intent of the current comment — with
 `CARGO_BIN_EXE_*` the binary cannot be missing, so the property is stronger, not weaker.
+
+## Notes
+
+Release review disposition (2026-09-04): already fixed on main by 10f44c2 / PR #82. All three stragglers now use env!(CARGO_BIN_EXE_flowmark), including platform suffix/profile correctness. The release audit will still run cargo test --release --all-features as non-vacuous confirmation.

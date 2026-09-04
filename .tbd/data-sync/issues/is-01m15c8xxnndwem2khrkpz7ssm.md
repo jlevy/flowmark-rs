@@ -5,11 +5,11 @@ title: Batch aborts on the first invalid-UTF-8 file, and the error does not name
 kind: bug
 status: open
 priority: 2
-version: 1
+version: 2
 labels: []
 dependencies: []
 created_at: 2026-08-28T23:46:24.820Z
-updated_at: 2026-08-28T23:46:24.820Z
+updated_at: 2026-09-04T08:22:28.612Z
 ---
 Running the formatter over a directory stops at the first non-UTF-8 file and leaves every later file unprocessed. The error is 'Error: input is not valid UTF-8' with no path, so over a large tree you cannot tell which file failed.
 
@@ -22,3 +22,7 @@ Two separable improvements:
 2. Skip the unreadable file, keep formatting the rest, and report a non-zero exit at the end — a batch formatter reporting partial completion as a hard stop is the worse default.
 
 Shared behavior, so it needs the upstream-first flow: agree the intended behavior in Python, replicate in flowmark-rs.
+
+## Notes
+
+Release review update (2026-09-04): the v0.3.2 diagnostic regression (missing offending path) is fixed in synchronized prep work fm-vc1q/fmr-unyc with shared and native tests. This bead remains open only for the separate behavior improvement of continuing past invalid files and reporting aggregate failure at batch end; that broader change is not required to restore last-release behavior.
