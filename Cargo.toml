@@ -31,7 +31,7 @@ default = ["cli"]
 cli = ["clap", "anyhow", "rayon"]
 
 [dependencies]
-comrak = { version = "0.51", default-features = false }
+comrak = { version = "0.54", default-features = false }
 regex = "1.12"
 thiserror = "2.0"
 toml = "1.0"
