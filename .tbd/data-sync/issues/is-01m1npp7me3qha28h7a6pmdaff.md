@@ -3,15 +3,19 @@ type: is
 id: is-01m1npp7me3qha28h7a6pmdaff
 title: Dry-run, publish, and verify flowmark-rs 0.4.0
 kind: task
-status: in_progress
+status: closed
 priority: 1
-version: 4
+version: 5
 labels:
   - release
 dependencies: []
 parent_id: is-01m1nn49g1bds1ekgvg22r297p
 created_at: 2026-09-04T07:56:17.421Z
-updated_at: 2026-09-04T11:27:45.368Z
+updated_at: 2026-09-04T11:34:15.760Z
+closed_at: 2026-09-04T11:34:15.750Z
+close_reason: "Completed: mandatory dry run green; crate 0.4.0, flowmark-rs PyPI 0.4.0, GitHub v0.4.0 assets, and Homebrew 0.4.0 all published and independently verified. Release runs 33866506716, 33867147690, and 33867336678; tap commits 9ec1dd9 and strict-audit correction 2ac6ca2."
+resolution: null
+duplicate_of: null
 ---
 Run the documented release workflow dry-run first; only if green, publish crates.io, then PyPI and GitHub artifacts, verify versioned binaries and aliases on supported channels, update and verify Homebrew, and record artifact provenance and post-publication smoke results.
 
