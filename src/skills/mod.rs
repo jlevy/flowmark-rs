@@ -59,11 +59,11 @@ const RS_VERSION_PLACEHOLDER: &str = "__FLOWMARK_RS_VERSION__"; // this package 
 /// This port's own discovery pin: the fallback flowmark-rs version used when the
 /// running build's version is not a real, PyPI-installable release. Must be a real
 /// release (guarded by tests).
-pub const FLOWMARK_RS_DISCOVERY_VERSION: &str = "0.3.2";
+pub const FLOWMARK_RS_DISCOVERY_VERSION: &str = "0.4.0";
 
 /// Sibling Python `flowmark` discovery pin substituted for `__FLOWMARK_VERSION__`. The
 /// two packages are numbered independently; this tracks the Python parity baseline.
-pub const FLOWMARK_PY_DISCOVERY_VERSION: &str = "0.7.3";
+pub const FLOWMARK_PY_DISCOVERY_VERSION: &str = "0.8.0";
 
 /// Project-local skill directory name.
 pub const SKILL_DIRNAME: &str = "flowmark";

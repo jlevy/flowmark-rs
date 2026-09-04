@@ -1387,21 +1387,96 @@ fn fence_closes(payload: &str, character: u8, length: usize) -> bool {
     bytes.len() >= length && bytes.iter().all(|byte| *byte == character)
 }
 
-fn opaque_line_flags(source: &str, lines: &[Line]) -> Vec<bool> {
+/// Classify documents whose only opaque Markdown blocks are root-level fences.
+///
+/// The full scanner tracks lazy container continuation and exact list columns. Most
+/// documents need none of that work: their fences start at column zero and they have no
+/// possible indented code. Return `None` at the first ambiguous line so complex syntax
+/// still uses the exact implementation below.
+fn simple_opaque_markdown_line_flags(source: &str) -> Option<Vec<bool>> {
+    // Keep any carriage return in the physical payload so this conservative path
+    // agrees with `build_lines` even when called before source normalization.
+    let lines: Vec<&str> = source.split_terminator('\n').collect();
     let mut covered = vec![false; lines.len()];
 
-    if lines.first().is_some_and(|line| {
-        line.start == 0 && line.frames.is_empty() && &source[line.start..line.content_end] == "---"
-    }) {
-        if let Some(closer) = lines
-            .iter()
-            .skip(1)
-            .position(|line| matches!(&source[line.start..line.content_end], "---" | "..."))
+    if lines.first().is_some_and(|line| *line == "---") {
+        if let Some(relative) = lines.iter().skip(1).position(|line| matches!(*line, "---" | "..."))
         {
-            covered[..=closer + 1].fill(true);
+            covered[..=relative + 1].fill(true);
         }
     }
 
+    let mut fence = None::<(u8, usize)>;
+    let mut previous_blank = true;
+    let mut previous_covered = false;
+    for (index, line) in lines.iter().enumerate() {
+        if covered[index] {
+            previous_blank = line.trim_matches([' ', '\t']).is_empty();
+            previous_covered = true;
+            continue;
+        }
+
+        if let Some((character, length)) = fence {
+            covered[index] = true;
+            let bytes = line.as_bytes();
+            let (payload_start, _) = consume_indent(bytes, 0, bytes.len(), 0, 3);
+            let payload = line[payload_start..].trim_end_matches([' ', '\t']);
+            if fence_closes(payload, character, length) {
+                fence = None;
+            }
+            previous_blank = false;
+            previous_covered = true;
+            continue;
+        }
+
+        let bytes = line.as_bytes();
+        let blank = line.trim_matches([' ', '\t']).is_empty();
+        let (whitespace_end, whitespace_column) = consume_whitespace(bytes, 0, bytes.len(), 0);
+        if !blank && (index == 0 || previous_blank || previous_covered) && whitespace_column >= 4 {
+            return None;
+        }
+
+        let payload = line.trim_end_matches([' ', '\t']);
+        if let Some(opened) = fence_opener(payload) {
+            covered[index] = true;
+            fence = Some(opened);
+            previous_blank = false;
+            previous_covered = true;
+            continue;
+        }
+
+        // An indented root opener or an opener after an explicit quote/list marker can
+        // have container-relative closing rules. Leave those documents to the exact
+        // scanner. Invalid backtick openers remain ordinary prose and need no fallback.
+        let mut frames = Vec::new();
+        let (content_start, content_column, _) =
+            parse_new_frames(bytes, 0, bytes.len(), 0, &mut frames);
+        if !frames.is_empty() {
+            let (payload_start, _) =
+                consume_indent(bytes, content_start, bytes.len(), content_column, 3);
+            let nested_payload = line[payload_start..].trim_end_matches([' ', '\t']);
+            if fence_opener(nested_payload).is_some() {
+                return None;
+            }
+            let (_, nested_column) =
+                consume_whitespace(bytes, content_start, bytes.len(), content_column);
+            if !blank && nested_column.saturating_sub(content_column) >= 4 {
+                return None;
+            }
+        } else if whitespace_end > 0 && fence_opener(&line[whitespace_end..]).is_some() {
+            return None;
+        }
+
+        previous_blank = blank;
+        previous_covered = false;
+    }
+    Some(covered)
+}
+
+/// Mark every physical line belonging to a fenced code block and return the source
+/// ranges occupied by each opening fence's info string.
+fn mark_fenced_code_lines(source: &str, lines: &[Line], covered: &mut [bool]) -> Vec<ByteRange> {
+    let mut info_ranges = Vec::new();
     let mut index = 0;
     while index < lines.len() {
         if covered[index] {
@@ -1412,6 +1487,10 @@ fn opaque_line_flags(source: &str, lines: &[Line]) -> Vec<bool> {
             index += 1;
             continue;
         };
+
+        let (payload_start, _) = line_payload_bounds(source, &lines[index]);
+        info_ranges.push((payload_start + length, lines[index].content_end));
+
         let mut final_index = index;
         for candidate in index + 1..lines.len() {
             let Some(payload) =
@@ -1427,6 +1506,41 @@ fn opaque_line_flags(source: &str, lines: &[Line]) -> Vec<bool> {
         covered[index..=final_index].fill(true);
         index = final_index + 1;
     }
+    info_ranges
+}
+
+/// Identify Markdown lines that parser-facing formatter rewrites must leave opaque.
+pub(crate) fn opaque_markdown_line_flags(source: &str) -> Vec<bool> {
+    if let Some(covered) = simple_opaque_markdown_line_flags(source) {
+        return covered;
+    }
+    let lines = build_lines(source);
+    opaque_line_flags(source, &lines)
+}
+
+/// Return the exact source ranges of fenced-code opening info strings.
+pub(crate) fn fenced_code_info_ranges(source: &str) -> Vec<ByteRange> {
+    let lines = build_lines(source);
+    let mut covered = vec![false; lines.len()];
+    mark_fenced_code_lines(source, &lines, &mut covered)
+}
+
+fn opaque_line_flags(source: &str, lines: &[Line]) -> Vec<bool> {
+    let mut covered = vec![false; lines.len()];
+
+    if lines.first().is_some_and(|line| {
+        line.start == 0 && line.frames.is_empty() && &source[line.start..line.content_end] == "---"
+    }) {
+        if let Some(closer) = lines
+            .iter()
+            .skip(1)
+            .position(|line| matches!(&source[line.start..line.content_end], "---" | "..."))
+        {
+            covered[..=closer + 1].fill(true);
+        }
+    }
+
+    mark_fenced_code_lines(source, lines, &mut covered);
 
     let mut index = 0;
     while index < lines.len() {
@@ -2634,6 +2748,7 @@ fn inline_scopes(
 
     for line in lines {
         let payload = line.payload(source);
+        let setext_boundary = is_setext_heading(payload);
         if excluded[line.index]
             || payload.is_empty()
             || paragraph_key.is_some_and(|key| key != line.frames.as_slice())
@@ -2664,6 +2779,10 @@ fn inline_scopes(
         paragraph_start.get_or_insert(payload_start);
         paragraph_key.get_or_insert(line.frames.as_slice());
         paragraph_end = line.end;
+        if setext_boundary {
+            flush(&mut scopes, &mut paragraph_start, paragraph_end);
+            paragraph_key = None;
+        }
     }
     flush(&mut scopes, &mut paragraph_start, paragraph_end);
     scopes
@@ -2778,6 +2897,27 @@ mod tests {
             "ordinary prose: punctuation, [links](target), and hyphen-words"
         ));
     }
+
+    #[test]
+    fn simple_opaque_line_path_matches_exact_root_fence_classification() {
+        let source = "# Heading\n\n- A list item whose continuation\n    remains prose.\n\n```rust\n    literal code\n```\n\n  ``` ``not a fence``\n";
+        let simple = simple_opaque_markdown_line_flags(source).expect("simple root-fence shape");
+        let exact = opaque_line_flags(source, &build_lines(source));
+        assert_eq!(simple, exact);
+    }
+
+    #[test]
+    fn simple_opaque_line_path_defers_ambiguous_code_containers() {
+        for source in [
+            "> ```rust\n> code\n> ```\n",
+            "- item\n\n    indented code\n",
+            "  ```rust\ncode\n  ```\n",
+            "```\ncode\n```\n    indented code\n",
+        ] {
+            assert!(simple_opaque_markdown_line_flags(source).is_none(), "accepted {source:?}");
+        }
+    }
+
     use crate::preservation::normalization::normalize_source;
 
     #[test]
