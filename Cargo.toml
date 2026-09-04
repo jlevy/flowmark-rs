@@ -1,6 +1,6 @@
 [package]
 name = "flowmark"
-version = "0.3.2"
+version = "0.4.0"
 edition = "2024"
 rust-version = "1.85"
 license = "MIT"
@@ -65,7 +65,7 @@ unsafe_code = "deny"
 warnings = "deny"
 
 [package.metadata.parity]
-version = "0.7.3"
+version = "0.8.0"
 
 # The Python v0.7.2 sync ported the cross-agent skill install, which changed
 # `skills::install_skill` from 1 to 3 parameters. That was a knowing, accepted breaking

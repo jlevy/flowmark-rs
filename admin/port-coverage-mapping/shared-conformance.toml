@@ -1,5 +1,5 @@
 schema_version = 1
-upstream_commit = "c2c4b5fe26d1d94f89414858fd3f9df211b26dcc"
+upstream_commit = "7dfd0421d483a42dee29edef999f866b04294720"
 manifest = "tests/parity_corpus/manifest.toml"
 rust_runner = "tests/test_conformance.rs"
 divergence_ledger = "tests/parity_corpus_known_divergences.toml"
@@ -14,6 +14,12 @@ status = "implemented"
 id = "FM-CODE-SPAN-001"
 python_bead = "fm-ocpw"
 rust_bead = "fm-82vu"
+status = "implemented"
+
+[[change]]
+id = "FM-CODE-SPAN-002"
+python_bead = "fm-eo8r"
+rust_bead = "fmr-4phz"
 status = "implemented"
 
 [[change]]
@@ -101,6 +107,24 @@ rust_bead = "fmr-sh2b"
 status = "implemented"
 
 [[change]]
+id = "FM-FENCED-CODE-002"
+python_bead = "fm-obf8"
+rust_bead = "fmr-k9gi"
+status = "implemented"
+
+[[change]]
+id = "FM-FENCED-CODE-003"
+python_bead = "fm-obf8"
+rust_bead = "fmr-k9gi"
+status = "implemented"
+
+[[change]]
+id = "FM-FENCED-CODE-004"
+python_bead = "fm-obf8"
+rust_bead = "fmr-k9gi"
+status = "implemented"
+
+[[change]]
 id = "FM-LINK-REF-DEF-001"
 python_bead = "fm-10ra"
 rust_bead = "fmr-ws7q"
@@ -128,6 +152,12 @@ status = "known-divergences"
 id = "FM-PRESERVE-CORE-001"
 python_bead = "fm-2tto"
 rust_bead = "fm-1mq0"
+status = "implemented"
+
+[[change]]
+id = "FM-PRESERVE-CORE-002"
+python_bead = "fm-0dmt"
+rust_bead = "fmr-zl5s"
 status = "implemented"
 
 [[change]]

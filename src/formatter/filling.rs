@@ -222,8 +222,9 @@ use crate::config::{DEFAULT_MIN_LINE_LEN, ListSpacing};
 use crate::formatter::markdown::flowmark_comrak_options;
 use crate::parser::frontmatter::split_frontmatter;
 use crate::preservation::{
-    InlineRewriteSegment, NormalizedSource, PreservationError, ProtectedSource, finalize_output,
-    normalize_source, protect_source, restore_source, scan_protected_regions,
+    InlineRewriteSegment, NormalizedSource, PreservationError, ProtectedSource,
+    fenced_code_info_ranges, finalize_output, normalize_source, opaque_markdown_line_flags,
+    protect_source, restore_source, scan_protected_regions,
 };
 use crate::transform::cleanups::doc_cleanups;
 use crate::typography::ellipses::ellipses as apply_ellipses;
@@ -419,6 +420,9 @@ static NUMBERED_ITEM_TWO_SPACES: LazyLock<Regex> =
 /// and, for an unterminated fence, leaves an empty line that the next format run
 /// collapses, so the output is not a fixed point (fmr-00e2).
 fn normalize_blank_lines(text: &str) -> String {
+    if !BLANK_LINE_WS.is_match(text) {
+        return text.to_string();
+    }
     transform_outside_code_fences(text, |line| {
         vec![BLANK_LINE_WS.replace_all(line, "").into_owned()]
     })
@@ -437,22 +441,15 @@ fn normalize_numbered_lists(text: &str) -> String {
     if !text.contains(".  ") {
         return text.to_string();
     }
-    let mut result = String::new();
-    for line in text.lines() {
+    transform_outside_code_fences(text, |line| {
         if let Some(caps) = NUMBERED_ITEM_TWO_SPACES.captures(line) {
             let num = &caps[1];
             let fixed = line.replacen(&format!("{num}.  "), &format!("{num}. "), 1);
-            result.push_str(&fixed);
+            vec![fixed]
         } else {
-            result.push_str(line);
+            vec![line.to_string()]
         }
-        result.push('\n');
-    }
-    // Remove trailing newline if original didn't have one
-    if !text.ends_with('\n') && result.ends_with('\n') {
-        result.pop();
-    }
-    result
+    })
 }
 
 /// COMRAK-WORKAROUND12: Apply all text-level normalizations to comrak output.
@@ -463,59 +460,29 @@ fn normalize_comrak_output(text: &str) -> String {
     collapse_blank_lines_outside_code(&text)
 }
 
-/// Check if a trimmed line is a closing fence matching the given fence string.
-fn is_closing_fence(trimmed: &str, fence_str: &str) -> bool {
-    if fence_str.is_empty() || !trimmed.starts_with(fence_str) {
-        return false;
-    }
-    let fence_char = fence_str.chars().next().unwrap_or('`');
-    trimmed[fence_str.len()..].chars().all(|c| c == fence_char || c.is_whitespace())
-}
-
-/// Detect an opening code fence and return the fence string if found.
-fn detect_opening_fence(trimmed: &str) -> Option<String> {
-    let is_backtick_fence = trimmed.starts_with("```");
-    let is_tilde_fence = trimmed.starts_with("~~~");
-    if is_backtick_fence || is_tilde_fence {
-        let fence_char = if is_backtick_fence { '`' } else { '~' };
-        let info = trimmed.trim_start_matches(fence_char);
-        // CommonMark 0.31.2 section 4.5: a backtick fence's info string may not contain
-        // a backtick. Such a line opens no code block, so it must stay eligible for the
-        // escape protection below; otherwise comrak resolves the escape and the
-        // authored backslash is lost. Tilde fences carry no such restriction.
-        if is_backtick_fence && info.contains('`') {
-            return None;
-        }
-        let fence_len = trimmed.len() - info.len();
-        Some(std::iter::repeat_n(fence_char, fence_len).collect())
-    } else {
-        None
-    }
-}
-
 /// Process text line-by-line, applying a transformation only outside fenced code blocks.
 ///
 /// `process_outside` receives each non-code, non-fence line and returns zero or more
 /// output lines. Code block lines and fence lines are included in the output unchanged.
-fn transform_outside_code_fences<F>(text: &str, mut process_outside: F) -> String
+fn transform_outside_code_fences<F>(text: &str, process_outside: F) -> String
+where
+    F: FnMut(&str) -> Vec<String>,
+{
+    let opaque = opaque_markdown_line_flags(text);
+    transform_outside_opaque_lines(text, &opaque, process_outside)
+}
+
+fn transform_outside_opaque_lines<F>(text: &str, opaque: &[bool], mut process_outside: F) -> String
 where
     F: FnMut(&str) -> Vec<String>,
 {
     let lines: Vec<&str> = text.lines().collect();
+    debug_assert_eq!(lines.len(), opaque.len());
     let had_trailing_newline = text.ends_with('\n');
     let mut result: Vec<String> = Vec::new();
-    let mut in_code = false;
-    let mut fence_str = String::new();
 
-    for line in &lines {
-        if in_code {
-            result.push((*line).to_string());
-            if is_closing_fence(line.trim(), &fence_str) {
-                in_code = false;
-            }
-        } else if let Some(fs) = detect_opening_fence(line.trim()) {
-            fence_str = fs;
-            in_code = true;
+    for (index, line) in lines.iter().enumerate() {
+        if opaque[index] {
             result.push((*line).to_string());
         } else {
             result.extend(process_outside(line));
@@ -532,28 +499,20 @@ where
 /// Collapse multiple blank lines to single blank lines, but preserve
 /// content inside code blocks (fenced with backticks or tildes).
 ///
-/// Uses the fence helpers directly (rather than `transform_outside_code_fences`)
-/// because it needs to reset the blank-line counter at fence boundaries.
+/// Uses scanner flags directly (rather than `transform_outside_code_fences`) because it
+/// needs to reset the blank-line counter at code-block boundaries.
 fn collapse_blank_lines_outside_code(text: &str) -> String {
     let lines: Vec<&str> = text.lines().collect();
+    let opaque = opaque_markdown_line_flags(text);
+    debug_assert_eq!(lines.len(), opaque.len());
     let had_trailing_newline = text.ends_with('\n');
     let mut result: Vec<&str> = Vec::new();
-    let mut in_code = false;
-    let mut fence_str = String::new();
     let mut consecutive_empty: usize = 0;
 
-    for line in &lines {
-        if in_code {
+    for (index, line) in lines.iter().enumerate() {
+        if opaque[index] {
             result.push(line);
-            if is_closing_fence(line.trim(), &fence_str) {
-                in_code = false;
-                consecutive_empty = 0;
-            }
-        } else if let Some(fs) = detect_opening_fence(line.trim()) {
-            fence_str = fs;
-            in_code = true;
             consecutive_empty = 0;
-            result.push(line);
         } else if line.trim().is_empty() {
             consecutive_empty += 1;
             if consecutive_empty <= 1 {
@@ -596,20 +555,26 @@ static ANGLE_AUTOLINK_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 /// COMRAK-WORKAROUND3: Replace `<url>` with PUA-wrapped text so comrak cannot
 /// merge them with bare-URL autolinks. Skips code fences and FNDEF/REFDEF markers.
-fn protect_autolinks(text: &str) -> String {
+fn protect_autolinks(text: &str, known_opaque: Option<&[bool]>) -> String {
+    if !ANGLE_AUTOLINK_RE.is_match(text) {
+        return text.to_string();
+    }
     let lines: Vec<&str> = text.lines().collect();
+    let computed_opaque;
+    let opaque = if let Some(opaque) = known_opaque {
+        opaque
+    } else {
+        computed_opaque = opaque_markdown_line_flags(text);
+        &computed_opaque
+    };
+    debug_assert_eq!(lines.len(), opaque.len());
     let had_trailing_newline = text.ends_with('\n');
     let mut result_lines: Vec<String> = Vec::new();
-    let mut in_code = false;
-    let mut fence_str = String::new();
     let mut in_html_comment = false;
 
-    for line in &lines {
-        if in_code {
+    for (index, line) in lines.iter().enumerate() {
+        if opaque[index] {
             result_lines.push((*line).to_string());
-            if is_closing_fence(line.trim(), &fence_str) {
-                in_code = false;
-            }
             continue;
         }
         if in_html_comment {
@@ -617,12 +582,6 @@ fn protect_autolinks(text: &str) -> String {
             if line.contains("-->") {
                 in_html_comment = false;
             }
-            continue;
-        }
-        if let Some(fs) = detect_opening_fence(line.trim()) {
-            fence_str = fs;
-            in_code = true;
-            result_lines.push((*line).to_string());
             continue;
         }
         // Skip FNDEF/REFDEF markers — their content contains raw autolinks
@@ -675,8 +634,18 @@ fn restore_autolinks(text: &str) -> String {
 
 /// COMRAK-WORKAROUND13: Replace `&` in HTML entities with a PUA placeholder
 /// so comrak cannot decode them. Operates outside fenced code blocks.
-fn protect_html_entities(text: &str) -> String {
-    transform_outside_code_fences(text, |line| {
+fn protect_html_entities(text: &str, known_opaque: Option<&[bool]>) -> String {
+    if !HTML_ENTITY_RE.is_match(text) {
+        return text.to_string();
+    }
+    let computed_opaque;
+    let opaque = if let Some(opaque) = known_opaque {
+        opaque
+    } else {
+        computed_opaque = opaque_markdown_line_flags(text);
+        &computed_opaque
+    };
+    transform_outside_opaque_lines(text, opaque, |line| {
         let replaced = HTML_ENTITY_RE.replace_all(line, |caps: &regex::Captures| {
             // Replace leading '&' with PUA char, keep the rest (e.g., "amp;")
             format!("{ENTITY_AMP}{}", &caps[0][1..])
@@ -708,6 +677,9 @@ static FOOTNOTE_DEF_START: LazyLock<Regex> = LazyLock::new(|| {
 /// position of each definition in the AST. The destination map drives reference-image
 /// inlining (see `inline_image_refs`).
 fn extract_link_ref_defs(text: &str) -> (HashMap<String, String>, String) {
+    if !LINK_REF_DEF.is_match(text) {
+        return (HashMap::new(), text.to_string());
+    }
     let mut defs: HashMap<String, String> = HashMap::new();
     let result = transform_outside_code_fences(text, |line| {
         if let Some(caps) = LINK_REF_DEF.captures(line) {
@@ -761,26 +733,19 @@ const FNDEF_MARKER_START: &str = "<!-- \u{F002}FNDEF";
 /// preserve as an `HtmlBlock` at the original position. Without this, comrak moves
 /// referenced footnotes to the end of the AST and drops unreferenced ones.
 fn extract_footnote_defs(text: &str) -> String {
+    if !text.lines().any(|line| FOOTNOTE_DEF_START.is_match(line)) {
+        return text.to_string();
+    }
     let lines: Vec<&str> = text.lines().collect();
+    let opaque = opaque_markdown_line_flags(text);
+    debug_assert_eq!(lines.len(), opaque.len());
     let had_trailing_newline = text.ends_with('\n');
     let mut result_lines: Vec<String> = Vec::new();
-    let mut in_code = false;
-    let mut fence_str = String::new();
     let mut i = 0;
 
     while i < lines.len() {
         let line = lines[i];
-        if in_code {
-            if is_closing_fence(line.trim(), &fence_str) {
-                in_code = false;
-            }
-            result_lines.push(line.to_string());
-            i += 1;
-            continue;
-        }
-        if let Some(fs) = detect_opening_fence(line.trim()) {
-            fence_str = fs;
-            in_code = true;
+        if opaque[i] {
             result_lines.push(line.to_string());
             i += 1;
             continue;
@@ -1104,11 +1069,69 @@ fn apply_typography_to_fndef_bodies(text: &str, do_smartquotes: bool, do_ellipse
 /// non-fenced line, replacements are applied uniformly (including inside inline code
 /// spans) because Comrak can strip escapes even in code-span-like contexts such as GFM
 /// table cells (P8).
-fn protect_escapes_outside_code(text: &str, escape_set: &[char]) -> String {
-    transform_outside_code_fences(text, |line| {
+fn has_protectable_escape(text: &str, escape_set: &[char]) -> bool {
+    text.as_bytes()
+        .windows(2)
+        .any(|pair| pair[0] == b'\\' && escape_set.contains(&char::from(pair[1])))
+}
+
+fn protect_escapes_outside_code(
+    text: &str,
+    escape_set: &[char],
+    known_opaque: Option<&[bool]>,
+) -> String {
+    if !has_protectable_escape(text, escape_set) {
+        return text.to_string();
+    }
+    let computed_opaque;
+    let opaque = if let Some(opaque) = known_opaque {
+        opaque
+    } else {
+        computed_opaque = opaque_markdown_line_flags(text);
+        &computed_opaque
+    };
+    transform_outside_opaque_lines(text, opaque, |line| {
         let processed = replace_escapes_in_line(line, escape_set);
         vec![processed]
     })
+}
+
+/// Protect escapes in a fenced code block's info-string suffix.
+///
+/// Python's parser decodes backslash escapes only in the first, language-like token and
+/// retains the remaining info string source-exactly. Comrak decodes escapes throughout
+/// the info string. Encode the suffix before parsing so the renderer can restore it,
+/// and normalize the separating whitespace to the single space Python emits.
+fn protect_fence_info_extras(text: &str, escape_set: &[char]) -> String {
+    if !text.contains("```") && !text.contains("~~~") {
+        return text.to_string();
+    }
+
+    let ranges = fenced_code_info_ranges(text);
+    if ranges.is_empty() {
+        return text.to_string();
+    }
+
+    let mut output = String::with_capacity(text.len());
+    let mut cursor = 0;
+    for (start, end) in ranges {
+        output.push_str(&text[cursor..start]);
+        let info = text[start..end].trim_matches([' ', '\t']);
+        if let Some(separator_start) = info.find([' ', '\t']) {
+            let language = &info[..separator_start];
+            let extra = info[separator_start..].trim_start_matches([' ', '\t']);
+            output.push_str(language);
+            if !extra.is_empty() {
+                output.push(' ');
+                output.push_str(&replace_escapes_in_line(extra, escape_set));
+            }
+        } else {
+            output.push_str(info);
+        }
+        cursor = end;
+    }
+    output.push_str(&text[cursor..]);
+    output
 }
 
 /// COMRAK-WORKAROUND4: Replace `\<char>` escape sequences with PUA placeholders in a
@@ -2777,7 +2800,7 @@ pub fn fill_markdown(
     let (ref_defs, text_without_defs) = extract_link_ref_defs(&text);
     // Shield escaped opening brackets before reference-link regexes run. An
     // authored `\[label]` is literal Markdown, not a shortcut reference link.
-    let text_without_defs = protect_escapes_outside_code(&text_without_defs, &['[']);
+    let text_without_defs = protect_escapes_outside_code(&text_without_defs, &['['], None);
     text = inline_image_refs(&text_without_defs, &ref_defs);
     text = encode_ref_links(&text, &ref_defs);
 
@@ -2791,17 +2814,28 @@ pub fn fill_markdown(
         text = apply_typography_to_fndef_bodies(&text, smartquotes, ellipses);
     }
 
-    // COMRAK-WORKAROUND3: Protect angle-bracket autolinks from comrak parsing.
-    text = protect_autolinks(&text);
+    // COMRAK-WORKAROUND4: Protect fenced-code info-string suffixes before the inline
+    // placeholders below change byte offsets. Those inline passes preserve line count
+    // and cannot create a code block, so they share this exact source classification.
+    text = protect_fence_info_extras(&text, ESCAPE_CHARS);
+    let needs_inline_protection = ANGLE_AUTOLINK_RE.is_match(&text)
+        || HTML_ENTITY_RE.is_match(&text)
+        || has_protectable_escape(&text, ESCAPE_CHARS);
+    if needs_inline_protection {
+        let opaque = opaque_markdown_line_flags(&text);
 
-    // COMRAK-WORKAROUND13: Protect HTML entities from comrak decoding.
-    text = protect_html_entities(&text);
+        // COMRAK-WORKAROUND3: Protect angle-bracket autolinks from comrak parsing.
+        text = protect_autolinks(&text, Some(&opaque));
 
-    // COMRAK-WORKAROUND4: Replace `\x` escape sequences with PUA placeholders.
-    // Each `\x` is 2 chars, so use a 2-char PUA placeholder to preserve width
-    // during line wrapping. Uses a single-pass scan per line instead of 32 sequential
-    // `.replace()` calls.
-    text = protect_escapes_outside_code(&text, ESCAPE_CHARS);
+        // COMRAK-WORKAROUND13: Protect HTML entities from comrak decoding.
+        text = protect_html_entities(&text, Some(&opaque));
+
+        // COMRAK-WORKAROUND4: Replace `\x` escape sequences with PUA placeholders.
+        // Each `\x` is 2 chars, so use a 2-char PUA placeholder to preserve width
+        // during line wrapping. Uses a single-pass scan per line instead of 32
+        // sequential `.replace()` calls.
+        text = protect_escapes_outside_code(&text, ESCAPE_CHARS, Some(&opaque));
+    }
     if let Some(start) = preprocess_start {
         perf_sample.preprocess = start.elapsed();
     }
@@ -3238,7 +3272,7 @@ mod tests {
             "Blank line between defs should be preserved after extraction, got:\n{extracted}"
         );
         // Also check that protect_autolinks doesn't destroy the blank line
-        let protected = protect_autolinks(&extracted);
+        let protected = protect_autolinks(&extracted, None);
         assert!(
             protected.contains("-->\n\n"),
             "Blank line between defs should be preserved after autolink protection, got:\n{protected}"
@@ -3469,13 +3503,13 @@ mod tests {
     /// escape protection and silently dropped the backslash (fmr-5vfu, fmr-sh2b).
     #[test]
     fn backtick_fence_info_string_with_backtick_is_not_a_fence() {
-        assert_eq!(detect_opening_fence("```\\`"), None);
-        assert_eq!(detect_opening_fence("```a`b"), None);
-        assert_eq!(detect_opening_fence("```$`$"), None);
-        assert_eq!(detect_opening_fence("```rust"), Some("```".to_string()));
-        assert_eq!(detect_opening_fence("````"), Some("````".to_string()));
+        assert!(fenced_code_info_ranges("```\\`").is_empty());
+        assert!(fenced_code_info_ranges("```a`b").is_empty());
+        assert!(fenced_code_info_ranges("```$`$").is_empty());
+        assert_eq!(fenced_code_info_ranges("```rust"), vec![(3, 7)]);
+        assert_eq!(fenced_code_info_ranges("````"), vec![(4, 4)]);
         // Tilde fences carry no such restriction.
-        assert_eq!(detect_opening_fence("~~~`"), Some("~~~".to_string()));
+        assert_eq!(fenced_code_info_ranges("~~~`"), vec![(3, 4)]);
     }
 
     fn fill_default(input: &str) -> String {
@@ -3505,5 +3539,26 @@ mod tests {
         let once = fill_default("```\\$`$");
         assert_eq!(once, "```\\$`$\n");
         assert_eq!(fill_default(&once), once);
+    }
+
+    /// fmr-k9gi: Python retains escapes after the language token and emits one
+    /// separating space, while comrak otherwise decodes the entire info string.
+    #[test]
+    fn fenced_info_extra_escapes_match_python() {
+        let once = fill_default("~~~lang  \\[meta] \\\\{#id}\nbody\n~~~\n");
+        assert_eq!(once, "~~~lang \\[meta] \\\\{#id}\nbody\n~~~\n");
+        assert_eq!(fill_default(&once), once);
+
+        let leading_space = fill_default("~~~ \\[meta]\nbody\n~~~\n");
+        assert_eq!(leading_space, "~~~[meta]\nbody\n~~~\n");
+        assert_eq!(fill_default(&leading_space), leading_space);
+    }
+
+    /// fmr-k9gi: post-render list normalization must not edit literal code bytes.
+    #[test]
+    fn numbered_looking_fenced_content_preserves_spacing() {
+        let input = "~~~text\n1.   literal\n~~~\n";
+        assert_eq!(fill_default(input), input);
+        assert_eq!(fill_default(&fill_default(input)), input);
     }
 }

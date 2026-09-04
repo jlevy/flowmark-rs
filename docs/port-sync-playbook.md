@@ -254,7 +254,7 @@ criterion:
 
 ```bash
 cd python
-uv run flowmark-dev discover-python --ref v0.7.3
+uv run flowmark-dev discover-python --ref v0.8.0
 uv run flowmark-dev discover-rust
 uv run flowmark-dev init-mapping
 uv run flowmark-dev check-mapping
@@ -364,7 +364,7 @@ being contributed to the playbook repository on its own branch.
 Run Flowmark only on documentation, never on golden Markdown fixtures:
 
 ```bash
-uvx --from flowmark==0.7.3 flowmark --auto \
+uvx --from flowmark==0.8.0 flowmark --auto \
   --extend-exclude "tests/" \
   --extend-exclude "repos/" \
   --extend-exclude "README.md" \

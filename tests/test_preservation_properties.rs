@@ -7,15 +7,16 @@
 //!   source rather than panicking), and
 //! - output always satisfies the normalization contract.
 //!
-//! A third — that formatting is a fixed point in one pass — does not yet hold for
-//! adversarial input in either port, so it runs on demand as a reproducer harness
-//! rather than a gate. See `generated_documents_reach_a_fixed_point`.
+//! A third — that formatting is a fixed point in one pass — has an exact, shrinking
+//! four-seed ledger. New failures and stale known failures both fail the suite. See
+//! `generated_documents_match_the_known_fixed_point_ledger`.
 //!
 //! The generator is a fixed-seed LCG rather than a property-testing crate so the suite
 //! stays dependency-free and every failure reproduces exactly from its seed.
 
 use flowmark::ListSpacing;
 use flowmark::formatter::filling::fill_markdown;
+use std::collections::BTreeSet;
 
 /// Fragments that stress the boundaries between protected constructs. Adjacent pairs
 /// are where the pre-parse scanner and comrak can disagree about block structure.
@@ -210,24 +211,27 @@ fn generated_documents_satisfy_the_output_normalization_contract() {
     }
 }
 
-/// Reproducer harness for the fixed-point property, run on demand:
-/// `cargo test --test test_preservation_properties -- --ignored --nocapture`.
+/// Gate the fixed-point property against an exact, shrinking adversarial ledger.
 ///
 /// Formatting formatted output should be a no-op; where it is not, `--check` reports a
-/// file the formatter itself just wrote. That guarantee does not yet hold for
-/// adversarial input in either port — the surviving shapes are escape sequences in fence
-/// info strings (fmr-c6xs / fm-ww33) and interior `U+FEFF` (fmr-uao3 / fm-jtwj), both of
-/// which Python reproduces too, so closing them needs an agreed target in the
-/// language-neutral manifest first.
+/// file the formatter itself just wrote. Three surviving seeds exercise the shared
+/// fence-info escape bug (fmr-c6xs / fm-ww33). Seed 610 is the already-ledgered empty
+/// blockquote class in the `CommonMark` parity review (fmr-rz9f). Every other Rust-only
+/// failure found during release review is fixed by fmr-k9gi.
 ///
-/// This is ignored rather than deleted because it is how those shapes were found, and
-/// how the next ones will be. It prints every failing seed with its exact input. Promote
-/// it to a gate once the shared cases land.
+/// Equality with the exact seed-and-mode set makes the ledger bidirectional: a new
+/// failure and a fixed known failure both stop CI until the implementation and ledger
+/// move together.
 #[test]
-#[ignore = "reproducer harness: the fixed-point property has known shared gaps"]
-fn generated_documents_reach_a_fixed_point() {
+fn generated_documents_match_the_known_fixed_point_ledger() {
     const CASES: u64 = 2_000;
-    let mut failures = Vec::new();
+    const KNOWN_FAILURE_SEEDS: &[u64] = &[610, 702, 1_316, 1_688];
+    let expected: BTreeSet<(u64, &str)> = KNOWN_FAILURE_SEEDS
+        .iter()
+        .flat_map(|seed| MODES.iter().map(move |mode| (*seed, mode.name)))
+        .collect();
+    let mut actual = BTreeSet::new();
+    let mut diagnostics = Vec::new();
 
     for seed in 0..CASES {
         let input = generate(seed, 24);
@@ -235,7 +239,8 @@ fn generated_documents_reach_a_fixed_point() {
             let once = format_with(*mode, &input);
             let twice = format_with(*mode, &once);
             if once != twice {
-                failures.push(format!(
+                actual.insert((seed, mode.name));
+                diagnostics.push(format!(
                     "seed {seed} mode {}\n  input: {input:?}\n  once:  {once:?}\n  twice: {twice:?}",
                     mode.name
                 ));
@@ -243,12 +248,12 @@ fn generated_documents_reach_a_fixed_point() {
         }
     }
 
-    assert!(
-        failures.is_empty(),
-        "{} of {} generated cases are not a fixed point:\n{}",
-        failures.len(),
+    assert_eq!(
+        actual,
+        expected,
+        "generated fixed-point ledger changed across {} checks:\n{}",
         CASES * MODES.len() as u64,
-        failures.join("\n")
+        diagnostics.join("\n")
     );
 }
 

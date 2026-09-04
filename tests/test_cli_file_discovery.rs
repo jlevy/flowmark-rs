@@ -301,6 +301,24 @@ fn test_explicit_file_still_works() {
 }
 
 #[test]
+fn test_named_invalid_utf8_reports_its_path_in_output_and_check_modes() {
+    let dir = tempfile::tempdir().expect("create temp dir");
+    let file = dir.path().join("invalid.md");
+    fs::write(&file, b"before\xffafter\n").expect("write invalid UTF-8");
+    let expected = format!("Error: {}: input is not valid UTF-8\n", file.display());
+
+    for args in [vec![], vec!["--check"]] {
+        let output =
+            Command::new(flowmark_bin()).args(args).arg(&file).output().expect("run flowmark");
+
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
+        assert_eq!(fs::read(&file).expect("reread invalid input"), b"before\xffafter\n");
+    }
+}
+
+#[test]
 fn test_stdin_still_works() {
     use std::io::Write;
     use std::process::Stdio;

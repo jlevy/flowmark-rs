@@ -36,6 +36,54 @@ mod cli {
         misses: AtomicUsize,
     }
 
+    #[derive(Debug)]
+    struct CliInvalidUtf8 {
+        path: Option<PathBuf>,
+        source: flowmark::Error,
+    }
+
+    impl std::fmt::Display for CliInvalidUtf8 {
+        fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            if let Some(path) = &self.path {
+                write!(formatter, "{}: input is not valid UTF-8", path.display())
+            } else {
+                formatter.write_str("input is not valid UTF-8")
+            }
+        }
+    }
+
+    impl std::error::Error for CliInvalidUtf8 {
+        fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            Some(&self.source)
+        }
+    }
+
+    fn annotate_invalid_utf8<T>(result: flowmark::Result<T>, path: Option<&Path>) -> Result<T> {
+        result.map_err(|source| {
+            if source.is_invalid_utf8() {
+                anyhow::Error::new(CliInvalidUtf8 { path: path.map(Path::to_path_buf), source })
+            } else {
+                anyhow::Error::new(source)
+            }
+        })
+    }
+
+    pub fn invalid_utf8_message(error: &anyhow::Error) -> Option<String> {
+        if let Some(invalid) =
+            error.chain().find_map(|cause| cause.downcast_ref::<CliInvalidUtf8>())
+        {
+            return Some(invalid.to_string());
+        }
+        error
+            .chain()
+            .any(|cause| {
+                cause
+                    .downcast_ref::<flowmark::Error>()
+                    .is_some_and(flowmark::Error::is_invalid_utf8)
+            })
+            .then(|| "input is not valid UTF-8".to_string())
+    }
+
     #[derive(Parser, Debug)]
     #[command(
         name = "flowmark",
@@ -574,7 +622,7 @@ Use `flowmark --docs` for full documentation.
             return Ok(true);
         }
 
-        let formatted = opts.reformat_bytes(&content)?;
+        let formatted = annotate_invalid_utf8(opts.reformat_bytes(&content), Some(path))?;
         if formatted.as_bytes() == content {
             cache.record_formatted(path, &content);
             return Ok(false);
@@ -822,7 +870,9 @@ Use `flowmark --docs` for full documentation.
                 } else {
                     std::fs::read(file).with_context(|| format!("failed to read {file}"))?
                 };
-                if opts.reformat_bytes(&content)?.as_bytes() != content {
+                let path = (file != "-").then(|| Path::new(file));
+                if annotate_invalid_utf8(opts.reformat_bytes(&content), path)?.as_bytes() != content
+                {
                     changed.push(file);
                 }
             }
@@ -878,7 +928,7 @@ Use `flowmark --docs` for full documentation.
         for _file in &stdin_files {
             let mut input = Vec::new();
             std::io::stdin().read_to_end(&mut input).context("failed to read stdin")?;
-            let output = opts.reformat_bytes(&input)?;
+            let output = annotate_invalid_utf8(opts.reformat_bytes(&input), None)?;
             if has_explicit_output {
                 let output_path = PathBuf::from(&args.output);
                 if let Some(parent) = output_path.parent() {
@@ -921,8 +971,11 @@ Use `flowmark --docs` for full documentation.
                     if args.perf_stats {
                         cache_perf.misses.fetch_add(1, Ordering::Relaxed);
                     }
-                    opts.reformat_file(&path, None, args.inplace, args.nobackup)
-                        .with_context(|| format!("failed to format {}", path.display()))
+                    annotate_invalid_utf8(
+                        opts.reformat_file(&path, None, args.inplace, args.nobackup),
+                        Some(&path),
+                    )
+                    .with_context(|| format!("failed to format {}", path.display()))
                 }
             })?;
         } else {
@@ -934,8 +987,11 @@ Use `flowmark --docs` for full documentation.
                 if args.verbose {
                     eprintln!("formatting {}", path.display());
                 }
-                opts.reformat_file(&path, output_path.as_deref(), false, args.nobackup)
-                    .with_context(|| format!("failed to format {}", path.display()))?;
+                annotate_invalid_utf8(
+                    opts.reformat_file(&path, output_path.as_deref(), false, args.nobackup),
+                    Some(&path),
+                )
+                .with_context(|| format!("failed to format {}", path.display()))?;
             }
         }
 
@@ -1073,12 +1129,8 @@ fn main() -> std::process::ExitCode {
     #[cfg(feature = "cli")]
     {
         if let Err(e) = cli::run() {
-            if e.chain().any(|cause| {
-                cause
-                    .downcast_ref::<flowmark::Error>()
-                    .is_some_and(flowmark::Error::is_invalid_utf8)
-            }) {
-                eprintln!("Error: input is not valid UTF-8");
+            if let Some(message) = cli::invalid_utf8_message(&e) {
+                eprintln!("Error: {message}");
                 return std::process::ExitCode::from(2);
             }
             eprintln!("error: {e:#}");

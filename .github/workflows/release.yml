@@ -108,6 +108,8 @@ jobs:
         run: echo "CC_aarch64_unknown_linux_musl=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
 
       - name: Build
+        env:
+          FLOWMARK_RELEASE_TAG: ${{ needs.plan.outputs.release_tag }}
         run: RUSTFLAGS="--deny warnings --codegen target-feature=+crt-static ${{ matrix.target_rustflags }}" cargo build --bin flowmark --release --locked --target ${{ matrix.target }}
 
       - name: Package

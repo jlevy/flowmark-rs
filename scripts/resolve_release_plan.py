@@ -7,6 +7,7 @@ import argparse
 import os
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 
@@ -31,6 +32,17 @@ def _write_outputs(outputs: dict[str, str], github_output_path: str | None) -> N
                 handle.write(f"{line}\n")
 
 
+def _read_package_version(manifest_path: Path) -> str:
+    try:
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        version = manifest["package"]["version"]
+    except (OSError, KeyError, TypeError, tomllib.TOMLDecodeError) as error:
+        raise ValueError(f"Cannot read package.version from {manifest_path}: {error}") from error
+    if not isinstance(version, str) or not version.strip():
+        raise ValueError(f"Cannot read package.version from {manifest_path}: expected a string")
+    return version.strip()
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--event-name", required=True)
@@ -39,6 +51,7 @@ def main() -> int:
     parser.add_argument("--publish", default="false")
     parser.add_argument("--publish-prerelease", default="false")
     parser.add_argument("--run-id", required=True)
+    parser.add_argument("--manifest-path", type=Path, default=Path("Cargo.toml"))
     parser.add_argument("--github-output", default=os.getenv("GITHUB_OUTPUT", ""))
     args = parser.parse_args()
 
@@ -61,6 +74,13 @@ def main() -> int:
             publish = False
         else:
             release_tag = requested_tag if requested_tag.startswith("v") else f"v{requested_tag}"
+            package_version = _read_package_version(args.manifest_path)
+            expected_tag = f"v{package_version}"
+            if release_tag != expected_tag:
+                raise ValueError(
+                    f"Release tag {release_tag} does not match Cargo package version "
+                    f"{package_version} (expected {expected_tag})."
+                )
             artifact_tag = release_tag
             prerelease = re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+", release_tag) is None
             publish = requested_publish

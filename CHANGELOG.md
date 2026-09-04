@@ -4,11 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased][unreleased]
 
+## [0.4.0][] (parity: flowmark-py 0.8.0)
+
+Minor release syncing the expanded Python v0.8.0 compatibility surface and hardening the
+multi-channel release path.
+The 527-case shared contract has 495 exact passes and 32 inherited CommonMark
+divergences, with no new divergence introduced by this release.
+
 ### Formatter behavior
 
-- Preserve recognized math, code spans, and opaque Markdown-extension regions from the
-  shared Python corpus as exact normalized-source slices, including GitLab references
-  and multiline blockquotes.
+- Preserve recognized math, code spans, fenced and indented code, and opaque
+  Markdown-extension regions from the shared Python corpus as exact normalized-source
+  slices, including nested-container fences, GitLab references, and multiline
+  blockquotes.
+- Keep fence info-string suffixes and numbered-looking code bytes intact, and stop
+  inline preservation scopes at setext-heading boundaries.
+- Measure escaped preservation sentinels at their rendered width so narrow wrapping
+  remains stable and idempotent.
 - Return normalized input unchanged if a parser or renderer violates preservation-token
   invariants, instead of aborting the process.
 - Match the Python `reformat_text()` contract by retaining Markdown indentation rather
@@ -22,7 +34,8 @@ All notable changes to this project will be documented in this file.
   `.bak`.
 - Allow one direct file or standard input to write to `--output`; multiple inputs still
   reject a single output path.
-- Reject invalid UTF-8 with exit status 2 instead of inserting replacement characters.
+- Reject invalid UTF-8 with exit status 2 instead of inserting replacement characters,
+  and include the offending path for named inputs.
 - Report missing or invalid explicit paths with their actual operating-system error and
   exit status 2.
 - Document the shared exit-status contract: 0 for success, 1 for expected command-level
@@ -35,6 +48,10 @@ All notable changes to this project will be documented in this file.
   submodule.
 - Require exact stdout, stderr, exit status, filesystem effects, and idempotence without
   executing Python during Rust tests.
+- Gate generated fixed-point behavior with a bidirectional seed-and-mode ledger, so new
+  failures and stale known failures both stop CI.
+- Embed the requested release tag in every archive binary and reject a real release tag
+  that does not match `Cargo.toml`, preventing mislabeled immutable artifacts.
 
 ## [0.3.2][] (parity: flowmark-py 0.7.2)
 
@@ -379,7 +396,8 @@ Early development release.
 [0.3.0]: https://github.com/jlevy/flowmark-rs/compare/v0.2.7...v0.3.0
 [0.3.1]: https://github.com/jlevy/flowmark-rs/compare/v0.3.0...v0.3.1
 [0.3.2]: https://github.com/jlevy/flowmark-rs/compare/v0.3.1...v0.3.2
-[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.3.2...HEAD
+[0.4.0]: https://github.com/jlevy/flowmark-rs/compare/v0.3.2...v0.4.0
+[unreleased]: https://github.com/jlevy/flowmark-rs/compare/v0.4.0...HEAD
 
 <!-- This document follows common-doc-guidelines.md.
 See github.com/jlevy/practical-prose and review guidelines before editing.

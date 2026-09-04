@@ -25,9 +25,16 @@ class ResolveReleasePlanTests(unittest.TestCase):
         publish: str = "false",
         publish_prerelease: str = "false",
         run_id: str = "12345",
+        package_version: str = "1.2.3",
     ) -> tuple[subprocess.CompletedProcess[str], str]:
         with tempfile.TemporaryDirectory() as temp_dir:
-            output_path = Path(temp_dir) / "github_output.txt"
+            temp_path = Path(temp_dir)
+            output_path = temp_path / "github_output.txt"
+            manifest_path = temp_path / "Cargo.toml"
+            manifest_path.write_text(
+                f'[package]\nname = "flowmark"\nversion = "{package_version}"\n',
+                encoding="utf-8",
+            )
             result = subprocess.run(
                 [
                     sys.executable,
@@ -44,6 +51,8 @@ class ResolveReleasePlanTests(unittest.TestCase):
                     publish_prerelease,
                     "--run-id",
                     run_id,
+                    "--manifest-path",
+                    str(manifest_path),
                     "--github-output",
                     str(output_path),
                 ],
@@ -116,6 +125,7 @@ class ResolveReleasePlanTests(unittest.TestCase):
             tag="v1.2.3-rc.1",
             publish="true",
             publish_prerelease="false",
+            package_version="1.2.3-rc.1",
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         data = self._to_map(output)
@@ -128,6 +138,7 @@ class ResolveReleasePlanTests(unittest.TestCase):
             tag="v1.2.3-rc.1",
             publish="true",
             publish_prerelease="true",
+            package_version="1.2.3-rc.1",
         )
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         data = self._to_map(output)
@@ -143,6 +154,25 @@ class ResolveReleasePlanTests(unittest.TestCase):
         )
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Publish mode requires a real tag", result.stderr)
+
+    def test_dispatch_rejects_tag_that_does_not_match_package_version(self) -> None:
+        result, _output = self._run_script(
+            event_name="workflow_dispatch",
+            tag="v1.2.4",
+            publish="true",
+            package_version="1.2.3",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Release tag v1.2.4 does not match Cargo package version 1.2.3", result.stderr)
+
+    def test_push_rejects_tag_that_does_not_match_package_version(self) -> None:
+        result, _output = self._run_script(
+            event_name="push",
+            ref_name="v9.9.9",
+            package_version="1.2.3",
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Release tag v9.9.9 does not match Cargo package version 1.2.3", result.stderr)
 
 
 if __name__ == "__main__":
