@@ -209,7 +209,7 @@
 
 use crate::escape_placeholders::{ESCAPE_PLACEHOLDER_BASE, ESCAPE_PLACEHOLDER_FILLER};
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Write as _;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
@@ -1732,6 +1732,33 @@ fn render_block<'a>(
                     .count();
                 has_sublist || has_code || para_count > 1
             });
+            // Per-item loose boundaries recovered from source positions. comrak's
+            // whole-list `tight` flag is False whenever ANY item boundary has a
+            // blank line, so a mixed list (blanks between only some items) would
+            // otherwise render fully loose, losing the authored tight segments.
+            let items: Vec<_> = node.children().collect();
+            let mut loose_boundaries: HashSet<usize> = HashSet::new();
+            let mut any_internal_blank = false;
+            for item in &items {
+                let item_children: Vec<_> = item.children().collect();
+                for pair in item_children.windows(2) {
+                    // A blank line between an item's own block elements forces the
+                    // whole list loose (CommonMark), even without between-item blanks.
+                    let start = pair[1].data.borrow().sourcepos.start.line;
+                    if start > last_content_line(pair[0]) + 1 {
+                        any_internal_blank = true;
+                        break;
+                    }
+                }
+            }
+            for i in 1..items.len() {
+                let prev_end = last_content_line(items[i - 1]);
+                let curr_start = items[i].data.borrow().sourcepos.start.line;
+                if curr_start > prev_end + 1 {
+                    loose_boundaries.insert(i);
+                }
+            }
+
             let is_tight = match list_spacing {
                 ListSpacing::Preserve => list.tight,
                 ListSpacing::Tight => !any_item_is_complex,
@@ -1755,8 +1782,29 @@ fn render_block<'a>(
 
                 // For loose lists, add blank line between items (except before first)
                 // Use the outer prefix (without list indentation) for the blank line
-                // to maintain blockquote context
-                if !is_tight && i > 0 {
+                // to maintain blockquote context. In preserve mode, add a blank only
+                // where the source had one (or where CommonMark requires a loose list).
+                let blank_needed = match list_spacing {
+                    ListSpacing::Preserve => {
+                        if list.tight {
+                            // comrak says fully tight; source-position gaps are then
+                            // phantom (comrak misaligns positions around some
+                            // continuation lines, e.g. an indented line starting
+                            // with `|`), so keep tight.
+                            false
+                        } else if any_internal_blank || loose_boundaries.is_empty() {
+                            // Loose for a reason source positions cannot see
+                            // (internal blank, or an unexplained loose flag):
+                            // fall back to the whole-list behavior.
+                            true
+                        } else {
+                            loose_boundaries.contains(&i)
+                        }
+                    }
+                    ListSpacing::Loose => true,
+                    ListSpacing::Tight => !is_tight,
+                };
+                if blank_needed && i > 0 {
                     let blank_prefix = subsequent_prefix.trim_end();
                     if blank_prefix.is_empty() {
                         output.push('\n');
