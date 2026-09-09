@@ -254,3 +254,29 @@ fn test_multi_paragraph_spacing_loose_mode() {
 
     assert_eq!(fmt_semantic(input, ListSpacing::Loose), expected);
 }
+
+#[test]
+fn test_mixed_list_preserved() {
+    // A mixed list (blank lines between only some items) keeps its authored
+    // spacing: tight segments stay tight, only the source blank remains.
+    let input = "- All lowercase.\n- No Title Case.\n\n- Uppercase reserved.\n- Last one.\n";
+    assert_eq!(fmt(input, ListSpacing::Preserve), input);
+}
+
+#[test]
+fn test_mixed_list_not_flattened_to_loose() {
+    // Regression: a single blank between groups must not loosen every item.
+    let input = "- one\n- two\n\n- three\n- four\n";
+    assert_eq!(fmt(input, ListSpacing::Preserve), "- one\n- two\n\n- three\n- four\n");
+}
+
+#[test]
+fn test_multi_paragraph_items_stay_loose_in_preserve() {
+    // CommonMark: items containing their own blank line force the list loose,
+    // even when the source has no blank between the items themselves.
+    let input = "- **`make_parent_dirs(path)`**\n\n  Ensures that the parent directories exist.\n- **`rmtree_or_file(path)`**\n\n  Removes the target.\n";
+    assert_eq!(
+        fmt(input, ListSpacing::Preserve),
+        "- **`make_parent_dirs(path)`**\n\n  Ensures that the parent directories exist.\n\n- **`rmtree_or_file(path)`**\n\n  Removes the target.\n"
+    );
+}
