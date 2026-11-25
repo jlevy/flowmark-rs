@@ -7,13 +7,7 @@ use std::process::Command;
 
 /// Get the path to the built binary.
 fn flowmark_bin() -> PathBuf {
-    let mut path = std::env::current_exe().expect("current exe");
-    path.pop();
-    if path.ends_with("deps") {
-        path.pop();
-    }
-    path.push("flowmark");
-    path
+    PathBuf::from(env!("CARGO_BIN_EXE_flowmark"))
 }
 
 #[test]

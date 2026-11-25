@@ -407,7 +407,7 @@ mod tests {
             Some(&simple_word_split),
             false,
         );
-        assert!(!lines.is_empty());
+        assert_ne!(lines, [] as [String; 0]);
         for line in &lines {
             assert!(line.chars().count() <= 10 || line.split_whitespace().count() == 1);
         }

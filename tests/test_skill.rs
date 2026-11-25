@@ -31,7 +31,7 @@ fn reformat(text: &str) -> String {
 
 #[test]
 fn test_skill_content_loads() {
-    assert!(!get_skill_content().is_empty());
+    assert_ne!(get_skill_content(), "");
 }
 
 #[test]
@@ -156,7 +156,7 @@ fn test_own_version_is_a_resolvable_pin() {
 
 #[test]
 fn test_docs_content_loads() {
-    assert!(!get_docs_content().is_empty());
+    assert_ne!(get_docs_content(), "");
 }
 
 #[test]
