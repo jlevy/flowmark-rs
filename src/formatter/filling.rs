@@ -3503,9 +3503,9 @@ mod tests {
     /// escape protection and silently dropped the backslash (fmr-5vfu, fmr-sh2b).
     #[test]
     fn backtick_fence_info_string_with_backtick_is_not_a_fence() {
-        assert!(fenced_code_info_ranges("```\\`").is_empty());
-        assert!(fenced_code_info_ranges("```a`b").is_empty());
-        assert!(fenced_code_info_ranges("```$`$").is_empty());
+        assert_eq!(fenced_code_info_ranges("```\\`"), [] as [(usize, usize); 0]);
+        assert_eq!(fenced_code_info_ranges("```a`b"), [] as [(usize, usize); 0]);
+        assert_eq!(fenced_code_info_ranges("```$`$"), [] as [(usize, usize); 0]);
         assert_eq!(fenced_code_info_ranges("```rust"), vec![(3, 7)]);
         assert_eq!(fenced_code_info_ranges("````"), vec![(4, 4)]);
         // Tilde fences carry no such restriction.

@@ -3039,13 +3039,13 @@ mod tests {
 
     #[test]
     fn angle_scanner_handles_many_unclosed_prose_comparisons() {
-        assert!(scan_angle_spans("<?>", 0, 3).is_empty());
+        assert_eq!(scan_angle_spans("<?>", 0, 3), [] as [Candidate; 0]);
         let processing = scan_angle_spans("<??>", 0, 4);
         assert_eq!(processing.len(), 1);
         assert_eq!((processing[0].start, processing[0].end), (0, 4));
 
         let text = "The build takes <15min and speedup is <1.5x.\n".repeat(8_192);
-        assert!(scan_angle_spans(&text, 0, text.len()).is_empty());
+        assert_eq!(scan_angle_spans(&text, 0, text.len()), [] as [Candidate; 0]);
     }
 
     #[test]
@@ -3064,7 +3064,7 @@ mod tests {
         );
 
         let unclosed = "[[".repeat(32_768);
-        assert!(scan_wikilinks(&unclosed, 0, unclosed.len()).is_empty());
+        assert_eq!(scan_wikilinks(&unclosed, 0, unclosed.len()), [] as [Candidate; 0]);
     }
 
     #[test]
@@ -3123,7 +3123,7 @@ mod tests {
     fn line_blocks_do_not_claim_single_column_gfm_tables() {
         let source = normalize_source("| Header |\n| --- |\n| There’s a value |\n");
         let regions = scan_protected_regions(&source).expect("valid scan");
-        assert!(regions.is_empty());
+        assert_eq!(regions, [] as [ProtectedRegion; 0]);
     }
 
     #[test]

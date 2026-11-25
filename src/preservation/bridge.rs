@@ -479,7 +479,7 @@ mod tests {
         let (gaps, indexes) = parse_rendered_stream("ordinary rendered text")
             .expect("marker-free rendered text is valid");
         assert_eq!(gaps, ["ordinary rendered text"]);
-        assert!(indexes.is_empty());
+        assert_eq!(indexes, [] as [usize; 0]);
     }
 
     #[test]

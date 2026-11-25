@@ -243,7 +243,7 @@ fn test_empty_directory_with_output_is_a_clean_noop() {
         .expect("run flowmark");
 
     assert!(output.status.success(), "zero resolved files should match Python's no-op");
-    assert!(output.stderr.is_empty());
+    assert_eq!(output.stderr, [] as [u8; 0]);
     assert!(!dir.path().join("out.md").exists());
 }
 
@@ -312,7 +312,7 @@ fn test_named_invalid_utf8_reports_its_path_in_output_and_check_modes() {
             Command::new(flowmark_bin()).args(args).arg(&file).output().expect("run flowmark");
 
         assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
+        assert_eq!(output.stdout, [] as [u8; 0]);
         assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
         assert_eq!(fs::read(&file).expect("reread invalid input"), b"before\xffafter\n");
     }
